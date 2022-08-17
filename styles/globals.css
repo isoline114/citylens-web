@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Leaflet styles */
+@import 'leaflet/dist/leaflet.css';
+
+:root {
+  color-scheme: light;
+}
+
+/* Basic app defaults */
+html,
+body {
+  height: 100%;
+}
