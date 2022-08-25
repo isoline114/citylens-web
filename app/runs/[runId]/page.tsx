@@ -20,7 +20,7 @@ export default function RunDetailPage() {
     return v === '1' || v === 'true' || v === 'yes';
   }, [searchParams]);
 
-  const [apiKeyPresent, setApiKeyPresent] = useState(false);
+  const [apiKeyPresent, setApiKeyPresent] = useState<boolean>(() => Boolean(getApiKey()));
 
   useEffect(() => {
     const sync = () => setApiKeyPresent(Boolean(getApiKey()));
@@ -50,6 +50,10 @@ export default function RunDetailPage() {
         const status = err instanceof ApiError ? err.status : undefined;
         if (status === 401) return false;
         if (status === 429) return false;
+        if (status === 404 && mode === 'demo' && apiKeyPresent) {
+          // If demo endpoint 404s but we have an API key, retry once in live mode on next key change.
+          setApiKeyPresent(Boolean(getApiKey()));
+        }
         return true;
       },
     },
