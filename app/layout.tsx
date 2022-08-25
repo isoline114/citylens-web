@@ -5,6 +5,7 @@ import Image from 'next/image';
 import '../styles/globals.css';
 
 import { ApiKeyGate } from '@/components/ApiKeyGate';
+import { DemoModeBanner } from '@/components/DemoModeBanner';
 import { Toasts } from '@/components/Toasts';
 
 const title = 'CityLens';
@@ -64,6 +65,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
+
+        <DemoModeBanner />
 
         <main className="mx-auto w-full max-w-4xl px-4 py-6">{children}</main>
         <Toasts />

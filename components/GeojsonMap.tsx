@@ -2,17 +2,17 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
-import type { FeatureCollection, Geometry, GeoJsonProperties } from 'geojson';
+import type { FeatureCollection, Geometry, GeoJsonProperties, GeoJsonObject } from 'geojson';
 
 type LatLng = [number, number];
 
-function boundsFromGeojson(fc: FeatureCollection): { sw: LatLng; ne: LatLng } | null {
+function boundsFromGeojson(fc: FeatureCollection<Geometry, GeoJsonProperties>): { sw: LatLng; ne: LatLng } | null {
   let minLat = Infinity;
   let minLng = Infinity;
   let maxLat = -Infinity;
   let maxLng = -Infinity;
 
-  function considerCoord(coord: any) {
+  function considerCoord(coord: unknown) {
     if (!Array.isArray(coord) || coord.length < 2) return;
     const [lng, lat] = coord;
     if (typeof lat !== 'number' || typeof lng !== 'number') return;
@@ -22,10 +22,10 @@ function boundsFromGeojson(fc: FeatureCollection): { sw: LatLng; ne: LatLng } | 
     maxLng = Math.max(maxLng, lng);
   }
 
-  function walkCoords(coords: any) {
+  function walkCoords(coords: unknown) {
     if (!coords) return;
-    if (typeof coords[0] === 'number') {
-      considerCoord(coords);
+    if (Array.isArray(coords) && typeof coords[0] === 'number') {
+      considerCoord(coords as unknown);
       return;
     }
     if (Array.isArray(coords)) {
@@ -34,9 +34,9 @@ function boundsFromGeojson(fc: FeatureCollection): { sw: LatLng; ne: LatLng } | 
   }
 
   for (const f of fc.features ?? []) {
-    const g: any = f?.geometry;
+    const g = f?.geometry;
     if (!g) continue;
-    walkCoords(g.coordinates);
+    walkCoords((g as Geometry).coordinates as unknown);
   }
 
   if (!isFinite(minLat) || !isFinite(minLng) || !isFinite(maxLat) || !isFinite(maxLng)) return null;
@@ -66,8 +66,9 @@ export function GeojsonMap({ url }: { url: string }) {
         if (!res.ok) throw new Error(`GeoJSON fetch failed (${res.status})`);
         const json = (await res.json()) as FeatureCollection;
         if (!cancelled) setGeojson(json);
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? String(e));
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!cancelled) setError(msg);
       }
     }
     run();
@@ -102,7 +103,7 @@ export function GeojsonMap({ url }: { url: string }) {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <FitBounds bounds={bounds} />
-            <GeoJSON data={geojson as any} />
+            <GeoJSON data={geojson as unknown as GeoJsonObject} />
           </MapContainer>
         )}
       </div>

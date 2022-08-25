@@ -1,25 +1,41 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import useSWR from 'swr';
 
 import { ArtifactsPanel } from '@/components/ArtifactsPanel';
 import { RunStatusCard } from '@/components/RunStatusCard';
-import { getRun } from '@/lib/api';
+import { ApiError, getDemoRun, getRun } from '@/lib/api';
 import type { RunResponse } from '@/lib/types';
-import { rememberRecentRun, setRunStatusCache } from '@/lib/storage';
+import { getApiKey, rememberRecentRun, setRunStatusCache } from '@/lib/storage';
 
 export default function RunDetailPage() {
   const params = useParams<{ runId: string }>();
+  const searchParams = useSearchParams();
   const runId = params.runId;
 
-  const swrKey = useMemo(() => ['run', runId] as const, [runId]);
+  const forceDemo = useMemo(() => {
+    const v = searchParams.get('demo');
+    return v === '1' || v === 'true' || v === 'yes';
+  }, [searchParams]);
+
+  const [apiKeyPresent, setApiKeyPresent] = useState(false);
+
+  useEffect(() => {
+    const sync = () => setApiKeyPresent(Boolean(getApiKey()));
+    sync();
+    window.addEventListener('citylens_api_key_changed', sync);
+    return () => window.removeEventListener('citylens_api_key_changed', sync);
+  }, []);
+
+  const mode = forceDemo || !apiKeyPresent ? 'demo' : 'live';
+  const swrKey = useMemo(() => ['run', runId, mode] as const, [runId, mode]);
 
   const { data, error, isLoading } = useSWR<RunResponse>(
     swrKey,
     async () => {
-      const run = await getRun(runId);
+      const run = mode === 'demo' ? await getDemoRun(runId) : await getRun(runId);
       rememberRecentRun(runId);
       if (run?.status) setRunStatusCache(runId, String(run.status));
       return run;
@@ -30,8 +46,8 @@ export default function RunDetailPage() {
         if (status === 'queued' || status === 'running') return 2500;
         return 0;
       },
-      shouldRetryOnError: (err: any) => {
-        const status = err?.status;
+      shouldRetryOnError: (err: unknown) => {
+        const status = err instanceof ApiError ? err.status : undefined;
         if (status === 401) return false;
         if (status === 429) return false;
         return true;

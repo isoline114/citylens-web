@@ -2,6 +2,19 @@ import { getApiKey } from '@/lib/storage';
 import type { CitylensCreateRunPayload } from '@/lib/validation';
 import type { CreateRunResponse, RunResponse } from '@/lib/types';
 
+export type DemoFeaturedRun = {
+  run_id?: string;
+  id?: string;
+  title?: string;
+  label?: string;
+  address?: string;
+  imagery_year?: number;
+  baseline_year?: number;
+  segmentation_backend?: string;
+  outputs?: string[];
+  request?: Record<string, unknown>;
+} & Record<string, unknown>;
+
 export class ApiError extends Error {
   status?: number;
   body?: unknown;
@@ -19,9 +32,14 @@ function getBaseUrl(): string {
   return (v && v.trim().length > 0 ? v : 'http://localhost:8000').replace(/\/+$/, '');
 }
 
-async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+async function requestJson<T>(
+  path: string,
+  init?: RequestInit,
+  opts?: { includeApiKey?: boolean },
+): Promise<T> {
   const url = `${getBaseUrl()}${path}`;
-  const apiKey = getApiKey();
+  const includeApiKey = opts?.includeApiKey ?? true;
+  const apiKey = includeApiKey ? getApiKey() : null;
 
   const headers = new Headers(init?.headers);
   headers.set('Accept', 'application/json');
@@ -31,8 +49,9 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
     res = await fetch(url, { ...init, headers });
-  } catch (e: any) {
-    throw new ApiError(`Network error while calling ${path}: ${e?.message ?? String(e)}`);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new ApiError(`Network error while calling ${path}: ${msg}`);
   }
 
   const contentType = res.headers.get('content-type') ?? '';
@@ -76,4 +95,21 @@ export async function createRun(req: CitylensCreateRunPayload): Promise<{ runId:
 
 export async function getRun(runId: string): Promise<RunResponse> {
   return requestJson<RunResponse>(`/v1/runs/${encodeURIComponent(runId)}`);
+}
+
+export async function getFeaturedDemos(): Promise<DemoFeaturedRun[]> {
+  const raw = await requestJson<unknown>('/v1/demo/featured', undefined, { includeApiKey: false });
+  if (Array.isArray(raw)) return raw as DemoFeaturedRun[];
+  if (raw && typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    const featured = obj['featured'];
+    const runs = obj['runs'];
+    if (Array.isArray(featured)) return featured as DemoFeaturedRun[];
+    if (Array.isArray(runs)) return runs as DemoFeaturedRun[];
+  }
+  return [];
+}
+
+export async function getDemoRun(runId: string): Promise<RunResponse> {
+  return requestJson<RunResponse>(`/v1/demo/runs/${encodeURIComponent(runId)}`, undefined, { includeApiKey: false });
 }

@@ -26,6 +26,16 @@ export function RunStatusCard({
   error?: unknown;
   loading?: boolean;
 }) {
+  const errorMessage = (() => {
+    if (!error) return null;
+    if (error instanceof Error) return error.message;
+    if (typeof error === 'object' && 'message' in (error as Record<string, unknown>)) {
+      const msg = (error as Record<string, unknown>)['message'];
+      if (typeof msg === 'string') return msg;
+    }
+    return String(error);
+  })();
+
   const status = String(run?.status ?? (loading ? 'loading' : 'unknown'));
   const stage = run?.stage ? String(run.stage) : '—';
   const progressRaw = typeof run?.progress === 'number' ? run.progress : undefined;
@@ -103,7 +113,7 @@ export function RunStatusCard({
       {Boolean(error) && !apiErr && (
         <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
           <div className="font-medium">Error loading run</div>
-          <div className="mt-1 whitespace-pre-wrap">{String((error as any)?.message ?? error)}</div>
+          <div className="mt-1 whitespace-pre-wrap">{errorMessage}</div>
         </div>
       )}
     </div>

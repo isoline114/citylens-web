@@ -10,13 +10,19 @@ import { GeojsonMap } from '@/components/GeojsonMap';
 
 const EXPECTED = ['preview.png', 'change.geojson', 'mesh.ply', 'run_summary.json'] as const;
 
+type ExpectedArtifactName = (typeof EXPECTED)[number];
+
+function isExpectedArtifactName(v: string): v is ExpectedArtifactName {
+  return (EXPECTED as readonly string[]).includes(v);
+}
+
 function pickUrl(a?: ArtifactRecord): string | null {
   if (!a) return null;
   const u = (a.signed_url ?? a.url) as string | undefined;
   return u && u.trim().length > 0 ? u : null;
 }
 
-function normalizeArtifacts(run?: RunResponse): Record<(typeof EXPECTED)[number], ArtifactRecord | undefined> {
+function normalizeArtifacts(run?: RunResponse): Record<ExpectedArtifactName, ArtifactRecord | undefined> {
   const map = (run?.artifacts ?? {}) as Record<string, ArtifactRecord>;
 
   const direct = {
@@ -30,10 +36,10 @@ function normalizeArtifacts(run?: RunResponse): Record<(typeof EXPECTED)[number]
   if (missing.length === 0) return { ...direct };
 
   // Some backends may key artifacts by id but include the filename in a `name` field.
-  const byName: Record<string, ArtifactRecord | undefined> = {};
+  const byName: Partial<Record<ExpectedArtifactName, ArtifactRecord>> = {};
   for (const v of Object.values(map)) {
     const n = typeof v?.name === 'string' ? v.name : undefined;
-    if (n && EXPECTED.includes(n as any) && !byName[n]) byName[n] = v;
+    if (n && isExpectedArtifactName(n) && !byName[n]) byName[n] = v;
   }
 
   return {
@@ -45,15 +51,6 @@ function normalizeArtifacts(run?: RunResponse): Record<(typeof EXPECTED)[number]
 }
 
 export function ArtifactsPanel({ run }: { run?: RunResponse }) {
-  if (!run) {
-    return (
-      <div className="rounded-lg border border-slate-200 bg-white">
-        <div className="border-b border-slate-200 px-4 py-3 text-sm font-medium">Artifacts</div>
-        <div className="p-4 text-sm text-slate-600">Run data not loaded yet.</div>
-      </div>
-    );
-  }
-
   const artifacts = useMemo(() => normalizeArtifacts(run), [run]);
   const previewUrl = pickUrl(artifacts['preview.png']);
   const changeUrl = pickUrl(artifacts['change.geojson']);
@@ -62,6 +59,10 @@ export function ArtifactsPanel({ run }: { run?: RunResponse }) {
 
   const [summaryText, setSummaryText] = useState<string | null>(null);
   const [summaryErr, setSummaryErr] = useState<string | null>(null);
+
+  function errorMessage(e: unknown): string {
+    return e instanceof Error ? e.message : String(e);
+  }
 
   async function loadSummary() {
     if (!summaryUrl) return;
@@ -78,9 +79,18 @@ export function ArtifactsPanel({ run }: { run?: RunResponse }) {
         const txt = await res.text();
         setSummaryText(txt);
       }
-    } catch (e: any) {
-      setSummaryErr(e?.message ?? String(e));
+    } catch (e: unknown) {
+      setSummaryErr(errorMessage(e));
     }
+  }
+
+  if (!run) {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white">
+        <div className="border-b border-slate-200 px-4 py-3 text-sm font-medium">Artifacts</div>
+        <div className="p-4 text-sm text-slate-600">Run data not loaded yet.</div>
+      </div>
+    );
   }
 
   return (

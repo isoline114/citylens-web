@@ -10,6 +10,13 @@ This frontend aligns to the Citylens API contract:
 - `POST /v1/runs` (request body matches the API schema; the UI injects required defaults)
 - `GET  /v1/runs/{run_id}`
 
+Demo mode (precomputed):
+
+- Requires citylens-api v0.2.0+ (demo endpoints).
+- If no API key exists in localStorage, the UI enters Demo Mode.
+- Demo Mode loads featured demo runs from `GET /v1/demo/featured`.
+- Selecting a demo run loads run details from `GET /v1/demo/runs/{run_id}` and renders artifacts like normal.
+
 Artifacts expected (standard filenames):
 
 - `preview.png`

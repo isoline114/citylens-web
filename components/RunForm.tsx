@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-import { createRun, ApiError } from '@/lib/api';
+import { createRun, ApiError, getFeaturedDemos, type DemoFeaturedRun } from '@/lib/api';
 import {
   buildCitylensCreateRunPayload,
   citylensCreateRunSchema,
@@ -26,6 +26,10 @@ export function RunForm() {
   const [form, setForm] = useState<CitylensCreateRunInput>(DEFAULTS);
   const [submitting, setSubmitting] = useState(false);
   const [apiKeyPresent, setApiKeyPresent] = useState(false);
+  const [featured, setFeatured] = useState<DemoFeaturedRun[]>([]);
+  const [featuredLoading, setFeaturedLoading] = useState(false);
+  const [featuredError, setFeaturedError] = useState<string | null>(null);
+  const [selectedDemoRunId, setSelectedDemoRunId] = useState<string>('');
 
   useEffect(() => {
     const sync = () => setApiKeyPresent(Boolean(getApiKey()));
@@ -34,7 +38,67 @@ export function RunForm() {
     return () => window.removeEventListener('citylens_api_key_changed', sync);
   }, []);
 
+  useEffect(() => {
+    let alive = true;
+    setFeaturedLoading(true);
+    setFeaturedError(null);
+    getFeaturedDemos()
+      .then((rows) => {
+        if (!alive) return;
+        setFeatured(rows);
+      })
+      .catch((e: unknown) => {
+        if (!alive) return;
+        setFeaturedError(errorMessage(e));
+      })
+      .finally(() => {
+        if (!alive) return;
+        setFeaturedLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const canSubmit = useMemo(() => apiKeyPresent && !submitting, [apiKeyPresent, submitting]);
+
+  function errorMessage(e: unknown): string {
+    return e instanceof Error ? e.message : String(e);
+  }
+
+  function demoRunId(d: DemoFeaturedRun): string | null {
+    const id = (typeof d.run_id === 'string' ? d.run_id : undefined) ?? (typeof d.id === 'string' ? d.id : undefined);
+    return id && id.trim().length > 0 ? id : null;
+  }
+
+  function demoLabel(d: DemoFeaturedRun): string {
+    const id = demoRunId(d) ?? 'unknown';
+    const title = typeof d.title === 'string' ? d.title : undefined;
+    const label = typeof d.label === 'string' ? d.label : undefined;
+    const address = typeof d.address === 'string' ? d.address : undefined;
+    return (title ?? label ?? address ?? id).trim();
+  }
+
+  function coerceNumber(v: unknown): number | undefined {
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+    if (typeof v === 'string' && v.trim().length > 0) {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : undefined;
+    }
+    return undefined;
+  }
+
+  function normalizeOutputs(v: unknown): CitylensCreateRunInput['outputs'] | undefined {
+    if (!Array.isArray(v)) return undefined;
+    const allowed = ['previews', 'change', 'mesh'] as const;
+    const isAllowed = (x: unknown): x is CitylensCreateRunInput['outputs'][number] =>
+      typeof x === 'string' && (allowed as readonly string[]).includes(x);
+
+    const next = (v as unknown[]).filter(isAllowed);
+    return next.length > 0
+      ? (Array.from(new Set(next)) as CitylensCreateRunInput['outputs'])
+      : undefined;
+  }
 
   function setField<K extends keyof CitylensCreateRunInput>(
     key: K,
@@ -57,8 +121,7 @@ export function RunForm() {
 
     const apiKey = getApiKey();
     if (!apiKey) {
-      toast.error('Missing API key', { description: 'Click “API key” in the header to set it.' });
-      window.dispatchEvent(new Event('citylens_open_api_key'));
+      toast.error('Demo mode', { description: 'Set an API key to run new jobs.' });
       return;
     }
 
@@ -82,8 +145,8 @@ export function RunForm() {
       rememberRecentRun(runId);
       toast.success('Run created', { description: runId });
       router.push(`/runs/${encodeURIComponent(runId)}`);
-    } catch (err: any) {
-      const status = err?.status;
+    } catch (err: unknown) {
+      const status = err instanceof ApiError ? err.status : undefined;
       if (status === 401) {
         toast.error('Unauthorized (401)', {
           description: 'Your API key was rejected. Click “API key” in the header to replace it.',
@@ -96,7 +159,7 @@ export function RunForm() {
       } else if (err instanceof ApiError) {
         toast.error('Failed to create run', { description: err.message });
       } else {
-        toast.error('Failed to create run', { description: String(err?.message ?? err) });
+        toast.error('Failed to create run', { description: errorMessage(err) });
       }
     } finally {
       setSubmitting(false);
@@ -105,12 +168,68 @@ export function RunForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
-      {!apiKeyPresent && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <div className="font-medium">API key required</div>
-          <div className="mt-1 text-amber-800">Click “API key” in the header to add your X-API-Key.</div>
-        </div>
-      )}
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium">Featured demos</span>
+        <select
+          className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+          value={selectedDemoRunId}
+          onChange={(e) => {
+            const nextRunId = e.target.value;
+            setSelectedDemoRunId(nextRunId);
+            if (!nextRunId) return;
+
+            const chosen = featured.find((d) => demoRunId(d) === nextRunId);
+            const req: Record<string, unknown> =
+              chosen?.request && typeof chosen.request === 'object'
+                ? (chosen.request as Record<string, unknown>)
+                : {};
+
+            const nextAddress =
+              (typeof chosen?.address === 'string' ? chosen.address : undefined) ??
+              (typeof req.address === 'string' ? (req.address as string) : undefined);
+            const nextImageryYear =
+              coerceNumber(chosen?.imagery_year ?? req.imagery_year ?? req['imageryYear']) ??
+              DEFAULTS.imagery_year;
+            const nextBaselineYear =
+              coerceNumber(chosen?.baseline_year ?? req.baseline_year ?? req['baselineYear']) ??
+              DEFAULTS.baseline_year;
+            const nextBackendRaw =
+              (typeof chosen?.segmentation_backend === 'string' ? chosen.segmentation_backend : undefined) ??
+              (typeof req.segmentation_backend === 'string' ? (req.segmentation_backend as string) : undefined);
+            const nextBackend =
+              nextBackendRaw === 'unet' || nextBackendRaw === 'smp' || nextBackendRaw === 'sam2'
+                ? (nextBackendRaw as CitylensCreateRunInput['segmentation_backend'])
+                : DEFAULTS.segmentation_backend;
+
+            const nextOutputs =
+              normalizeOutputs(chosen?.outputs ?? req.outputs) ??
+              DEFAULTS.outputs;
+
+            setForm((prev) => ({
+              ...prev,
+              address: nextAddress ?? prev.address,
+              imagery_year: nextImageryYear,
+              baseline_year: nextBaselineYear,
+              segmentation_backend: nextBackend,
+              outputs: nextOutputs,
+            }));
+
+            router.push(`/runs/${encodeURIComponent(nextRunId)}?demo=1`);
+          }}
+          aria-label="Select a featured demo run"
+        >
+          <option value="">{featuredLoading ? 'Loading demos…' : 'Select a demo run…'}</option>
+          {featured
+            .map((d) => ({ d, id: demoRunId(d) }))
+            .filter((x): x is { d: DemoFeaturedRun; id: string } => Boolean(x.id))
+            .map(({ d, id }) => (
+              <option key={id} value={id}>
+                {demoLabel(d)}
+              </option>
+            ))}
+        </select>
+        {featuredError && <div className="text-xs text-rose-700">Failed to load demos: {featuredError}</div>}
+      </label>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <label className="flex flex-col gap-1 md:col-span-2">
@@ -205,7 +324,7 @@ export function RunForm() {
         >
           {submitting ? 'Creating…' : 'Create run'}
         </button>
-        {!apiKeyPresent && <div className="text-sm text-slate-600">Set your API key to submit.</div>}
+        {!apiKeyPresent && <div className="text-sm text-slate-600">Demo mode: set an API key to create runs.</div>}
       </div>
     </form>
   );
