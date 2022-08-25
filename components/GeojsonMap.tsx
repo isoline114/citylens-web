@@ -35,8 +35,8 @@ function boundsFromGeojson(fc: FeatureCollection<Geometry, GeoJsonProperties>): 
 
   for (const f of fc.features ?? []) {
     const g = f?.geometry;
-    if (!g) continue;
-    walkCoords((g as Geometry).coordinates as unknown);
+    if (!g || g.type === 'GeometryCollection') continue;
+    walkCoords(g.coordinates as unknown);
   }
 
   if (!isFinite(minLat) || !isFinite(minLng) || !isFinite(maxLat) || !isFinite(maxLng)) return null;
