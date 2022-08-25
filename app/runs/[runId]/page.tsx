@@ -63,6 +63,13 @@ export default function RunDetailPage() {
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-semibold">Run {runId}</h1>
 
+      {mode === 'demo' && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="font-medium">Demo run</div>
+          <div className="mt-1">This is a precomputed demo. Artifacts may not have download links available.</div>
+        </div>
+      )}
+
       <RunStatusCard runId={runId} run={data} error={error} loading={isLoading} />
 
       <ArtifactsPanel run={data} />
