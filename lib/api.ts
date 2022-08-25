@@ -106,6 +106,29 @@ export async function getFeaturedDemos(): Promise<DemoFeaturedRun[]> {
     const runs = obj['runs'];
     if (Array.isArray(featured)) return featured as DemoFeaturedRun[];
     if (Array.isArray(runs)) return runs as DemoFeaturedRun[];
+
+    // Flatten category-keyed objects like { "Featured": [...], "Change Detection": [...] }
+    const flat: DemoFeaturedRun[] = [];
+    for (const value of Object.values(obj)) {
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          if (item && typeof item === 'object') flat.push(item as DemoFeaturedRun);
+        }
+      }
+    }
+    if (flat.length > 0) {
+      // Deduplicate by run_id/id
+      const seen = new Set<string>();
+      const out: DemoFeaturedRun[] = [];
+      for (const d of flat) {
+        const id = (typeof d.run_id === 'string' && d.run_id) || (typeof d.id === 'string' ? d.id : undefined);
+        const key = id ?? JSON.stringify(d);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(d);
+      }
+      return out;
+    }
   }
   return [];
 }
