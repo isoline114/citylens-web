@@ -229,6 +229,9 @@ export function RunForm() {
             ))}
         </select>
         {featuredError && <div className="text-xs text-rose-700">Failed to load demos: {featuredError}</div>}
+        {!featuredError && !featuredLoading && featured.length === 0 && (
+          <div className="text-xs text-slate-600">No featured demos found. Ensure the API is serving /v1/demo/featured.</div>
+        )}
       </label>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
