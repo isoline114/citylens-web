@@ -193,14 +193,6 @@ export function RunForm() {
             const nextBaselineYear =
               coerceNumber(chosen?.baseline_year ?? req.baseline_year ?? req['baselineYear']) ??
               DEFAULTS.baseline_year;
-            const nextBackendRaw =
-              (typeof chosen?.segmentation_backend === 'string' ? chosen.segmentation_backend : undefined) ??
-              (typeof req.segmentation_backend === 'string' ? (req.segmentation_backend as string) : undefined);
-            const nextBackend =
-              nextBackendRaw === 'unet' || nextBackendRaw === 'smp' || nextBackendRaw === 'sam2'
-                ? (nextBackendRaw as CitylensCreateRunInput['segmentation_backend'])
-                : DEFAULTS.segmentation_backend;
-
             const nextOutputs =
               normalizeOutputs(chosen?.outputs ?? req.outputs) ??
               DEFAULTS.outputs;
@@ -210,7 +202,7 @@ export function RunForm() {
               address: nextAddress ?? prev.address,
               imagery_year: nextImageryYear,
               baseline_year: nextBaselineYear,
-              segmentation_backend: nextBackend,
+              segmentation_backend: 'sam2',
               outputs: nextOutputs,
             }));
 
@@ -272,20 +264,10 @@ export function RunForm() {
 
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium">Segmentation backend</span>
-          <select
-            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
-            value={form.segmentation_backend}
-            onChange={(e) =>
-              setField(
-                'segmentation_backend',
-                e.target.value as CitylensCreateRunInput['segmentation_backend'],
-              )
-            }
-          >
-            <option value="unet">unet</option>
-            <option value="smp">smp</option>
-            <option value="sam2">sam2</option>
-          </select>
+          <div className="h-10 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            SAM2 only
+          </div>
+          <div className="text-xs text-slate-500">The API contract now accepts `sam2` only.</div>
         </label>
       </div>
 

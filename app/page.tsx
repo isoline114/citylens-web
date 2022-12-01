@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Boxes, Radar, Workflow } from 'lucide-react';
 
 import { RunForm } from '@/components/RunForm';
+import { publicAssetPath } from '@/lib/site';
 
 export default function HomePage() {
   return (
@@ -10,7 +11,7 @@ export default function HomePage() {
       {/* Subtle topo texture */}
       <div
         className="pointer-events-none absolute inset-0 -z-10 opacity-[0.08]"
-        style={{ backgroundImage: 'url(/topo-grid.png)', backgroundRepeat: 'repeat' }}
+        style={{ backgroundImage: `url(${publicAssetPath('/topo-grid.png')})`, backgroundRepeat: 'repeat' }}
         aria-hidden="true"
       />
 
@@ -46,7 +47,7 @@ export default function HomePage() {
 
           <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
             <Image
-              src="/hero-citylens.png"
+              src={publicAssetPath('/hero-citylens.png')}
               alt="CityLens preview"
               width={1200}
               height={800}

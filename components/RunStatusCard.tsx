@@ -6,6 +6,33 @@ import type { RunResponse } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ApiError } from '@/lib/api';
 
+function formatRunError(error: RunResponse['error']): string | null {
+  if (!error) return null;
+  if (typeof error === 'string') {
+    const trimmed = error.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  const lines: string[] = [];
+  if (typeof error.code === 'string' && error.code.trim().length > 0) {
+    lines.push(`Code: ${error.code.trim()}`);
+  }
+  if (typeof error.stage === 'string' && error.stage.trim().length > 0) {
+    lines.push(`Stage: ${error.stage.trim()}`);
+  }
+  if (typeof error.message === 'string' && error.message.trim().length > 0) {
+    lines.push(error.message.trim());
+  }
+  if (Array.isArray(error.traceback_summary)) {
+    const joined = error.traceback_summary.filter((x): x is string => typeof x === 'string').join('\n');
+    if (joined.trim().length > 0) lines.push(joined.trim());
+  } else if (typeof error.traceback_summary === 'string' && error.traceback_summary.trim().length > 0) {
+    lines.push(error.traceback_summary.trim());
+  }
+
+  return lines.length > 0 ? lines.join('\n') : null;
+}
+
 function statusStyle(status: string) {
   const s = status.toLowerCase();
   if (s === 'succeeded') return { cls: 'bg-emerald-50 text-emerald-800 border-emerald-200', icon: CheckCircle2 };
@@ -39,7 +66,12 @@ export function RunStatusCard({
   const status = String(run?.status ?? (loading ? 'loading' : 'unknown'));
   const stage = run?.stage ? String(run.stage) : '—';
   const progressRaw = typeof run?.progress === 'number' ? run.progress : undefined;
-  const progress = progressRaw === undefined ? undefined : Math.max(0, Math.min(1, progressRaw));
+  const progress =
+    progressRaw === undefined
+      ? undefined
+      : progressRaw > 1 || progressRaw === 1
+        ? Math.max(0, Math.min(100, progressRaw))
+        : Math.max(0, Math.min(1, progressRaw)) * 100;
 
   const { cls, icon: Icon } = statusStyle(status);
 
@@ -73,10 +105,10 @@ export function RunStatusCard({
           <div className="h-2 w-full overflow-hidden rounded bg-slate-100">
             <div
               className="h-2 bg-slate-900"
-              style={{ width: `${Math.round(((progress ?? 0) * 100) * 100) / 100}%` }}
+              style={{ width: `${Math.round(progress ?? 0)}%` }}
             />
           </div>
-          <div className="text-xs text-slate-600">{progress === undefined ? '—' : `${Math.round(progress * 100)}%`}</div>
+          <div className="text-xs text-slate-600">{progress === undefined ? '—' : `${Math.round(progress)}%`}</div>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -92,7 +124,9 @@ export function RunStatusCard({
       {String(run?.status ?? '').toLowerCase() === 'failed' && (
         <div className="border-t border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
           <div className="font-medium">Run failed</div>
-          <div className="mt-1 whitespace-pre-wrap">{run?.error ? String(run.error) : 'No error message provided by API.'}</div>
+          <div className="mt-1 whitespace-pre-wrap">
+            {formatRunError(run?.error) ?? 'No error message provided by API.'}
+          </div>
         </div>
       )}
 

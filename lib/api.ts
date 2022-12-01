@@ -1,6 +1,6 @@
 import { getApiKey } from '@/lib/storage';
 import type { CitylensCreateRunPayload } from '@/lib/validation';
-import type { CreateRunResponse, RunResponse } from '@/lib/types';
+import type { CreateRunResponse, RunListItem, RunResponse, RunsListResponse } from '@/lib/types';
 
 export type DemoFeaturedRun = {
   run_id?: string;
@@ -14,6 +14,23 @@ export type DemoFeaturedRun = {
   outputs?: string[];
   request?: Record<string, unknown>;
 } & Record<string, unknown>;
+
+export type RunsQuery = {
+  limit?: number;
+  cursor?: string | null;
+};
+
+export type RunsPage = {
+  items: RunListItem[];
+  nextCursor: string | null;
+};
+
+export class ApiConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ApiConfigError';
+  }
+}
 
 export class ApiError extends Error {
   status?: number;
@@ -29,7 +46,47 @@ export class ApiError extends Error {
 
 function getBaseUrl(): string {
   const v = process.env.NEXT_PUBLIC_CITYLENS_API_BASE;
-  return (v && v.trim().length > 0 ? v : 'http://localhost:8000').replace(/\/+$/, '');
+  if (v && v.trim().length > 0) return v.replace(/\/+$/, '');
+  if (process.env.NODE_ENV === 'production') {
+    throw new ApiConfigError('NEXT_PUBLIC_CITYLENS_API_BASE is required in production.');
+  }
+  return 'http://localhost:8000';
+}
+
+function isAbsoluteUrl(value: string): boolean {
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(value);
+}
+
+export function joinApiUrl(base: string, value: string): string {
+  const raw = value.trim();
+  if (!raw) return base;
+  if (isAbsoluteUrl(raw)) return raw;
+
+  const target = new URL(base);
+  const hashIndex = raw.indexOf('#');
+  const hash = hashIndex >= 0 ? raw.slice(hashIndex + 1) : '';
+  const withoutHash = hashIndex >= 0 ? raw.slice(0, hashIndex) : raw;
+  const queryIndex = withoutHash.indexOf('?');
+  const query = queryIndex >= 0 ? withoutHash.slice(queryIndex + 1) : '';
+  const pathname = queryIndex >= 0 ? withoutHash.slice(0, queryIndex) : withoutHash;
+
+  const basePath = target.pathname.replace(/\/+$/, '');
+  const relativePath = pathname.trim();
+  const joinedPath =
+    relativePath.length === 0
+      ? basePath || '/'
+      : `${basePath}${relativePath.startsWith('/') ? relativePath : `/${relativePath}`}`.replace(/\/{2,}/g, '/');
+
+  target.pathname = joinedPath || '/';
+  target.search = query ? `?${query}` : '';
+  target.hash = hash ? `#${hash}` : '';
+  return target.toString();
+}
+
+export function resolveApiUrl(value: string | null | undefined): string | null {
+  if (!value || value.trim().length === 0) return null;
+  const raw = value.trim();
+  return isAbsoluteUrl(raw) ? raw : joinApiUrl(getBaseUrl(), raw);
 }
 
 async function requestJson<T>(
@@ -37,7 +94,7 @@ async function requestJson<T>(
   init?: RequestInit,
   opts?: { includeApiKey?: boolean },
 ): Promise<T> {
-  const url = `${getBaseUrl()}${path}`;
+  const url = joinApiUrl(getBaseUrl(), path);
   const includeApiKey = opts?.includeApiKey ?? true;
   const apiKey = includeApiKey ? getApiKey() : null;
 
@@ -70,6 +127,30 @@ async function requestJson<T>(
   return body as T;
 }
 
+function parseRunsResponse(raw: unknown): RunsPage {
+  if (Array.isArray(raw)) {
+    return { items: raw as RunListItem[], nextCursor: null };
+  }
+
+  if (raw && typeof raw === 'object') {
+    const obj = raw as RunsListResponse & Record<string, unknown>;
+    const items = obj.items ?? obj.runs;
+    if (Array.isArray(items)) {
+      return {
+        items: items as RunListItem[],
+        nextCursor:
+          typeof obj.next_cursor === 'string'
+            ? obj.next_cursor
+            : typeof obj.nextCursor === 'string'
+              ? obj.nextCursor
+              : null,
+      };
+    }
+  }
+
+  return { items: [], nextCursor: null };
+}
+
 export async function health(): Promise<unknown> {
   return requestJson('/v1/health');
 }
@@ -95,6 +176,20 @@ export async function createRun(req: CitylensCreateRunPayload): Promise<{ runId:
 
 export async function getRun(runId: string): Promise<RunResponse> {
   return requestJson<RunResponse>(`/v1/runs/${encodeURIComponent(runId)}`);
+}
+
+export async function getRuns(query?: RunsQuery): Promise<RunsPage> {
+  const params = new URLSearchParams();
+  if (typeof query?.limit === 'number' && Number.isFinite(query.limit) && query.limit > 0) {
+    params.set('limit', String(Math.floor(query.limit)));
+  }
+  if (typeof query?.cursor === 'string' && query.cursor.trim().length > 0) {
+    params.set('cursor', query.cursor.trim());
+  }
+
+  const suffix = params.toString().length > 0 ? `?${params.toString()}` : '';
+  const raw = await requestJson<unknown>(`/v1/runs${suffix}`);
+  return parseRunsResponse(raw);
 }
 
 export async function getFeaturedDemos(): Promise<DemoFeaturedRun[]> {

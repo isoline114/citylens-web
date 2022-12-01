@@ -3,7 +3,7 @@ import { z } from 'zod';
 // UI schema for creating runs.
 // Note: CitylensRequest in citylens-core includes aoi_radius_m, but the MVP UI does not expose it.
 // We inject a fixed default into the request payload internally.
-export const segmentationBackendSchema = z.enum(['unet', 'smp', 'sam2']);
+export const segmentationBackendSchema = z.literal('sam2');
 export const outputsSchema = z.array(z.enum(['previews', 'change', 'mesh'])).min(1);
 
 export const CITYLENS_DEFAULT_AOI_RADIUS_M = 250 as const;

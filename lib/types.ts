@@ -13,6 +13,13 @@ export type ArtifactRecord = {
 
 export type RunStatus = 'queued' | 'running' | 'succeeded' | 'failed' | (string & {});
 
+export type RunErrorRecord = {
+  code: string;
+  message: string;
+  stage?: string | null;
+  traceback_summary?: string | string[] | null;
+} & Record<string, unknown>;
+
 export type RunResponse = {
   run_id?: string;
   id?: string;
@@ -21,9 +28,28 @@ export type RunResponse = {
   progress?: number;
   created_at?: string;
   updated_at?: string;
-  error?: string;
+  error?: RunErrorRecord | string | null;
   request?: Record<string, unknown>;
-  artifacts?: Record<string, ArtifactRecord>;
+  artifacts?: Record<string, ArtifactRecord> | ArtifactRecord[];
+} & Record<string, unknown>;
+
+export type RunListItem = {
+  run_id?: string;
+  id?: string;
+  status?: RunStatus;
+  stage?: string;
+  progress?: number;
+  created_at?: string;
+  updated_at?: string;
+  error?: RunErrorRecord | string | null;
+  request?: Record<string, unknown>;
+} & Record<string, unknown>;
+
+export type RunsListResponse = {
+  items?: RunListItem[];
+  next_cursor?: string | null;
+  nextCursor?: string | null;
+  runs?: RunListItem[];
 } & Record<string, unknown>;
 
 export type CreateRunResponse = {

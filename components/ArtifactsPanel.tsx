@@ -1,12 +1,31 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Download, FileJson, Image as ImageIcon } from 'lucide-react';
 
 import type { RunResponse, ArtifactRecord } from '@/lib/types';
+import { resolveApiUrl } from '@/lib/api';
 import { safeJsonStringify } from '@/lib/utils';
 import { PreviewImage } from '@/components/PreviewImage';
-import { GeojsonMap } from '@/components/GeojsonMap';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { RunSummaryPanel } from '@/components/RunSummaryPanel';
+
+const GeojsonMap = dynamic(
+  () => import('@/components/GeojsonMap').then((mod) => mod.GeojsonMap),
+  {
+    ssr: false,
+    loading: () => <div className="text-sm text-slate-600">Loading change.geojson viewer…</div>,
+  },
+);
+
+const MeshViewer = dynamic(
+  () => import('@/components/MeshViewer').then((mod) => mod.MeshViewer),
+  {
+    ssr: false,
+    loading: () => <div className="text-sm text-slate-600">Loading mesh viewer…</div>,
+  },
+);
 
 const EXPECTED = ['preview.png', 'change.geojson', 'mesh.ply', 'run_summary.json'] as const;
 
@@ -16,14 +35,32 @@ function isExpectedArtifactName(v: string): v is ExpectedArtifactName {
   return (EXPECTED as readonly string[]).includes(v);
 }
 
-function pickUrl(a?: ArtifactRecord): string | null {
-  if (!a) return null;
+type ArtifactUrlResult = {
+  url: string | null;
+  error: string | null;
+};
+
+function pickUrl(a?: ArtifactRecord): ArtifactUrlResult {
+  if (!a) return { url: null, error: null };
   const u = (a.signed_url ?? a.url) as string | undefined;
-  return u && u.trim().length > 0 ? u : null;
+  try {
+    return { url: resolveApiUrl(u), error: null };
+  } catch (e: unknown) {
+    return { url: null, error: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 function normalizeArtifacts(run?: RunResponse): Record<ExpectedArtifactName, ArtifactRecord | undefined> {
-  const map = (run?.artifacts ?? {}) as Record<string, ArtifactRecord>;
+  const rawArtifacts = run?.artifacts;
+  const map = (
+    Array.isArray(rawArtifacts)
+      ? Object.fromEntries(
+          rawArtifacts
+            .filter((artifact): artifact is ArtifactRecord => Boolean(artifact))
+            .map((artifact, index) => [String(index), artifact]),
+        )
+      : (rawArtifacts ?? {})
+  ) as Record<string, ArtifactRecord>;
 
   const direct = {
     'preview.png': map['preview.png'],
@@ -52,13 +89,27 @@ function normalizeArtifacts(run?: RunResponse): Record<ExpectedArtifactName, Art
 
 export function ArtifactsPanel({ run }: { run?: RunResponse }) {
   const artifacts = useMemo(() => normalizeArtifacts(run), [run]);
-  const previewUrl = pickUrl(artifacts['preview.png']);
-  const changeUrl = pickUrl(artifacts['change.geojson']);
-  const meshUrl = pickUrl(artifacts['mesh.ply']);
-  const summaryUrl = pickUrl(artifacts['run_summary.json']);
+  const preview = pickUrl(artifacts['preview.png']);
+  const change = pickUrl(artifacts['change.geojson']);
+  const mesh = pickUrl(artifacts['mesh.ply']);
+  const summary = pickUrl(artifacts['run_summary.json']);
+  const previewUrl = preview.url;
+  const changeUrl = change.url;
+  const meshUrl = mesh.url;
+  const summaryUrl = summary.url;
+  const artifactConfigError = preview.error ?? change.error ?? mesh.error ?? summary.error ?? null;
 
   const [summaryText, setSummaryText] = useState<string | null>(null);
+  const [summaryData, setSummaryData] = useState<Record<string, unknown> | null>(null);
   const [summaryErr, setSummaryErr] = useState<string | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
+  useEffect(() => {
+    setSummaryText(null);
+    setSummaryData(null);
+    setSummaryErr(null);
+    setSummaryLoading(false);
+  }, [summaryUrl, run?.run_id]);
 
   function errorMessage(e: unknown): string {
     return e instanceof Error ? e.message : String(e);
@@ -66,14 +117,17 @@ export function ArtifactsPanel({ run }: { run?: RunResponse }) {
 
   async function loadSummary() {
     if (!summaryUrl) return;
+    setSummaryLoading(true);
     setSummaryErr(null);
     setSummaryText(null);
+    setSummaryData(null);
     try {
       const res = await fetch(summaryUrl);
       if (!res.ok) throw new Error(`run_summary.json fetch failed (${res.status})`);
       const ct = res.headers.get('content-type') ?? '';
       if (ct.includes('application/json')) {
         const json = await res.json();
+        setSummaryData((json && typeof json === 'object' ? (json as Record<string, unknown>) : null) ?? null);
         setSummaryText(safeJsonStringify(json, 2));
       } else {
         const txt = await res.text();
@@ -81,6 +135,8 @@ export function ArtifactsPanel({ run }: { run?: RunResponse }) {
       }
     } catch (e: unknown) {
       setSummaryErr(errorMessage(e));
+    } finally {
+      setSummaryLoading(false);
     }
   }
 
@@ -94,22 +150,29 @@ export function ArtifactsPanel({ run }: { run?: RunResponse }) {
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white">
+    <div className="rounded-lg border border-slate-200 bg-white" data-testid="artifacts-panel">
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
         <div className="text-sm font-medium">Artifacts</div>
         <div className="text-xs text-slate-600">Expected: {EXPECTED.join(', ')}</div>
       </div>
 
       <div className="flex flex-col gap-4 p-4">
+        {artifactConfigError && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Frontend config error: {artifactConfigError}
+          </div>
+        )}
+
         {/* Preview */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2" data-testid="artifact-preview">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-medium">
+            <div className="flex items-center gap-2 text-sm font-medium" data-testid="artifact-preview-name">
               <ImageIcon className="h-4 w-4" /> preview.png
             </div>
             {previewUrl && (
               <a
                 className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50"
+                data-testid="artifact-preview-download"
                 href={previewUrl}
                 target="_blank"
                 rel="noreferrer"
@@ -119,21 +182,24 @@ export function ArtifactsPanel({ run }: { run?: RunResponse }) {
             )}
           </div>
           {previewUrl ? (
-            <PreviewImage src={previewUrl} alt="preview.png" />
+            <ErrorBoundary title="preview.png" message="The preview image could not be rendered.">
+              <PreviewImage src={previewUrl} alt="preview.png" />
+            </ErrorBoundary>
           ) : (
-            <div className="text-sm text-slate-600">No signed_url available for preview.png yet.</div>
+            <div className="text-sm text-slate-600">No artifact URL available for preview.png yet.</div>
           )}
         </div>
 
         {/* GeoJSON */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2" data-testid="artifact-change">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-medium">
+            <div className="flex items-center gap-2 text-sm font-medium" data-testid="artifact-change-name">
               <FileJson className="h-4 w-4" /> change.geojson
             </div>
             {changeUrl && (
               <a
                 className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50"
+                data-testid="artifact-change-download"
                 href={changeUrl}
                 target="_blank"
                 rel="noreferrer"
@@ -143,72 +209,59 @@ export function ArtifactsPanel({ run }: { run?: RunResponse }) {
             )}
           </div>
           {changeUrl ? (
-            <GeojsonMap url={changeUrl} />
+            <ErrorBoundary title="change.geojson" message="The change map could not be rendered.">
+              <GeojsonMap url={changeUrl} />
+            </ErrorBoundary>
           ) : (
-            <div className="text-sm text-slate-600">No signed_url available for change.geojson yet.</div>
+            <div className="text-sm text-slate-600">No artifact URL available for change.geojson yet.</div>
           )}
         </div>
 
         {/* Mesh */}
-        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-          <div className="text-sm font-medium">mesh.ply</div>
-          {meshUrl ? (
-            <a
-              className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50"
-              href={meshUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Download className="h-4 w-4" /> Download
-            </a>
-          ) : (
-            <div className="text-sm text-slate-600">No signed_url available yet.</div>
-          )}
-        </div>
-
-        {/* Summary */}
-        <div className="rounded-lg border border-slate-200 bg-white">
-          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-            <div className="text-sm font-medium">run_summary.json</div>
-            <div className="flex items-center gap-2">
-              {summaryUrl && (
-                <a
-                  className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50"
-                  href={summaryUrl}
-                  target="_blank"
-                  rel="noreferrer"
+        {meshUrl ? (
+          <div className="flex flex-col gap-2" data-testid="artifact-mesh">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-medium" data-testid="artifact-mesh-name">
+                <Download className="h-4 w-4" /> mesh.ply
+                <span
+                  className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-700"
+                  data-testid="mesh-status"
                 >
-                  <Download className="h-4 w-4" /> Download
-                </a>
-              )}
-              {summaryUrl && (
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
-                  onClick={loadSummary}
-                >
-                  Load
-                </button>
-              )}
+                  Ready
+                </span>
+              </div>
+              <a
+                className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50"
+                data-testid="artifact-mesh-download"
+                href={meshUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <Download className="h-4 w-4" /> Download
+              </a>
             </div>
+            <ErrorBoundary
+              title="mesh.ply"
+              message="The mesh viewer could not be rendered. Download the file to inspect it locally."
+              testId="mesh-boundary-error"
+            >
+              <MeshViewer url={meshUrl} />
+            </ErrorBoundary>
           </div>
-          <div className="p-4">
-            {!summaryUrl ? (
-              <div className="text-sm text-slate-600">No signed_url available for run_summary.json yet.</div>
-            ) : summaryErr ? (
-              <div className="text-sm text-rose-700">{summaryErr}</div>
-            ) : summaryText ? (
-              <details open>
-                <summary className="cursor-pointer text-sm font-medium text-slate-900">View JSON</summary>
-                <pre className="mt-3 max-h-96 overflow-auto rounded-md bg-slate-950 p-3 text-xs text-slate-100">
-                  {summaryText}
-                </pre>
-              </details>
-            ) : (
-              <div className="text-sm text-slate-600">Click Load to view formatted JSON.</div>
-            )}
+        ) : (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            No artifact URL available for mesh.ply yet.
           </div>
-        </div>
+        )}
+
+        <RunSummaryPanel
+          summaryUrl={summaryUrl}
+          summary={summaryData}
+          rawText={summaryText}
+          loading={summaryLoading}
+          error={summaryErr}
+          onLoad={loadSummary}
+        />
       </div>
     </div>
   );
