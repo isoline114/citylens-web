@@ -144,6 +144,13 @@ export function RunStatusCard({
         </div>
       )}
 
+      {apiErr && apiErr.status !== 401 && apiErr.status !== 429 && (
+        <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
+          <div className="font-medium">Error loading run</div>
+          <div className="mt-1 whitespace-pre-wrap">{errorMessage}</div>
+        </div>
+      )}
+
       {Boolean(error) && !apiErr && (
         <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
           <div className="font-medium">Error loading run</div>

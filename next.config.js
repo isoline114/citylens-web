@@ -9,13 +9,25 @@ const basePath = normalizeSiteBasePath(process.env.NEXT_PUBLIC_SITE_BASE_PATH);
 const apiBase = String(process.env.NEXT_PUBLIC_CITYLENS_API_BASE ?? '').trim();
 
 if (process.env.NODE_ENV === 'production' && !apiBase) {
-  throw new Error('NEXT_PUBLIC_CITYLENS_API_BASE is required in production builds.');
+  console.warn(
+    'NEXT_PUBLIC_CITYLENS_API_BASE is not set. API calls will use same-origin requests ' +
+    '(requires a reverse proxy or Next.js rewrites to forward /v1/* to the API backend).',
+  );
 }
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   basePath,
+  async rewrites() {
+    if (!apiBase) return [];
+    return [
+      {
+        source: '/v1/:path*',
+        destination: `${apiBase}/v1/:path*`,
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

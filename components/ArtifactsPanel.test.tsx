@@ -132,7 +132,7 @@ describe('ArtifactsPanel', () => {
     expect(screen.getByText('No artifact URL available for mesh.ply yet.')).toBeInTheDocument();
   });
 
-  it('shows a clear config error for relative artifact URLs in production without an API base', () => {
+  it('resolves relative artifact URLs via same-origin in production without an API base', () => {
     vi.stubEnv('NODE_ENV', 'production');
     delete process.env.NEXT_PUBLIC_CITYLENS_API_BASE;
 
@@ -147,8 +147,7 @@ describe('ArtifactsPanel', () => {
       />,
     );
 
-    expect(screen.getByText(/Frontend config error:/)).toHaveTextContent(
-      'NEXT_PUBLIC_CITYLENS_API_BASE is required in production.',
-    );
+    expect(screen.queryByText(/Frontend config error:/)).not.toBeInTheDocument();
+    expect(screen.getByTestId('artifact-preview-name')).toHaveTextContent('preview.png');
   });
 });

@@ -47,9 +47,7 @@ export class ApiError extends Error {
 function getBaseUrl(): string {
   const v = process.env.NEXT_PUBLIC_CITYLENS_API_BASE;
   if (v && v.trim().length > 0) return v.replace(/\/+$/, '');
-  if (process.env.NODE_ENV === 'production') {
-    throw new ApiConfigError('NEXT_PUBLIC_CITYLENS_API_BASE is required in production.');
-  }
+  if (process.env.NODE_ENV === 'production') return '';
   return 'http://localhost:8000';
 }
 
@@ -59,8 +57,13 @@ function isAbsoluteUrl(value: string): boolean {
 
 export function joinApiUrl(base: string, value: string): string {
   const raw = value.trim();
-  if (!raw) return base;
+  if (!raw) return base || '/';
   if (isAbsoluteUrl(raw)) return raw;
+
+  if (!base) {
+    return raw.startsWith('/') ? raw : `/${raw}`;
+  }
+
 
   const target = new URL(base);
   const hashIndex = raw.indexOf('#');

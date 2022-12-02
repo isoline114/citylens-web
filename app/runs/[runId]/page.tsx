@@ -46,14 +46,10 @@ export default function RunDetailPage() {
         if (status === 'queued' || status === 'running') return 2500;
         return 0;
       },
+      errorRetryCount: 3,
       shouldRetryOnError: (err: unknown) => {
         const status = err instanceof ApiError ? err.status : undefined;
-        if (status === 401) return false;
-        if (status === 429) return false;
-        if (status === 404 && mode === 'demo' && apiKeyPresent) {
-          // If demo endpoint 404s but we have an API key, retry once in live mode on next key change.
-          setApiKeyPresent(Boolean(getApiKey()));
-        }
+        if (status === 401 || status === 403 || status === 404 || status === 429) return false;
         return true;
       },
     },

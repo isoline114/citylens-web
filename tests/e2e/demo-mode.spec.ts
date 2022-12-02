@@ -144,3 +144,29 @@ end_header
   await expect(page.getByText('Added: 1')).toBeVisible();
   await expect(page.getByText('Removed: 1')).toBeVisible();
 });
+
+test('shows error message instead of infinite loading when demo API is unreachable', async ({ page }) => {
+  await page.route('**/v1/demo/featured', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ Featured: [{ run_id: 'demo-fail', label: 'Fail demo', address: 'Addr', imagery_year: 2024, baseline_year: 2017, segmentation_backend: 'sam2', outputs: [] }] }),
+    });
+  });
+
+  await page.route('**/v1/demo/runs/demo-fail', async (route) => {
+    await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ detail: 'Run not found' }) });
+  });
+
+  await page.goto('/runs/demo-fail?demo=1');
+  await expect(page.getByText('Demo run')).toBeVisible();
+  await expect(page.getByText('Error loading run')).toBeVisible({ timeout: 15000 });
+});
+
+test('homepage shows error text when /v1/demo/featured returns 404', async ({ page }) => {
+  await page.route('**/v1/demo/featured', async (route) => {
+    await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ detail: 'Not Found' }) });
+  });
+
+  await page.goto('/');
+  await expect(page.getByText(/Failed to load demos/i)).toBeVisible({ timeout: 10000 });
+});
