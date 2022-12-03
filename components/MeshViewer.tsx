@@ -128,7 +128,8 @@ export function MeshViewer({ url }: { url: string }) {
     };
   }, [url]);
 
-  const status = loading ? 'Loading' : error ? 'Error' : mesh ? 'Ready' : 'Unavailable';
+  const isEmptyMesh = mesh !== null && mesh.vertices.length === 0;
+  const status = loading ? 'Loading' : error ? 'Error' : isEmptyMesh ? 'Empty' : mesh ? 'Ready' : 'Unavailable';
 
   const statusBody = useMemo(() => {
     if (loading) {
@@ -139,6 +140,18 @@ export function MeshViewer({ url }: { url: string }) {
         >
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Loading mesh…
+        </div>
+      );
+    }
+
+    if (isEmptyMesh) {
+      return (
+        <div
+          className="flex h-48 items-center justify-center border border-slate-200 bg-slate-50 px-4 text-sm text-slate-600"
+          data-testid="mesh-empty"
+        >
+          <AlertTriangle className="mr-2 h-4 w-4" />
+          Mesh is empty (0 vertices). This demo run produced placeholder data.
         </div>
       );
     }
@@ -192,7 +205,7 @@ export function MeshViewer({ url }: { url: string }) {
         <MeshScene mesh={mesh} />
       </ErrorBoundary>
     );
-  }, [error, loading, mesh, url]);
+  }, [error, loading, mesh, url, isEmptyMesh]);
 
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white" data-testid="mesh-viewer">

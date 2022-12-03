@@ -51,7 +51,8 @@ export function parseAsciiPly(text: string): PlyMesh | null {
     }
   }
 
-  if (!isAscii || headerEnd < 0 || vertexCount <= 0 || faceCount < 0) return null;
+  if (!isAscii || headerEnd < 0 || vertexCount < 0 || faceCount < 0) return null;
+  if (vertexCount === 0) return { vertices: [], faces: [] };
 
   const vertices: PlyVertex[] = [];
   const vertexLines = lines.slice(headerEnd + 1, headerEnd + 1 + vertexCount);
