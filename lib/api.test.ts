@@ -76,6 +76,15 @@ describe('api client', () => {
     );
   });
 
+  it('uses same-origin relative URLs in production even when NEXT_PUBLIC_CITYLENS_API_BASE is set', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    process.env.NEXT_PUBLIC_CITYLENS_API_BASE = 'https://api.citylens.dev';
+
+    expect(resolveApiUrl('/v1/demo/artifacts/demo-1/preview.png')).toBe(
+      '/v1/demo/artifacts/demo-1/preview.png',
+    );
+  });
+
   it('uses same-origin relative URLs in production when NEXT_PUBLIC_CITYLENS_API_BASE is not set', () => {
     vi.stubEnv('NODE_ENV', 'production');
     delete process.env.NEXT_PUBLIC_CITYLENS_API_BASE;

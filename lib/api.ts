@@ -45,9 +45,9 @@ export class ApiError extends Error {
 }
 
 function getBaseUrl(): string {
+  if (process.env.NODE_ENV === 'production') return '';
   const v = process.env.NEXT_PUBLIC_CITYLENS_API_BASE;
   if (v && v.trim().length > 0) return v.replace(/\/+$/, '');
-  if (process.env.NODE_ENV === 'production') return '';
   return 'http://localhost:8000';
 }
 
