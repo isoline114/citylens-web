@@ -1,21 +1,51 @@
 import type { FeatureCollection, GeoJsonProperties, Geometry } from 'geojson';
 
 export type GeojsonCoordinateSpace = 'pixel' | 'geographic' | 'unknown';
-export type ChangeKind = 'added' | 'removed' | 'other';
+export type ChangeKind = 'added' | 'removed' | 'modified' | 'unchanged' | 'other';
+
+/**
+ * Read the change classification from a feature's properties.
+ *
+ * The citylens-core pipeline emits the RFC-compliant `change_type` field with
+ * one of `added`, `demolished`, `modified`, or `unchanged`. Older fixtures
+ * (and some legacy callers) instead used `kind` with `added` / `removed`.
+ * This helper reads either, normalises to lower-case, and maps `demolished`
+ * to `removed` so the legacy two-bucket UI path keeps working.
+ */
+export function normalizeChangeKind(
+  props: GeoJsonProperties | null | undefined,
+): ChangeKind {
+  if (!props || typeof props !== 'object') return 'other';
+  const record = props as Record<string, unknown>;
+  const raw =
+    typeof record.change_type === 'string'
+      ? record.change_type
+      : typeof record.kind === 'string'
+        ? record.kind
+        : null;
+  if (!raw) return 'other';
+  const value = raw.toLowerCase();
+  if (value === 'demolished' || value === 'removed') return 'removed';
+  if (value === 'added') return 'added';
+  if (value === 'modified') return 'modified';
+  if (value === 'unchanged') return 'unchanged';
+  return 'other';
+}
 
 export function getGeojsonChangeKindCounts(
   fc: FeatureCollection<Geometry, GeoJsonProperties> | null | undefined,
 ): Record<ChangeKind, number> {
-  const counts: Record<ChangeKind, number> = { added: 0, removed: 0, other: 0 };
+  const counts: Record<ChangeKind, number> = {
+    added: 0,
+    removed: 0,
+    modified: 0,
+    unchanged: 0,
+    other: 0,
+  };
   if (!fc || !Array.isArray(fc.features)) return counts;
   for (const feature of fc.features) {
-    const props = feature?.properties;
-    const kind =
-      props && typeof props === 'object' && typeof (props as Record<string, unknown>).kind === 'string'
-        ? String((props as Record<string, unknown>).kind).toLowerCase()
-        : 'other';
-    if (kind === 'added' || kind === 'removed') counts[kind] += 1;
-    else counts.other += 1;
+    const kind = normalizeChangeKind(feature?.properties);
+    counts[kind] += 1;
   }
   return counts;
 }

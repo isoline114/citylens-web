@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
 import type { Feature, FeatureCollection, Geometry, GeoJsonProperties, GeoJsonObject } from 'geojson';
-import { boundsFromGeojson, getGeojsonChangeKindCounts, getGeojsonCoordinateSpace } from '@/lib/geojson';
+import {
+  boundsFromGeojson,
+  getGeojsonChangeKindCounts,
+  getGeojsonCoordinateSpace,
+  normalizeChangeKind,
+} from '@/lib/geojson';
 
 type LatLng = [number, number];
 
@@ -50,13 +55,19 @@ export function GeojsonMap({ url }: { url: string }) {
   );
 
   function styleForFeature(feature: Feature | undefined) {
-    const props = feature?.properties as Record<string, unknown> | null | undefined;
-    const kind = props && typeof props.kind === 'string' ? props.kind.toLowerCase() : 'other';
+    const kind = normalizeChangeKind(feature?.properties);
     if (kind === 'removed') {
-      return { color: '#e11d48', weight: 2, fillColor: '#fb7185', fillOpacity: 0.25 };
+      // demolished / removed
+      return { color: '#dc1e1e', weight: 2, fillColor: '#dc1e1e', fillOpacity: 0.3 };
     }
     if (kind === 'added') {
-      return { color: '#15803d', weight: 2, fillColor: '#4ade80', fillOpacity: 0.25 };
+      return { color: '#00c83c', weight: 2, fillColor: '#00c83c', fillOpacity: 0.3 };
+    }
+    if (kind === 'modified') {
+      return { color: '#ffc800', weight: 2, fillColor: '#ffc800', fillOpacity: 0.3 };
+    }
+    if (kind === 'unchanged') {
+      return { color: '#8c8c8c', weight: 2, fillColor: '#8c8c8c', fillOpacity: 0.2 };
     }
     return { color: '#334155', weight: 2, fillColor: '#cbd5e1', fillOpacity: 0.2 };
   }
@@ -78,14 +89,22 @@ export function GeojsonMap({ url }: { url: string }) {
           <div className="p-4 text-sm text-slate-600">No mappable geometry found in GeoJSON.</div>
         ) : (
           <div className="flex h-full flex-col">
-            <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-2 text-xs text-slate-600">
-              <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-800">
-                <span className="h-2 w-2 rounded-full bg-emerald-600" />
+            <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-2 text-xs text-slate-700">
+              <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-2.5 py-1">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#00c83c' }} />
                 Added: {kindCounts.added}
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-2.5 py-1 text-rose-800">
-                <span className="h-2 w-2 rounded-full bg-rose-600" />
-                Removed: {kindCounts.removed}
+              <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-2.5 py-1">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#dc1e1e' }} />
+                Demolished: {kindCounts.removed}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-2.5 py-1">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#ffc800' }} />
+                Modified: {kindCounts.modified}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-2.5 py-1">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#8c8c8c' }} />
+                Unchanged: {kindCounts.unchanged}
               </span>
             </div>
             <div className="min-h-0 flex-1">
