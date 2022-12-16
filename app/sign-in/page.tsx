@@ -130,9 +130,19 @@ export default function SignInPage() {
       </form>
 
       {IS_NEON && (
-        <p className="text-slate-500 text-sm">
-          Need an account? <Link href="/sign-up" className="font-medium text-slate-900 hover:underline">Sign up</Link>
-        </p>
+        <div className="flex flex-col gap-1 text-sm text-slate-500">
+          <p>
+            Need an account?{' '}
+            <Link href="/sign-up" className="font-medium text-slate-900 hover:underline">
+              Sign up
+            </Link>
+          </p>
+          <p>
+            <Link href="/forgot-password" className="font-medium text-slate-900 hover:underline">
+              Forgot password?
+            </Link>
+          </p>
+        </div>
       )}
       {!IS_NEON && (
         <p className="text-slate-500 text-xs">
