@@ -62,7 +62,16 @@ export default function SignInPage() {
                 }
               ).signIn.email({ email: trimmedEmail, password });
               if (result?.error) {
-                setError(result.error.message ?? 'Sign in failed. Check your email and password.');
+                const msg = result.error.message ?? '';
+                const code = (result.error as { code?: string })?.code ?? '';
+                const looksLikeVerificationGate =
+                  /not verified|verify your email|email.*verif/i.test(msg) ||
+                  code === 'EMAIL_NOT_VERIFIED';
+                if (looksLikeVerificationGate) {
+                  router.push(`/verify-email?email=${encodeURIComponent(trimmedEmail)}`);
+                  return;
+                }
+                setError(msg || 'Sign in failed. Check your email and password.');
                 return;
               }
               router.push('/');

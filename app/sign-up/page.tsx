@@ -59,7 +59,10 @@ export default function SignUpPage() {
               setError(result.error.message ?? 'Sign up failed. Try again.');
               return;
             }
-            router.push('/');
+            // Account created. Whether or not email verification is required
+            // for sign-in, route to /verify-email so the user knows where to
+            // enter the code that was just emailed.
+            router.push(`/verify-email?email=${encodeURIComponent(trimmedEmail)}`);
           } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Sign up failed.');
           } finally {
