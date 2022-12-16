@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -24,6 +24,14 @@ type VerifyEmailClient = {
 const otpClient = neonAuthClient as unknown as VerifyEmailClient;
 
 export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div className="text-sm text-slate-600">Loading…</div>}>
+      <VerifyEmailInner />
+    </Suspense>
+  );
+}
+
+function VerifyEmailInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialEmail = useMemo(() => searchParams.get('email') ?? '', [searchParams]);
