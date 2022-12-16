@@ -54,23 +54,21 @@ export function NeonAuthProvider({ children }: { children: ReactNode }) {
       return cached.token;
     }
 
-    // Better Auth's JWT plugin exposes a /api/auth/token endpoint that returns
-    // a short-lived JWT signed with the JWKS at /api/auth/jwks. Both must be
-    // enabled in the Neon Auth project for cross-service Bearer auth to work.
+    // Better Auth's JWT plugin exposes a /api/auth/token endpoint that
+    // returns { token: "..." }. Verifiers fetch JWKS from
+    // /api/auth/.well-known/jwks.json (standard OIDC location). Both must
+    // be enabled in the Neon Auth / Better Auth config for cross-service
+    // Bearer auth to work.
     try {
       const res = await fetch('/api/auth/token', {
         method: 'GET',
         credentials: 'include',
       });
       if (!res.ok) return null;
-      const body = (await res.json()) as { token?: string; expiresAt?: string | number } | null;
+      const body = (await res.json()) as { token?: string } | null;
       const token = body?.token;
       if (typeof token !== 'string' || token.length === 0) return null;
-      const expiresAt =
-        typeof body?.expiresAt === 'number'
-          ? body.expiresAt * (body.expiresAt < 1e12 ? 1000 : 1)
-          : Date.parse(String(body?.expiresAt ?? '')) || now + 60_000;
-      cachedJwt.current = { token, expiresAt };
+      cachedJwt.current = { token, expiresAt: extractJwtExpMs(token) ?? now + 60_000 };
       return token;
     } catch {
       return null;
@@ -105,3 +103,19 @@ export function useNeonAuth(): AuthContextValue {
 }
 
 export { authClient as neonAuthClient };
+
+function extractJwtExpMs(token: string): number | null {
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4);
+    const decoded =
+      typeof atob === 'function' ? atob(padded) : Buffer.from(padded, 'base64').toString('utf-8');
+    const parsed = JSON.parse(decoded) as { exp?: number };
+    if (typeof parsed?.exp === 'number') return parsed.exp * 1000;
+  } catch {
+    // fall through
+  }
+  return null;
+}
