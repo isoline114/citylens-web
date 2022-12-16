@@ -1,18 +1,61 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => ({
+  fetchFeaturedDemosOnServer: vi.fn(),
+}));
 
 vi.mock('@/components/RunForm', () => ({
   RunForm: () => <div data-testid="run-form">Run form</div>,
 }));
 
+vi.mock('@/lib/api.server', () => ({
+  fetchFeaturedDemosOnServer: mocks.fetchFeaturedDemosOnServer,
+}));
+
 import HomePage from './page';
 
-describe('HomePage smoke test', () => {
-  it('renders the main landing content', () => {
-    render(<HomePage />);
+beforeEach(() => {
+  mocks.fetchFeaturedDemosOnServer.mockReset();
+});
 
-    expect(screen.getByText(/Urban change detection and 3D reconstruction/i)).toBeInTheDocument();
+describe('HomePage', () => {
+  it('renders the new outcome-oriented hero copy', async () => {
+    mocks.fetchFeaturedDemosOnServer.mockResolvedValueOnce([
+      { run_id: 'demo-1', label: 'Brooklyn brownstones', address: '100 E 21st St' },
+      { run_id: 'demo-2', label: 'Hudson Yards' },
+    ]);
+
+    // HomePage is an async Server Component; resolve its element tree first.
+    const tree = await HomePage();
+    render(tree);
+
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: /Detect urban change and generate geospatial & 3D artifacts/i,
+      }),
+    ).toBeInTheDocument();
+
+    expect(screen.getByRole('link', { name: /view featured demo/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Create a run' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /read api docs/i })).toBeInTheDocument();
+
+    expect(screen.getByText(/Free account: 5 runs\/month/i)).toBeInTheDocument();
+
+    const demoCards = screen.getAllByTestId('featured-demo-card');
+    expect(demoCards.length).toBeGreaterThan(0);
+
     expect(screen.getByTestId('run-form')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View runs' })).toBeInTheDocument();
+  });
+
+  it('omits the "View featured demo" CTA gracefully when no demos load', async () => {
+    mocks.fetchFeaturedDemosOnServer.mockResolvedValueOnce([]);
+
+    const tree = await HomePage();
+    render(tree);
+
+    expect(screen.queryByRole('link', { name: /view featured demo/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/no featured demos found/i)).not.toBeInTheDocument();
   });
 });

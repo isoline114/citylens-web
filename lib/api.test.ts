@@ -106,6 +106,39 @@ describe('api client', () => {
   });
 });
 
+describe('parseFeaturedDemosResponse', () => {
+  it('passes through a top-level array', async () => {
+    const { parseFeaturedDemosResponse } = await import('@/lib/api');
+    const out = parseFeaturedDemosResponse([{ run_id: 'a' }]);
+    expect(out).toEqual([{ run_id: 'a' }]);
+  });
+
+  it('unwraps {featured: []} and {runs: []} variants', async () => {
+    const { parseFeaturedDemosResponse } = await import('@/lib/api');
+    expect(parseFeaturedDemosResponse({ featured: [{ run_id: 'a' }] })).toEqual([{ run_id: 'a' }]);
+    expect(parseFeaturedDemosResponse({ runs: [{ run_id: 'b' }] })).toEqual([{ run_id: 'b' }]);
+  });
+
+  it('flattens category-keyed objects and dedupes by id', async () => {
+    const { parseFeaturedDemosResponse } = await import('@/lib/api');
+    const raw = {
+      Featured: [{ run_id: 'a', label: 'A' }, { run_id: 'b', label: 'B' }],
+      'Change Detection': [{ run_id: 'a', label: 'A-dup' }, { run_id: 'c', label: 'C' }],
+    };
+    const out = parseFeaturedDemosResponse(raw);
+    expect(out.map((d) => d.run_id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('returns [] for unrecognized shapes (and never throws)', async () => {
+    const { parseFeaturedDemosResponse } = await import('@/lib/api');
+    expect(parseFeaturedDemosResponse(null)).toEqual([]);
+    expect(parseFeaturedDemosResponse(undefined)).toEqual([]);
+    expect(parseFeaturedDemosResponse(42)).toEqual([]);
+    expect(parseFeaturedDemosResponse('hello')).toEqual([]);
+    expect(parseFeaturedDemosResponse({})).toEqual([]);
+  });
+});
+
 describe('demo fetches do not send Authorization', () => {
   beforeEach(() => {
     setAuthTokenGetter(async () => 'tok-abc');

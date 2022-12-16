@@ -16,7 +16,6 @@ export default function RunsPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [source, setSource] = useState<'server' | 'local'>('local');
 
   const signedIn = auth.status === 'authenticated';
 
@@ -29,7 +28,6 @@ export default function RunsPage() {
 
     async function load() {
       if (!signedIn) {
-        setSource('local');
         setServerRuns([]);
         setNextCursor(null);
         setServerError(null);
@@ -43,13 +41,11 @@ export default function RunsPage() {
         setServerRuns(page.items);
         setNextCursor(page.nextCursor);
         setServerError(null);
-        setSource('server');
       } catch (e: unknown) {
         if (cancelled) return;
         setServerRuns([]);
         setNextCursor(null);
         setServerError(e instanceof Error ? e.message : String(e));
-        setSource('local');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -74,7 +70,6 @@ export default function RunsPage() {
       setServerRuns((prev) => [...prev, ...page.items]);
       setNextCursor(page.nextCursor);
       setServerError(null);
-      setSource('server');
     } catch (e: unknown) {
       setServerError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -82,33 +77,114 @@ export default function RunsPage() {
     }
   }
 
+  // Signed-out: lead with the product story (sign in / featured demos),
+  // not with browser-local history. Local history stays as a quiet
+  // fallback below for dev/test convenience.
+  if (!signedIn) {
+    return (
+      <div className="flex flex-col gap-6">
+        <header className="flex flex-col gap-2">
+          <h1 className="text-2xl font-semibold">Your runs</h1>
+          <p className="text-sm text-slate-600">
+            Sign in to view runs from your account. Public demo runs are available without sign-in.
+            Account runs are private to you.
+          </p>
+        </header>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-6">
+          <h2 className="text-lg font-semibold">Sign in to view your runs</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            CityLens runs are tied to a free account. Free plan includes 5 runs per month.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Link
+              href="/sign-in"
+              className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/sign-up"
+              className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 hover:bg-slate-50"
+            >
+              Create a free account
+            </Link>
+            <Link
+              href="/#featured-demos"
+              className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 hover:bg-slate-50"
+            >
+              View featured demos
+            </Link>
+          </div>
+        </section>
+
+        {localRuns.length > 0 && (
+          <details className="rounded-2xl border border-slate-200 bg-white p-4">
+            <summary className="cursor-pointer text-sm font-medium text-slate-900">
+              Browser-local run history ({localRuns.length})
+            </summary>
+            <p className="mt-2 text-xs text-slate-500">
+              Cached run IDs from this browser. Useful for re-opening a run by ID. Sign in to see
+              your full server-side history.
+            </p>
+            <ul className="mt-3 divide-y divide-slate-200">
+              {localRuns.map((r) => (
+                <li key={r.runId} className="flex items-center justify-between py-2">
+                  <Link
+                    href={`/runs/${encodeURIComponent(r.runId)}`}
+                    className="text-sm font-medium text-slate-900 hover:underline"
+                  >
+                    {r.runId}
+                  </Link>
+                  <div className="text-xs text-slate-500">
+                    {r.lastKnownStatus ? `status: ${r.lastKnownStatus}` : 'status: unknown'}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </div>
+    );
+  }
+
+  // Signed-in: server history is the primary product surface.
+  const isEmpty = serverRuns.length === 0 && !loading;
+
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Runs</h1>
-      <p className="text-sm text-slate-600">
-        {source === 'server'
-          ? 'Showing server-backed run history. Local browser history is appended if it is not already on the server.'
-          : 'Showing browser-local run history. Sign in to load your full server history.'}
-      </p>
-      {serverError && signedIn && (
+      <h1 className="text-2xl font-semibold">Your runs</h1>
+
+      {serverError && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Falling back to local browser history because the server list could not be loaded: {serverError}
+          Could not load your run history: {serverError}. Showing browser-local fallback below.
         </div>
       )}
 
       <div className="rounded-lg border border-slate-200 bg-white">
         <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 text-sm font-medium">
-          <div>Recent run IDs</div>
+          <div>Run history</div>
           {loading && <div className="text-xs text-slate-500">Loading…</div>}
         </div>
         <div className="p-4">
-          {rows.length === 0 ? (
-            <div className="text-sm text-slate-600">No runs yet. Create one from Home.</div>
+          {isEmpty && !serverError ? (
+            <div className="flex flex-col items-start gap-3">
+              <p className="text-sm text-slate-600">No runs yet — create your first run.</p>
+              <Link
+                href="/#create"
+                className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
+              >
+                Create a run
+              </Link>
+            </div>
           ) : (
             <ul className="divide-y divide-slate-200">
               {rows.map((r) => (
                 <li key={r.runId} className="flex items-center justify-between py-3">
-                  <Link href={`/runs/${encodeURIComponent(r.runId)}`} className="text-sm font-medium text-slate-900 hover:underline">
+                  <Link
+                    href={`/runs/${encodeURIComponent(r.runId)}`}
+                    className="text-sm font-medium text-slate-900 hover:underline"
+                  >
                     {r.runId}
                   </Link>
                   <div className="text-right text-xs text-slate-600">
@@ -120,19 +196,21 @@ export default function RunsPage() {
             </ul>
           )}
 
-          <div className="mt-4 flex items-center justify-between gap-3 text-xs text-slate-500">
-            <div>{nextCursor ? 'More runs are available from the server.' : 'No more server pages.'}</div>
-            {nextCursor && (
-              <button
-                type="button"
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 hover:bg-slate-50"
-                onClick={loadMore}
-                disabled={loading}
-              >
-                Load more
-              </button>
-            )}
-          </div>
+          {rows.length > 0 && (
+            <div className="mt-4 flex items-center justify-between gap-3 text-xs text-slate-500">
+              <div>{nextCursor ? 'More runs are available.' : 'End of history.'}</div>
+              {nextCursor && (
+                <button
+                  type="button"
+                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 hover:bg-slate-50"
+                  onClick={loadMore}
+                  disabled={loading}
+                >
+                  Load more
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

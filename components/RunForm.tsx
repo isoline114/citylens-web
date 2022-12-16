@@ -23,42 +23,55 @@ const DEFAULTS: CitylensCreateRunInput = {
   notes: undefined,
 };
 
-export function RunForm() {
+export type RunFormProps = {
+  /** Optional pre-fetched featured demos (e.g. from a Server Component). When
+   *  provided, the form skips its own client-side fetch and uses these
+   *  immediately, so SSR HTML already shows the populated dropdown. */
+  initialFeatured?: DemoFeaturedRun[];
+};
+
+export function RunForm({ initialFeatured }: RunFormProps = {}) {
   const router = useRouter();
   const auth = useAuth();
   const [form, setForm] = useState<CitylensCreateRunInput>(DEFAULTS);
   const [submitting, setSubmitting] = useState(false);
-  const [featured, setFeatured] = useState<DemoFeaturedRun[]>([]);
-  // Start in `loading` so SSR (and the brief pre-fetch window on the
-  // client) shows a neutral "Loading…" hint instead of the empty-state
-  // copy, which reads like an error to crawlers.
-  const [featuredLoading, setFeaturedLoading] = useState(true);
-  const [featuredError, setFeaturedError] = useState<string | null>(null);
+  // Tri-state demo loading: 'loading' | 'loaded' | 'error'. Initialize as
+  // 'loaded' if the parent passed pre-fetched demos (so we never render the
+  // empty/error state during the initial paint). Otherwise start in
+  // 'loading' so SSR/cold-mount shows a neutral skeleton, never the
+  // crawler-hostile "no demos" message.
+  const [featured, setFeatured] = useState<DemoFeaturedRun[]>(initialFeatured ?? []);
+  const hasInitial = Array.isArray(initialFeatured) && initialFeatured.length > 0;
+  const [featuredStatus, setFeaturedStatus] = useState<'loading' | 'loaded' | 'error'>(
+    hasInitial ? 'loaded' : 'loading',
+  );
   const [selectedDemoRunId, setSelectedDemoRunId] = useState<string>('');
 
   const signedIn = auth.status === 'authenticated';
 
   useEffect(() => {
+    // Skip the client fetch only if the server already gave us a populated
+    // list. If SSR fetched 0 demos (rare — API outage, network policy, e2e
+    // test environment without internet) fall back to the client path so
+    // we still discover demos at runtime and so Playwright route mocks
+    // still apply during e2e.
+    if (hasInitial) return;
     let alive = true;
-    setFeaturedLoading(true);
-    setFeaturedError(null);
+    setFeaturedStatus('loading');
     getFeaturedDemos()
       .then((rows) => {
         if (!alive) return;
         setFeatured(rows);
+        setFeaturedStatus('loaded');
       })
-      .catch((e: unknown) => {
+      .catch(() => {
         if (!alive) return;
-        setFeaturedError(errorMessage(e));
-      })
-      .finally(() => {
-        if (!alive) return;
-        setFeaturedLoading(false);
+        setFeaturedStatus('error');
       });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [hasInitial]);
 
   const canSubmit = useMemo(() => signedIn && !submitting, [signedIn, submitting]);
 
@@ -176,7 +189,9 @@ export function RunForm() {
           }}
           aria-label="Select a featured demo run"
         >
-          <option value="">{featuredLoading ? 'Loading demos…' : 'Select a demo run…'}</option>
+          <option value="">
+            {featuredStatus === 'loading' ? 'Loading demos…' : 'Select a demo run…'}
+          </option>
           {featured
             .map((d) => ({ d, id: demoRunId(d) }))
             .filter((x): x is { d: DemoFeaturedRun; id: string } => Boolean(x.id))
@@ -186,9 +201,15 @@ export function RunForm() {
               </option>
             ))}
         </select>
-        {featuredError && <div className="text-xs text-rose-700">Failed to load demos: {featuredError}</div>}
-        {!featuredError && !featuredLoading && featured.length === 0 && (
-          <div className="text-xs text-slate-600">No featured demos available right now.</div>
+        {featuredStatus === 'error' && (
+          <div className="text-xs text-slate-600">
+            Featured demos are temporarily unavailable. You can still sign in to create a run.
+          </div>
+        )}
+        {featuredStatus === 'loaded' && featured.length === 0 && (
+          <div className="text-xs text-slate-600">
+            Featured demos are temporarily unavailable. You can still sign in to create a run.
+          </div>
         )}
       </label>
 
@@ -276,16 +297,22 @@ export function RunForm() {
             {submitting ? 'Creating…' : 'Create run'}
           </button>
         ) : (
-          <Link
-            href="/sign-in"
-            className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
-          >
-            Sign in to create a run
-          </Link>
-        )}
-        {!signedIn && (
-          <div className="text-sm text-slate-600">
-            Demo mode: viewing public demos works without an account.
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/sign-up"
+              className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              Sign up — free
+            </Link>
+            <Link
+              href="/sign-in"
+              className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 hover:bg-slate-50"
+            >
+              Sign in
+            </Link>
+            <span className="text-xs text-slate-600">
+              Free account: 5 runs/month. Public demos above need no account.
+            </span>
           </div>
         )}
       </div>

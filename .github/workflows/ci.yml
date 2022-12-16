@@ -3,12 +3,23 @@ name: ci
 on:
   push:
     branches:
+      # Default branch is `main`; `master` is listed too so this still
+      # works if the repo is renamed or aligned with sibling repos.
+      # PRs already trigger via `pull_request:`.
       - main
+      - master
   pull_request:
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    # The homepage SSR fetches /v1/demo/featured at build time (ISR
+    # prerender). In CI, that fetch would either bake stale prod data
+    # into the static HTML (breaking e2e mocks) or hit a quota. Disable
+    # it for the entire workflow so the build short-circuits to [] and
+    # the client-side fetch is what runs at request time.
+    env:
+      CITYLENS_DISABLE_SSR_DEMOS: '1'
     steps:
       - uses: actions/checkout@v4
 

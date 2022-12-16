@@ -251,8 +251,13 @@ export async function getRunOptions(): Promise<RunOptions> {
   return requestJson<RunOptions>('/v1/run-options', undefined, { includeAuth: false });
 }
 
-export async function getFeaturedDemos(): Promise<DemoFeaturedRun[]> {
-  const raw = await requestJson<unknown>('/v1/demo/featured', undefined, { includeAuth: false });
+/**
+ * Normalize the various shapes the /v1/demo/featured endpoint can return
+ * (array, {featured: []}, {runs: []}, or category-keyed objects) into a
+ * deduplicated DemoFeaturedRun[]. Exported for reuse by server-side
+ * loaders that fetch the endpoint without going through requestJson.
+ */
+export function parseFeaturedDemosResponse(raw: unknown): DemoFeaturedRun[] {
   if (Array.isArray(raw)) return raw as DemoFeaturedRun[];
   if (raw && typeof raw === 'object') {
     const obj = raw as Record<string, unknown>;
@@ -285,6 +290,11 @@ export async function getFeaturedDemos(): Promise<DemoFeaturedRun[]> {
     }
   }
   return [];
+}
+
+export async function getFeaturedDemos(): Promise<DemoFeaturedRun[]> {
+  const raw = await requestJson<unknown>('/v1/demo/featured', undefined, { includeAuth: false });
+  return parseFeaturedDemosResponse(raw);
 }
 
 export async function getDemoRun(runId: string): Promise<RunResponse> {

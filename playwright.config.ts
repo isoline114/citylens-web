@@ -21,6 +21,14 @@ export default defineConfig({
     url: 'http://127.0.0.1:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
+    env: {
+      // Disable the SSR featured-demos fetch entirely during e2e — the
+      // test's expectations rely on `page.route` mocks of the browser
+      // fetch path, and Server-side fetches bypass those mocks. With
+      // this set, RunForm falls through to its client-side fetch where
+      // page.route does intercept.
+      CITYLENS_DISABLE_SSR_DEMOS: '1',
+    },
   },
   projects: [
     {

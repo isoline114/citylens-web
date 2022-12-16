@@ -162,11 +162,19 @@ test('shows error message instead of infinite loading when demo API is unreachab
   await expect(page.getByText('Error loading run')).toBeVisible({ timeout: 15000 });
 });
 
-test('homepage shows error text when /v1/demo/featured returns 404', async ({ page }) => {
+test('homepage shows product-safe copy when /v1/demo/featured returns 404', async ({ page }) => {
   await page.route('**/v1/demo/featured', async (route) => {
     await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ detail: 'Not Found' }) });
   });
 
   await page.goto('/');
-  await expect(page.getByText(/Failed to load demos/i)).toBeVisible({ timeout: 10000 });
+  // When the demo endpoint fails, the run form's selector and the demo
+  // cards both show the same product-safe fallback. We don't surface
+  // raw error strings to a public visitor.
+  await expect(
+    page.getByText(/Featured demos are temporarily unavailable/i).first(),
+  ).toBeVisible({ timeout: 10000 });
+  // Old, crawler-hostile copy must not surface
+  await expect(page.getByText(/Failed to load demos/i)).not.toBeVisible();
+  await expect(page.getByText(/No featured demos found/i)).not.toBeVisible();
 });
