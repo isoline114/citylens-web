@@ -1,4 +1,3 @@
-import { getApiKey } from '@/lib/storage';
 import type { CitylensCreateRunPayload } from '@/lib/validation';
 import type { CreateRunResponse, RunListItem, RunResponse, RunsListResponse } from '@/lib/types';
 
@@ -25,6 +24,37 @@ export type RunsPage = {
   nextCursor: string | null;
 };
 
+export type RunOptions = {
+  imagery_years: number[];
+  baseline_years: number[];
+  segmentation_backends: string[];
+  outputs: string[];
+  defaults: {
+    imagery_year: number;
+    baseline_year: number;
+    segmentation_backend: string;
+    outputs: string[];
+    aoi_radius_m: number;
+  };
+};
+
+export type MeResponse = {
+  user: {
+    id: string;
+    email: string | null;
+    plan_type: string;
+    is_admin: boolean;
+  };
+  quota: {
+    month_key: string;
+    monthly_run_limit: number | null;
+    runs_used: number;
+    runs_remaining: number | null;
+    unlimited: boolean;
+    max_concurrent_runs: number | null;
+  };
+};
+
 export class ApiConfigError extends Error {
   constructor(message: string) {
     super(message);
@@ -42,6 +72,19 @@ export class ApiError extends Error {
     this.status = opts?.status;
     this.body = opts?.body;
   }
+}
+
+type TokenGetter = () => Promise<string | null> | string | null;
+let tokenGetter: TokenGetter | null = null;
+
+export function setAuthTokenGetter(getter: TokenGetter | null): void {
+  tokenGetter = getter;
+}
+
+async function resolveAuthToken(): Promise<string | null> {
+  if (!tokenGetter) return null;
+  const result = tokenGetter();
+  return result instanceof Promise ? result : result;
 }
 
 function getBaseUrl(): string {
@@ -63,7 +106,6 @@ export function joinApiUrl(base: string, value: string): string {
   if (!base) {
     return raw.startsWith('/') ? raw : `/${raw}`;
   }
-
 
   const target = new URL(base);
   const hashIndex = raw.indexOf('#');
@@ -95,16 +137,22 @@ export function resolveApiUrl(value: string | null | undefined): string | null {
 async function requestJson<T>(
   path: string,
   init?: RequestInit,
-  opts?: { includeApiKey?: boolean },
+  opts?: { includeAuth?: boolean },
 ): Promise<T> {
   const url = joinApiUrl(getBaseUrl(), path);
-  const includeApiKey = opts?.includeApiKey ?? true;
-  const apiKey = includeApiKey ? getApiKey() : null;
+  const includeAuth = opts?.includeAuth ?? true;
 
   const headers = new Headers(init?.headers);
   headers.set('Accept', 'application/json');
   if (init?.body) headers.set('Content-Type', 'application/json');
-  if (apiKey) headers.set('X-API-Key', apiKey);
+
+  if (includeAuth) {
+    const token = await resolveAuthToken();
+    if (!token) {
+      throw new ApiError('Sign in required', { status: 401 });
+    }
+    headers.set('Authorization', `Bearer ${token}`);
+  }
 
   let res: Response;
   try {
@@ -155,7 +203,7 @@ function parseRunsResponse(raw: unknown): RunsPage {
 }
 
 export async function health(): Promise<unknown> {
-  return requestJson('/v1/health');
+  return requestJson('/v1/health', undefined, { includeAuth: false });
 }
 
 export async function createRun(req: CitylensCreateRunPayload): Promise<{ runId: string; raw: CreateRunResponse | unknown }> {
@@ -195,8 +243,16 @@ export async function getRuns(query?: RunsQuery): Promise<RunsPage> {
   return parseRunsResponse(raw);
 }
 
+export async function getMe(): Promise<MeResponse> {
+  return requestJson<MeResponse>('/v1/me');
+}
+
+export async function getRunOptions(): Promise<RunOptions> {
+  return requestJson<RunOptions>('/v1/run-options', undefined, { includeAuth: false });
+}
+
 export async function getFeaturedDemos(): Promise<DemoFeaturedRun[]> {
-  const raw = await requestJson<unknown>('/v1/demo/featured', undefined, { includeApiKey: false });
+  const raw = await requestJson<unknown>('/v1/demo/featured', undefined, { includeAuth: false });
   if (Array.isArray(raw)) return raw as DemoFeaturedRun[];
   if (raw && typeof raw === 'object') {
     const obj = raw as Record<string, unknown>;
@@ -232,5 +288,5 @@ export async function getFeaturedDemos(): Promise<DemoFeaturedRun[]> {
 }
 
 export async function getDemoRun(runId: string): Promise<RunResponse> {
-  return requestJson<RunResponse>(`/v1/demo/runs/${encodeURIComponent(runId)}`, undefined, { includeApiKey: false });
+  return requestJson<RunResponse>(`/v1/demo/runs/${encodeURIComponent(runId)}`, undefined, { includeAuth: false });
 }

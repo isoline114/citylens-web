@@ -1,36 +1,32 @@
 import { z } from 'zod';
 
-// UI schema for creating runs.
-// Note: CitylensRequest in citylens-core includes aoi_radius_m, but the MVP UI does not expose it.
-// We inject a fixed default into the request payload internally.
+// Server-locked run options for the public MVP. Match
+// citylens-engine/api/app/services/run_options.py — fields the server forbids
+// (aoi_radius_m, sam2_*, orthophoto_*) must NOT appear in the public payload.
 export const segmentationBackendSchema = z.literal('sam2');
 export const outputsSchema = z.array(z.enum(['previews', 'change', 'mesh'])).min(1);
 
+export const CITYLENS_SUPPORTED_IMAGERY_YEAR = 2024 as const;
+export const CITYLENS_SUPPORTED_BASELINE_YEAR = 2017 as const;
+// Server-side fixed AOI radius. Public clients do NOT send this; the engine
+// injects it when materializing the canonical CitylensRequest.
 export const CITYLENS_DEFAULT_AOI_RADIUS_M = 250 as const;
 
 export const citylensCreateRunSchema = z.object({
   address: z.string().min(1, 'Address is required'),
-  imagery_year: z.number().int().min(1990).max(2100).default(2024),
-  baseline_year: z.number().int().min(1990).max(2100).default(2017),
+  imagery_year: z.literal(CITYLENS_SUPPORTED_IMAGERY_YEAR).default(CITYLENS_SUPPORTED_IMAGERY_YEAR),
+  baseline_year: z.literal(CITYLENS_SUPPORTED_BASELINE_YEAR).default(CITYLENS_SUPPORTED_BASELINE_YEAR),
   segmentation_backend: segmentationBackendSchema.default('sam2'),
-  // Optional in CitylensRequest (defaults exist server-side).
-  sam2_cfg: z.string().min(1).optional(),
-  sam2_checkpoint: z.string().min(1).optional(),
   outputs: outputsSchema.default(['previews', 'change', 'mesh']),
   notes: z.string().optional(),
 });
 
 export type CitylensCreateRunInput = z.infer<typeof citylensCreateRunSchema>;
 
-// Payload sent to the backend.
-export type CitylensCreateRunPayload = CitylensCreateRunInput & {
-  aoi_radius_m: number;
-};
+// Payload sent to the backend. Currently identical to the input — the engine
+// rejects any extra fields in POST /v1/runs.
+export type CitylensCreateRunPayload = CitylensCreateRunInput;
 
 export function buildCitylensCreateRunPayload(input: CitylensCreateRunInput): CitylensCreateRunPayload {
-  return {
-    ...input,
-    // TODO: Remove once backend schema no longer requires aoi_radius_m.
-    aoi_radius_m: CITYLENS_DEFAULT_AOI_RADIUS_M,
-  };
+  return { ...input };
 }

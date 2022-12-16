@@ -2,6 +2,8 @@ const API_KEY_STORAGE = 'citylens_api_key';
 const RECENT_RUNS_STORAGE = 'citylens_recent_runs';
 const RUN_STATUS_CACHE_STORAGE = 'citylens_run_status_cache';
 
+// @deprecated Dashboard auth no longer uses a manually-pasted API key. Use lib/auth instead.
+// These helpers are kept for any internal admin tooling that still relies on local-storage keys.
 export function getApiKey(): string | null {
   if (typeof window === 'undefined') return null;
   const v = window.localStorage.getItem(API_KEY_STORAGE);

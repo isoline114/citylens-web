@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   ApiError,
@@ -9,14 +9,20 @@ import {
   getRuns,
   joinApiUrl,
   resolveApiUrl,
+  setAuthTokenGetter,
 } from '@/lib/api';
 
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+  setAuthTokenGetter(null);
 });
 
 describe('api client', () => {
+  beforeEach(() => {
+    setAuthTokenGetter(async () => 'tok-abc');
+  });
+
   it('normalizes string createRun responses', async () => {
     vi.stubGlobal(
       'fetch',
@@ -33,7 +39,6 @@ describe('api client', () => {
       imagery_year: 2024,
       baseline_year: 2017,
       segmentation_backend: 'sam2',
-      aoi_radius_m: 250,
       outputs: ['previews'],
     });
 
@@ -101,10 +106,9 @@ describe('api client', () => {
   });
 });
 
-describe('demo fetches do not send API key', () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.unstubAllEnvs();
+describe('demo fetches do not send Authorization', () => {
+  beforeEach(() => {
+    setAuthTokenGetter(async () => 'tok-abc');
   });
 
   function stubFetch(body: unknown) {
@@ -118,15 +122,9 @@ describe('demo fetches do not send API key', () => {
     return mockFetch;
   }
 
-  it('getFeaturedDemos does not include X-API-Key header', async () => {
+  it('getFeaturedDemos does not include Authorization header', async () => {
     const mockFetch = stubFetch({
       Featured: [{ run_id: 'demo-1', label: 'Test', address: 'Addr', imagery_year: 2024, baseline_year: 2017, segmentation_backend: 'sam2', outputs: [] }],
-    });
-
-    vi.stubGlobal('localStorage', {
-      getItem: () => 'secret-key',
-      setItem: () => {},
-      removeItem: () => {},
     });
 
     const demos = await getFeaturedDemos();
@@ -135,47 +133,53 @@ describe('demo fetches do not send API key', () => {
 
     const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     const headers = new Headers(init.headers);
+    expect(headers.has('Authorization')).toBe(false);
     expect(headers.has('X-API-Key')).toBe(false);
   });
 
-  it('getDemoRun does not include X-API-Key header', async () => {
+  it('getDemoRun does not include Authorization header', async () => {
     const mockFetch = stubFetch({ run_id: 'demo-1', status: 'succeeded' });
-
-    vi.stubGlobal('localStorage', {
-      getItem: () => 'secret-key',
-      setItem: () => {},
-      removeItem: () => {},
-    });
 
     const run = await getDemoRun('demo-1');
     expect(run.run_id).toBe('demo-1');
 
     const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     const headers = new Headers(init.headers);
+    expect(headers.has('Authorization')).toBe(false);
+  });
+});
+
+describe('non-demo fetches attach Bearer token', () => {
+  it('getRun includes Authorization: Bearer header', async () => {
+    setAuthTokenGetter(async () => 'tok-abc');
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({ run_id: 'run-1', status: 'succeeded' }),
+      text: async () => '',
+    } as Response);
+    vi.stubGlobal('fetch', mockFetch);
+
+    await getRun('run-1');
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const headers = new Headers(init.headers);
+    expect(headers.get('Authorization')).toBe('Bearer tok-abc');
     expect(headers.has('X-API-Key')).toBe(false);
   });
 
-  it('getRun includes X-API-Key header when key is available', async () => {
-    const mockFetch = stubFetch({ run_id: 'run-1', status: 'succeeded' });
+  it('throws ApiError(401) when no token is available', async () => {
+    setAuthTokenGetter(async () => null);
+    const mockFetch = vi.fn();
+    vi.stubGlobal('fetch', mockFetch);
 
-    vi.stubGlobal('localStorage', {
-      getItem: (key: string) => (key === 'citylens_api_key' ? 'secret-key' : null),
-      setItem: () => {},
-      removeItem: () => {},
-    });
-
-    await getRun('run-1');
-
-    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
-    const headers = new Headers(init.headers);
-    expect(headers.get('X-API-Key')).toBe('secret-key');
+    await expect(getRun('run-1')).rejects.toMatchObject({ status: 401 });
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });
 
 describe('error handling', () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.unstubAllEnvs();
+  beforeEach(() => {
+    setAuthTokenGetter(async () => 'tok-abc');
   });
 
   it('throws ApiError with status on HTTP failure', async () => {

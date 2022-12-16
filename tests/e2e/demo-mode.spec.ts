@@ -142,7 +142,7 @@ end_header
   await page.getByTestId('run-summary-load').click();
   await expect(page.getByText('Reference case')).toBeVisible();
   await expect(page.getByText('Added: 1')).toBeVisible();
-  await expect(page.getByText('Removed: 1')).toBeVisible();
+  await expect(page.getByText('Demolished: 1')).toBeVisible();
 });
 
 test('shows error message instead of infinite loading when demo API is unreachable', async ({ page }) => {

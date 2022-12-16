@@ -1,16 +1,18 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { createRun, ApiError, getFeaturedDemos, type DemoFeaturedRun } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import {
   buildCitylensCreateRunPayload,
   citylensCreateRunSchema,
   type CitylensCreateRunInput,
 } from '@/lib/validation';
-import { getApiKey, rememberRecentRun } from '@/lib/storage';
+import { rememberRecentRun } from '@/lib/storage';
 
 const DEFAULTS: CitylensCreateRunInput = {
   address: '',
@@ -23,20 +25,15 @@ const DEFAULTS: CitylensCreateRunInput = {
 
 export function RunForm() {
   const router = useRouter();
+  const auth = useAuth();
   const [form, setForm] = useState<CitylensCreateRunInput>(DEFAULTS);
   const [submitting, setSubmitting] = useState(false);
-  const [apiKeyPresent, setApiKeyPresent] = useState(false);
   const [featured, setFeatured] = useState<DemoFeaturedRun[]>([]);
   const [featuredLoading, setFeaturedLoading] = useState(false);
   const [featuredError, setFeaturedError] = useState<string | null>(null);
   const [selectedDemoRunId, setSelectedDemoRunId] = useState<string>('');
 
-  useEffect(() => {
-    const sync = () => setApiKeyPresent(Boolean(getApiKey()));
-    sync();
-    window.addEventListener('citylens_api_key_changed', sync);
-    return () => window.removeEventListener('citylens_api_key_changed', sync);
-  }, []);
+  const signedIn = auth.status === 'authenticated';
 
   useEffect(() => {
     let alive = true;
@@ -60,7 +57,7 @@ export function RunForm() {
     };
   }, []);
 
-  const canSubmit = useMemo(() => apiKeyPresent && !submitting, [apiKeyPresent, submitting]);
+  const canSubmit = useMemo(() => signedIn && !submitting, [signedIn, submitting]);
 
   function errorMessage(e: unknown): string {
     return e instanceof Error ? e.message : String(e);
@@ -77,27 +74,6 @@ export function RunForm() {
     const label = typeof d.label === 'string' ? d.label : undefined;
     const address = typeof d.address === 'string' ? d.address : undefined;
     return (title ?? label ?? address ?? id).trim();
-  }
-
-  function coerceNumber(v: unknown): number | undefined {
-    if (typeof v === 'number' && Number.isFinite(v)) return v;
-    if (typeof v === 'string' && v.trim().length > 0) {
-      const n = Number(v);
-      return Number.isFinite(n) ? n : undefined;
-    }
-    return undefined;
-  }
-
-  function normalizeOutputs(v: unknown): CitylensCreateRunInput['outputs'] | undefined {
-    if (!Array.isArray(v)) return undefined;
-    const allowed = ['previews', 'change', 'mesh'] as const;
-    const isAllowed = (x: unknown): x is CitylensCreateRunInput['outputs'][number] =>
-      typeof x === 'string' && (allowed as readonly string[]).includes(x);
-
-    const next = (v as unknown[]).filter(isAllowed);
-    return next.length > 0
-      ? (Array.from(new Set(next)) as CitylensCreateRunInput['outputs'])
-      : undefined;
   }
 
   function setField<K extends keyof CitylensCreateRunInput>(
@@ -119,9 +95,8 @@ export function RunForm() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      toast.error('Demo mode', { description: 'Set an API key to run new jobs.' });
+    if (!signedIn) {
+      router.push('/sign-in');
       return;
     }
 
@@ -146,18 +121,19 @@ export function RunForm() {
       toast.success('Run created', { description: runId });
       router.push(`/runs/${encodeURIComponent(runId)}`);
     } catch (err: unknown) {
-      const status = err instanceof ApiError ? err.status : undefined;
+      const apiErr = err instanceof ApiError ? err : null;
+      const status = apiErr?.status;
       if (status === 401) {
-        toast.error('Unauthorized (401)', {
-          description: 'Your API key was rejected. Click “API key” in the header to replace it.',
+        toast.error('Sign in required', {
+          description: 'Your session expired. Sign in to create runs.',
         });
-        window.dispatchEvent(new Event('citylens_open_api_key'));
+        router.push('/sign-in');
       } else if (status === 429) {
-        toast.error('Quota exceeded (429)', {
-          description: 'Too many requests. Please wait and try again.',
-        });
-      } else if (err instanceof ApiError) {
-        toast.error('Failed to create run', { description: err.message });
+        const detail = readQuotaDetail(apiErr?.body);
+        const description = quotaDescription(detail);
+        toast.error('Monthly quota reached', { description });
+      } else if (apiErr) {
+        toast.error('Failed to create run', { description: apiErr.message });
       } else {
         toast.error('Failed to create run', { description: errorMessage(err) });
       }
@@ -187,23 +163,10 @@ export function RunForm() {
             const nextAddress =
               (typeof chosen?.address === 'string' ? chosen.address : undefined) ??
               (typeof req.address === 'string' ? (req.address as string) : undefined);
-            const nextImageryYear =
-              coerceNumber(chosen?.imagery_year ?? req.imagery_year ?? req['imageryYear']) ??
-              DEFAULTS.imagery_year;
-            const nextBaselineYear =
-              coerceNumber(chosen?.baseline_year ?? req.baseline_year ?? req['baselineYear']) ??
-              DEFAULTS.baseline_year;
-            const nextOutputs =
-              normalizeOutputs(chosen?.outputs ?? req.outputs) ??
-              DEFAULTS.outputs;
 
             setForm((prev) => ({
               ...prev,
               address: nextAddress ?? prev.address,
-              imagery_year: nextImageryYear,
-              baseline_year: nextBaselineYear,
-              segmentation_backend: 'sam2',
-              outputs: nextOutputs,
             }));
 
             router.push(`/runs/${encodeURIComponent(nextRunId)}?demo=1`);
@@ -238,37 +201,36 @@ export function RunForm() {
           />
         </label>
 
-        <label className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1">
           <span className="text-sm font-medium">Imagery year</span>
-          <input
-            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
-            type="number"
-            min={1990}
-            max={2100}
-            value={form.imagery_year}
-            onChange={(e) => setField('imagery_year', Number(e.target.value))}
-          />
-        </label>
-
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Baseline year</span>
-          <input
-            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
-            type="number"
-            min={1990}
-            max={2100}
-            value={form.baseline_year}
-            onChange={(e) => setField('baseline_year', Number(e.target.value))}
-          />
-        </label>
-
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Segmentation backend</span>
-          <div className="h-10 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-            SAM2 only
+          <div
+            data-testid="imagery-year-chip"
+            className="h-10 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+          >
+            2024
           </div>
-          <div className="text-xs text-slate-500">The API contract now accepts `sam2` only.</div>
-        </label>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-medium">Baseline year</span>
+          <div
+            data-testid="baseline-year-chip"
+            className="h-10 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+          >
+            2017
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-medium">Segmentation</span>
+          <div
+            data-testid="segmentation-chip"
+            className="h-10 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+          >
+            SAM2
+          </div>
+          <div className="text-xs text-slate-500">Public MVP supports SAM2 only.</div>
+        </div>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -302,15 +264,54 @@ export function RunForm() {
       </label>
 
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
-        >
-          {submitting ? 'Creating…' : 'Create run'}
-        </button>
-        {!apiKeyPresent && <div className="text-sm text-slate-600">Demo mode: set an API key to create runs.</div>}
+        {signedIn ? (
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+          >
+            {submitting ? 'Creating…' : 'Create run'}
+          </button>
+        ) : (
+          <Link
+            href="/sign-in"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            Sign in to create a run
+          </Link>
+        )}
+        {!signedIn && (
+          <div className="text-sm text-slate-600">
+            Demo mode: viewing public demos works without an account.
+          </div>
+        )}
       </div>
     </form>
   );
+}
+
+type QuotaDetail = {
+  message?: string;
+  monthly_run_limit?: number;
+  runs_remaining?: number;
+  runs_used?: number;
+  month_key?: string;
+  plan_type?: string;
+  code?: string;
+};
+
+function readQuotaDetail(body: unknown): QuotaDetail | null {
+  if (!body || typeof body !== 'object') return null;
+  const detail = (body as { detail?: unknown }).detail;
+  if (!detail || typeof detail !== 'object') return null;
+  return detail as QuotaDetail;
+}
+
+function quotaDescription(detail: QuotaDetail | null): string {
+  if (!detail) return 'Try again later or upgrade your plan.';
+  if (detail.message) return detail.message;
+  if (typeof detail.monthly_run_limit === 'number') {
+    return `Free plan includes ${detail.monthly_run_limit} runs per month.`;
+  }
+  return 'Monthly quota reached.';
 }

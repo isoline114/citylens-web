@@ -10,7 +10,10 @@ async function expectMeshState(page: Page) {
 
 test('authenticated run detail renders artifacts and qa summary', async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem('citylens_api_key', 'test-key');
+    sessionStorage.setItem(
+      'citylens_mock_auth_user',
+      JSON.stringify({ id: 'mock-test', email: 'test@mock.local', displayName: 'mock-test' }),
+    );
   });
 
   await page.route('**/v1/runs/run-123', async (route) => {
@@ -116,5 +119,5 @@ end_header
   await expect(page.getByText('Reference case')).toBeVisible();
   await expect(page.getByText('100 E 21st St Brooklyn, NY 11226').first()).toBeVisible();
   await expect(page.getByText('Added: 1')).toBeVisible();
-  await expect(page.getByText('Removed: 0')).toBeVisible();
+  await expect(page.getByText('Demolished: 0')).toBeVisible();
 });

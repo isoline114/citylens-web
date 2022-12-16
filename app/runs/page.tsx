@@ -4,25 +4,21 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 import { getRuns } from '@/lib/api';
-import { getApiKey, getRecentRuns, type RecentRun } from '@/lib/storage';
+import { useAuth } from '@/lib/auth';
+import { getRecentRuns, type RecentRun } from '@/lib/storage';
 import { mergeRunHistory, type RunHistoryRow } from '@/lib/run-history';
 import type { RunListItem } from '@/lib/types';
 
 export default function RunsPage() {
+  const auth = useAuth();
   const [serverRuns, setServerRuns] = useState<RunListItem[]>([]);
   const [localRuns, setLocalRuns] = useState<RecentRun[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [apiKeyPresent, setApiKeyPresent] = useState(false);
   const [source, setSource] = useState<'server' | 'local'>('local');
 
-  useEffect(() => {
-    const sync = () => setApiKeyPresent(Boolean(getApiKey()));
-    sync();
-    window.addEventListener('citylens_api_key_changed', sync);
-    return () => window.removeEventListener('citylens_api_key_changed', sync);
-  }, []);
+  const signedIn = auth.status === 'authenticated';
 
   useEffect(() => {
     setLocalRuns(getRecentRuns());
@@ -32,7 +28,7 @@ export default function RunsPage() {
     let cancelled = false;
 
     async function load() {
-      if (!apiKeyPresent) {
+      if (!signedIn) {
         setSource('local');
         setServerRuns([]);
         setNextCursor(null);
@@ -63,7 +59,7 @@ export default function RunsPage() {
     return () => {
       cancelled = true;
     };
-  }, [apiKeyPresent]);
+  }, [signedIn]);
 
   const rows: RunHistoryRow[] = useMemo(
     () => mergeRunHistory(serverRuns, localRuns),
@@ -92,9 +88,9 @@ export default function RunsPage() {
       <p className="text-sm text-slate-600">
         {source === 'server'
           ? 'Showing server-backed run history. Local browser history is appended if it is not already on the server.'
-          : 'Showing browser-local run history because the server list is unavailable or no API key is set.'}
+          : 'Showing browser-local run history. Sign in to load your full server history.'}
       </p>
-      {serverError && apiKeyPresent && (
+      {serverError && signedIn && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Falling back to local browser history because the server list could not be loaded: {serverError}
         </div>
