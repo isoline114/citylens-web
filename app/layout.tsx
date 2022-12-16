@@ -13,7 +13,8 @@ import { AuthTokenBridge } from '@/lib/auth/AuthTokenBridge';
 import { publicAssetPath } from '@/lib/site';
 
 const title = 'CityLens';
-const description = 'API-first urban change detection and 3D reconstruction from open geospatial data.';
+const description =
+  'Urban change detection and 3D reconstruction from any NYC address. Sign up free, get 5 runs per month, download change.geojson and PLY mesh artifacts.';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://citylens.dev'),

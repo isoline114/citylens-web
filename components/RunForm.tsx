@@ -29,7 +29,10 @@ export function RunForm() {
   const [form, setForm] = useState<CitylensCreateRunInput>(DEFAULTS);
   const [submitting, setSubmitting] = useState(false);
   const [featured, setFeatured] = useState<DemoFeaturedRun[]>([]);
-  const [featuredLoading, setFeaturedLoading] = useState(false);
+  // Start in `loading` so SSR (and the brief pre-fetch window on the
+  // client) shows a neutral "Loading…" hint instead of the empty-state
+  // copy, which reads like an error to crawlers.
+  const [featuredLoading, setFeaturedLoading] = useState(true);
   const [featuredError, setFeaturedError] = useState<string | null>(null);
   const [selectedDemoRunId, setSelectedDemoRunId] = useState<string>('');
 
@@ -185,7 +188,7 @@ export function RunForm() {
         </select>
         {featuredError && <div className="text-xs text-rose-700">Failed to load demos: {featuredError}</div>}
         {!featuredError && !featuredLoading && featured.length === 0 && (
-          <div className="text-xs text-slate-600">No featured demos found. Ensure the API is serving /v1/demo/featured.</div>
+          <div className="text-xs text-slate-600">No featured demos available right now.</div>
         )}
       </label>
 

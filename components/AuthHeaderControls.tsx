@@ -10,14 +10,10 @@ export function AuthHeaderControls() {
   const auth = useAuth();
   const router = useRouter();
 
-  if (auth.status === 'loading') {
-    return (
-      <span className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-500">
-        Loading…
-      </span>
-    );
-  }
-
+  // For SSR + first paint, render the "Sign in" CTA as the default. Crawlers
+  // can't run client effects so they'd otherwise see a permanent "Loading…"
+  // chip, which makes the page look like it's stuck. Once auth resolves on
+  // the client, this flips to the signed-in state with the user's email.
   if (auth.status !== 'authenticated') {
     return (
       <Link
