@@ -132,8 +132,11 @@ export function RunStatusCard({
 
       {apiErr?.status === 401 && (
         <div className="border-t border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <div className="font-medium">Unauthorized (401)</div>
-          <div className="mt-1">Click “API key” in the header to set or replace your key.</div>
+          <div className="font-medium">Sign in required</div>
+          <div className="mt-1">
+            Your session expired or you&apos;re not signed in.{' '}
+            <a href="/sign-in" className="font-medium underline">Sign in</a> to view this run.
+          </div>
         </div>
       )}
 

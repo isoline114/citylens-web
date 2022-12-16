@@ -74,7 +74,7 @@ export default function HomePage() {
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
               <Workflow className="h-4 w-4" /> API-first Runs
             </div>
-            <p className="mt-2 text-sm text-slate-600">Create, poll, and fetch artifacts with an API key.</p>
+            <p className="mt-2 text-sm text-slate-600">Create, poll, and fetch artifacts via the authenticated API.</p>
           </div>
         </div>
       </section>
