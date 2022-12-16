@@ -27,9 +27,8 @@ export default function DocsPage() {
 
       <h2>Authenticated endpoints (require sign in)</h2>
       <p>
-        Real run creation requires a signed-in user. The browser obtains an access token from the
-        configured auth provider (Neon Auth) and the API client attaches{' '}
-        <code>Authorization: Bearer &lt;token&gt;</code>:
+        Real run creation requires a signed-in user. The browser obtains an access token after
+        sign-in and the API client attaches <code>Authorization: Bearer &lt;token&gt;</code>:
       </p>
       <ul>
         <li><code>POST /v1/runs</code> — create a new run</li>

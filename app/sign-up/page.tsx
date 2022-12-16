@@ -115,8 +115,8 @@ export default function SignUpPage() {
           {busy ? 'Creating account…' : 'Create account'}
         </button>
       </form>
-      <p className="text-slate-500 text-xs">
-        Already have an account? <Link href="/sign-in">Sign in</Link>.
+      <p className="text-slate-500 text-sm">
+        Already have an account? <Link href="/sign-in" className="font-medium text-slate-900 hover:underline">Sign in</Link>
       </p>
     </div>
   );

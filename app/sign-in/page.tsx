@@ -78,7 +78,7 @@ export default function SignInPage() {
         }}
       >
         <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Email{IS_NEON ? '' : ' (optional, mock provider)'}</span>
+          <span className="text-sm font-medium">Email</span>
           <input
             className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
             type="email"
@@ -121,16 +121,15 @@ export default function SignInPage() {
       </form>
 
       {IS_NEON && (
-        <p className="text-slate-500 text-xs">
-          Need an account? <Link href="/sign-up">Sign up</Link>. Sign-up is wired against
-          Neon Auth&apos;s <code className="font-mono">authClient.signUp.email</code>.
+        <p className="text-slate-500 text-sm">
+          Need an account? <Link href="/sign-up" className="font-medium text-slate-900 hover:underline">Sign up</Link>
         </p>
       )}
       {!IS_NEON && (
         <p className="text-slate-500 text-xs">
-          Local dev uses a mock auth provider. Set
+          Local dev uses a mock auth provider. Set{' '}
           <code className="font-mono px-1">NEXT_PUBLIC_AUTH_PROVIDER=neon</code>
-          and configure Neon Auth env vars to use the real provider.
+          {' '}to use the configured production provider.
         </p>
       )}
     </div>
