@@ -144,9 +144,10 @@ curl -L ${API_BASE}/v1/demo/artifacts/${SAMPLE_RUN}/mesh.ply       -o mesh.ply`}
               title="Programmatic API keys"
               body={
                 <>
-                  Reserved for future plan-aware keys. Today, only an admin{' '}
-                  <code>X-API-Key</code> path exists for internal scripts
-                  (demo precomputation) and is disabled by default.
+                  Mint Bearer keys (prefix <code>clk_live_</code>) at{' '}
+                  <Link href="/account/api-keys" className="underline">/account/api-keys</Link>.
+                  Each key inherits your plan + monthly quota; revoke any time. Send as{' '}
+                  <code>Authorization: Bearer clk_live_…</code> — same header as user JWTs.
                 </>
               }
             />
@@ -168,6 +169,14 @@ curl -L ${API_BASE}/v1/demo/artifacts/${SAMPLE_RUN}/mesh.ply       -o mesh.ply`}
 # Then attach it on protected routes:
 curl -s ${API_BASE}/v1/me \\
   -H "Authorization: Bearer $TOKEN" | jq '{email, plan_type, quota}'`}
+          </CodeBlock>
+          <CodeBlock language="bash" label="user api key example">
+{`# Mint a key at /account/api-keys, then use it from any script:
+curl -s ${API_BASE}/v1/me \\
+  -H "Authorization: Bearer clk_live_…" | jq '{user, quota}'
+
+# API keys are interchangeable with JWTs — they hit the same routes
+# and use the same plan/quota state. Revoke any time from the dashboard.`}
           </CodeBlock>
         </section>
 

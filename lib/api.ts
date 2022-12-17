@@ -300,3 +300,37 @@ export async function getFeaturedDemos(): Promise<DemoFeaturedRun[]> {
 export async function getDemoRun(runId: string): Promise<RunResponse> {
   return requestJson<RunResponse>(`/v1/demo/runs/${encodeURIComponent(runId)}`, undefined, { includeAuth: false });
 }
+
+// ---------- API keys ----------
+
+export type ApiKeyRecord = {
+  key_id: string;
+  label: string;
+  key_prefix: string;
+  created_at: string | null;
+  last_used_at: string | null;
+  revoked_at: string | null;
+};
+
+export type CreatedApiKeyRecord = ApiKeyRecord & {
+  /** Plaintext key — shown once on create, never again. */
+  plaintext_key: string;
+};
+
+export async function createApiKey(label: string): Promise<CreatedApiKeyRecord> {
+  return requestJson<CreatedApiKeyRecord>('/v1/api-keys', {
+    method: 'POST',
+    body: JSON.stringify({ label }),
+  });
+}
+
+export async function listApiKeys(): Promise<ApiKeyRecord[]> {
+  const raw = await requestJson<{ items?: ApiKeyRecord[] }>('/v1/api-keys');
+  return Array.isArray(raw?.items) ? raw.items : [];
+}
+
+export async function revokeApiKey(keyId: string): Promise<void> {
+  await requestJson<unknown>(`/v1/api-keys/${encodeURIComponent(keyId)}`, {
+    method: 'DELETE',
+  });
+}

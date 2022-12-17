@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogIn, LogOut, UserRound } from 'lucide-react';
+import { Key, LogIn, LogOut, UserRound } from 'lucide-react';
 
 import { useAuth } from '@/lib/auth';
 
@@ -34,6 +34,14 @@ export function AuthHeaderControls() {
           {auth.user.email ?? auth.user.displayName ?? auth.user.id}
         </span>
       </span>
+      <Link
+        href="/account/api-keys"
+        className="hidden h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 hover:bg-slate-50 sm:inline-flex"
+        title="API keys"
+      >
+        <Key className="h-4 w-4" />
+        <span className="hidden md:inline">API keys</span>
+      </Link>
       <button
         type="button"
         onClick={async () => {

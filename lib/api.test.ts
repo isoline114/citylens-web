@@ -2,13 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   ApiError,
+  createApiKey,
   createRun,
   getDemoRun,
   getFeaturedDemos,
   getRun,
   getRuns,
   joinApiUrl,
+  listApiKeys,
   resolveApiUrl,
+  revokeApiKey,
   setAuthTokenGetter,
 } from '@/lib/api';
 
@@ -247,5 +250,100 @@ describe('error handling', () => {
       expect(e).toBeInstanceOf(ApiError);
       expect((e as ApiError).message).toContain('Network error');
     }
+  });
+});
+
+describe('user api keys helpers', () => {
+  beforeEach(() => {
+    setAuthTokenGetter(async () => 'tok-abc');
+  });
+
+  it('createApiKey POSTs the label and returns the plaintext + record', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({
+        key_id: 'k1',
+        label: 'cli',
+        key_prefix: 'clk_live_abcd',
+        plaintext_key: 'clk_live_abcdSECRET',
+        created_at: '2026-04-30T12:00:00Z',
+        last_used_at: null,
+        revoked_at: null,
+      }),
+      text: async () => '',
+    } as Response);
+    vi.stubGlobal('fetch', mockFetch);
+
+    const created = await createApiKey('cli');
+    expect(created.plaintext_key).toBe('clk_live_abcdSECRET');
+    expect(created.key_id).toBe('k1');
+
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/v1\/api-keys$/);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(String(init.body))).toEqual({ label: 'cli' });
+    const headers = new Headers(init.headers);
+    expect(headers.get('Authorization')).toBe('Bearer tok-abc');
+  });
+
+  it('listApiKeys returns the items array', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({
+          items: [
+            {
+              key_id: 'k1',
+              label: 'cli',
+              key_prefix: 'clk_live_abcd',
+              created_at: '2026-04-30T12:00:00Z',
+              last_used_at: null,
+              revoked_at: null,
+            },
+          ],
+        }),
+        text: async () => '',
+      } as Response),
+    );
+
+    const items = await listApiKeys();
+    expect(items).toHaveLength(1);
+    expect(items[0]?.key_id).toBe('k1');
+  });
+
+  it('listApiKeys returns [] when the response shape is wrong', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ unexpected: 'shape' }),
+        text: async () => '',
+      } as Response),
+    );
+
+    expect(await listApiKeys()).toEqual([]);
+  });
+
+  it('revokeApiKey sends DELETE with Bearer auth', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 204,
+      headers: new Headers(),
+      json: async () => null,
+      text: async () => '',
+    } as Response);
+    vi.stubGlobal('fetch', mockFetch);
+
+    await revokeApiKey('k1');
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/v1\/api-keys\/k1$/);
+    expect(init.method).toBe('DELETE');
+    const headers = new Headers(init.headers);
+    expect(headers.get('Authorization')).toBe('Bearer tok-abc');
   });
 });
