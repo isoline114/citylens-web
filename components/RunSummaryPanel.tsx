@@ -9,9 +9,21 @@ type SummaryQA = {
   baseline_footprints_used?: boolean;
   lidar_used?: boolean;
   mask_iou?: number;
+  /** Legacy XOR-mask metric. Kept here for backward compat with older
+   *  run_summary.json blobs but intentionally not surfaced in the UI —
+   *  the metric compares against an XOR baseline that punishes the
+   *  per-footprint classifier for correctly ignoring registration noise.
+   *  See research/repo_state_audit.md. */
   change_polygon_f1?: number;
+  /** Per-class counts produced by stage_change. Replaces the misleading
+   *  `change_polygon_f1` cell in the UI. */
+  change_counts?: Record<string, number>;
   mesh_footprint_iou?: number;
   parity_status?: string;
+  // Input audit trail — written by the worker on every run.
+  orthophoto_sha256?: string;
+  baseline_sha256?: string;
+  lidar_sha256?: string;
 } & Record<string, unknown>;
 
 type SummaryPerformance = {
@@ -29,6 +41,20 @@ function formatValue(value: unknown): string {
   if (typeof value === 'number' && Number.isFinite(value)) return new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 }).format(value);
   if (typeof value === 'string' && value.trim().length > 0) return value.trim();
   return '—';
+}
+
+function formatChangeCounts(counts: Record<string, number> | undefined): string {
+  if (!counts || typeof counts !== 'object') return '—';
+  const order = ['unchanged', 'modified', 'demolished', 'added'];
+  const parts = order
+    .filter((k) => typeof counts[k] === 'number')
+    .map((k) => `${counts[k]} ${k}`);
+  return parts.length > 0 ? parts.join(' · ') : '—';
+}
+
+function shortSha(value: unknown): string {
+  if (typeof value !== 'string' || value.length < 12) return '—';
+  return `${value.slice(0, 12)}…`;
 }
 
 function formatSeconds(value: unknown): string {
@@ -116,9 +142,27 @@ export function RunSummaryPanel({
                 <Metric label="Baseline footprints used" value={qa?.baseline_footprints_used} />
                 <Metric label="LiDAR used" value={qa?.lidar_used} />
                 <Metric label="Mask IoU" value={qa?.mask_iou} />
-                <Metric label="Change polygon F1" value={qa?.change_polygon_f1} />
+                <Metric label="Change classes" value={formatChangeCounts(qa?.change_counts)} />
                 <Metric label="Mesh footprint IoU" value={qa?.mesh_footprint_iou} />
                 <Metric label="Parity status" value={qa?.parity_status} />
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-900">
+                Audit trail
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-normal text-slate-600">
+                  reproducible
+                </span>
+              </div>
+              <p className="mb-2 text-xs text-slate-600">
+                Every run records a SHA-256 of each input asset so any output can
+                be traced back to the exact bytes the pipeline saw.
+              </p>
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                <Metric label="Orthophoto sha256" value={shortSha(qa?.orthophoto_sha256)} />
+                <Metric label="Baseline sha256" value={shortSha(qa?.baseline_sha256)} />
+                <Metric label="LiDAR sha256" value={shortSha(qa?.lidar_sha256)} />
               </div>
             </div>
 

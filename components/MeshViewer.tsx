@@ -39,9 +39,22 @@ function OrbitControls() {
 
 function MeshScene({ mesh }: { mesh: PlyMesh }) {
   const scene = useMemo(() => buildCenteredMeshGeometry(mesh), [mesh]);
+  // When the PLY carries per-vertex RGB, the change-detection palette is
+  // already encoded on the mesh (gray=unchanged, yellow=modified,
+  // red=demolished, green=added — see citylens-core stage_render).
+  // We let the buffer geometry's color attribute drive shading and skip
+  // the flat fallback fill. Without colors we fall back to sky-blue.
+  const hasVertexColors = scene?.hasVertexColors ?? false;
   const material = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: '#38bdf8', roughness: 0.45, metalness: 0.08, flatShading: true }),
-    [],
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: hasVertexColors ? '#ffffff' : '#38bdf8',
+        vertexColors: hasVertexColors,
+        roughness: 0.45,
+        metalness: 0.08,
+        flatShading: true,
+      }),
+    [hasVertexColors],
   );
 
   useEffect(() => {
@@ -89,6 +102,17 @@ function MeshScene({ mesh }: { mesh: PlyMesh }) {
           <span>{scene.faceCount} faces</span>
         </div>
       </div>
+      {hasVertexColors && (
+        <div className="pointer-events-none absolute right-3 bottom-3 rounded-md bg-slate-950/70 px-3 py-2 text-[11px] text-slate-100 backdrop-blur">
+          <div className="font-medium">Change overlay</div>
+          <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5">
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-[#8c8c8c]" /> unchanged</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-[#ffc800]" /> modified</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-[#dc1e1e]" /> demolished</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-[#00c83c]" /> added</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

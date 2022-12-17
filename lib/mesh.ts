@@ -1,11 +1,16 @@
 import * as THREE from 'three';
 
 export type PlyVertex = [number, number, number];
+export type PlyVertexColor = [number, number, number]; // 0..1 floats
 export type PlyFace = number[];
 
 export type PlyMesh = {
   vertices: PlyVertex[];
   faces: PlyFace[];
+  /** Per-vertex sRGB color in 0..1, when the source PLY had `red/green/blue`
+   *  uchar properties. Undefined when the source has only positions —
+   *  callers fall back to a flat material color. */
+  vertexColors?: PlyVertexColor[];
 };
 
 export type ProjectedFace = {
@@ -22,6 +27,10 @@ export type MeshSceneData = {
   geometry: THREE.BufferGeometry;
   vertexCount: number;
   faceCount: number;
+  /** True when the source PLY supplied per-vertex RGB and the geometry
+   *  has a populated `color` attribute. The mesh material should set
+   *  `vertexColors: true` and skip its flat fallback color in this case. */
+  hasVertexColors: boolean;
 };
 
 export function parseAsciiPly(text: string): PlyMesh | null {
@@ -32,6 +41,10 @@ export function parseAsciiPly(text: string): PlyMesh | null {
   let vertexCount = 0;
   let faceCount = 0;
   let headerEnd = -1;
+  // Order of vertex properties as declared in the header. Used to find
+  // x/y/z and (optionally) red/green/blue offsets in each vertex line.
+  const vertexProps: string[] = [];
+  let inVertexElement = false;
 
   for (let i = 1; i < lines.length; i += 1) {
     const line = lines[i].trim();
@@ -45,26 +58,54 @@ export function parseAsciiPly(text: string): PlyMesh | null {
     } else if (line.startsWith('element vertex ')) {
       const n = Number.parseInt(line.split(/\s+/)[2] ?? '', 10);
       if (Number.isFinite(n)) vertexCount = n;
-    } else if (line.startsWith('element face ')) {
-      const n = Number.parseInt(line.split(/\s+/)[2] ?? '', 10);
-      if (Number.isFinite(n)) faceCount = n;
+      inVertexElement = true;
+    } else if (line.startsWith('element ')) {
+      // Any other element ends the vertex-property block.
+      inVertexElement = false;
+      if (line.startsWith('element face ')) {
+        const n = Number.parseInt(line.split(/\s+/)[2] ?? '', 10);
+        if (Number.isFinite(n)) faceCount = n;
+      }
+    } else if (inVertexElement && line.startsWith('property ')) {
+      // `property <type> <name>` — we only care about the name here.
+      const parts = line.split(/\s+/);
+      const name = parts[parts.length - 1];
+      if (name) vertexProps.push(name);
     }
   }
 
   if (!isAscii || headerEnd < 0 || vertexCount < 0 || faceCount < 0) return null;
   if (vertexCount === 0) return { vertices: [], faces: [] };
 
+  const xIdx = vertexProps.indexOf('x');
+  const yIdx = vertexProps.indexOf('y');
+  const zIdx = vertexProps.indexOf('z');
+  const rIdx = vertexProps.indexOf('red');
+  const gIdx = vertexProps.indexOf('green');
+  const bIdx = vertexProps.indexOf('blue');
+  const hasColor = rIdx >= 0 && gIdx >= 0 && bIdx >= 0;
+
+  if (xIdx < 0 || yIdx < 0 || zIdx < 0) return null;
+
   const vertices: PlyVertex[] = [];
+  const vertexColors: PlyVertexColor[] | null = hasColor ? [] : null;
   const vertexLines = lines.slice(headerEnd + 1, headerEnd + 1 + vertexCount);
   if (vertexLines.length !== vertexCount) return null;
   for (const line of vertexLines) {
     const parts = line.trim().split(/\s+/);
-    if (parts.length < 3) return null;
-    const x = Number.parseFloat(parts[0] ?? '');
-    const y = Number.parseFloat(parts[1] ?? '');
-    const z = Number.parseFloat(parts[2] ?? '');
+    if (parts.length < vertexProps.length) return null;
+    const x = Number.parseFloat(parts[xIdx] ?? '');
+    const y = Number.parseFloat(parts[yIdx] ?? '');
+    const z = Number.parseFloat(parts[zIdx] ?? '');
     if (![x, y, z].every(Number.isFinite)) return null;
     vertices.push([x, y, z]);
+    if (vertexColors) {
+      const r = Number.parseInt(parts[rIdx] ?? '', 10);
+      const g = Number.parseInt(parts[gIdx] ?? '', 10);
+      const b = Number.parseInt(parts[bIdx] ?? '', 10);
+      if (![r, g, b].every(Number.isFinite)) return null;
+      vertexColors.push([r / 255, g / 255, b / 255]);
+    }
   }
 
   const faces: PlyFace[] = [];
@@ -80,7 +121,9 @@ export function parseAsciiPly(text: string): PlyMesh | null {
     faces.push(indices);
   }
 
-  return { vertices, faces };
+  return vertexColors
+    ? { vertices, faces, vertexColors }
+    : { vertices, faces };
 }
 
 function rotatePoint([x, y, z]: PlyVertex, yawDeg: number, pitchDeg: number): [number, number] {
@@ -149,6 +192,8 @@ export function buildCenteredMeshGeometry(mesh: PlyMesh): MeshSceneData | null {
   const scale = 2 / Math.max(...spans, 1e-6);
 
   const positions: number[] = [];
+  const colors: number[] = [];
+  const hasColor = Array.isArray(mesh.vertexColors) && mesh.vertexColors.length === mesh.vertices.length;
   for (const face of mesh.faces) {
     if (face.length < 3) continue;
     const [first, ...rest] = face;
@@ -163,6 +208,10 @@ export function buildCenteredMeshGeometry(mesh: PlyMesh): MeshSceneData | null {
           (vertex[1] - center[1]) * scale,
           (vertex[2] - center[2]) * scale,
         );
+        if (hasColor) {
+          const c = mesh.vertexColors![index] ?? [1, 1, 1];
+          colors.push(c[0], c[1], c[2]);
+        }
       }
     }
   }
@@ -171,6 +220,9 @@ export function buildCenteredMeshGeometry(mesh: PlyMesh): MeshSceneData | null {
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  if (hasColor && colors.length === positions.length) {
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  }
   geometry.computeVertexNormals();
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
@@ -179,5 +231,6 @@ export function buildCenteredMeshGeometry(mesh: PlyMesh): MeshSceneData | null {
     geometry,
     vertexCount: mesh.vertices.length,
     faceCount: mesh.faces.length,
+    hasVertexColors: hasColor && colors.length === positions.length,
   };
 }
