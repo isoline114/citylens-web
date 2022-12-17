@@ -20,7 +20,7 @@ beforeEach(() => {
 });
 
 describe('HomePage', () => {
-  it('renders the new outcome-oriented hero copy', async () => {
+  it('renders the outcome-oriented hero copy and the real-output panel', async () => {
     mocks.fetchFeaturedDemosOnServer.mockResolvedValueOnce([
       { run_id: 'demo-1', label: 'Brooklyn brownstones', address: '100 E 21st St' },
       { run_id: 'demo-2', label: 'Hudson Yards' },
@@ -33,15 +33,23 @@ describe('HomePage', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: /Detect urban change and generate geospatial & 3D artifacts/i,
+        name: /Building-level urban change detection/i,
       }),
     ).toBeInTheDocument();
 
     expect(screen.getByRole('link', { name: /view featured demo/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Create a run' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /read api docs/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /api docs/i })).toBeInTheDocument();
 
     expect(screen.getByText(/Free account: 5 runs\/month/i)).toBeInTheDocument();
+
+    // "What you get per run" — real-output panel
+    expect(
+      screen.getByRole('heading', { level: 2, name: /what you get per run/i }),
+    ).toBeInTheDocument();
+    // Per-class counts from the Brooklyn demo render as semantic text
+    expect(screen.getByText('unchanged')).toBeInTheDocument();
+    expect(screen.getByText('demolished')).toBeInTheDocument();
 
     const demoCards = screen.getAllByTestId('featured-demo-card');
     expect(demoCards.length).toBeGreaterThan(0);
