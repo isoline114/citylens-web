@@ -49,9 +49,23 @@ export function normalizeLocalRuns(runs: RecentRun[]): RunHistoryRow[] {
   return rows.filter((row): row is RunHistoryRow => row !== null);
 }
 
-export function mergeRunHistory(serverRuns: RunListItem[], localRuns: RecentRun[]): RunHistoryRow[] {
+export function mergeRunHistory(
+  serverRuns: RunListItem[],
+  localRuns: RecentRun[],
+  options?: { demoRunIds?: Iterable<string> },
+): RunHistoryRow[] {
   const out: RunHistoryRow[] = [];
   const seen = new Set<string>();
+
+  // Drop demo runs from the local-only pool: they're not the user's own
+  // runs and the server's /v1/runs correctly excludes them, so merging
+  // them in just creates `source: local` orphans on the runs tab.
+  const demoIds = new Set<string>();
+  if (options?.demoRunIds) {
+    for (const id of options.demoRunIds) {
+      if (typeof id === 'string' && id.trim().length > 0) demoIds.add(id.trim());
+    }
+  }
 
   for (const row of normalizeServerRuns(serverRuns)) {
     if (seen.has(row.runId)) continue;
@@ -61,6 +75,7 @@ export function mergeRunHistory(serverRuns: RunListItem[], localRuns: RecentRun[
 
   for (const row of normalizeLocalRuns(localRuns)) {
     if (seen.has(row.runId)) continue;
+    if (demoIds.has(row.runId)) continue;
     seen.add(row.runId);
     out.push(row);
   }

@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
-import { getRuns } from '@/lib/api';
+import { getFeaturedDemos, getRuns } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { getRecentRuns, type RecentRun } from '@/lib/storage';
+import { forgetRecentRuns, getRecentRuns, type RecentRun } from '@/lib/storage';
 import { mergeRunHistory, type RunHistoryRow } from '@/lib/run-history';
 import type { RunListItem } from '@/lib/types';
 
@@ -16,11 +16,41 @@ export default function RunsPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [demoRunIds, setDemoRunIds] = useState<Set<string>>(() => new Set());
 
   const signedIn = auth.status === 'authenticated';
 
   useEffect(() => {
     setLocalRuns(getRecentRuns());
+  }, []);
+
+  // Backfill cleanup: earlier builds incorrectly cached demo run ids
+  // into localStorage on every demo detail-page view. Filter them out
+  // both from the in-memory list and from the persisted store so the
+  // runs tab stops showing demo orphans as `source: local`.
+  useEffect(() => {
+    let cancelled = false;
+    async function pruneDemoRunsFromLocal() {
+      try {
+        const demos = await getFeaturedDemos();
+        if (cancelled) return;
+        const ids = new Set<string>();
+        for (const d of demos) {
+          const id = (typeof d.run_id === 'string' && d.run_id) || (typeof d.id === 'string' ? d.id : undefined);
+          if (id) ids.add(id);
+        }
+        if (ids.size === 0) return;
+        setDemoRunIds(ids);
+        const removed = forgetRecentRuns(ids);
+        if (removed > 0) setLocalRuns(getRecentRuns());
+      } catch {
+        // Best-effort cleanup; failure here is non-fatal.
+      }
+    }
+    pruneDemoRunsFromLocal();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -58,8 +88,8 @@ export default function RunsPage() {
   }, [signedIn]);
 
   const rows: RunHistoryRow[] = useMemo(
-    () => mergeRunHistory(serverRuns, localRuns),
-    [serverRuns, localRuns],
+    () => mergeRunHistory(serverRuns, localRuns, { demoRunIds }),
+    [serverRuns, localRuns, demoRunIds],
   );
 
   async function loadMore() {

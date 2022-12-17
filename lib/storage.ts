@@ -56,6 +56,28 @@ export function getRecentRuns(): RecentRun[] {
   return list.map((r) => ({ ...r, lastKnownStatus: cache[r.runId] ?? r.lastKnownStatus }));
 }
 
+/**
+ * Drop any cached recent-run entries whose runId is in `idsToForget`.
+ * Used to backfill cleanup of demo run ids that earlier builds
+ * incorrectly cached when users opened a demo detail page.
+ *
+ * Returns the number of entries removed (0 if no-op).
+ */
+export function forgetRecentRuns(idsToForget: Iterable<string>): number {
+  if (typeof window === 'undefined') return 0;
+  const drop = new Set<string>();
+  for (const id of idsToForget) {
+    if (typeof id === 'string' && id.trim().length > 0) drop.add(id.trim());
+  }
+  if (drop.size === 0) return 0;
+
+  const list = readJson<RecentRun[]>(RECENT_RUNS_STORAGE, []);
+  const next = list.filter((r) => !drop.has(r.runId));
+  if (next.length === list.length) return 0;
+  writeJson(RECENT_RUNS_STORAGE, next);
+  return list.length - next.length;
+}
+
 export function setRunStatusCache(runId: string, status: string): void {
   const cache = readJson<Record<string, string>>(RUN_STATUS_CACHE_STORAGE, {});
   cache[runId] = status;

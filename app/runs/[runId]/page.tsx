@@ -37,7 +37,12 @@ export default function RunDetailPage() {
     swrKey,
     async () => {
       const run = mode === 'demo' ? await getDemoRun(runId) : await getRun(runId);
-      rememberRecentRun(runId);
+      // Only cache the user's own runs as "recent runs". Demo views must
+      // not pollute localStorage — the signed-in /runs view merges
+      // recent-runs back in as `source: local` rows even though the
+      // server's /v1/runs correctly excludes demo runs from per-user
+      // history.
+      if (mode !== 'demo') rememberRecentRun(runId);
       if (run?.status) setRunStatusCache(runId, String(run.status));
       return run;
     },
