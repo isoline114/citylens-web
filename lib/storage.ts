@@ -38,6 +38,12 @@ function writeJson<T>(key: string, value: T): void {
   window.localStorage.setItem(key, JSON.stringify(value));
 }
 
+/**
+ * @deprecated The /runs page no longer merges localStorage entries with
+ * the server-side run history; account-scoped runs are the only source
+ * of truth. Kept as an exported symbol because removed callers may exist
+ * in older test scaffolds; new code should not call this.
+ */
 export function rememberRecentRun(runId: string): void {
   const list = readJson<RecentRun[]>(RECENT_RUNS_STORAGE, []);
   const now = Date.now();

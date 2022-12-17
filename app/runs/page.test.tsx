@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   },
   getRuns: vi.fn(),
   getRecentRuns: vi.fn(),
+  forgetRecentRuns: vi.fn(),
 }));
 
 vi.mock('@/lib/auth', () => ({
@@ -26,7 +27,11 @@ vi.mock('@/lib/api', async () => {
 
 vi.mock('@/lib/storage', async () => {
   const actual = await vi.importActual<typeof import('@/lib/storage')>('@/lib/storage');
-  return { ...actual, getRecentRuns: mocks.getRecentRuns };
+  return {
+    ...actual,
+    getRecentRuns: mocks.getRecentRuns,
+    forgetRecentRuns: mocks.forgetRecentRuns,
+  };
 });
 
 import RunsPage from './page';
@@ -34,34 +39,23 @@ import RunsPage from './page';
 beforeEach(() => {
   mocks.getRuns.mockReset();
   mocks.getRecentRuns.mockReset();
+  mocks.forgetRecentRuns.mockReset();
   mocks.getRecentRuns.mockReturnValue([]);
+  mocks.forgetRecentRuns.mockReturnValue(0);
   mocks.authState.status = 'unauthenticated';
   mocks.authState.user = null;
 });
 
 describe('/runs (signed out)', () => {
-  it('leads with sign-in / sign-up / featured-demos CTAs and explains the model', () => {
+  it('leads with sign-in / sign-up / featured-demos CTAs', () => {
     render(<RunsPage />);
 
     expect(
       screen.getByRole('heading', { level: 1, name: /your runs/i }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('link', { name: 'Sign in' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('link', { name: 'Create a free account' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('link', { name: 'View featured demos' }),
-    ).toBeInTheDocument();
-
-    expect(
-      screen.getByText(/public demo runs are available without sign-in/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/account runs are private to you/i),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Create a free account' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View featured demos' })).toBeInTheDocument();
   });
 
   it('does not call /v1/runs while signed out', () => {
@@ -69,19 +63,13 @@ describe('/runs (signed out)', () => {
     expect(mocks.getRuns).not.toHaveBeenCalled();
   });
 
-  it('hides the local-history accordion entirely when there is no local history', () => {
-    mocks.getRecentRuns.mockReturnValue([]);
-    render(<RunsPage />);
-    expect(screen.queryByText(/Browser-local run history/i)).not.toBeInTheDocument();
-  });
-
-  it('keeps the local-history accordion as a quiet fallback when entries exist', () => {
+  it('does not render any localStorage-derived run rows', () => {
     mocks.getRecentRuns.mockReturnValue([
       { runId: 'old-run-1', createdAtMs: 1700000000000, lastKnownStatus: 'succeeded' },
     ]);
     render(<RunsPage />);
-    // Renders inside <details>, so the summary text is what's surfaced
-    expect(screen.getByText(/Browser-local run history/i)).toBeInTheDocument();
+    expect(screen.queryByText('old-run-1')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Browser-local run history/i)).not.toBeInTheDocument();
   });
 });
 
@@ -95,8 +83,48 @@ describe('/runs (signed in, empty)', () => {
     mocks.getRuns.mockResolvedValueOnce({ items: [], nextCursor: null });
     render(<RunsPage />);
 
-    // Empty-state copy fires after the (resolved) fetch completes
     await screen.findByText(/No runs yet — create your first run\./i);
     expect(screen.getByRole('link', { name: 'Create a run' })).toBeInTheDocument();
+  });
+
+  it('clears stale localStorage recent-runs on mount (one-time backfill)', async () => {
+    mocks.getRecentRuns.mockReturnValue([
+      { runId: 'stale-1', createdAtMs: 1, lastKnownStatus: 'succeeded' },
+      { runId: 'stale-2', createdAtMs: 2, lastKnownStatus: 'failed' },
+    ]);
+    mocks.getRuns.mockResolvedValueOnce({ items: [], nextCursor: null });
+    render(<RunsPage />);
+
+    await waitFor(() => {
+      expect(mocks.forgetRecentRuns).toHaveBeenCalledWith(['stale-1', 'stale-2']);
+    });
+  });
+});
+
+describe('/runs (signed in, with server runs)', () => {
+  beforeEach(() => {
+    mocks.authState.status = 'authenticated';
+    mocks.authState.user = { id: 'u-test', email: 't@example.com' };
+  });
+
+  it('renders only server-returned runs, ignoring any localStorage entries', async () => {
+    mocks.getRecentRuns.mockReturnValue([
+      { runId: 'leaked-local', createdAtMs: 1, lastKnownStatus: 'succeeded' },
+    ]);
+    mocks.getRuns.mockResolvedValueOnce({
+      items: [
+        { run_id: 'real-server-1', status: 'succeeded', stage: 'done' },
+        { run_id: 'real-server-2', status: 'failed', stage: 'failed' },
+      ],
+      nextCursor: null,
+    });
+    render(<RunsPage />);
+
+    await screen.findByText('real-server-1');
+    expect(screen.getByText('real-server-2')).toBeInTheDocument();
+    // localStorage orphans must not bleed into the rendered list
+    expect(screen.queryByText('leaked-local')).not.toBeInTheDocument();
+    // Stage line is only rendered when stage is present (no `source: …` fallback)
+    expect(screen.queryByText(/source: local/i)).not.toBeInTheDocument();
   });
 });

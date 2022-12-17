@@ -3,54 +3,31 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
-import { getFeaturedDemos, getRuns } from '@/lib/api';
+import { getRuns } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { forgetRecentRuns, getRecentRuns, type RecentRun } from '@/lib/storage';
-import { mergeRunHistory, type RunHistoryRow } from '@/lib/run-history';
+import { forgetRecentRuns, getRecentRuns } from '@/lib/storage';
+import { normalizeServerRuns, type RunHistoryRow } from '@/lib/run-history';
 import type { RunListItem } from '@/lib/types';
 
 export default function RunsPage() {
   const auth = useAuth();
   const [serverRuns, setServerRuns] = useState<RunListItem[]>([]);
-  const [localRuns, setLocalRuns] = useState<RecentRun[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [demoRunIds, setDemoRunIds] = useState<Set<string>>(() => new Set());
 
   const signedIn = auth.status === 'authenticated';
 
+  // One-time backfill cleanup: earlier builds wrote arbitrary run ids to
+  // localStorage on every detail-page view (signed-out demo views,
+  // direct-URL visits, etc). Those orphans used to be merged into this
+  // page as `source: local` rows. The /runs view now only shows
+  // server-side runs — the cache has no remaining purpose, so drop it.
   useEffect(() => {
-    setLocalRuns(getRecentRuns());
-  }, []);
-
-  // Backfill cleanup: earlier builds incorrectly cached demo run ids
-  // into localStorage on every demo detail-page view. Filter them out
-  // both from the in-memory list and from the persisted store so the
-  // runs tab stops showing demo orphans as `source: local`.
-  useEffect(() => {
-    let cancelled = false;
-    async function pruneDemoRunsFromLocal() {
-      try {
-        const demos = await getFeaturedDemos();
-        if (cancelled) return;
-        const ids = new Set<string>();
-        for (const d of demos) {
-          const id = (typeof d.run_id === 'string' && d.run_id) || (typeof d.id === 'string' ? d.id : undefined);
-          if (id) ids.add(id);
-        }
-        if (ids.size === 0) return;
-        setDemoRunIds(ids);
-        const removed = forgetRecentRuns(ids);
-        if (removed > 0) setLocalRuns(getRecentRuns());
-      } catch {
-        // Best-effort cleanup; failure here is non-fatal.
-      }
+    const cached = getRecentRuns();
+    if (cached.length > 0) {
+      forgetRecentRuns(cached.map((r) => r.runId));
     }
-    pruneDemoRunsFromLocal();
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   useEffect(() => {
@@ -87,10 +64,7 @@ export default function RunsPage() {
     };
   }, [signedIn]);
 
-  const rows: RunHistoryRow[] = useMemo(
-    () => mergeRunHistory(serverRuns, localRuns, { demoRunIds }),
-    [serverRuns, localRuns, demoRunIds],
-  );
+  const rows: RunHistoryRow[] = useMemo(() => normalizeServerRuns(serverRuns), [serverRuns]);
 
   async function loadMore() {
     if (!nextCursor) return;
@@ -107,9 +81,8 @@ export default function RunsPage() {
     }
   }
 
-  // Signed-out: lead with the product story (sign in / featured demos),
-  // not with browser-local history. Local history stays as a quiet
-  // fallback below for dev/test convenience.
+  // Signed-out: only sign-in CTAs. No localStorage fallback — the runs
+  // tab is account-scoped by design.
   if (!signedIn) {
     return (
       <div className="flex flex-col gap-6">
@@ -117,7 +90,6 @@ export default function RunsPage() {
           <h1 className="text-2xl font-semibold">Your runs</h1>
           <p className="text-sm text-slate-600">
             Sign in to view runs from your account. Public demo runs are available without sign-in.
-            Account runs are private to you.
           </p>
         </header>
 
@@ -147,38 +119,11 @@ export default function RunsPage() {
             </Link>
           </div>
         </section>
-
-        {localRuns.length > 0 && (
-          <details className="rounded-2xl border border-slate-200 bg-white p-4">
-            <summary className="cursor-pointer text-sm font-medium text-slate-900">
-              Browser-local run history ({localRuns.length})
-            </summary>
-            <p className="mt-2 text-xs text-slate-500">
-              Cached run IDs from this browser. Useful for re-opening a run by ID. Sign in to see
-              your full server-side history.
-            </p>
-            <ul className="mt-3 divide-y divide-slate-200">
-              {localRuns.map((r) => (
-                <li key={r.runId} className="flex items-center justify-between py-2">
-                  <Link
-                    href={`/runs/${encodeURIComponent(r.runId)}`}
-                    className="text-sm font-medium text-slate-900 hover:underline"
-                  >
-                    {r.runId}
-                  </Link>
-                  <div className="text-xs text-slate-500">
-                    {r.lastKnownStatus ? `status: ${r.lastKnownStatus}` : 'status: unknown'}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </details>
-        )}
       </div>
     );
   }
 
-  // Signed-in: server history is the primary product surface.
+  // Signed-in: server history is the only source of truth.
   const isEmpty = serverRuns.length === 0 && !loading;
 
   return (
@@ -187,7 +132,7 @@ export default function RunsPage() {
 
       {serverError && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Could not load your run history: {serverError}. Showing browser-local fallback below.
+          Could not load your run history: {serverError}.
         </div>
       )}
 
@@ -219,7 +164,7 @@ export default function RunsPage() {
                   </Link>
                   <div className="text-right text-xs text-slate-600">
                     <div>{r.status ? `status: ${r.status}` : 'status: (unknown)'}</div>
-                    <div>{r.stage ? `stage: ${r.stage}` : `source: ${r.source}`}</div>
+                    {r.stage && <div>stage: {r.stage}</div>}
                   </div>
                 </li>
               ))}
