@@ -41,15 +41,16 @@ describe('HomePage', () => {
     expect(screen.getByRole('link', { name: 'Create a run' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /api docs/i })).toBeInTheDocument();
 
-    expect(screen.getByText(/Free account: 5 runs\/month/i)).toBeInTheDocument();
+    expect(screen.getByText(/NYC, 5 boroughs/i)).toBeInTheDocument();
 
     // "What you get per run" — real-output panel
     expect(
       screen.getByRole('heading', { level: 2, name: /what you get per run/i }),
     ).toBeInTheDocument();
-    // Per-class counts from the Brooklyn demo render as semantic text
-    expect(screen.getByText('unchanged')).toBeInTheDocument();
-    expect(screen.getByText('demolished')).toBeInTheDocument();
+    // Per-class counts from the Brooklyn demo render as semantic text.
+    // The same labels appear in the hero legend, so scope by count.
+    expect(screen.getAllByText('unchanged').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('demolished').length).toBeGreaterThan(0);
 
     const demoCards = screen.getAllByTestId('featured-demo-card');
     expect(demoCards.length).toBeGreaterThan(0);
