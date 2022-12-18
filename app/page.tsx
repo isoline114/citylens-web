@@ -20,8 +20,8 @@ export const revalidate = 60;
 // the latest known values and may go stale between precomputes — the
 // failure mode is just stale numbers, not a broken page.
 const BROOKLYN_PARITY_ADDRESS_PREFIX = '100 E 21st St';
-const BROOKLYN_DEMO_RUN_FALLBACK = '11d4ce7c0f9b453da50f0bf770f69d47';
-const BROOKLYN_CHANGE_COUNTS = { unchanged: 127, modified: 7, demolished: 0, added: 2 } as const;
+const BROOKLYN_DEMO_RUN_FALLBACK = 'b7356fa767aa4605b8a77352bccd427e';
+const BROOKLYN_CHANGE_COUNTS = { unchanged: 127, modified: 7, demolished: 0, added: 0 } as const;
 const BROOKLYN_TOTAL =
   BROOKLYN_CHANGE_COUNTS.unchanged +
   BROOKLYN_CHANGE_COUNTS.modified +
@@ -147,7 +147,7 @@ export default async function HomePage() {
                 <div>
                   <div className="text-sm font-semibold tracking-tight">100 E 21st St — Brooklyn</div>
                   <div className="mt-0.5 text-slate-300">
-                    136 buildings classified · 2017 → 2024 · LOD1 mesh
+                    {BROOKLYN_TOTAL} buildings classified · 2017 → 2024 · LOD1 mesh
                   </div>
                 </div>
                 <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-medium ring-1 ring-white/25 backdrop-blur-sm">
