@@ -1,12 +1,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, Boxes, FileCode, Radar } from 'lucide-react';
+import { ArrowRight, Boxes, FileCode, Fingerprint, Layers, MapPin, Radar, ShieldCheck, Sparkles } from 'lucide-react';
 
 import { FeaturedDemoCards } from '@/components/FeaturedDemoCards';
 import { RunForm } from '@/components/RunForm';
 import type { DemoFeaturedRun } from '@/lib/api';
 import { fetchFeaturedDemosOnServer } from '@/lib/api.server';
-import { publicAssetPath } from '@/lib/site';
 
 // Re-render the homepage's SSR HTML at most once per minute so a freshly
 // published demo lands on the landing page within ~60s without hammering
@@ -23,6 +22,11 @@ export const revalidate = 60;
 const BROOKLYN_PARITY_ADDRESS_PREFIX = '100 E 21st St';
 const BROOKLYN_DEMO_RUN_FALLBACK = '11d4ce7c0f9b453da50f0bf770f69d47';
 const BROOKLYN_CHANGE_COUNTS = { unchanged: 127, modified: 7, demolished: 0, added: 2 } as const;
+const BROOKLYN_TOTAL =
+  BROOKLYN_CHANGE_COUNTS.unchanged +
+  BROOKLYN_CHANGE_COUNTS.modified +
+  BROOKLYN_CHANGE_COUNTS.demolished +
+  BROOKLYN_CHANGE_COUNTS.added;
 
 export default async function HomePage() {
   const featured = await fetchFeaturedDemosOnServer();
@@ -32,38 +36,57 @@ export default async function HomePage() {
   const brooklynDetailUrl = `/runs/${brooklynRunId}?demo=1`;
 
   return (
-    <div className="relative">
-      {/* Subtle topo texture */}
-      <div
-        className="pointer-events-none absolute inset-0 -z-10 opacity-[0.08]"
-        style={{ backgroundImage: `url(${publicAssetPath('/topo-grid.png')})`, backgroundRepeat: 'repeat' }}
-        aria-hidden="true"
-      />
-
+    <div className="flex flex-col gap-10 pb-4">
       {/* ---------- Hero ---------- */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-2">
-          <div className="flex flex-col gap-5">
-            <div className="inline-flex items-center gap-2 self-start rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        {/* Layered backdrop: soft slate gradient + sky/emerald glow blobs.
+            Scoped to the hero card only; replaces the old (barely visible)
+            global topo-grid texture. */}
+        <div
+          className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-slate-50 via-white to-sky-50/60"
+          aria-hidden="true"
+        />
+        <div
+          className="pointer-events-none absolute -left-20 -top-24 -z-10 h-72 w-72 rounded-full bg-sky-200/40 blur-3xl"
+          aria-hidden="true"
+        />
+        <div
+          className="pointer-events-none absolute -bottom-24 -right-20 -z-10 h-80 w-80 rounded-full bg-emerald-200/30 blur-3xl"
+          aria-hidden="true"
+        />
+
+        <div className="grid grid-cols-1 items-center gap-10 p-6 md:grid-cols-[1.05fr_1fr] md:p-8">
+          <div className="flex flex-col gap-6">
+            <div className="inline-flex items-center gap-2 self-start rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              </span>
               v0.1 · NYC, 5 boroughs · public demos free
             </div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-[2.5rem] md:leading-[1.1]">
+
+            <h1 className="text-balance text-4xl font-semibold tracking-tight text-slate-950 md:text-[3.25rem] md:leading-[1.05]">
               Building-level urban change detection from aerial imagery.
             </h1>
-            <p className="max-w-prose text-[15px] leading-7 text-slate-600">
-              Type any NYC address. CityLens pulls the latest orthophoto, fuses it
-              with NYC&apos;s baseline footprints and NYS LiDAR, and returns a
-              classified <code className="rounded bg-slate-100 px-1 py-0.5 text-[12px]">change.geojson</code>,
-              a LOD1 <code className="rounded bg-slate-100 px-1 py-0.5 text-[12px]">mesh.ply</code>,
-              and a rendered preview — with a per-input audit trail.
+
+            <p className="max-w-prose text-base leading-7 text-slate-600 md:text-lg md:leading-8">
+              Type any NYC address. CityLens fuses the latest orthophoto with NYC&apos;s
+              baseline footprints and NYS LiDAR, then returns a classified{' '}
+              <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[13px] text-slate-800 ring-1 ring-inset ring-slate-200">
+                change.geojson
+              </code>
+              , a LOD1{' '}
+              <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[13px] text-slate-800 ring-1 ring-inset ring-slate-200">
+                mesh.ply
+              </code>
+              , and a rendered preview — every input SHA-256 recorded.
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               {featured.length > 0 && (
                 <Link
                   href="#featured-demos"
-                  className="group inline-flex h-11 items-center justify-center gap-2 rounded-md bg-slate-900 px-5 text-sm font-medium text-white shadow-sm hover:bg-slate-800"
+                  className="group inline-flex h-11 items-center justify-center gap-2 rounded-md bg-slate-900 px-5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-800"
                 >
                   View featured demo
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -71,7 +94,7 @@ export default async function HomePage() {
               )}
               <Link
                 href="#create"
-                className="inline-flex h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-5 text-sm font-medium text-slate-900 hover:bg-slate-50"
+                className="inline-flex h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-5 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50"
               >
                 Create a run
               </Link>
@@ -87,49 +110,124 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <Link
-            href={brooklynDetailUrl}
-            className="group relative block overflow-hidden rounded-xl border border-slate-200 bg-slate-950 shadow-md ring-1 ring-black/5"
-            aria-label="Open the Brooklyn featured demo"
-          >
-            <Image
-              src={brooklynPreviewUrl}
-              alt="CityLens change-detection preview for 100 E 21st St, Brooklyn — gray = unchanged buildings, green = added, yellow = modified, red = demolished."
-              width={1024}
-              height={703}
-              priority
-              unoptimized
-              className="h-auto w-full transition-transform duration-300 group-hover:scale-[1.02]"
+          {/* Hero preview — framed with offset shadow stack + colored glow.
+              The change-classified output is the killer demo, so we lean
+              into a more "alive" presentation. */}
+          <div className="relative">
+            <div
+              className="pointer-events-none absolute -inset-4 -z-10 rounded-[28px] bg-gradient-to-br from-sky-200/40 via-emerald-200/30 to-amber-200/30 blur-2xl"
+              aria-hidden="true"
             />
-            {/* Top-right palette legend over the imagery */}
-            <div className="pointer-events-none absolute right-3 top-3 rounded-md bg-slate-950/70 p-2 text-[10px] text-slate-100 shadow-sm backdrop-blur-sm">
-              <div className="font-medium uppercase tracking-wider text-slate-300">2024 vs 2017</div>
-              <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5">
-                <LegendDot color="#8c8c8c" label="unchanged" />
-                <LegendDot color="#ffc800" label="modified" />
-                <LegendDot color="#dc1e1e" label="demolished" />
-                <LegendDot color="#00c83c" label="added" />
-              </div>
-            </div>
-            {/* Bottom caption */}
-            <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent px-4 pb-3 pt-8 text-xs text-slate-50">
-              <div>
-                <div className="text-sm font-semibold">100 E 21st St — Brooklyn</div>
-                <div className="mt-0.5 text-slate-300">
-                  136 buildings classified · 2017 → 2024 · LOD1 mesh
+            <Link
+              href={brooklynDetailUrl}
+              className="group relative block overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-2xl shadow-slate-900/15 ring-1 ring-black/5 transition-transform duration-300 hover:-translate-y-0.5"
+              aria-label="Open the Brooklyn featured demo"
+            >
+              <Image
+                src={brooklynPreviewUrl}
+                alt="CityLens change-detection preview for 100 E 21st St, Brooklyn — gray = unchanged buildings, green = added, yellow = modified, red = demolished."
+                width={1024}
+                height={703}
+                priority
+                unoptimized
+                className="h-auto w-full transition-transform duration-500 group-hover:scale-[1.03]"
+              />
+              {/* Top-right palette legend over the imagery */}
+              <div className="pointer-events-none absolute right-3 top-3 rounded-lg bg-slate-950/75 p-2.5 text-[10px] text-slate-100 shadow-md ring-1 ring-white/10 backdrop-blur-md">
+                <div className="font-medium uppercase tracking-wider text-slate-300">2024 vs 2017</div>
+                <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1">
+                  <LegendDot color="#8c8c8c" label="unchanged" />
+                  <LegendDot color="#ffc800" label="modified" />
+                  <LegendDot color="#dc1e1e" label="demolished" />
+                  <LegendDot color="#00c83c" label="added" />
                 </div>
               </div>
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-medium ring-1 ring-white/25 backdrop-blur-sm">
-                Live demo
-                <ArrowRight className="h-3 w-3" />
-              </span>
+              {/* Bottom caption */}
+              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-slate-950/95 via-slate-950/55 to-transparent px-4 pb-3.5 pt-10 text-xs text-slate-50">
+                <div>
+                  <div className="text-sm font-semibold tracking-tight">100 E 21st St — Brooklyn</div>
+                  <div className="mt-0.5 text-slate-300">
+                    136 buildings classified · 2017 → 2024 · LOD1 mesh
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-medium ring-1 ring-white/25 backdrop-blur-sm">
+                  Live demo
+                  <ArrowRight className="h-3 w-3" />
+                </span>
+              </div>
+            </Link>
+            {/* Floating provenance chip — anchors the trust message visually */}
+            <div className="absolute -bottom-3 left-4 hidden items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-3 py-1.5 text-[11px] font-medium text-slate-700 shadow-md ring-1 ring-black/[0.03] backdrop-blur sm:inline-flex">
+              <Fingerprint className="h-3.5 w-3.5 text-emerald-600" />
+              SHA-256 audit trail per run
             </div>
-          </Link>
+          </div>
         </div>
       </section>
 
-      {/* ---------- Feature row (lifted out of the hero card so it breathes) ---------- */}
-      <section className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+      {/* ---------- How it works — 3-step strip ---------- */}
+      <section aria-labelledby="how-it-works" className="flex flex-col gap-5">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+              How it works
+            </div>
+            <h2 id="how-it-works" className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
+              Address in. Reproducible artifacts out.
+            </h2>
+          </div>
+        </div>
+
+        <ol className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Step
+            n={1}
+            accent="sky"
+            icon={<MapPin className="h-4 w-4" />}
+            title="Type an NYC address"
+            body="We geocode it, snap to a 250m AOI, and pull the latest USGS NAIP orthophoto."
+            visual={
+              <div className="font-mono text-[13px] text-slate-700">
+                <span className="text-slate-400">&gt;</span> 100 E 21st St,{' '}
+                <span className="text-sky-700">Brooklyn</span>
+                <span className="ml-0.5 inline-block h-3.5 w-1.5 translate-y-0.5 animate-pulse bg-slate-400" />
+              </div>
+            }
+          />
+          <Step
+            n={2}
+            accent="amber"
+            icon={<Layers className="h-4 w-4" />}
+            title="Fuse imagery + footprints + LiDAR"
+            body="SAM2 segments rooftops; we align them against NYC OpenData footprints and lift heights from NYS LiDAR p95."
+            visual={
+              <div className="flex items-center gap-1.5">
+                <FuseChip label="orthophoto" tone="bg-sky-100 text-sky-800 ring-sky-200" />
+                <span className="text-slate-300">+</span>
+                <FuseChip label="footprints" tone="bg-amber-100 text-amber-800 ring-amber-200" />
+                <span className="text-slate-300">+</span>
+                <FuseChip label="LiDAR" tone="bg-emerald-100 text-emerald-800 ring-emerald-200" />
+              </div>
+            }
+          />
+          <Step
+            n={3}
+            accent="emerald"
+            icon={<Sparkles className="h-4 w-4" />}
+            title="Get classified change + 3D mesh"
+            body="Per-building change class, vertex-colored LOD1 mesh, and a one-page run summary — all downloadable."
+            visual={
+              <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                <ArtifactPill label="preview.png" />
+                <ArtifactPill label="change.geojson" />
+                <ArtifactPill label="mesh.ply" />
+              </div>
+            }
+          />
+        </ol>
+      </section>
+
+      {/* ---------- Feature row ---------- */}
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <FeatureCard
           accent="sky"
           icon={<Radar className="h-4 w-4" />}
@@ -169,13 +267,16 @@ export default async function HomePage() {
       </section>
 
       {/* ---------- "What you get per run" — three real artifacts ---------- */}
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight">What you get per run</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Three artifacts, every run, on a fixed 250m AOI. Real output below from
-              the Brooklyn demo.
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+              Run output
+            </div>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight">What you get per run</h2>
+            <p className="mt-1.5 text-sm text-slate-600">
+              Three artifacts, every run, on a fixed 250m AOI. Real output below from the
+              Brooklyn demo.
             </p>
           </div>
           <Link
@@ -186,7 +287,8 @@ export default async function HomePage() {
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
           {/* preview.png card */}
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
             <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-950">
@@ -195,12 +297,15 @@ export default async function HomePage() {
                 alt=""
                 fill
                 unoptimized
-                className="object-cover opacity-90"
+                className="object-cover opacity-95"
               />
+              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-slate-950/70 to-transparent" />
+              <div className="absolute bottom-2 left-2 rounded-md bg-slate-950/70 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-slate-100 ring-1 ring-white/10 backdrop-blur-sm">
+                preview.png
+              </div>
             </div>
-            <div className="p-3">
-              <div className="font-mono text-[11px] uppercase tracking-wider text-slate-500">preview.png</div>
-              <div className="mt-1 text-sm font-medium text-slate-900">
+            <div className="p-4">
+              <div className="text-sm font-semibold text-slate-900">
                 Change-classified overlay
               </div>
               <p className="mt-1 text-xs leading-relaxed text-slate-600">
@@ -209,30 +314,70 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* change.geojson card */}
+          {/* change.geojson card — now with a proportional stack-bar */}
           <div className="flex flex-col rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="font-mono text-[11px] uppercase tracking-wider text-slate-500">change.geojson</div>
-            <div className="mt-1 text-sm font-medium text-slate-900">
+            <div className="font-mono text-[11px] uppercase tracking-wider text-slate-500">
+              change.geojson
+            </div>
+            <div className="mt-1 text-sm font-semibold text-slate-900">
               Per-feature classification
             </div>
+
+            {/* Stack-bar visualization of change_counts */}
+            <div className="mt-3.5 flex h-2.5 w-full overflow-hidden rounded-full ring-1 ring-slate-200">
+              <StackSeg width={(BROOKLYN_CHANGE_COUNTS.unchanged / BROOKLYN_TOTAL) * 100} color="#8c8c8c" />
+              <StackSeg width={(BROOKLYN_CHANGE_COUNTS.modified / BROOKLYN_TOTAL) * 100} color="#ffc800" />
+              <StackSeg width={(BROOKLYN_CHANGE_COUNTS.demolished / BROOKLYN_TOTAL) * 100} color="#dc1e1e" />
+              <StackSeg width={(BROOKLYN_CHANGE_COUNTS.added / BROOKLYN_TOTAL) * 100} color="#00c83c" />
+            </div>
+
             <ul className="mt-3 space-y-1.5 text-xs">
               <ChangeRow color="#8c8c8c" label="unchanged" count={BROOKLYN_CHANGE_COUNTS.unchanged} />
               <ChangeRow color="#ffc800" label="modified" count={BROOKLYN_CHANGE_COUNTS.modified} />
               <ChangeRow color="#dc1e1e" label="demolished" count={BROOKLYN_CHANGE_COUNTS.demolished} />
               <ChangeRow color="#00c83c" label="added" count={BROOKLYN_CHANGE_COUNTS.added} />
             </ul>
-            <p className="mt-3 text-xs leading-relaxed text-slate-600">
-              Each feature carries area, height, IoU, confidence, and 2017 NYC OpenData
-              provenance.
-            </p>
+
+            {/* Tiny syntax-highlighted snippet of a feature's properties */}
+            <pre className="mt-3 overflow-x-auto rounded-md bg-slate-950 p-2.5 font-mono text-[10.5px] leading-relaxed text-slate-200 ring-1 ring-slate-900/20">
+              <code>
+                <span className="text-slate-400">{'{'}</span>
+                {'\n  '}
+                <span className="text-sky-300">&quot;kind&quot;</span>
+                <span className="text-slate-400">: </span>
+                <span className="text-amber-300">&quot;modified&quot;</span>
+                <span className="text-slate-400">,</span>
+                {'\n  '}
+                <span className="text-sky-300">&quot;iou&quot;</span>
+                <span className="text-slate-400">: </span>
+                <span className="text-emerald-300">0.74</span>
+                <span className="text-slate-400">,</span>
+                {'\n  '}
+                <span className="text-sky-300">&quot;height_m&quot;</span>
+                <span className="text-slate-400">: </span>
+                <span className="text-emerald-300">12.4</span>
+                {'\n'}
+                <span className="text-slate-400">{'}'}</span>
+              </code>
+            </pre>
           </div>
 
           {/* mesh.ply card */}
           <div className="flex flex-col rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="font-mono text-[11px] uppercase tracking-wider text-slate-500">mesh.ply</div>
-            <div className="mt-1 text-sm font-medium text-slate-900">
+            <div className="font-mono text-[11px] uppercase tracking-wider text-slate-500">
+              mesh.ply
+            </div>
+            <div className="mt-1 text-sm font-semibold text-slate-900">
               LOD1 extruded buildings
             </div>
+
+            {/* Inline isometric-ish "mesh thumbnail" rendered with CSS so it
+                stays light-weight and vector-crisp; signals the 3D output
+                without asking the visitor to load three.js up front. */}
+            <div className="mt-3.5 flex h-24 items-center justify-center rounded-md bg-gradient-to-br from-slate-900 to-slate-800 ring-1 ring-slate-900/30">
+              <MeshThumb />
+            </div>
+
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-700">
               <Stat label="vertices" value="3.9k" />
               <Stat label="faces" value="5.6k" />
@@ -240,23 +385,78 @@ export default async function HomePage() {
               <Stat label="vertex colors" value="change palette" />
             </div>
             <p className="mt-3 text-xs leading-relaxed text-slate-600">
-              Drop into three.js / Blender / Unreal. Vertex-colored so the change
-              palette renders without extra work.
+              Drop into three.js / Blender / Unreal. Vertex-colored so the change palette
+              renders without extra work.
             </p>
           </div>
         </div>
       </section>
 
-      <div id="featured-demos" className="mt-6">
+      {/* ---------- Trust / provenance stripe ---------- */}
+      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-900 to-slate-950 p-6 text-slate-100 shadow-sm md:p-8">
+        <div
+          className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-emerald-500/15 blur-3xl"
+          aria-hidden="true"
+        />
+        <div className="relative grid grid-cols-1 gap-6 md:grid-cols-[1.1fr_2fr] md:items-center">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-300">
+              Built for diligence
+            </div>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-white">
+              Every input is hashed. Every run is reproducible.
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-300">
+              CityLens records the SHA-256 of every orthophoto tile, footprint snapshot,
+              and LiDAR tile. Re-run the same address tomorrow and you get a byte-for-byte
+              audit trail back to the source data.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <TrustCard
+              icon={<Fingerprint className="h-4 w-4" />}
+              title="SHA-256 per input"
+              body="Imagery, footprints, LiDAR — all hashed and embedded in run_summary.json."
+            />
+            <TrustCard
+              icon={<ShieldCheck className="h-4 w-4" />}
+              title="Server-locked options"
+              body="Imagery 2024, baseline 2017, SAM2. Clients can't drift the contract."
+            />
+            <TrustCard
+              icon={<FileCode className="h-4 w-4" />}
+              title="QA metrics included"
+              body="mask_iou, change_polygon_f1, mesh_footprint_iou — included in every run."
+            />
+          </div>
+        </div>
+      </section>
+
+      <div id="featured-demos">
         <FeaturedDemoCards demos={featured} />
       </div>
 
-      <section id="create" className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold tracking-tight">Create a CityLens run</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Pick a featured demo above, or sign in with a free account to run CityLens on any NYC
-          address. We inject pipeline defaults — you only pick the address and outputs.
-        </p>
+      {/* ---------- Create a run ---------- */}
+      <section
+        id="create"
+        className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8"
+      >
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+              Try it
+            </div>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight">Create a CityLens run</h2>
+            <p className="mt-1.5 max-w-2xl text-sm text-slate-600">
+              Pick a featured demo above, or sign in with a free account to run CityLens on
+              any NYC address. We inject pipeline defaults — you only pick the address and
+              outputs.
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-2 self-start rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
+            Free plan · 5 runs/month
+          </span>
+        </div>
         <div className="mt-6">
           <RunForm initialFeatured={featured} />
         </div>
@@ -272,14 +472,17 @@ const ACCENTS = {
   sky: {
     bar: 'bg-sky-500',
     iconBg: 'bg-sky-50 text-sky-700 ring-sky-200',
+    chipNum: 'bg-sky-50 text-sky-700 ring-sky-200',
   },
   amber: {
     bar: 'bg-amber-500',
     iconBg: 'bg-amber-50 text-amber-700 ring-amber-200',
+    chipNum: 'bg-amber-50 text-amber-700 ring-amber-200',
   },
   emerald: {
     bar: 'bg-emerald-500',
     iconBg: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+    chipNum: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
   },
 } as const;
 
@@ -300,7 +503,7 @@ function FeatureCard({
   return (
     <Link
       href={href}
-      className="group relative flex flex-col gap-3 overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+      className="group relative flex flex-col gap-3 overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
     >
       <span className={`absolute inset-y-0 left-0 w-1 ${a.bar}`} aria-hidden="true" />
       <span
@@ -314,6 +517,126 @@ function FeatureCard({
         Learn more <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
       </span>
     </Link>
+  );
+}
+
+function Step({
+  n,
+  accent,
+  icon,
+  title,
+  body,
+  visual,
+}: {
+  n: number;
+  accent: keyof typeof ACCENTS;
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+  visual: React.ReactNode;
+}) {
+  const a = ACCENTS[accent];
+  return (
+    <li className="relative flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <span className={`absolute inset-y-0 left-0 w-1 rounded-l-xl ${a.bar}`} aria-hidden="true" />
+      <div className="flex items-center gap-2.5">
+        <span
+          className={`inline-flex h-7 w-7 items-center justify-center rounded-md font-mono text-xs font-semibold ring-1 ring-inset ${a.chipNum}`}
+        >
+          {n}
+        </span>
+        <span
+          className={`inline-flex h-7 w-7 items-center justify-center rounded-md ring-1 ring-inset ${a.iconBg}`}
+        >
+          {icon}
+        </span>
+      </div>
+      <div>
+        <div className="text-sm font-semibold text-slate-900">{title}</div>
+        <p className="mt-1 text-sm leading-6 text-slate-600">{body}</p>
+      </div>
+      <div className="mt-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5">
+        {visual}
+      </div>
+    </li>
+  );
+}
+
+function FuseChip({ label, tone }: { label: string; tone: string }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 font-mono text-[10.5px] font-medium ring-1 ring-inset ${tone}`}
+    >
+      {label}
+    </span>
+  );
+}
+
+function ArtifactPill({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center rounded-md bg-white px-2 py-1 text-slate-700 ring-1 ring-inset ring-slate-200">
+      {label}
+    </span>
+  );
+}
+
+function TrustCard({
+  icon,
+  title,
+  body,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
+      <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-400/10 text-emerald-300 ring-1 ring-inset ring-emerald-400/30">
+        {icon}
+      </span>
+      <div className="mt-3 text-sm font-semibold text-white">{title}</div>
+      <p className="mt-1 text-xs leading-5 text-slate-300">{body}</p>
+    </div>
+  );
+}
+
+function StackSeg({ width, color }: { width: number; color: string }) {
+  if (width <= 0) return null;
+  return (
+    <span
+      className="block h-full"
+      style={{ width: `${width}%`, backgroundColor: color }}
+      aria-hidden="true"
+    />
+  );
+}
+
+// Pure-CSS isometric rooftop cluster — three offset extruded "buildings"
+// approximating a vertex-colored LOD1 mesh. Doesn't try to be accurate;
+// signals "3D output" at a glance without loading three.js.
+function MeshThumb() {
+  return (
+    <div
+      className="relative h-16 w-32"
+      style={{
+        transform: 'rotateX(55deg) rotateZ(-35deg)',
+        transformStyle: 'preserve-3d',
+      }}
+      aria-hidden="true"
+    >
+      <span
+        className="absolute left-2 top-2 block h-10 w-10 rounded-sm shadow-md ring-1 ring-black/30"
+        style={{ backgroundColor: '#8c8c8c' }}
+      />
+      <span
+        className="absolute left-12 top-0 block h-12 w-9 rounded-sm shadow-md ring-1 ring-black/30"
+        style={{ backgroundColor: '#ffc800' }}
+      />
+      <span
+        className="absolute left-20 top-4 block h-8 w-10 rounded-sm shadow-md ring-1 ring-black/30"
+        style={{ backgroundColor: '#00c83c' }}
+      />
+    </div>
   );
 }
 
