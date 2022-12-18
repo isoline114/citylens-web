@@ -26,10 +26,10 @@ export function FeaturedDemoCards({ demos }: Props) {
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6">
+    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-end justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Featured demos</h2>
+          <h2 className="text-xl font-semibold tracking-tight">Featured demos</h2>
           <p className="mt-1 text-sm text-slate-600">
             Real precomputed CityLens runs. No sign-in required.
           </p>
@@ -37,17 +37,30 @@ export function FeaturedDemoCards({ demos }: Props) {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {demos.slice(0, 6).map((demo) => {
+        {demos.slice(0, 6).map((demo, index) => {
           const id = demoId(demo);
           if (!id) return null;
-          return <DemoCard key={id} demo={demo} runId={id} />;
+          return <DemoCard key={id} demo={demo} runId={id} index={index} />;
         })}
       </div>
     </section>
   );
 }
 
-function DemoCard({ demo, runId }: { demo: DemoFeaturedRun; runId: string }) {
+// Cycled through the demo grid so the section reads as a kit alongside
+// the home-page feature cards (which use the same sky/amber/emerald
+// palette).
+const DEMO_ACCENTS = ['bg-sky-500', 'bg-amber-500', 'bg-emerald-500'] as const;
+
+function DemoCard({
+  demo,
+  runId,
+  index,
+}: {
+  demo: DemoFeaturedRun;
+  runId: string;
+  index: number;
+}) {
   const title = demoTitle(demo, runId);
   const address = typeof demo.address === 'string' ? demo.address : null;
   const imageryYear = typeof demo.imagery_year === 'number' ? demo.imagery_year : undefined;
@@ -55,16 +68,18 @@ function DemoCard({ demo, runId }: { demo: DemoFeaturedRun; runId: string }) {
   const outputs = Array.isArray(demo.outputs)
     ? demo.outputs.filter((o): o is string => typeof o === 'string')
     : [];
+  const accent = DEMO_ACCENTS[index % DEMO_ACCENTS.length];
 
   return (
     <Link
       href={`/runs/${encodeURIComponent(runId)}?demo=1`}
-      className="group flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:border-slate-300 hover:bg-white"
+      className="group relative flex flex-col gap-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-4 pl-5 transition-all hover:border-slate-300 hover:bg-white hover:shadow-sm"
       data-testid="featured-demo-card"
     >
+      <span className={`absolute inset-y-0 left-0 w-1 ${accent}`} aria-hidden="true" />
       <div className="flex items-start justify-between gap-3">
         <div className="text-sm font-semibold text-slate-900">{title}</div>
-        <ArrowRight className="h-4 w-4 shrink-0 text-slate-400 group-hover:text-slate-700" />
+        <ArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-700" />
       </div>
 
       {address && (
@@ -89,8 +104,9 @@ function DemoCard({ demo, runId }: { demo: DemoFeaturedRun; runId: string }) {
         )}
       </div>
 
-      <span className="mt-1 text-xs font-medium text-slate-900">
+      <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-slate-900">
         View demo
+        <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
       </span>
     </Link>
   );

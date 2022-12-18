@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ArrowRight, Inbox } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { getRuns } from '@/lib/api';
@@ -93,7 +94,8 @@ export default function RunsPage() {
           </p>
         </header>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6">
+        <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <span className="absolute inset-y-0 left-0 w-1 bg-sky-500" aria-hidden="true" />
           <h2 className="text-lg font-semibold">Sign in to view your runs</h2>
           <p className="mt-2 text-sm text-slate-600">
             CityLens runs are tied to a free account. Free plan includes 5 runs per month.
@@ -101,9 +103,10 @@ export default function RunsPage() {
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <Link
               href="/sign-in"
-              className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
+              className="group inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
             >
               Sign in
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <Link
               href="/sign-up"
@@ -143,13 +146,17 @@ export default function RunsPage() {
         </div>
         <div className="p-4">
           {isEmpty && !serverError ? (
-            <div className="flex flex-col items-start gap-3">
-              <p className="text-sm text-slate-600">No runs yet — create your first run.</p>
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200">
+                <Inbox className="h-5 w-5" />
+              </span>
+              <p className="text-sm text-slate-700">No runs yet — create your first run.</p>
               <Link
                 href="/#create"
-                className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
+                className="group inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
               >
                 Create a run
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
           ) : (
