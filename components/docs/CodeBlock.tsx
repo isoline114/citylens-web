@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { CopyButton } from '@/components/docs/CopyButton';
+
 type CodeBlockProps = {
   language?: string;
   label?: string;
@@ -8,13 +10,14 @@ type CodeBlockProps = {
 
 export function CodeBlock({ language = 'bash', label, children }: CodeBlockProps) {
   return (
-    <div className="overflow-hidden rounded-md border border-slate-200 bg-slate-900">
+    <div className="max-w-full overflow-hidden rounded-md border border-slate-200 bg-slate-900">
       {(label || language) && (
-        <div className="flex items-center justify-between border-b border-slate-800 bg-slate-950/40 px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400">
-          <span>{label ?? language}</span>
+        <div className="flex min-w-0 items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/40 px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400">
+          <span className="min-w-0 truncate">{label ?? language}</span>
+          <CopyButton value={children} />
         </div>
       )}
-      <pre className="overflow-x-auto px-4 py-3 text-[13px] leading-relaxed text-slate-100">
+      <pre className="max-w-full overflow-x-auto overscroll-x-contain px-4 py-3 text-[13px] leading-relaxed text-slate-100">
         <code>{children}</code>
       </pre>
     </div>
@@ -66,15 +69,15 @@ export function Endpoint({
       id={id}
       className="scroll-mt-24 rounded-lg border border-slate-200 bg-white shadow-sm"
     >
-      <header className="flex flex-wrap items-center gap-3 border-b border-slate-200 px-4 py-3">
+      <header className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-b border-slate-200 px-4 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
         <span
           className={`inline-flex h-6 items-center rounded-md px-2 font-mono text-xs font-semibold ring-1 ring-inset ${methodClass}`}
         >
           {method}
         </span>
-        <code className="font-mono text-sm text-slate-900">{path}</code>
+        <code className="min-w-0 break-all font-mono text-sm text-slate-900">{path}</code>
         <span
-          className={`ml-auto inline-flex h-6 items-center rounded-full px-2.5 text-[11px] font-medium ring-1 ring-inset ${authBadge.classes}`}
+          className={`col-span-2 inline-flex h-6 w-fit items-center rounded-full px-2.5 text-[11px] font-medium ring-1 ring-inset sm:col-span-1 ${authBadge.classes}`}
         >
           {authBadge.label}
         </span>

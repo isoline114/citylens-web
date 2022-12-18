@@ -46,7 +46,7 @@ export function PlanQuotaBadge() {
     return (
       <span
         data-testid="plan-quota-badge"
-        className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-900 border border-emerald-200"
+        className="hidden h-9 items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-900 sm:inline-flex"
       >
         Admin: unlimited
       </span>
@@ -66,8 +66,8 @@ export function PlanQuotaBadge() {
       title={text}
       className="hidden h-9 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 pl-3 pr-2 text-xs font-medium text-slate-800 sm:inline-flex"
     >
-      <span className="hidden md:inline">{text}</span>
-      <span className="md:hidden">{`${used}/${limit}`}</span>
+      <span className="hidden xl:inline">{text}</span>
+      <span className="xl:hidden">{`${used}/${limit} runs`}</span>
       <span
         aria-hidden="true"
         className="relative h-1.5 w-12 overflow-hidden rounded-full bg-slate-200"

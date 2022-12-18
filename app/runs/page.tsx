@@ -1,7 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, Inbox } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowRight,
+  CalendarClock,
+  CheckCircle2,
+  Clock,
+  Inbox,
+  Loader2,
+  Plus,
+  XCircle,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { getRuns } from '@/lib/api';
@@ -128,10 +138,32 @@ export default function RunsPage() {
 
   // Signed-in: server history is the only source of truth.
   const isEmpty = serverRuns.length === 0 && !loading;
+  const succeeded = rows.filter((r) => String(r.status ?? '').toLowerCase() === 'succeeded').length;
+  const active = rows.filter((r) => ['queued', 'running'].includes(String(r.status ?? '').toLowerCase())).length;
+  const failed = rows.filter((r) => String(r.status ?? '').toLowerCase() === 'failed').length;
+  const latestUpdated = rows
+    .map((r) => r.updatedAt ?? r.createdAt)
+    .filter((v): v is string => Boolean(v))
+    .sort()
+    .at(-1);
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Your runs</h1>
+    <div className="flex flex-col gap-5">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Your runs</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Account-scoped processing history, newest runs first.
+          </p>
+        </div>
+        <Link
+          href="/#create"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 sm:self-auto"
+        >
+          <Plus className="h-4 w-4" />
+          New run
+        </Link>
+      </header>
 
       {serverError && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -139,9 +171,22 @@ export default function RunsPage() {
         </div>
       )}
 
-      <div className="rounded-lg border border-slate-200 bg-white">
-        <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 text-sm font-medium">
-          <div>Run history</div>
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <SummaryTile label="Total" value={rows.length} />
+        <SummaryTile label="Succeeded" value={succeeded} tone="emerald" />
+        <SummaryTile label="Active" value={active} tone="sky" />
+        <SummaryTile label="Failed" value={failed} tone="rose" />
+      </section>
+
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+          <div>
+            <div className="text-sm font-medium text-slate-900">Run history</div>
+            <div className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+              <CalendarClock className="h-3.5 w-3.5" />
+              {latestUpdated ? `Last updated ${formatDate(latestUpdated)}` : 'No completed history yet'}
+            </div>
+          </div>
           {loading && <div className="text-xs text-slate-500">Loading…</div>}
         </div>
         <div className="p-4">
@@ -162,17 +207,31 @@ export default function RunsPage() {
           ) : (
             <ul className="divide-y divide-slate-200">
               {rows.map((r) => (
-                <li key={r.runId} className="flex items-center justify-between py-3">
+                <li key={r.runId} className="py-3 first:pt-0 last:pb-0">
                   <Link
                     href={`/runs/${encodeURIComponent(r.runId)}`}
-                    className="text-sm font-medium text-slate-900 hover:underline"
+                    className="group grid gap-3 rounded-lg px-2 py-2 hover:bg-slate-50 sm:grid-cols-[minmax(0,1fr)_auto]"
                   >
-                    {r.runId}
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-sm font-medium text-slate-900 group-hover:underline">
+                          {r.runId}
+                        </span>
+                        <StatusBadge status={r.status} />
+                      </div>
+                      <div className="mt-1 text-sm text-slate-700">
+                        {r.address ?? 'Address unavailable'}
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+                        {r.stage && <span>Stage: {r.stage}</span>}
+                        {typeof r.progress === 'number' && <span>Progress: {Math.round(r.progress)}%</span>}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1 text-xs text-slate-500 sm:min-w-36 sm:text-right">
+                      <span>Created {formatDate(r.createdAt)}</span>
+                      <span>Updated {formatDate(r.updatedAt)}</span>
+                    </div>
                   </Link>
-                  <div className="text-right text-xs text-slate-600">
-                    <div>{r.status ? `status: ${r.status}` : 'status: (unknown)'}</div>
-                    {r.stage && <div>stage: {r.stage}</div>}
-                  </div>
                 </li>
               ))}
             </ul>
@@ -197,4 +256,72 @@ export default function RunsPage() {
       </div>
     </div>
   );
+}
+
+function SummaryTile({
+  label,
+  value,
+  tone = 'slate',
+}: {
+  label: string;
+  value: number;
+  tone?: 'slate' | 'emerald' | 'sky' | 'rose';
+}) {
+  const toneClass =
+    tone === 'emerald'
+      ? 'bg-emerald-50 text-emerald-800 ring-emerald-200'
+      : tone === 'sky'
+        ? 'bg-sky-50 text-sky-800 ring-sky-200'
+        : tone === 'rose'
+          ? 'bg-rose-50 text-rose-800 ring-rose-200'
+          : 'bg-slate-50 text-slate-800 ring-slate-200';
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
+      <div className={`mt-2 inline-flex min-w-12 justify-center rounded-md px-2 py-1 text-lg font-semibold ring-1 ring-inset ${toneClass}`}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status?: string }) {
+  const value = String(status ?? 'unknown');
+  const normalized = value.toLowerCase();
+  const Icon =
+    normalized === 'succeeded'
+      ? CheckCircle2
+      : normalized === 'failed'
+        ? XCircle
+        : normalized === 'running'
+          ? Loader2
+          : normalized === 'queued'
+            ? Clock
+            : AlertTriangle;
+  const cls =
+    normalized === 'succeeded'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+      : normalized === 'failed'
+        ? 'border-rose-200 bg-rose-50 text-rose-800'
+        : normalized === 'running'
+          ? 'border-sky-200 bg-sky-50 text-sky-800'
+          : 'border-slate-200 bg-slate-50 text-slate-700';
+  return (
+    <span className={`inline-flex h-6 items-center gap-1.5 rounded-full border px-2 text-xs font-medium ${cls}`}>
+      <Icon className={`h-3.5 w-3.5 ${normalized === 'running' ? 'animate-spin' : ''}`} />
+      {value}
+    </span>
+  );
+}
+
+function formatDate(value?: string): string {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
 }

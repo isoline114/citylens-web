@@ -44,13 +44,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <AuthProvider>
           <AuthTokenBridge />
           <header className="border-b border-slate-200 bg-white">
-            <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
-              <div className="flex items-center gap-4">
-                <Link href="/" className="flex items-center gap-2">
+            <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+              <div className="flex min-w-0 flex-1 items-center gap-5">
+                <Link href="/" className="flex shrink-0 items-center gap-2">
                   <Image src={publicAssetPath('/citylens-mark.png')} alt="CityLens" width={24} height={24} priority />
                   <span className="text-lg font-semibold">CityLens</span>
                 </Link>
-                <nav className="hidden items-center gap-4 text-sm md:flex">
+                <nav className="hidden items-center gap-4 text-sm md:flex lg:gap-5">
                   <Link href="/" className="text-slate-700 hover:text-slate-950">
                     Home
                   </Link>
@@ -63,24 +63,28 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 </nav>
               </div>
 
-              <div className="flex items-center gap-2">
-                <nav className="flex items-center gap-3 text-sm md:hidden">
-                  <Link href="/" className="text-slate-700 hover:text-slate-950">
-                    Home
-                  </Link>
-                  <Link href="/runs" className="text-slate-700 hover:text-slate-950">
-                    Runs
-                  </Link>
-                </nav>
+              <div className="ml-auto flex max-w-full shrink-0 items-center gap-1.5 sm:gap-2">
                 <PlanQuotaBadge />
                 <AuthHeaderControls />
               </div>
+
+              <nav className="flex w-full items-center gap-4 overflow-x-auto pt-1 text-sm md:hidden">
+                <Link href="/" className="shrink-0 text-slate-700 hover:text-slate-950">
+                  Home
+                </Link>
+                <Link href="/runs" className="shrink-0 text-slate-700 hover:text-slate-950">
+                  Runs
+                </Link>
+                <Link href="/docs" className="shrink-0 text-slate-700 hover:text-slate-950">
+                  Docs
+                </Link>
+              </nav>
             </div>
           </header>
 
           <DemoModeBanner />
 
-          <main className="mx-auto w-full max-w-4xl px-4 py-6">{children}</main>
+          <main className="mx-auto w-full max-w-6xl px-4 py-6">{children}</main>
           <SiteFooter />
           <Toasts />
         </AuthProvider>
@@ -92,7 +96,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 function SiteFooter() {
   return (
     <footer className="mt-12 border-t border-slate-200 bg-slate-50">
-      <div className="mx-auto flex max-w-4xl flex-col gap-4 px-4 py-6 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-6 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Image
             src={publicAssetPath('/citylens-mark.png')}
@@ -129,7 +133,7 @@ function SiteFooter() {
         </nav>
       </div>
       <div className="border-t border-slate-200">
-        <div className="mx-auto max-w-4xl px-4 py-3 text-[11px] leading-5 text-slate-500">
+        <div className="mx-auto max-w-6xl px-4 py-3 text-[11px] leading-5 text-slate-500">
           Imagery: USGS NAIP &middot; Footprints: NYC OpenData (DOITT) &middot; LiDAR: NYS GIS
           &middot; v0.1 · 5-borough preview · &copy; {new Date().getFullYear()} CityLens.
         </div>

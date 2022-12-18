@@ -28,20 +28,20 @@ export function AuthHeaderControls() {
 
   const emailLabel = auth.user.email ?? auth.user.displayName ?? auth.user.id;
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+    <div className="flex items-center justify-end gap-1.5 sm:gap-2">
       {/* Email chip is informational; below `sm` we hide it to keep the
        *  signed-in cluster from wrapping. The badge + actions still make
        *  it obvious you're signed in. */}
       <span
-        className="hidden h-9 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 sm:inline-flex"
+        className="hidden h-9 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 xl:inline-flex"
         title={emailLabel}
       >
         <UserRound className="h-4 w-4" />
-        <span className="max-w-[140px] truncate lg:max-w-[200px]">{emailLabel}</span>
+        <span className="max-w-[180px] truncate">{emailLabel}</span>
       </span>
       <Link
         href="/account/api-keys"
-        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-2.5 text-sm font-medium text-slate-900 hover:bg-slate-50 lg:px-3"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-900 hover:bg-slate-50 lg:w-auto lg:gap-2 lg:px-3"
         title="API keys"
         aria-label="API keys"
       >
@@ -54,7 +54,7 @@ export function AuthHeaderControls() {
           await auth.signOut();
           router.push('/');
         }}
-        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-2.5 text-sm font-medium text-slate-900 hover:bg-slate-50 lg:px-3"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-900 hover:bg-slate-50 lg:w-auto lg:gap-2 lg:px-3"
         title="Sign out"
         aria-label="Sign out"
       >

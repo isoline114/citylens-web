@@ -183,8 +183,8 @@ curl -s ${API_BASE}/v1/me \\
         {/* Quotas */}
         <section id="quotas" className="scroll-mt-24 space-y-3">
           <h2 className="text-xl font-semibold text-slate-950">Plans & quotas</h2>
-          <div className="overflow-hidden rounded-lg border border-slate-200">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <table className="min-w-[560px] divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-3 py-2">Plan</th>
@@ -505,8 +505,8 @@ curl -s ${API_BASE}/v1/me \\
             All errors come back with a stable <code>detail.code</code> string
             so clients can branch on outcomes without parsing messages.
           </p>
-          <div className="overflow-hidden rounded-lg border border-slate-200">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <table className="min-w-[640px] divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-3 py-2">Code</th>
