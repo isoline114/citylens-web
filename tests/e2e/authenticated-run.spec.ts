@@ -109,7 +109,7 @@ end_header
 
   await page.goto('/runs/run-123');
   await expect(page.getByRole('heading', { name: 'Run run-123' })).toBeVisible();
-  await expect(page.getByText('Status')).toBeVisible();
+  await expect(page.getByRole('main').getByText('Status', { exact: true })).toBeVisible();
   await expect(page.getByTestId('artifacts-panel')).toBeVisible();
   await expect(page.getByTestId('artifact-preview-name')).toHaveText('preview.png', { timeout: 15000 });
   await expect(page.getByTestId('artifact-preview-download')).toBeVisible();

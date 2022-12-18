@@ -4,6 +4,7 @@ import { ArrowRight, Boxes, FileCode, Radar } from 'lucide-react';
 
 import { FeaturedDemoCards } from '@/components/FeaturedDemoCards';
 import { RunForm } from '@/components/RunForm';
+import type { DemoFeaturedRun } from '@/lib/api';
 import { fetchFeaturedDemosOnServer } from '@/lib/api.server';
 import { publicAssetPath } from '@/lib/site';
 
@@ -12,17 +13,23 @@ import { publicAssetPath } from '@/lib/site';
 // the API on every cold visit.
 export const revalidate = 60;
 
-// Brooklyn brownstones / Flatbush — the canonical featured demo. Used to
-// surface real product output on the homepage hero + "what you get" panel.
-// If this run is ever rebuilt the change_counts may shift; the failure
-// mode is just stale numbers, not a broken page.
-const BROOKLYN_DEMO_RUN_ID = '5f079d78d89c4387a9c0ddd5e3507b5e';
-const BROOKLYN_PREVIEW_URL = `/v1/demo/artifacts/${BROOKLYN_DEMO_RUN_ID}/preview.png`;
-const BROOKLYN_DETAIL_URL = `/runs/${BROOKLYN_DEMO_RUN_ID}?demo=1`;
-const BROOKLYN_CHANGE_COUNTS = { unchanged: 134, modified: 0, demolished: 0, added: 2 } as const;
+// Brooklyn brownstones / Flatbush — the canonical featured demo. The
+// run_id is resolved at request time from the live featured-demos list
+// (matched by address) so a `precompute_demo_runs.py` rerun in the
+// engine doesn't break the homepage. If the match misses we fall back
+// to the first featured demo, then to a static ID. change_counts are
+// the latest known values and may go stale between precomputes — the
+// failure mode is just stale numbers, not a broken page.
+const BROOKLYN_PARITY_ADDRESS_PREFIX = '100 E 21st St';
+const BROOKLYN_DEMO_RUN_FALLBACK = '11d4ce7c0f9b453da50f0bf770f69d47';
+const BROOKLYN_CHANGE_COUNTS = { unchanged: 127, modified: 7, demolished: 0, added: 2 } as const;
 
 export default async function HomePage() {
   const featured = await fetchFeaturedDemosOnServer();
+
+  const brooklynRunId = resolveBrooklynRunId(featured);
+  const brooklynPreviewUrl = `/v1/demo/artifacts/${brooklynRunId}/preview.png`;
+  const brooklynDetailUrl = `/runs/${brooklynRunId}?demo=1`;
 
   return (
     <div className="relative">
@@ -81,12 +88,12 @@ export default async function HomePage() {
           </div>
 
           <Link
-            href={BROOKLYN_DETAIL_URL}
+            href={brooklynDetailUrl}
             className="group relative block overflow-hidden rounded-xl border border-slate-200 bg-slate-950 shadow-md ring-1 ring-black/5"
             aria-label="Open the Brooklyn featured demo"
           >
             <Image
-              src={BROOKLYN_PREVIEW_URL}
+              src={brooklynPreviewUrl}
               alt="CityLens change-detection preview for 100 E 21st St, Brooklyn — gray = unchanged buildings, green = added, yellow = modified, red = demolished."
               width={1024}
               height={703}
@@ -172,7 +179,7 @@ export default async function HomePage() {
             </p>
           </div>
           <Link
-            href={BROOKLYN_DETAIL_URL}
+            href={brooklynDetailUrl}
             className="inline-flex items-center gap-1 text-sm font-medium text-slate-900 hover:underline"
           >
             View full demo
@@ -184,7 +191,7 @@ export default async function HomePage() {
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
             <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-950">
               <Image
-                src={BROOKLYN_PREVIEW_URL}
+                src={brooklynPreviewUrl}
                 alt=""
                 fill
                 unoptimized
@@ -308,6 +315,17 @@ function FeatureCard({
       </span>
     </Link>
   );
+}
+
+function resolveBrooklynRunId(featured: DemoFeaturedRun[]): string {
+  const match = featured.find(
+    (d) => typeof d.address === 'string' && d.address.startsWith(BROOKLYN_PARITY_ADDRESS_PREFIX),
+  );
+  const matchId = match && typeof match.run_id === 'string' ? match.run_id : null;
+  if (matchId) return matchId;
+  const firstId =
+    featured.length > 0 && typeof featured[0].run_id === 'string' ? featured[0].run_id : null;
+  return firstId ?? BROOKLYN_DEMO_RUN_FALLBACK;
 }
 
 function LegendDot({ color, label }: { color: string; label: string }) {

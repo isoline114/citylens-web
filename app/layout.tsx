@@ -81,9 +81,59 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <DemoModeBanner />
 
           <main className="mx-auto w-full max-w-4xl px-4 py-6">{children}</main>
+          <SiteFooter />
           <Toasts />
         </AuthProvider>
       </body>
     </html>
+  );
+}
+
+function SiteFooter() {
+  return (
+    <footer className="mt-12 border-t border-slate-200 bg-slate-50">
+      <div className="mx-auto flex max-w-4xl flex-col gap-4 px-4 py-6 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <Image
+            src={publicAssetPath('/citylens-mark.png')}
+            alt=""
+            width={16}
+            height={16}
+            aria-hidden
+          />
+          <span className="font-medium text-slate-900">CityLens</span>
+          <span className="text-slate-400">·</span>
+          <span>NYC building change detection</span>
+        </div>
+        <nav className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <Link href="/" className="hover:text-slate-900">
+            Home
+          </Link>
+          <Link href="/runs" className="hover:text-slate-900">
+            Runs
+          </Link>
+          <Link href="/docs" className="hover:text-slate-900">
+            API docs
+          </Link>
+          <Link href="/account/api-keys" className="hover:text-slate-900">
+            API keys
+          </Link>
+          <a
+            href="https://api.citylens.dev/v1/health"
+            className="hover:text-slate-900"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            Status
+          </a>
+        </nav>
+      </div>
+      <div className="border-t border-slate-200">
+        <div className="mx-auto max-w-4xl px-4 py-3 text-[11px] leading-5 text-slate-500">
+          Imagery: USGS NAIP &middot; Footprints: NYC OpenData (DOITT) &middot; LiDAR: NYS GIS
+          &middot; v0.1 · 5-borough preview · &copy; {new Date().getFullYear()} CityLens.
+        </div>
+      </div>
+    </footer>
   );
 }
