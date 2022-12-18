@@ -55,12 +55,28 @@ export function PlanQuotaBadge() {
 
   const used = me.quota.runs_used;
   const limit = me.quota.monthly_run_limit ?? 0;
+  const text = `${plan_type[0].toUpperCase()}${plan_type.slice(1)} plan: ${used}/${limit} runs this month`;
+  const pct = limit > 0 ? Math.min(100, Math.max(0, Math.round((used / limit) * 100))) : 0;
+  // Bar color shifts as the user gets closer to the cap so the chip
+  // tells you both "what plan" and "how close to running out" at a glance.
+  const barColor = pct >= 100 ? 'bg-rose-500' : pct >= 60 ? 'bg-amber-500' : 'bg-sky-500';
   return (
     <span
       data-testid="plan-quota-badge"
-      className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-800 border border-slate-200"
+      title={text}
+      className="hidden h-9 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 pl-3 pr-2 text-xs font-medium text-slate-800 sm:inline-flex"
     >
-      {`${plan_type[0].toUpperCase()}${plan_type.slice(1)} plan: ${used}/${limit} runs this month`}
+      <span className="hidden md:inline">{text}</span>
+      <span className="md:hidden">{`${used}/${limit}`}</span>
+      <span
+        aria-hidden="true"
+        className="relative h-1.5 w-12 overflow-hidden rounded-full bg-slate-200"
+      >
+        <span
+          className={`absolute inset-y-0 left-0 ${barColor} transition-all`}
+          style={{ width: `${pct}%` }}
+        />
+      </span>
     </span>
   );
 }
