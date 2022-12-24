@@ -57,6 +57,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   <Link href="/runs" className="text-slate-700 hover:text-slate-950">
                     Runs
                   </Link>
+                  <Link href="/parcel-intel" className="text-slate-700 hover:text-slate-950">
+                    Parcels
+                  </Link>
                   <Link href="/docs" className="text-slate-700 hover:text-slate-950">
                     Docs
                   </Link>
@@ -74,6 +77,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 </Link>
                 <Link href="/runs" className="shrink-0 text-slate-700 hover:text-slate-950">
                   Runs
+                </Link>
+                <Link href="/parcel-intel" className="shrink-0 text-slate-700 hover:text-slate-950">
+                  Parcels
                 </Link>
                 <Link href="/docs" className="shrink-0 text-slate-700 hover:text-slate-950">
                   Docs

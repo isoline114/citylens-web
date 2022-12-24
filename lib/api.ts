@@ -334,3 +334,69 @@ export async function revokeApiKey(keyId: string): Promise<void> {
     method: 'DELETE',
   });
 }
+
+// ---------- Parcel Intelligence ----------
+
+export type ParcelIntelRow = {
+  bbl: string;
+  address: string | null;
+  borough: string | null;
+  score_calibrated: number | null;
+  score_calibrated_p10: number | null;
+  score_calibrated_p90: number | null;
+  lot_area_sqft: number | null;
+  allowed_far: number | null;
+  max_floor_area_sqft: number | null;
+  unused_floor_area_sqft: number | null;
+  far_utilization_pct: number | null;
+  zoning_district_1: string | null;
+  land_use: string | null;
+  year_built: number | null;
+  num_floors: number | null;
+  last_sale_price: number | null;
+  last_sale_year: number | null;
+  years_held: number | null;
+  has_recent_sale_5yr: boolean;
+  is_landmark: boolean;
+  is_historic_district: boolean;
+  block_id: string | null;
+  block_rank: number | null;
+};
+
+export type ParcelIntelBorough = {
+  slug: string;
+  display_name: string;
+  count: number;
+  top_score: number | null;
+};
+
+export type ParcelIntelIndex = {
+  boroughs: ParcelIntelBorough[];
+  generated_at: string | null;
+  model_metadata: Record<string, unknown>;
+};
+
+export type ParcelIntelSweepResponse = {
+  borough: string;
+  rows: ParcelIntelRow[];
+  generated_at: string | null;
+  model_metadata: Record<string, unknown>;
+};
+
+export async function getParcelIntelIndex(): Promise<ParcelIntelIndex> {
+  return requestJson<ParcelIntelIndex>('/v1/parcel-intel/index', undefined, {
+    includeAuth: false,
+  });
+}
+
+export async function getParcelIntelSweep(
+  borough: string,
+  top: number = 100,
+): Promise<ParcelIntelSweepResponse> {
+  const params = new URLSearchParams({ borough, top: String(top) });
+  return requestJson<ParcelIntelSweepResponse>(
+    `/v1/parcel-intel/sweep?${params.toString()}`,
+    undefined,
+    { includeAuth: false },
+  );
+}

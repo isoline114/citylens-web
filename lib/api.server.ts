@@ -11,7 +11,12 @@
  *   cacheable response on first paint.
  */
 
-import { parseFeaturedDemosResponse, type DemoFeaturedRun } from '@/lib/api';
+import {
+  parseFeaturedDemosResponse,
+  type DemoFeaturedRun,
+  type ParcelIntelIndex,
+  type ParcelIntelSweepResponse,
+} from '@/lib/api';
 
 /**
  * Production API URL for server-side fetches. Order of preference:
@@ -58,5 +63,67 @@ export async function fetchFeaturedDemosOnServer(): Promise<DemoFeaturedRun[]> {
     return parseFeaturedDemosResponse(raw);
   } catch {
     return [];
+  }
+}
+
+/**
+ * Fetch /v1/parcel-intel/index server-side. Powers the borough picker
+ * at /parcel-intel — 5 borough cards SSR'd into the HTML.
+ *
+ * Like featured demos, this short-circuits when
+ * `CITYLENS_DISABLE_SSR_PARCEL_INTEL=1` is set so Playwright e2e
+ * fixtures can intercept via `page.route` instead of being baked.
+ *
+ * Sweep cadence is monthly — `revalidate: 300` (5 min) is plenty fresh
+ * and lets `npm run build` produce a static prerender.
+ */
+export async function fetchParcelIntelIndexOnServer(): Promise<ParcelIntelIndex> {
+  const empty: ParcelIntelIndex = {
+    boroughs: [],
+    generated_at: null,
+    model_metadata: {},
+  };
+  if (process.env.CITYLENS_DISABLE_SSR_PARCEL_INTEL === '1') return empty;
+
+  const url = `${serverApiBase()}/v1/parcel-intel/index`;
+  try {
+    const res = await fetch(url, {
+      next: { revalidate: 300 },
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(2_000),
+    });
+    if (!res.ok) return empty;
+    return (await res.json()) as ParcelIntelIndex;
+  } catch {
+    return empty;
+  }
+}
+
+/**
+ * Fetch /v1/parcel-intel/sweep server-side for a specific borough.
+ * Used by the borough list page to SSR the table on first paint.
+ *
+ * Returns null on failure so the page can render an explicit empty state
+ * (rather than a 500). Pages should treat null and `rows.length === 0`
+ * the same way.
+ */
+export async function fetchParcelIntelSweepOnServer(
+  borough: string,
+  top: number = 100,
+): Promise<ParcelIntelSweepResponse | null> {
+  if (process.env.CITYLENS_DISABLE_SSR_PARCEL_INTEL === '1') return null;
+
+  const params = new URLSearchParams({ borough, top: String(top) });
+  const url = `${serverApiBase()}/v1/parcel-intel/sweep?${params.toString()}`;
+  try {
+    const res = await fetch(url, {
+      next: { revalidate: 300 },
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(3_000),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as ParcelIntelSweepResponse;
+  } catch {
+    return null;
   }
 }
