@@ -76,6 +76,11 @@ export async function fetchFeaturedDemosOnServer(): Promise<DemoFeaturedRun[]> {
  *
  * Sweep cadence is monthly — `revalidate: 300` (5 min) is plenty fresh
  * and lets `npm run build` produce a static prerender.
+ *
+ * Timeout: 6s. Tight enough to keep page render snappy, generous
+ * enough that a Cloud Run cold start (typical 3-5s) doesn't bake an
+ * empty page into ISR. The empty fallback is genuinely a fallback,
+ * not an "engine is mid-cold-start" misfire.
  */
 export async function fetchParcelIntelIndexOnServer(): Promise<ParcelIntelIndex> {
   const empty: ParcelIntelIndex = {
@@ -90,7 +95,7 @@ export async function fetchParcelIntelIndexOnServer(): Promise<ParcelIntelIndex>
     const res = await fetch(url, {
       next: { revalidate: 300 },
       headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(2_000),
+      signal: AbortSignal.timeout(6_000),
     });
     if (!res.ok) return empty;
     return (await res.json()) as ParcelIntelIndex;
@@ -106,6 +111,9 @@ export async function fetchParcelIntelIndexOnServer(): Promise<ParcelIntelIndex>
  * Returns null on failure so the page can render an explicit empty state
  * (rather than a 500). Pages should treat null and `rows.length === 0`
  * the same way.
+ *
+ * Timeout: 8s — sweep responses are 5-10x larger than index, so we
+ * give them more headroom on cold engine instances.
  */
 export async function fetchParcelIntelSweepOnServer(
   borough: string,
@@ -119,7 +127,7 @@ export async function fetchParcelIntelSweepOnServer(
     const res = await fetch(url, {
       next: { revalidate: 300 },
       headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(3_000),
+      signal: AbortSignal.timeout(8_000),
     });
     if (!res.ok) return null;
     return (await res.json()) as ParcelIntelSweepResponse;
