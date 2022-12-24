@@ -353,6 +353,10 @@ export type ParcelIntelRow = {
   land_use: string | null;
   year_built: number | null;
   num_floors: number | null;
+  // Tax-lot centroid in WGS84. Some parcels (condo billing units,
+  // transit ROW) lack polygon geometry — those have null lat/lng.
+  lat: number | null;
+  lng: number | null;
   last_sale_price: number | null;
   last_sale_year: number | null;
   years_held: number | null;
