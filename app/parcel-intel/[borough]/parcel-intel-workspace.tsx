@@ -9,8 +9,8 @@ import {
   ChevronDown,
   ChevronUp,
   Download,
-  Info,
   Lock,
+  MapPin,
   TrendingDown,
   TrendingUp,
   X,
@@ -43,6 +43,12 @@ type SortKey =
 
 type Direction = 'asc' | 'desc';
 
+// Shared focus-ring style. Apply to every interactive element so keyboard
+// users get a consistent visible affordance (sky-blue ring with an offset
+// so it doesn't blend into adjacent surfaces).
+const FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white';
+
 const SORT_LABELS: Record<SortKey, string> = {
   score_calibrated: 'Score',
   lot_area_sqft: 'Lot',
@@ -52,7 +58,10 @@ const SORT_LABELS: Record<SortKey, string> = {
 
 function formatCurrency(value: number | null | undefined): string {
   if (value === null || value === undefined) return '—';
-  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000_000) {
+    // Strip trailing ".0" so $4.0M renders as $4M while $1.5M stays $1.5M.
+    return `$${(value / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  }
   if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}k`;
   return `$${value.toFixed(0)}`;
 }
@@ -221,20 +230,20 @@ function SignInGate({
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <Link
             href={`/sign-in?next=${encodeURIComponent(`/parcel-intel/${borough}`)}`}
-            className="group inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
+            className={`group inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 ${FOCUS_RING}`}
           >
             Sign in
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
           <Link
             href={`/sign-up?next=${encodeURIComponent(`/parcel-intel/${borough}`)}`}
-            className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 hover:bg-slate-50"
+            className={`inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 hover:bg-slate-50 ${FOCUS_RING}`}
           >
             Create a free account
           </Link>
           <Link
             href="/parcel-intel"
-            className="inline-flex h-10 items-center justify-center text-sm font-medium text-slate-600 hover:text-slate-900"
+            className={`inline-flex h-10 items-center justify-center rounded-md text-sm font-medium text-slate-600 hover:text-slate-900 ${FOCUS_RING}`}
           >
             Back to all boroughs
           </Link>
@@ -318,13 +327,13 @@ function ModelAttributionSection({ features }: { features: TopFeature[] }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
+        className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left ${FOCUS_RING}`}
       >
         <div className="min-w-0">
           <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Model attribution
           </h4>
-          <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
+          <p className="mt-0.5 text-xs leading-4 text-slate-500">
             What the model weighed for this parcel — top {features.length} features by
             absolute contribution to the score.
           </p>
@@ -350,7 +359,7 @@ function ModelAttributionSection({ features }: { features: TopFeature[] }) {
                   <span className="font-medium text-slate-900">
                     {friendlyFeatureLabel(feat.name)}
                   </span>
-                  <span className="ml-auto inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-700">
+                  <span className="ml-auto inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-700">
                     {formatFeatureValue(feat.value)}
                   </span>
                 </div>
@@ -376,7 +385,7 @@ function ReasonChip({ reason }: { reason: Reason }) {
   const tone = {
     positive: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
     neutral: 'bg-slate-50 text-slate-800 ring-slate-200',
-    caution: 'bg-rose-50 text-rose-800 ring-rose-200',
+    caution: 'bg-rose-50 text-rose-900 ring-rose-200',
   }[reason.tone];
   return (
     <li className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
@@ -397,9 +406,14 @@ function ParcelDetailPanel({
 }) {
   if (!row) {
     return (
-      <aside className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-        <Info className="mx-auto h-5 w-5 text-slate-400" />
-        <p className="mt-2 text-xs text-slate-500">
+      <aside className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white ring-1 ring-inset ring-slate-200">
+          <MapPin className="h-5 w-5 text-slate-400" aria-hidden="true" />
+        </div>
+        <p className="mt-3 text-sm font-medium text-slate-700">
+          No parcel selected
+        </p>
+        <p className="mt-1 max-w-xs text-xs text-slate-500">
           Click a row or a map marker to see why it scored high.
         </p>
       </aside>
@@ -424,40 +438,40 @@ function ParcelDetailPanel({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+          className={`rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 ${FOCUS_RING}`}
           aria-label="Close detail"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded-md border border-slate-200 bg-slate-50 p-2.5">
-          <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+        <div className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-2.5">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Score
           </dt>
           <dd className="mt-0.5 text-base font-semibold text-slate-950">
             {formatScore(row.score_calibrated)}
           </dd>
         </div>
-        <div className="rounded-md border border-slate-200 bg-slate-50 p-2.5">
-          <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        <div className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-2.5">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Lot
           </dt>
           <dd className="mt-0.5 text-base font-semibold text-slate-950">
             {formatNumber(row.lot_area_sqft)} sqft
           </dd>
         </div>
-        <div className="rounded-md border border-slate-200 bg-slate-50 p-2.5">
-          <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        <div className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-2.5">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Allowed FAR
           </dt>
           <dd className="mt-0.5 text-base font-semibold text-slate-950">
             {row.allowed_far ?? '—'}
           </dd>
         </div>
-        <div className="rounded-md border border-slate-200 bg-slate-50 p-2.5">
-          <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        <div className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-2.5">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Built %
           </dt>
           <dd className="mt-0.5 text-base font-semibold text-slate-950">
@@ -466,8 +480,8 @@ function ParcelDetailPanel({
               : '—'}
           </dd>
         </div>
-        <div className="rounded-md border border-slate-200 bg-slate-50 p-2.5">
-          <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        <div className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-2.5">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Last sale
           </dt>
           <dd className="mt-0.5 text-base font-semibold text-slate-950">
@@ -479,8 +493,8 @@ function ParcelDetailPanel({
             )}
           </dd>
         </div>
-        <div className="rounded-md border border-slate-200 bg-slate-50 p-2.5">
-          <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        <div className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-2.5">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Held
           </dt>
           <dd className="mt-0.5 text-base font-semibold text-slate-950">
@@ -580,7 +594,9 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
     }
   };
 
-  const SortIcon = ({ k }: { k: SortKey }) => {
+  // Plain helper rather than an inline component so we don't trip the
+  // react-hooks/static-components rule when used at multiple call sites.
+  const renderSortIcon = (k: SortKey) => {
     if (sortKey !== k)
       return <ArrowUpDown className="h-3 w-3 text-slate-400" />;
     return direction === 'desc' ? (
@@ -623,7 +639,7 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
               type="checkbox"
               checked={hideLandmarked}
               onChange={(e) => setHideLandmarked(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-700"
+              className={`h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-700 ${FOCUS_RING}`}
             />
             Hide landmarked
           </label>
@@ -631,7 +647,7 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
             <button
               type="button"
               onClick={() => downloadCSV(sorted, borough)}
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-900 hover:bg-slate-50"
+              className={`inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-900 hover:bg-slate-50 ${FOCUS_RING}`}
             >
               <Download className="h-3.5 w-3.5" />
               CSV ({sorted.length})
@@ -646,77 +662,135 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="max-h-[460px] overflow-y-auto">
             <table className="w-full text-left text-sm">
-              <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              <thead className="sticky top-0 z-10 bg-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-700">
                 <tr>
                   <th className="px-3 py-2">#</th>
                   <th className="px-3 py-2">Address · BBL</th>
-                  {(
-                    [
-                      'score_calibrated',
-                      'lot_area_sqft',
-                      'last_sale_price',
-                      'years_held',
-                    ] as SortKey[]
-                  ).map((k) => (
-                    <th key={k} className="px-3 py-2">
-                      <button
-                        type="button"
-                        onClick={() => toggleSort(k)}
-                        className="inline-flex items-center gap-1 hover:text-slate-900"
-                      >
-                        {SORT_LABELS[k]}
-                        <SortIcon k={k} />
-                      </button>
-                    </th>
-                  ))}
+                  <th className="px-3 py-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('score_calibrated')}
+                      className={`inline-flex items-center gap-1 rounded-sm hover:text-slate-900 ${FOCUS_RING}`}
+                    >
+                      {SORT_LABELS.score_calibrated}
+                      {renderSortIcon('score_calibrated')}
+                    </button>
+                  </th>
+                  <th className="px-3 py-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('lot_area_sqft')}
+                      className={`inline-flex items-center gap-1 rounded-sm hover:text-slate-900 ${FOCUS_RING}`}
+                    >
+                      {SORT_LABELS.lot_area_sqft}
+                      {renderSortIcon('lot_area_sqft')}
+                    </button>
+                  </th>
+                  {/* Last sale and Held are hidden on narrow viewports;
+                      a compact inline summary surfaces them under the
+                      Address · BBL cell instead. */}
+                  <th className="hidden px-3 py-2 sm:table-cell">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('last_sale_price')}
+                      className={`inline-flex items-center gap-1 rounded-sm hover:text-slate-900 ${FOCUS_RING}`}
+                    >
+                      {SORT_LABELS.last_sale_price}
+                      {renderSortIcon('last_sale_price')}
+                    </button>
+                  </th>
+                  <th className="hidden px-3 py-2 sm:table-cell">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('years_held')}
+                      className={`inline-flex items-center gap-1 rounded-sm hover:text-slate-900 ${FOCUS_RING}`}
+                    >
+                      {SORT_LABELS.years_held}
+                      {renderSortIcon('years_held')}
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {sorted.map((r, i) => {
-                  const isSel = r.bbl === selectedBbl;
-                  return (
-                    <tr
-                      key={r.bbl}
-                      id={`parcel-row-${r.bbl}`}
-                      onClick={() => setSelectedBbl(r.bbl)}
-                      className={`cursor-pointer transition-colors ${
-                        isSel ? 'bg-sky-50' : 'hover:bg-slate-50'
-                      }`}
-                    >
-                      <td className="px-3 py-2 text-xs text-slate-500">{i + 1}</td>
-                      <td className="px-3 py-2">
-                        <div className="font-medium text-slate-900">
-                          {r.address || '—'}
-                        </div>
-                        <div className="font-mono text-[10px] text-slate-500">
-                          {r.bbl}
-                          {r.is_landmark && (
-                            <span className="ml-1 rounded-full bg-rose-50 px-1 text-rose-700">
-                              LPC
-                            </span>
-                          )}
-                          {r.is_historic_district && !r.is_landmark && (
-                            <span className="ml-1 rounded-full bg-amber-50 px-1 text-amber-700">
-                              HD
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 font-semibold text-slate-900">
-                        {formatScore(r.score_calibrated)}
-                      </td>
-                      <td className="px-3 py-2 text-xs text-slate-700">
-                        {formatNumber(r.lot_area_sqft)}
-                      </td>
-                      <td className="px-3 py-2 text-xs text-slate-700">
-                        {formatCurrency(r.last_sale_price)}
-                      </td>
-                      <td className="px-3 py-2 text-xs text-slate-700">
-                        {r.years_held ?? '—'}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {sorted.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-12 text-center">
+                      <p className="text-sm text-slate-600">
+                        No parcels match your filters.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setHideLandmarked(false)}
+                        className={`mt-2 inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-900 hover:bg-slate-50 ${FOCUS_RING}`}
+                      >
+                        Clear filters
+                      </button>
+                    </td>
+                  </tr>
+                ) : (
+                  sorted.map((r, i) => {
+                    const isSel = r.bbl === selectedBbl;
+                    const ariaLabel = `Open detail for ${r.address || '—'}, BBL ${r.bbl}`;
+                    return (
+                      <tr
+                        key={r.bbl}
+                        id={`parcel-row-${r.bbl}`}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={ariaLabel}
+                        onClick={() => setSelectedBbl(r.bbl)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedBbl(r.bbl);
+                          }
+                        }}
+                        className={`cursor-pointer transition-colors ${FOCUS_RING} ${
+                          isSel ? 'bg-sky-50' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <td className="px-3 py-2 text-xs text-slate-500">{i + 1}</td>
+                        <td className="px-3 py-2">
+                          <div className="font-medium text-slate-900">
+                            {r.address || '—'}
+                          </div>
+                          <div className="font-mono text-xs text-slate-500">
+                            {r.bbl}
+                            {r.is_landmark && (
+                              <span className="ml-1 rounded-full bg-rose-50 px-1 text-rose-700">
+                                LPC
+                              </span>
+                            )}
+                            {r.is_historic_district && !r.is_landmark && (
+                              <span className="ml-1 rounded-full bg-amber-50 px-1 text-amber-700">
+                                HD
+                              </span>
+                            )}
+                          </div>
+                          {/* Mobile-only: surface the columns we hide
+                              below sm so users on narrow screens still
+                              see sale + holding. */}
+                          <div className="text-xs text-slate-500 sm:hidden">
+                            {formatCurrency(r.last_sale_price)} ·{' '}
+                            {r.years_held ?? '—'}y held
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 font-semibold text-slate-900">
+                          {formatScore(r.score_calibrated)}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-slate-700">
+                          {formatNumber(r.lot_area_sqft)}
+                        </td>
+                        <td className="hidden px-3 py-2 text-xs text-slate-700 sm:table-cell">
+                          {formatCurrency(r.last_sale_price)}
+                        </td>
+                        <td className="hidden px-3 py-2 text-xs text-slate-700 sm:table-cell">
+                          {r.years_held ?? '—'}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

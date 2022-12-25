@@ -96,7 +96,7 @@ export default async function ParcelIntelIndexPage() {
               <BoroughCardPrefetch key={b.slug}>
                 <Link
                   href={`/parcel-intel/${b.slug}`}
-                  className="group relative block overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                  className="group relative block overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                 >
                   <span
                     className={`absolute inset-y-0 left-0 w-1 ${accent}`}

@@ -182,7 +182,7 @@ export function ParcelIntelMap({ borough, rows, selectedBbl, onSelect }: Props) 
       </MapContainer>
 
       {/* Legend */}
-      <div className="pointer-events-none absolute right-2 top-2 z-[400] rounded-md border border-slate-200 bg-white/95 px-2.5 py-1.5 text-[10px] font-medium uppercase tracking-wide text-slate-700 shadow-sm backdrop-blur">
+      <div className="pointer-events-none absolute right-2 top-2 z-[400] rounded-md border border-slate-200 bg-white/95 px-2.5 py-1.5 text-xs font-medium uppercase tracking-wide text-slate-700 shadow-sm backdrop-blur">
         <div className="mb-1 text-slate-500">Rank</div>
         <div className="flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-white" style={{ background: '#dc2626' }} />
@@ -203,12 +203,12 @@ export function ParcelIntelMap({ borough, rows, selectedBbl, onSelect }: Props) 
       </div>
 
       {mappable.length === 0 && (
-        <div className="absolute inset-x-2 top-12 z-[400] rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900 shadow-sm">
+        <div className="absolute inset-x-2 top-12 z-[400] rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 shadow-sm">
           None of the {rows.length} parcels have polygon geometry — the map can&apos;t show markers. The list still works.
         </div>
       )}
       {mappable.length > 0 && mappable.length < rows.length && (
-        <div className="absolute bottom-2 left-2 z-[400] max-w-xs rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] text-amber-800 shadow-sm">
+        <div className="absolute bottom-2 left-2 z-[400] max-w-xs rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900 shadow-sm">
           {rows.length - mappable.length} parcels lack polygon geometry
           (typically condo billing units or transit ROW) and don&apos;t appear on the map.
         </div>
