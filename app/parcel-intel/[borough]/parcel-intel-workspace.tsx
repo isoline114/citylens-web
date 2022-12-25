@@ -11,11 +11,13 @@ import {
   Download,
   Info,
   Lock,
+  TrendingDown,
+  TrendingUp,
   X,
 } from 'lucide-react';
 
 import { useAuth } from '@/lib/auth';
-import type { ParcelIntelRow } from '@/lib/api';
+import type { ParcelIntelRow, TopFeature } from '@/lib/api';
 import { explainParcel, type Reason } from './parcel-intel-explain';
 
 // Leaflet must not render on the server (window/document references).
@@ -245,6 +247,131 @@ function SignInGate({
   );
 }
 
+// Map internal SHAP roll-up names to user-facing labels. Names not present
+// in the table fall through with a tidied-up version of the raw key.
+const FEATURE_LABELS: Record<string, string> = {
+  lot_area: 'Lot area',
+  allowed_far: 'Allowed FAR',
+  lot_huge_flag: 'Oversize lot',
+  lot_tiny_flag: 'Undersize lot',
+  assesstot_per_lot: 'Total assessment / lot',
+  assessland_per_lot: 'Land assessment / lot',
+  assessbldg_per_lot: 'Building assessment / lot',
+  units: 'Residential units',
+  zoning_district: 'Zoning',
+  zoning_family: 'Zoning family',
+  bldg_class: 'Building class',
+  year_bucket: 'Build era',
+  floors_bucket: 'Floors',
+  land_use: 'Land use',
+  borough: 'Borough',
+  is_landmark: 'LPC landmark',
+  is_historic_district: 'Historic district',
+  last_sale_price: 'Last sale price',
+  years_held: 'Years held',
+  has_recent_sale_5yr: 'Recent sale (5 yr)',
+  has_any_sale: 'Has ACRIS deed',
+  last_sale_price_missing: 'Sale price missing',
+  prior_nb_count: 'Prior NB permits',
+  prior_alt_count: 'Prior ALT permits',
+  prior_structural_count: 'Prior structural permits',
+  prior_recent_nb_count: 'Recent NB permits',
+  years_since_last_structural: 'Years since structural permit',
+  years_since_last_structural_missing: 'No prior structural permit',
+  block_prior_nb_count: 'Block prior NB permits',
+  block_prior_structural_count: 'Block prior structural permits',
+  block_redev_share: 'Block redevelopment share',
+  change_added_count: 'CityLens added structures',
+  change_modified_count: 'CityLens modified structures',
+  change_demolished_count: 'CityLens demolished structures',
+  change_run_count: 'CityLens run count',
+  change_any_activity: 'CityLens activity flag',
+};
+
+function friendlyFeatureLabel(name: string): string {
+  if (FEATURE_LABELS[name]) return FEATURE_LABELS[name];
+  // Fallback: snake_case → Title case so unknown features still read.
+  return name
+    .split('_')
+    .map((part) => (part.length === 0 ? part : part[0].toUpperCase() + part.slice(1)))
+    .join(' ');
+}
+
+function formatFeatureValue(value: TopFeature['value']): string {
+  if (value === null || value === undefined) return '—';
+  if (typeof value === 'boolean') return value ? 'yes' : 'no';
+  if (typeof value === 'number') {
+    if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+    if (Math.abs(value) >= 1_000) return `${(value / 1_000).toFixed(0)}k`;
+    return String(value);
+  }
+  return value;
+}
+
+function ModelAttributionSection({ features }: { features: TopFeature[] }) {
+  const [open, setOpen] = useState(false);
+  if (features.length === 0) return null;
+
+  return (
+    <div className="mt-4 rounded-md border border-slate-200 bg-white">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
+      >
+        <div className="min-w-0">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Model attribution
+          </h4>
+          <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
+            What the model weighed for this parcel — top {features.length} features by
+            absolute contribution to the score.
+          </p>
+        </div>
+        {open ? (
+          <ChevronUp className="h-4 w-4 shrink-0 text-slate-500" />
+        ) : (
+          <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
+        )}
+      </button>
+      {open && (
+        <ul className="border-t border-slate-100 px-3 py-2">
+          {features.map((feat, i) => {
+            const positive = feat.contribution_logit >= 0;
+            const widthPct = Math.min(Math.max(feat.contribution_pct * 100, 0), 100);
+            const Icon = positive ? TrendingUp : TrendingDown;
+            const iconClass = positive ? 'text-emerald-600' : 'text-rose-600';
+            const barClass = positive ? 'bg-emerald-500' : 'bg-rose-500';
+            return (
+              <li key={`${feat.name}-${i}`} className="py-1.5">
+                <div className="flex items-center gap-2 text-xs">
+                  <Icon className={`h-3.5 w-3.5 shrink-0 ${iconClass}`} aria-hidden />
+                  <span className="font-medium text-slate-900">
+                    {friendlyFeatureLabel(feat.name)}
+                  </span>
+                  <span className="ml-auto inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-700">
+                    {formatFeatureValue(feat.value)}
+                  </span>
+                </div>
+                <div
+                  className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
+                  aria-label={`${feat.contribution_pct.toFixed(2)} share of total contribution`}
+                >
+                  <div
+                    className={`h-full ${barClass}`}
+                    style={{ width: `${widthPct}%` }}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function ReasonChip({ reason }: { reason: Reason }) {
   const tone = {
     positive: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
@@ -393,6 +520,8 @@ function ParcelDetailPanel({
           )}
         </ul>
       </div>
+
+      <ModelAttributionSection features={row.top_features ?? []} />
     </aside>
   );
 }

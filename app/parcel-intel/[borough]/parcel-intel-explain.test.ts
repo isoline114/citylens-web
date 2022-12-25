@@ -30,6 +30,7 @@ function row(overrides: Partial<ParcelIntelRow>): ParcelIntelRow {
     is_historic_district: false,
     block_id: '300000',
     block_rank: 1,
+    top_features: [],
     ...overrides,
   };
 }

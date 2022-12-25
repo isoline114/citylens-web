@@ -55,6 +55,7 @@ function row(overrides: Partial<ParcelIntelRow>): ParcelIntelRow {
     is_historic_district: false,
     block_id: '300000',
     block_rank: 1,
+    top_features: [],
     ...overrides,
   };
 }
@@ -162,6 +163,90 @@ describe('ParcelIntelWorkspace', () => {
     ).toBeInTheDocument();
     // Recent priced sale reason.
     expect(screen.getByText(/Sold for \$5\.0M 2022/)).toBeInTheDocument();
+  });
+
+  it('renders model attribution section when top_features are present', () => {
+    mocks.authState.status = 'authenticated';
+    mocks.authState.user = { id: 'u1', email: 'a@b' };
+    const rows = [
+      row({
+        bbl: '3000000001',
+        address: 'PURDY PLACE',
+        score_calibrated: 0.99,
+        top_features: [
+          {
+            name: 'lot_area',
+            value: 5000,
+            contribution_logit: 0.85,
+            contribution_pct: 0.31,
+          },
+          {
+            name: 'zoning_district',
+            value: 'R7A',
+            contribution_logit: -0.42,
+            contribution_pct: 0.15,
+          },
+          {
+            name: 'is_landmark',
+            value: false,
+            contribution_logit: 0.18,
+            contribution_pct: 0.07,
+          },
+        ],
+      }),
+    ];
+    render(
+      <ParcelIntelWorkspace
+        rows={rows}
+        borough="brooklyn"
+        boroughDisplayName="Brooklyn"
+      />,
+    );
+    fireEvent.click(screen.getByText('PURDY PLACE').closest('tr') as HTMLTableRowElement);
+
+    // Disclosure button is present and currently collapsed.
+    const heading = screen.getByRole('heading', { name: /Model attribution/i });
+    expect(heading).toBeInTheDocument();
+    const button = heading.closest('button') as HTMLButtonElement;
+    expect(button).not.toBeNull();
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+
+    // Click to expand. All three friendly labels should now be visible.
+    fireEvent.click(button);
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+
+    // Use within() over the disclosure region so we don't accidentally
+    // match the rule-based section's text.
+    const list = button.parentElement?.querySelector('ul');
+    expect(list).not.toBeNull();
+    const scope = within(list as HTMLElement);
+    expect(scope.getByText('Lot area')).toBeInTheDocument();
+    expect(scope.getByText('Zoning')).toBeInTheDocument();
+    expect(scope.getByText('LPC landmark')).toBeInTheDocument();
+  });
+
+  it('omits model attribution section when top_features is empty', () => {
+    mocks.authState.status = 'authenticated';
+    mocks.authState.user = { id: 'u1', email: 'a@b' };
+    const rows = [
+      row({
+        bbl: '3000000001',
+        address: 'EMPTY FEATS',
+        score_calibrated: 0.7,
+        top_features: [],
+      }),
+    ];
+    render(
+      <ParcelIntelWorkspace
+        rows={rows}
+        borough="brooklyn"
+        boroughDisplayName="Brooklyn"
+      />,
+    );
+    fireEvent.click(screen.getByText('EMPTY FEATS').closest('tr') as HTMLTableRowElement);
+    expect(
+      screen.queryByRole('heading', { name: /Model attribution/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('hides landmarked rows when checkbox toggled', () => {

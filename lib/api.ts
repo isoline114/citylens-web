@@ -337,6 +337,17 @@ export async function revokeApiKey(keyId: string): Promise<void> {
 
 // ---------- Parcel Intelligence ----------
 
+export type TopFeature = {
+  /** Internal feature name (e.g. "lot_area", "zoning_district"). */
+  name: string;
+  /** Heterogeneous: numeric for singletons, label for one-hot groups, bool for flags. */
+  value: string | number | boolean | null;
+  /** Signed log-odds contribution. Positive raises the score; negative lowers it. */
+  contribution_logit: number;
+  /** Share of the row's total absolute attribution. ``[0, 1]``. */
+  contribution_pct: number;
+};
+
 export type ParcelIntelRow = {
   bbl: string;
   address: string | null;
@@ -365,6 +376,8 @@ export type ParcelIntelRow = {
   is_historic_district: boolean;
   block_id: string | null;
   block_rank: number | null;
+  /** Top-K SHAP attributions for the parcel. Empty when SHAP is unavailable. */
+  top_features: TopFeature[];
 };
 
 export type ParcelIntelBorough = {
