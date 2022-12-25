@@ -19,6 +19,9 @@ import type { ParcelIntelRow } from '@/lib/api';
 import { explainParcel, type Reason } from './parcel-intel-explain';
 
 // Leaflet must not render on the server (window/document references).
+// next/dynamic's `loading` callback can't receive props; the skeleton
+// uses a generic NYC silhouette regardless of which borough is loading.
+// Visual continuity matters more than shape accuracy here.
 const ParcelIntelMap = dynamic(
   () => import('./parcel-intel-map').then((m) => m.ParcelIntelMap),
   { ssr: false, loading: () => <MapSkeleton /> },
@@ -92,10 +95,81 @@ function downloadCSV(rows: ParcelIntelRow[], borough: string) {
   URL.revokeObjectURL(url);
 }
 
+// Generic NYC-blob silhouette for the loading placeholder. Not geographically
+// accurate — its job is purely visual continuity between the gray skeleton
+// and the real map tiles.
+const NYC_SILHOUETTE =
+  'M 100 200 Q 200 170 280 210 L 320 280 L 290 360 L 200 380 L 110 340 L 80 270 Z';
+
 function MapSkeleton() {
+  const silhouette = NYC_SILHOUETTE;
+  // Placeholder marker positions, evenly distributed across the borough
+  // silhouette. Color-coded to match the rank legend on the real map so
+  // the visual idiom is consistent.
+  const placeholders = [
+    { cx: 220, cy: 220, r: 9, fill: '#dc2626' },
+    { cx: 180, cy: 280, r: 7, fill: '#f59e0b' },
+    { cx: 260, cy: 260, r: 7, fill: '#f59e0b' },
+    { cx: 140, cy: 230, r: 6, fill: '#10b981' },
+    { cx: 280, cy: 200, r: 6, fill: '#10b981' },
+    { cx: 200, cy: 180, r: 5, fill: '#0ea5e9' },
+    { cx: 160, cy: 320, r: 5, fill: '#0ea5e9' },
+    { cx: 240, cy: 310, r: 5, fill: '#0ea5e9' },
+  ];
   return (
-    <div className="flex h-full w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-100">
-      <span className="text-sm text-slate-400">Loading map …</span>
+    <div
+      className="relative h-full w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+      role="status"
+      aria-label="Loading map"
+    >
+      <svg
+        viewBox="0 0 460 460"
+        className="absolute inset-0 h-full w-full"
+        preserveAspectRatio="xMidYMid meet"
+        aria-hidden="true"
+      >
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path
+              d="M 40 0 L 0 0 0 40"
+              fill="none"
+              stroke="rgba(148,163,184,0.15)"
+              strokeWidth="1"
+            />
+          </pattern>
+        </defs>
+        <rect width="460" height="460" fill="url(#grid)" />
+        <path
+          d={silhouette}
+          fill="rgba(226,232,240,0.7)"
+          stroke="rgba(148,163,184,0.5)"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+        {placeholders.map((p, i) => (
+          <circle
+            key={i}
+            cx={p.cx}
+            cy={p.cy}
+            r={p.r}
+            fill={p.fill}
+            fillOpacity="0.5"
+            stroke="white"
+            strokeWidth="1.5"
+          >
+            <animate
+              attributeName="fillOpacity"
+              values="0.3;0.7;0.3"
+              dur="2s"
+              repeatCount="indefinite"
+              begin={`${i * 0.15}s`}
+            />
+          </circle>
+        ))}
+      </svg>
+      <div className="absolute inset-x-0 bottom-3 text-center text-xs font-medium text-slate-500">
+        Loading map …
+      </div>
     </div>
   );
 }

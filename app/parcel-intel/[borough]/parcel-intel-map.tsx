@@ -64,15 +64,18 @@ function FitBoundsAndInvalidate({
         points.push([r.lat, r.lng]);
       }
     }
+    // animate: false saves ~250ms on first paint by skipping Leaflet's
+    // default zoom-pan animation. Subsequent re-fits (filter changes)
+    // also feel snappier without the wobble.
     if (points.length === 0) {
-      map.fitBounds(fallback, { padding: [16, 16] });
+      map.fitBounds(fallback, { padding: [16, 16], animate: false });
       return;
     }
     if (points.length === 1) {
-      map.setView(points[0], 15);
+      map.setView(points[0], 15, { animate: false });
       return;
     }
-    map.fitBounds(points, { padding: [32, 32] });
+    map.fitBounds(points, { padding: [32, 32], animate: false });
   }, [map, rows, fallback]);
   return null;
 }

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight, Building2, MapPin } from 'lucide-react';
 import { fetchParcelIntelIndexOnServer } from '@/lib/api.server';
+import { BoroughCardPrefetch } from './borough-card-prefetch';
 
 export const metadata = {
   title: 'Parcel Intelligence — CityLens',
@@ -92,32 +93,33 @@ export default async function ParcelIntelIndexPage() {
                 ? `${Math.round(b.top_score * 100)}%`
                 : null;
             return (
-              <Link
-                key={b.slug}
-                href={`/parcel-intel/${b.slug}`}
-                className="group relative block overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <span
-                  className={`absolute inset-y-0 left-0 w-1 ${accent}`}
-                  aria-hidden="true"
-                />
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                      <MapPin className="h-3.5 w-3.5" />
-                      Borough
+              <BoroughCardPrefetch key={b.slug}>
+                <Link
+                  href={`/parcel-intel/${b.slug}`}
+                  className="group relative block overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <span
+                    className={`absolute inset-y-0 left-0 w-1 ${accent}`}
+                    aria-hidden="true"
+                  />
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                        <MapPin className="h-3.5 w-3.5" />
+                        Borough
+                      </div>
+                      <h2 className="mt-1 text-xl font-semibold text-slate-950">
+                        {b.display_name}
+                      </h2>
+                      <p className="mt-2 text-sm text-slate-600">
+                        {b.count} ranked candidates
+                        {topPct ? `, top score ${topPct}` : ''}
+                      </p>
                     </div>
-                    <h2 className="mt-1 text-xl font-semibold text-slate-950">
-                      {b.display_name}
-                    </h2>
-                    <p className="mt-2 text-sm text-slate-600">
-                      {b.count} ranked candidates
-                      {topPct ? `, top score ${topPct}` : ''}
-                    </p>
+                    <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-700" />
                   </div>
-                  <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-700" />
-                </div>
-              </Link>
+                </Link>
+              </BoroughCardPrefetch>
             );
           })}
         </section>
