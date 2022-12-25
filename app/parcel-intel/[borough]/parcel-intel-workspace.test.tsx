@@ -249,7 +249,7 @@ describe('ParcelIntelWorkspace', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('hides landmarked rows when checkbox toggled', () => {
+  it('hides landmarked rows when filter toggled', () => {
     mocks.authState.status = 'authenticated';
     mocks.authState.user = { id: 'u1', email: 'a@b' };
     const rows = [
@@ -267,8 +267,58 @@ describe('ParcelIntelWorkspace', () => {
     expect(screen.getByText('KEEP')).toBeInTheDocument();
     expect(screen.getByText('HIDE')).toBeInTheDocument();
 
+    // Filters live inside a collapsible disclosure now. Open it first,
+    // then click the "Hide landmarked" checkbox.
+    fireEvent.click(screen.getByRole('button', { name: /^Filters$/i }));
     fireEvent.click(screen.getByRole('checkbox', { name: /Hide landmarked/i }));
     expect(screen.getByText('KEEP')).toBeInTheDocument();
     expect(screen.queryByText('HIDE')).not.toBeInTheDocument();
+  });
+
+  it('zoning family pills filter the list', () => {
+    mocks.authState.status = 'authenticated';
+    mocks.authState.user = { id: 'u1', email: 'a@b' };
+    const rows = [
+      row({ bbl: '3000000001', address: 'RES', zoning_district_1: 'R6B' }),
+      row({ bbl: '3000000002', address: 'COMM', zoning_district_1: 'C2-4' }),
+    ];
+    render(
+      <ParcelIntelWorkspace
+        rows={rows}
+        borough="brooklyn"
+        boroughDisplayName="Brooklyn"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /^Filters$/i }));
+    // All four families on by default → both rows visible.
+    expect(screen.getByText('RES')).toBeInTheDocument();
+    expect(screen.getByText('COMM')).toBeInTheDocument();
+    // Toggle commercial off (R/M/Other remain on) — COMM should hide.
+    fireEvent.click(screen.getByRole('button', { name: 'C', pressed: true }));
+    expect(screen.getByText('RES')).toBeInTheDocument();
+    expect(screen.queryByText('COMM')).not.toBeInTheDocument();
+  });
+
+  it('min-score range slider filters out low-score rows', () => {
+    mocks.authState.status = 'authenticated';
+    mocks.authState.user = { id: 'u1', email: 'a@b' };
+    const rows = [
+      row({ bbl: '3000000001', address: 'HIGH', score_calibrated: 0.95 }),
+      row({ bbl: '3000000002', address: 'LOW', score_calibrated: 0.4 }),
+    ];
+    render(
+      <ParcelIntelWorkspace
+        rows={rows}
+        borough="brooklyn"
+        boroughDisplayName="Brooklyn"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /^Filters$/i }));
+    const slider = screen.getByLabelText(/Min score/i);
+    fireEvent.change(slider, { target: { value: '50' } });
+    expect(screen.getByText('HIGH')).toBeInTheDocument();
+    expect(screen.queryByText('LOW')).not.toBeInTheDocument();
   });
 });

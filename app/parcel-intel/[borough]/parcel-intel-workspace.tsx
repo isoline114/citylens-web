@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronUp,
   Download,
+  Filter,
   Lock,
   MapPin,
   TrendingDown,
@@ -39,7 +40,25 @@ type SortKey =
   | 'score_calibrated'
   | 'lot_area_sqft'
   | 'last_sale_price'
-  | 'years_held';
+  | 'years_held'
+  | 'year_built'
+  | 'num_floors'
+  | 'allowed_far'
+  | 'far_utilization_pct';
+
+// Zoning families: first letter of zoning_district_1.
+type ZoningFamily = 'R' | 'C' | 'M' | 'Other';
+
+// Condensed land-use buckets for the filter dropdown. PLUTO has 11 codes;
+// most users think in coarser product terms.
+type LandUseFilter = 'all' | 'residential' | 'commercial' | 'industrial' | 'vacant';
+const LAND_USE_GROUPS: Record<LandUseFilter, Set<string>> = {
+  all: new Set(),
+  residential: new Set(['01', '02', '03', '04']),
+  commercial: new Set(['05']),
+  industrial: new Set(['06']),
+  vacant: new Set(['11']),
+};
 
 type Direction = 'asc' | 'desc';
 
@@ -54,7 +73,17 @@ const SORT_LABELS: Record<SortKey, string> = {
   lot_area_sqft: 'Lot',
   last_sale_price: 'Last sale',
   years_held: 'Held',
+  year_built: 'Built',
+  num_floors: 'Floors',
+  allowed_far: 'FAR',
+  far_utilization_pct: 'Util %',
 };
+
+function zoningFamilyOf(zone: string | null | undefined): ZoningFamily {
+  const ch = (zone ?? '').trim().charAt(0).toUpperCase();
+  if (ch === 'R' || ch === 'C' || ch === 'M') return ch;
+  return 'Other';
+}
 
 function formatCurrency(value: number | null | undefined): string {
   if (value === null || value === undefined) return '—';
@@ -540,6 +569,13 @@ function ParcelDetailPanel({
   );
 }
 
+const DEFAULT_ZONING_FAMILIES: Set<ZoningFamily> = new Set([
+  'R',
+  'C',
+  'M',
+  'Other',
+]);
+
 export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Props) {
   const auth = useAuth();
   const [sortKey, setSortKey] = useState<SortKey>('score_calibrated');
@@ -547,13 +583,69 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
   const [hideLandmarked, setHideLandmarked] = useState(false);
   const [selectedBbl, setSelectedBbl] = useState<string | null>(null);
 
-  const filtered = useMemo(
-    () =>
-      hideLandmarked
-        ? rows.filter((r) => !r.is_landmark && !r.is_historic_district)
-        : rows,
-    [rows, hideLandmarked],
+  // Filter state. Default values match the unfiltered list so a fresh
+  // visit shows the full top-N. Disclosure stays collapsed by default.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [zoningFamilies, setZoningFamilies] = useState<Set<ZoningFamily>>(
+    new Set(DEFAULT_ZONING_FAMILIES),
   );
+  const [landUseFilter, setLandUseFilter] = useState<LandUseFilter>('all');
+  const [recentSaleOnly, setRecentSaleOnly] = useState(false);
+  const [minScorePct, setMinScorePct] = useState(0); // 0-100
+
+  const filterCount =
+    (hideLandmarked ? 1 : 0) +
+    (zoningFamilies.size < 4 ? 1 : 0) +
+    (landUseFilter !== 'all' ? 1 : 0) +
+    (recentSaleOnly ? 1 : 0) +
+    (minScorePct > 0 ? 1 : 0);
+
+  const resetFilters = () => {
+    setHideLandmarked(false);
+    setZoningFamilies(new Set(DEFAULT_ZONING_FAMILIES));
+    setLandUseFilter('all');
+    setRecentSaleOnly(false);
+    setMinScorePct(0);
+  };
+
+  const toggleZoningFamily = (fam: ZoningFamily) => {
+    setZoningFamilies((prev) => {
+      const next = new Set(prev);
+      if (next.has(fam)) {
+        next.delete(fam);
+      } else {
+        next.add(fam);
+      }
+      // Don't allow zero zoning families — that'd render an empty list
+      // with no good way to recover from one click.
+      return next.size === 0 ? new Set(DEFAULT_ZONING_FAMILIES) : next;
+    });
+  };
+
+  const filtered = useMemo(() => {
+    const luSet = LAND_USE_GROUPS[landUseFilter];
+    const minScore = minScorePct / 100;
+    return rows.filter((r) => {
+      if (hideLandmarked && (r.is_landmark || r.is_historic_district)) return false;
+      if (!zoningFamilies.has(zoningFamilyOf(r.zoning_district_1))) return false;
+      if (luSet.size > 0 && !luSet.has(r.land_use ?? '')) return false;
+      if (recentSaleOnly && !r.has_recent_sale_5yr) return false;
+      if (
+        minScore > 0 &&
+        (typeof r.score_calibrated !== 'number' ||
+          r.score_calibrated < minScore)
+      )
+        return false;
+      return true;
+    });
+  }, [
+    rows,
+    hideLandmarked,
+    zoningFamilies,
+    landUseFilter,
+    recentSaleOnly,
+    minScorePct,
+  ]);
 
   const sorted = useMemo(() => {
     const out = [...filtered];
@@ -634,26 +726,157 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
       <div className="order-1 flex flex-col gap-4 lg:order-2">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-slate-700">
-            <input
-              type="checkbox"
-              checked={hideLandmarked}
-              onChange={(e) => setHideLandmarked(e.target.checked)}
-              className={`h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-700 ${FOCUS_RING}`}
-            />
-            Hide landmarked
-          </label>
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((v) => !v)}
+            aria-expanded={filtersOpen}
+            aria-controls="parcel-intel-filters"
+            className={`inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-900 hover:bg-slate-50 ${FOCUS_RING}`}
+          >
+            <Filter className="h-3.5 w-3.5" />
+            Filters
+            {filterCount > 0 && (
+              <span className="ml-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-sky-500 px-1 text-[10px] font-semibold text-white">
+                {filterCount}
+              </span>
+            )}
+            {filtersOpen ? (
+              <ChevronUp className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5" />
+            )}
+          </button>
           <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">
+              {sorted.length} of {rows.length}
+            </span>
             <button
               type="button"
               onClick={() => downloadCSV(sorted, borough)}
               className={`inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-900 hover:bg-slate-50 ${FOCUS_RING}`}
             >
               <Download className="h-3.5 w-3.5" />
-              CSV ({sorted.length})
+              CSV
             </button>
           </div>
         </div>
+
+        {filtersOpen && (
+          <div
+            id="parcel-intel-filters"
+            className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+          >
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              {/* Zoning family pills */}
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Zoning
+                </span>
+                <div className="flex gap-1">
+                  {(['R', 'C', 'M', 'Other'] as ZoningFamily[]).map((fam) => {
+                    const active = zoningFamilies.has(fam);
+                    return (
+                      <button
+                        key={fam}
+                        type="button"
+                        onClick={() => toggleZoningFamily(fam)}
+                        aria-pressed={active}
+                        className={`inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium ${FOCUS_RING} ${
+                          active
+                            ? 'bg-slate-900 text-white'
+                            : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        {fam}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Land use bucket */}
+              <div className="flex flex-col gap-1">
+                <label
+                  htmlFor="parcel-intel-landuse"
+                  className="text-xs font-medium uppercase tracking-wide text-slate-500"
+                >
+                  Land use
+                </label>
+                <select
+                  id="parcel-intel-landuse"
+                  value={landUseFilter}
+                  onChange={(e) =>
+                    setLandUseFilter(e.target.value as LandUseFilter)
+                  }
+                  className={`h-7 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-900 ${FOCUS_RING}`}
+                >
+                  <option value="all">All</option>
+                  <option value="residential">Residential</option>
+                  <option value="commercial">Commercial</option>
+                  <option value="industrial">Industrial</option>
+                  <option value="vacant">Vacant land</option>
+                </select>
+              </div>
+
+              {/* Hide landmarked + recent-sale toggles */}
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Filters
+                </span>
+                <div className="flex gap-2">
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={hideLandmarked}
+                      onChange={(e) => setHideLandmarked(e.target.checked)}
+                      className={`h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-700 ${FOCUS_RING}`}
+                    />
+                    Hide landmarked
+                  </label>
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={recentSaleOnly}
+                      onChange={(e) => setRecentSaleOnly(e.target.checked)}
+                      className={`h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-700 ${FOCUS_RING}`}
+                    />
+                    Sold in last 5 yrs
+                  </label>
+                </div>
+              </div>
+
+              {/* Score range */}
+              <div className="flex min-w-[180px] flex-col gap-1">
+                <label
+                  htmlFor="parcel-intel-minscore"
+                  className="text-xs font-medium uppercase tracking-wide text-slate-500"
+                >
+                  Min score: {minScorePct}%
+                </label>
+                <input
+                  id="parcel-intel-minscore"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={minScorePct}
+                  onChange={(e) => setMinScorePct(Number(e.target.value))}
+                  className={`h-2 cursor-pointer accent-slate-900 ${FOCUS_RING}`}
+                />
+              </div>
+
+              {filterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className={`ml-auto inline-flex h-7 items-center rounded-md px-2 text-xs font-medium text-slate-600 hover:bg-white hover:text-slate-900 ${FOCUS_RING}`}
+                >
+                  Reset all
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Detail panel */}
         <ParcelDetailPanel row={selected} onClose={() => setSelectedBbl(null)} />
@@ -709,21 +932,61 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
                       {renderSortIcon('years_held')}
                     </button>
                   </th>
+                  <th className="hidden px-3 py-2 lg:table-cell">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('year_built')}
+                      className={`inline-flex items-center gap-1 rounded-sm hover:text-slate-900 ${FOCUS_RING}`}
+                    >
+                      {SORT_LABELS.year_built}
+                      {renderSortIcon('year_built')}
+                    </button>
+                  </th>
+                  <th className="hidden px-3 py-2 lg:table-cell">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('num_floors')}
+                      className={`inline-flex items-center gap-1 rounded-sm hover:text-slate-900 ${FOCUS_RING}`}
+                    >
+                      {SORT_LABELS.num_floors}
+                      {renderSortIcon('num_floors')}
+                    </button>
+                  </th>
+                  <th className="hidden px-3 py-2 lg:table-cell">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('allowed_far')}
+                      className={`inline-flex items-center gap-1 rounded-sm hover:text-slate-900 ${FOCUS_RING}`}
+                    >
+                      {SORT_LABELS.allowed_far}
+                      {renderSortIcon('allowed_far')}
+                    </button>
+                  </th>
+                  <th className="hidden px-3 py-2 lg:table-cell">
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('far_utilization_pct')}
+                      className={`inline-flex items-center gap-1 rounded-sm hover:text-slate-900 ${FOCUS_RING}`}
+                    >
+                      {SORT_LABELS.far_utilization_pct}
+                      {renderSortIcon('far_utilization_pct')}
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {sorted.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center">
+                    <td colSpan={10} className="px-4 py-12 text-center">
                       <p className="text-sm text-slate-600">
                         No parcels match your filters.
                       </p>
                       <button
                         type="button"
-                        onClick={() => setHideLandmarked(false)}
+                        onClick={resetFilters}
                         className={`mt-2 inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-900 hover:bg-slate-50 ${FOCUS_RING}`}
                       >
-                        Clear filters
+                        Clear all filters
                       </button>
                     </td>
                   </tr>
@@ -786,6 +1049,20 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
                         </td>
                         <td className="hidden px-3 py-2 text-xs text-slate-700 sm:table-cell">
                           {r.years_held ?? '—'}
+                        </td>
+                        <td className="hidden px-3 py-2 text-xs text-slate-700 lg:table-cell">
+                          {r.year_built && r.year_built > 0 ? r.year_built : '—'}
+                        </td>
+                        <td className="hidden px-3 py-2 text-xs text-slate-700 lg:table-cell">
+                          {r.num_floors ?? '—'}
+                        </td>
+                        <td className="hidden px-3 py-2 text-xs text-slate-700 lg:table-cell">
+                          {r.allowed_far ?? '—'}
+                        </td>
+                        <td className="hidden px-3 py-2 text-xs text-slate-700 lg:table-cell">
+                          {typeof r.far_utilization_pct === 'number'
+                            ? `${r.far_utilization_pct.toFixed(0)}%`
+                            : '—'}
                         </td>
                       </tr>
                     );
