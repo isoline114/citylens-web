@@ -9,3 +9,6 @@ out/
 .vercel
 .env*.local
 tsconfig.tsbuildinfo
+
+# Local agent context — kept per-developer, not committed.
+CLAUDE.md
