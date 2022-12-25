@@ -532,15 +532,31 @@ function ParcelDetailPanel({
         </div>
       </dl>
 
-      {(row.is_landmark || row.is_historic_district) && (
+      {(row.is_landmark || row.is_historic_district || row.redev_status !== 'still_vacant') && (
         <div className="mt-3 flex flex-wrap gap-2">
+          {row.redev_status === 'active' && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-800 ring-1 ring-inset ring-sky-200"
+              title="DOB has issued an NB permit on this BBL since the model's 2018 feature year, but the build hasn't been recorded as complete yet. The model still surfaces it as a similar-pattern candidate; verify against current DOB filings."
+            >
+              Active project
+            </span>
+          )}
+          {row.redev_status === 'already_built' && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-300"
+              title="PLUTO records this parcel as built post-2018 with a meaningful built_far jump. The publisher normally filters these out; if you're seeing this, the data may be stale."
+            >
+              Already built
+            </span>
+          )}
           {row.is_landmark && (
-            <span className="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-200">
+            <span className="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-900 ring-1 ring-inset ring-rose-200">
               LPC landmark
             </span>
           )}
           {row.is_historic_district && (
-            <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
+            <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-900 ring-1 ring-inset ring-amber-200">
               Historic district
             </span>
           )}

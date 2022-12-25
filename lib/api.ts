@@ -378,6 +378,13 @@ export type ParcelIntelRow = {
   block_rank: number | null;
   /** Top-K SHAP attributions for the parcel. Empty when SHAP is unavailable. */
   top_features: TopFeature[];
+  /**
+   * Validation status against the latest PLUTO snapshot + DOB labels:
+   *   - "still_vacant"  — clean redev candidate (default).
+   *   - "active"        — NB-permitted 2019-2024 OR year_built bumped post-2018.
+   *   - "already_built" — completed; publisher should have filtered out before us.
+   */
+  redev_status: 'still_vacant' | 'active' | 'already_built';
 };
 
 export type ParcelIntelBorough = {
