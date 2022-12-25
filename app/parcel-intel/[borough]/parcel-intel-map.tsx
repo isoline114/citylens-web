@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap } from 'react-leaflet';
-import type { LatLngBoundsExpression } from 'leaflet';
+import type { LatLngBoundsExpression, LatLngTuple } from 'leaflet';
 import type { ParcelIntelRow } from '@/lib/api';
 
 // Borough-level bbox fallbacks, used when a borough has zero rows with
@@ -33,7 +33,14 @@ function colorForRank(rank: number, total: number): string {
   return '#0ea5e9'; // rest — sky-500
 }
 
-function FitBoundsToRows({
+/**
+ * Fits the map to the markers' bounding box on first render and
+ * whenever the row set changes. Also calls `invalidateSize` once after
+ * mount because Leaflet's container can be measured at 0 px when the
+ * dynamic-import skeleton transitions to the real component, which
+ * leaves the map locked at the wrong zoom and tile-layer coords.
+ */
+function FitBoundsAndInvalidate({
   rows,
   fallback,
 }: {
@@ -41,8 +48,17 @@ function FitBoundsToRows({
   fallback: LatLngBoundsExpression;
 }) {
   const map = useMap();
+
+  // Safety: a fresh-mounted Leaflet map sometimes reports container
+  // size as 0 when its parent height is set via flexbox. invalidateSize
+  // re-reads the container and re-projects tile/marker layers.
   useEffect(() => {
-    const points: [number, number][] = [];
+    const t = setTimeout(() => map.invalidateSize(), 0);
+    return () => clearTimeout(t);
+  }, [map]);
+
+  useEffect(() => {
+    const points: LatLngTuple[] = [];
     for (const r of rows) {
       if (typeof r.lat === 'number' && typeof r.lng === 'number') {
         points.push([r.lat, r.lng]);
@@ -77,7 +93,6 @@ function PanToSelected({
       typeof row.lat === 'number' &&
       typeof row.lng === 'number'
     ) {
-      // Smooth-pan; keep the user's current zoom unless very far out.
       const currentZoom = map.getZoom();
       const targetZoom = Math.max(currentZoom, 16);
       map.flyTo([row.lat, row.lng], targetZoom, { duration: 0.6 });
@@ -87,12 +102,14 @@ function PanToSelected({
 }
 
 export function ParcelIntelMap({ borough, rows, selectedBbl, onSelect }: Props) {
-  const fallback = BOROUGH_FALLBACK_BOUNDS[borough] ?? BOROUGH_FALLBACK_BOUNDS.brooklyn;
+  const fallback = useMemo<LatLngBoundsExpression>(
+    () => BOROUGH_FALLBACK_BOUNDS[borough] ?? BOROUGH_FALLBACK_BOUNDS.brooklyn,
+    [borough],
+  );
   const total = rows.length;
-  const mapRef = useRef<unknown>(null);
 
-  // Filter rows that lack geometry — we still show them in the list but
-  // they don't get a dot on the map.
+  // Filter rows that lack geometry — we still show them in the list
+  // but they don't get a dot on the map.
   const mappable = useMemo(
     () =>
       rows.filter(
@@ -101,21 +118,30 @@ export function ParcelIntelMap({ borough, rows, selectedBbl, onSelect }: Props) 
     [rows],
   );
 
+  // A computed initial center/zoom that already targets the borough
+  // even before FitBoundsAndInvalidate runs. Prevents the brief
+  // flash of "all of NYC" before bounds are applied.
+  const initialCenter = useMemo<LatLngTuple>(() => {
+    const fb = fallback as [LatLngTuple, LatLngTuple];
+    return [(fb[0][0] + fb[1][0]) / 2, (fb[0][1] + fb[1][1]) / 2];
+  }, [fallback]);
+
   return (
     <div className="relative h-full w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
       <MapContainer
-        ref={mapRef as never}
-        center={[40.7128, -74.006]}
-        zoom={11}
+        center={initialCenter}
+        zoom={12}
         scrollWheelZoom
         className="h-full w-full"
-        attributionControl={false}
+        style={{ height: '100%', width: '100%', zIndex: 0 }}
       >
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          // No attribution prop here; we render our own footer below.
+          attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · <a href="https://carto.com/attributions">CARTO</a>'
+          subdomains={['a', 'b', 'c', 'd']}
+          maxZoom={19}
         />
-        <FitBoundsToRows rows={rows} fallback={fallback} />
+        <FitBoundsAndInvalidate rows={mappable} fallback={fallback} />
         <PanToSelected rows={rows} selectedBbl={selectedBbl} />
         {mappable.map((r, idx) => {
           const isSelected = r.bbl === selectedBbl;
@@ -124,18 +150,19 @@ export function ParcelIntelMap({ borough, rows, selectedBbl, onSelect }: Props) 
             <CircleMarker
               key={r.bbl}
               center={[r.lat as number, r.lng as number]}
-              radius={isSelected ? 11 : 6}
+              radius={isSelected ? 11 : 7}
               pathOptions={{
-                color: isSelected ? '#0f172a' : baseColor,
-                weight: isSelected ? 2 : 1,
+                color: isSelected ? '#0f172a' : '#ffffff',
+                weight: isSelected ? 2.5 : 1.5,
+                opacity: 1,
                 fillColor: baseColor,
-                fillOpacity: isSelected ? 0.95 : 0.75,
+                fillOpacity: isSelected ? 0.95 : 0.85,
               }}
               eventHandlers={{
                 click: () => onSelect(r.bbl),
               }}
             >
-              <Tooltip direction="top" offset={[0, -6]}>
+              <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
                 <div className="text-xs">
                   <div className="font-semibold">{r.address ?? r.bbl}</div>
                   <div className="text-slate-600">
@@ -151,33 +178,34 @@ export function ParcelIntelMap({ borough, rows, selectedBbl, onSelect }: Props) 
         })}
       </MapContainer>
 
-      {/* Legend — small, fixed, non-interactive */}
-      <div className="pointer-events-none absolute right-2 top-2 rounded-md border border-slate-200 bg-white/90 px-2.5 py-1.5 text-[10px] font-medium uppercase tracking-wide text-slate-700 shadow-sm backdrop-blur">
+      {/* Legend */}
+      <div className="pointer-events-none absolute right-2 top-2 z-[400] rounded-md border border-slate-200 bg-white/95 px-2.5 py-1.5 text-[10px] font-medium uppercase tracking-wide text-slate-700 shadow-sm backdrop-blur">
         <div className="mb-1 text-slate-500">Rank</div>
         <div className="flex items-center gap-1.5">
-          <span className="inline-block h-2 w-2 rounded-full" style={{ background: '#dc2626' }} />
+          <span className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-white" style={{ background: '#dc2626' }} />
           <span>Top 10</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="inline-block h-2 w-2 rounded-full" style={{ background: '#f59e0b' }} />
+          <span className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-white" style={{ background: '#f59e0b' }} />
           <span>11-30</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="inline-block h-2 w-2 rounded-full" style={{ background: '#10b981' }} />
+          <span className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-white" style={{ background: '#10b981' }} />
           <span>31-60</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="inline-block h-2 w-2 rounded-full" style={{ background: '#0ea5e9' }} />
+          <span className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-white" style={{ background: '#0ea5e9' }} />
           <span>61+</span>
         </div>
       </div>
 
-      <div className="pointer-events-none absolute bottom-1 right-2 text-[9px] text-slate-500">
-        © OpenStreetMap · CARTO
-      </div>
-
-      {mappable.length < rows.length && (
-        <div className="absolute bottom-2 left-2 max-w-xs rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] text-amber-800 shadow-sm">
+      {mappable.length === 0 && (
+        <div className="absolute inset-x-2 top-12 z-[400] rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900 shadow-sm">
+          None of the {rows.length} parcels have polygon geometry — the map can&apos;t show markers. The list still works.
+        </div>
+      )}
+      {mappable.length > 0 && mappable.length < rows.length && (
+        <div className="absolute bottom-2 left-2 z-[400] max-w-xs rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] text-amber-800 shadow-sm">
           {rows.length - mappable.length} parcels lack polygon geometry
           (typically condo billing units or transit ROW) and don&apos;t appear on the map.
         </div>
