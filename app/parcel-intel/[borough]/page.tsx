@@ -43,7 +43,7 @@ export default async function BoroughParcelIntelPage({
   const { borough } = await params;
   if (!VALID_BOROUGHS.has(borough)) notFound();
 
-  const sweep = await fetchParcelIntelSweepOnServer(borough, 100);
+  const sweep = await fetchParcelIntelSweepOnServer(borough, 1000);
   const displayName = DISPLAY_NAMES[borough];
 
   return (

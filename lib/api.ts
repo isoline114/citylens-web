@@ -415,7 +415,7 @@ export async function getParcelIntelIndex(): Promise<ParcelIntelIndex> {
 
 export async function getParcelIntelSweep(
   borough: string,
-  top: number = 100,
+  top: number = 1000,
 ): Promise<ParcelIntelSweepResponse> {
   const params = new URLSearchParams({ borough, top: String(top) });
   return requestJson<ParcelIntelSweepResponse>(
