@@ -1,6 +1,11 @@
 import Link from 'next/link';
 import { ArrowRight, Building2, MapPin } from 'lucide-react';
 import { fetchParcelIntelIndexOnServer } from '@/lib/api.server';
+import {
+  formatAuc,
+  formatPrecisionAt100,
+  resolveParcelIntelMetrics,
+} from '@/lib/parcel-intel-metrics';
 import { BoroughCardPrefetch } from './borough-card-prefetch';
 
 export const metadata = {
@@ -37,6 +42,7 @@ function formatGenerated(iso: string | null): string {
 export default async function ParcelIntelIndexPage() {
   const index = await fetchParcelIntelIndexOnServer();
   const generatedLabel = formatGenerated(index.generated_at);
+  const metrics = resolveParcelIntelMetrics(index.model_metadata);
   const modelType =
     typeof index.model_metadata?.model_type === 'string'
       ? (index.model_metadata.model_type as string).toUpperCase()
@@ -60,7 +66,8 @@ export default async function ParcelIntelIndexPage() {
         <p className="mt-3 max-w-prose text-base leading-7 text-slate-600">
           A calibrated gradient-boosted classifier scores every NYC tax lot using PLUTO
           + DOB permits + LPC landmarks + ACRIS deed history. Ranked under temporal
-          holdout (PLUTO 2018 features → 2019-2024 NB filings) at AUC 0.978 / P@100 = 0.92.
+          holdout (PLUTO {metrics.featureYear} features → {metrics.labelWindow} NB filings)
+          at AUC {formatAuc(metrics.auc)} / P@100 = {formatPrecisionAt100(metrics.precisionAt100)}.
         </p>
         {(modelType || featureYear || labelWindow || generatedLabel) && (
           <p className="mt-2 text-xs text-slate-500">

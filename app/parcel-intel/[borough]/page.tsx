@@ -2,7 +2,14 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, BookOpen, Layers, MapPin, Workflow } from 'lucide-react';
 import { fetchParcelIntelSweepOnServer } from '@/lib/api.server';
-import { ParcelIntelWorkspace } from './parcel-intel-workspace';
+import { neonAuth } from '@/lib/auth/server';
+import {
+  formatAuc,
+  formatPrecisionAt100,
+  resolveParcelIntelMetrics,
+  type ParcelIntelMetrics,
+} from '@/lib/parcel-intel-metrics';
+import { ParcelIntelWorkspace, SignInGate } from './parcel-intel-workspace';
 
 const VALID_BOROUGHS = new Set([
   'manhattan',
@@ -42,9 +49,37 @@ export default async function BoroughParcelIntelPage({
 }) {
   const { borough } = await params;
   if (!VALID_BOROUGHS.has(borough)) notFound();
+  const displayName = DISPLAY_NAMES[borough];
+
+  // Server-side auth gate. When Neon Auth is configured (prod), verify the
+  // session BEFORE fetching the sweep so parcel data never lands in the SSR
+  // HTML for unauthenticated visitors. When `neonAuth` is null (dev/CI mock
+  // provider, or Neon unconfigured) we fall through to the existing behavior —
+  // the client-side gate in ParcelIntelWorkspace still applies, and the
+  // CITYLENS_DISABLE_SSR_PARCEL_INTEL=1 e2e path is unaffected. We fail closed
+  // (render the gate) if the session check itself errors.
+  if (neonAuth && !(await hasValidSession())) {
+    return (
+      <main className="mx-auto max-w-7xl px-4 py-8 md:py-10">
+        <Link
+          href="/parcel-intel"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          All boroughs
+        </Link>
+        <header className="mt-3 mb-6">
+          <h1 className="text-balance text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">
+            {displayName} — top redevelopment candidates
+          </h1>
+        </header>
+        <SignInGate borough={borough} boroughDisplayName={displayName} />
+      </main>
+    );
+  }
 
   const sweep = await fetchParcelIntelSweepOnServer(borough, 1000);
-  const displayName = DISPLAY_NAMES[borough];
+  const metrics = resolveParcelIntelMetrics(sweep?.model_metadata);
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8 md:py-10">
@@ -74,7 +109,7 @@ export default async function BoroughParcelIntelPage({
             borough={borough}
             boroughDisplayName={displayName}
           />
-          <MethodologyPanel />
+          <MethodologyPanel metrics={metrics} />
         </>
       ) : (
         <section className="rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center">
@@ -88,7 +123,25 @@ export default async function BoroughParcelIntelPage({
   );
 }
 
-function MethodologyPanel() {
+/**
+ * Read the Neon Auth session server-side. `getSession()` reads the signed,
+ * TTL-cached session cookie (`NEON_AUTH_COOKIE_SECRET`), so on cache hits this
+ * is local — no upstream round-trip. Fails closed: any error → treat as no
+ * session so we never SSR protected data on an unverifiable request.
+ */
+async function hasValidSession(): Promise<boolean> {
+  if (!neonAuth) return true; // caller guards on `neonAuth` truthiness
+  try {
+    const { data: session } = await neonAuth.getSession();
+    return Boolean(session);
+  } catch (err) {
+    console.warn('parcel-intel: server session check failed; gating', err);
+    return false;
+  }
+}
+
+function MethodologyPanel({ metrics }: { metrics: ParcelIntelMetrics }) {
+  const pct100 = Math.round(metrics.precisionAt100 * 100);
   return (
     <section className="mt-12 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
       <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200">
@@ -145,11 +198,12 @@ function MethodologyPanel() {
             What a high score means
           </dt>
           <dd className="mt-2 text-xs leading-5 text-slate-600">
-            <strong>P@100 = 0.92</strong>: 92 of every 100 top-scored parcels actually
-            received an NB permit in the 2019-2024 holdout window. <strong>AUC = 0.98</strong>{' '}
+            <strong>P@100 = {formatPrecisionAt100(metrics.precisionAt100)}</strong>: {pct100} of
+            every 100 top-scored parcels actually received an NB permit in the{' '}
+            {metrics.labelWindow} holdout window. <strong>AUC = {formatAuc(metrics.auc)}</strong>{' '}
             in aggregate. A high score is <em>not</em> a guarantee — it&apos;s
-            "this parcel looks structurally similar to the redevelopments we&apos;ve
-            seen." Verify against current LPC status, ACRIS owner chain, and DOB filings
+            &quot;this parcel looks structurally similar to the redevelopments we&apos;ve
+            seen.&quot; Verify against current LPC status, ACRIS owner chain, and DOB filings
             before acting.
           </dd>
         </div>

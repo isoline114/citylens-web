@@ -214,14 +214,18 @@ function MapSkeleton() {
   );
 }
 
-function SignInGate({
+// Exported so the borough Server Component can render the same gate before it
+// ever fetches the sweep — keeping parcel data out of the SSR HTML for
+// unauthenticated visitors. `rowCount` is optional: the server path gates
+// without a count (it deliberately skips the data fetch).
+export function SignInGate({
   borough,
   boroughDisplayName,
   rowCount,
 }: {
   borough: string;
   boroughDisplayName: string;
-  rowCount: number;
+  rowCount?: number;
 }) {
   return (
     <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
@@ -236,8 +240,8 @@ function SignInGate({
         </h2>
         <p className="max-w-prose text-sm leading-6 text-slate-600">
           The parcel-level workspace surfaces address, BBL, recent sale prices, owner
-          information, FAR utilization, LPC constraints, and per-parcel "why this scored
-          high" reasoning derived from the underlying public data. We gate it behind a
+          information, FAR utilization, LPC constraints, and per-parcel &quot;why this scored
+          high&quot; reasoning derived from the underlying public data. We gate it behind a
           free account so we can rate-limit fairly and ensure the data is being used
           responsibly — these are real properties owned by real people, not anonymized
           fixtures.
@@ -245,7 +249,10 @@ function SignInGate({
         <ul className="text-sm text-slate-700">
           <li className="flex items-start gap-2">
             <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            <span>{rowCount} ranked candidates with full feature breakdown</span>
+            <span>
+              {typeof rowCount === 'number' ? `${rowCount} ranked candidates` : 'Ranked candidates'}{' '}
+              with full feature breakdown
+            </span>
           </li>
           <li className="flex items-start gap-2">
             <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500" />
