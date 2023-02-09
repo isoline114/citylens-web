@@ -14,9 +14,12 @@ Next.js app for CityLens. It pairs with:
 ## Product surface
 
 - **Public, no sign-in**: featured demo runs (real precomputed CityLens
-  output), the run-options API, and the docs page.
-- **Account-backed**: creating new runs, viewing your run history, and the
-  monthly-quota dashboard. Free plan includes 5 runs per month.
+  output), the run-options API, the docs page, and the `/parcel-intel`
+  borough picker (NYC redevelopment-candidate rankings).
+- **Account-backed**: creating new runs, viewing your run history, the
+  monthly-quota dashboard, and the `/parcel-intel/[borough]` workspace
+  (server-side auth-gated map + list + SHAP attribution). Free plan includes
+  5 runs per month.
 - **Auth**: email + password via Neon Auth. The browser obtains a
   short-lived JWT and includes it as `Authorization: Bearer <token>` on
   authenticated API calls. Normal users do not configure API keys.
