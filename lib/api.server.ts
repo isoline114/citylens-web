@@ -33,6 +33,21 @@ function serverApiBase(): string {
 }
 
 /**
+ * Parcel-intel SSR runs on behalf of the signed-in product, but it cannot use
+ * the browser's short-lived session token. In production Vercel supplies a
+ * dedicated CityLens API key so these requests receive the full commercial
+ * feed. Keeping the header construction here makes the public index and the
+ * borough sweep follow the same contract while preserving local/CI behavior
+ * when the key is intentionally absent.
+ */
+function parcelIntelHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  const apiKey = process.env.CITYLENS_SERVER_API_KEY?.trim();
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+  return headers;
+}
+
+/**
  * Fetch /v1/demo/featured server-side with Next caching. Designed to be
  * called from async Server Components on the homepage so the SSR HTML
  * already includes featured demos — no client-side flash of "no demos".
@@ -94,7 +109,7 @@ export async function fetchParcelIntelIndexOnServer(): Promise<ParcelIntelIndex>
   try {
     const res = await fetch(url, {
       next: { revalidate: 300 },
-      headers: { Accept: 'application/json' },
+      headers: parcelIntelHeaders(),
       signal: AbortSignal.timeout(6_000),
     });
     if (!res.ok) return empty;
@@ -126,7 +141,7 @@ export async function fetchParcelIntelSweepOnServer(
   try {
     const res = await fetch(url, {
       next: { revalidate: 300 },
-      headers: { Accept: 'application/json' },
+      headers: parcelIntelHeaders(),
       signal: AbortSignal.timeout(8_000),
     });
     if (!res.ok) return null;

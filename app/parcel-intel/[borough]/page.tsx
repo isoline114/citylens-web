@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, BookOpen, Layers, MapPin, Workflow } from 'lucide-react';
 import { fetchParcelIntelSweepOnServer } from '@/lib/api.server';
 import { neonAuth } from '@/lib/auth/server';
+import { hasValidSession } from '@/lib/auth/session.server';
 import {
   formatAuc,
   formatPrecisionAt100,
@@ -123,22 +124,10 @@ export default async function BoroughParcelIntelPage({
   );
 }
 
-/**
- * Read the Neon Auth session server-side. `getSession()` reads the signed,
- * TTL-cached session cookie (`NEON_AUTH_COOKIE_SECRET`), so on cache hits this
- * is local — no upstream round-trip. Fails closed: any error → treat as no
- * session so we never SSR protected data on an unverifiable request.
- */
-async function hasValidSession(): Promise<boolean> {
-  if (!neonAuth) return true; // caller guards on `neonAuth` truthiness
-  try {
-    const { data: session } = await neonAuth.getSession();
-    return Boolean(session);
-  } catch (err) {
-    console.warn('parcel-intel: server session check failed; gating', err);
-    return false;
-  }
-}
+// hasValidSession lives in lib/auth/session.server.ts (extracted so the
+// fail-closed contract is unit-testable). It defaults to the shared
+// `neonAuth` client and returns true when Neon is unconfigured — the
+// `neonAuth &&` guard above keeps the prod-only semantics explicit.
 
 function MethodologyPanel({ metrics }: { metrics: ParcelIntelMetrics }) {
   const pct100 = Math.round(metrics.precisionAt100 * 100);

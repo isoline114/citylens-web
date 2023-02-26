@@ -2,6 +2,8 @@
 
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
+import { reportError } from '@/lib/error-reporting';
+
 type Props = {
   title: string;
   children: ReactNode;
@@ -21,8 +23,10 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    void error;
-    void errorInfo;
+    reportError(error, {
+      boundary: this.props.title,
+      componentStack: errorInfo.componentStack,
+    });
   }
 
   override render() {

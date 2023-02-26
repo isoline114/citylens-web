@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Analytics } from '@vercel/analytics/next';
 import '../styles/globals.css';
 
 import { AuthHeaderControls } from '@/components/AuthHeaderControls';
@@ -17,7 +18,8 @@ const description =
   'Urban change detection and 3D reconstruction from any NYC address. Sign up free, get 5 runs per month, download change.geojson and PLY mesh artifacts.';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://citylens.dev'),
+  // Canonical host is www — matches the production deployment and sitemap.
+  metadataBase: new URL('https://www.citylens.dev'),
   title,
   description,
   openGraph: {
@@ -94,6 +96,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <SiteFooter />
           <Toasts />
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );

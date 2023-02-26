@@ -72,6 +72,8 @@ Standard artifact filenames the UI renders:
 | `NEON_AUTH_BASE_URL` | Neon Auth managed URL (provisioned by the Vercel ↔ Neon integration). |
 | `NEON_AUTH_COOKIE_SECRET` | ≥32 chars; signs Neon Auth session cookies. |
 | `CITYLENS_API_INTERNAL_URL` | Optional override for the SSR-side API URL (e.g. private VPC). |
+| `CITYLENS_SERVER_API_KEY` | Optional server-only `clk_live_` key used by authenticated parcel-intel SSR to request the full feed; set in Vercel production. |
+| `NEXT_PUBLIC_ERROR_REPORTING_DSN` | Optional browser-safe error ingestion endpoint; reporting is disabled when unset. |
 | `NEXT_PUBLIC_SITE_BASE_PATH` | Optional path prefix when hosted under a subpath. |
 
 ## Local development

@@ -2,13 +2,16 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
   ArrowUpDown,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Download,
+  ExternalLink,
   Filter,
   Lock,
   MapPin,
@@ -19,6 +22,8 @@ import {
 
 import { useAuth } from '@/lib/auth';
 import type { ParcelIntelRow, TopFeature } from '@/lib/api';
+import { trackEvent } from '@/lib/analytics';
+import { downloadCsv } from './parcel-intel-csv';
 import { explainParcel, type Reason } from './parcel-intel-explain';
 
 // Leaflet must not render on the server (window/document references).
@@ -105,35 +110,13 @@ function formatScore(value: number | null | undefined): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-function downloadCSV(rows: ParcelIntelRow[], borough: string) {
-  if (rows.length === 0) return;
-  const headers = Object.keys(rows[0]) as (keyof ParcelIntelRow)[];
-  const csv = [headers.join(',')]
-    .concat(
-      rows.map((r) =>
-        headers
-          .map((h) => {
-            const v = r[h];
-            if (v === null || v === undefined) return '';
-            if (typeof v === 'string' && (v.includes(',') || v.includes('"'))) {
-              return `"${v.replace(/"/g, '""')}"`;
-            }
-            return String(v);
-          })
-          .join(','),
-      ),
-    )
-    .join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `parcel-intel-${borough}-top${rows.length}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
+// CSV serialization lives in ./parcel-intel-csv (pure `buildCsv` +
+// browser-only `downloadCsv`) so the column contract is unit-testable.
+
+// Table pagination: 100 rows per page keeps the DOM light at the
+// 1000-row sweep size while staying simpler (and more testable) than
+// windowed virtualization for these variable-height rows.
+const PAGE_SIZE = 100;
 
 // Generic NYC-blob silhouette for the loading placeholder. Not geographically
 // accurate — its job is purely visual continuity between the gray skeleton
@@ -266,6 +249,7 @@ export function SignInGate({
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <Link
             href={`/sign-in?next=${encodeURIComponent(`/parcel-intel/${borough}`)}`}
+            onClick={() => trackEvent('gate_signin_click', { borough, cta: 'sign_in' })}
             className={`group inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 ${FOCUS_RING}`}
           >
             Sign in
@@ -273,6 +257,7 @@ export function SignInGate({
           </Link>
           <Link
             href={`/sign-up?next=${encodeURIComponent(`/parcel-intel/${borough}`)}`}
+            onClick={() => trackEvent('gate_signin_click', { borough, cta: 'sign_up' })}
             className={`inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 hover:bg-slate-50 ${FOCUS_RING}`}
           >
             Create a free account
@@ -433,6 +418,83 @@ function ReasonChip({ reason }: { reason: Reason }) {
   );
 }
 
+/**
+ * Split a 10-digit BBL into its parts: 1-digit borough, 5-digit block,
+ * 4-digit lot. City systems (ACRIS, ZoLa, BIS) want block/lot without
+ * leading zeros. Returns null for malformed BBLs so callers can skip
+ * the BBL-derived links entirely.
+ */
+export function parseBbl(
+  bbl: string | null | undefined,
+): { borough: string; block: string; lot: string } | null {
+  const m = /^([1-5])(\d{5})(\d{4})$/.exec((bbl ?? '').trim());
+  if (!m) return null;
+  return {
+    borough: m[1],
+    block: String(Number(m[2])),
+    lot: String(Number(m[3])),
+  };
+}
+
+type ExternalParcelLink = { label: string; href: string };
+
+/** External lookups for a parcel: city systems keyed by BBL, Google by centroid. */
+export function externalParcelLinks(row: ParcelIntelRow): ExternalParcelLink[] {
+  const links: ExternalParcelLink[] = [];
+  const parts = parseBbl(row.bbl);
+  if (parts) {
+    const { borough, block, lot } = parts;
+    links.push(
+      {
+        label: 'ACRIS',
+        href: `https://a836-acris.nyc.gov/bblsearch/bblsearch.asp?borough=${borough}&block=${block}&lot=${lot}`,
+      },
+      {
+        label: 'ZoLa',
+        href: `https://zola.planning.nyc.gov/l/lot/${borough}/${block}/${lot}`,
+      },
+      {
+        label: 'DOB BIS',
+        href: `https://a810-bisweb.nyc.gov/bisweb/PropertyBrowseByBBLServlet?allborough=${borough}&allblock=${block}&alllot=${lot}&go5=+GO+`,
+      },
+    );
+  }
+  if (typeof row.lat === 'number' && typeof row.lng === 'number') {
+    links.push(
+      {
+        label: 'Google Maps',
+        href: `https://www.google.com/maps/search/?api=1&query=${row.lat},${row.lng}`,
+      },
+      {
+        label: 'Street View',
+        href: `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${row.lat},${row.lng}`,
+      },
+    );
+  }
+  return links;
+}
+
+function ParcelLinksRow({ row }: { row: ParcelIntelRow }) {
+  const links = externalParcelLinks(row);
+  if (links.length === 0) return null;
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5" aria-label="External lookups">
+      {links.map((link) => (
+        <a
+          key={link.label}
+          href={link.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 ${FOCUS_RING}`}
+        >
+          {link.label}
+          <ExternalLink className="h-3 w-3 text-slate-400" aria-hidden="true" />
+        </a>
+      ))}
+    </div>
+  );
+}
+
 function ParcelDetailPanel({
   row,
   onClose,
@@ -482,6 +544,16 @@ function ParcelDetailPanel({
       </div>
 
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+        {row.owner_name?.trim() && (
+          <div className="col-span-2 min-w-0 rounded-md border border-slate-200 bg-slate-50 p-2.5 sm:col-span-3">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Owner
+            </dt>
+            <dd className="mt-0.5 truncate text-base font-semibold text-slate-950" title={row.owner_name}>
+              {row.owner_name}
+            </dd>
+          </div>
+        )}
         <div className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-2.5">
           <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Score
@@ -518,6 +590,14 @@ function ParcelDetailPanel({
         </div>
         <div className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-2.5">
           <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Unused FAR (SF)
+          </dt>
+          <dd className="mt-0.5 text-base font-semibold text-slate-950">
+            {formatNumber(row.unused_floor_area_sqft)}
+          </dd>
+        </div>
+        <div className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-2.5">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Last sale
           </dt>
           <dd className="mt-0.5 text-base font-semibold text-slate-950">
@@ -539,8 +619,21 @@ function ParcelDetailPanel({
         </div>
       </dl>
 
-      {(row.is_landmark || row.is_historic_district || row.redev_status !== 'still_vacant') && (
+      <ParcelLinksRow row={row} />
+
+      {(row.recent_change ||
+        row.is_landmark ||
+        row.is_historic_district ||
+        row.redev_status !== 'still_vacant') && (
         <div className="mt-3 flex flex-wrap gap-2">
+          {row.recent_change && (
+            <span
+              className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-900 ring-1 ring-inset ring-emerald-200"
+              title="Physical change observed in current aerial imagery compared with the 2017 baseline; verify the event date during diligence."
+            >
+              Recently changed
+            </span>
+          )}
           {row.redev_status === 'active' && (
             <span
               className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-800 ring-1 ring-inset ring-sky-200"
@@ -606,6 +699,12 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
   const [hideLandmarked, setHideLandmarked] = useState(false);
   const [selectedBbl, setSelectedBbl] = useState<string | null>(null);
 
+  // Pagination (0-based page of PAGE_SIZE rows, with a "show all" escape
+  // hatch). Sorting and filtering always operate on the FULL set; only
+  // rendering is windowed.
+  const [page, setPage] = useState(0);
+  const [showAll, setShowAll] = useState(false);
+
   // Filter state. Default values match the unfiltered list so a fresh
   // visit shows the full top-N. Disclosure stays collapsed by default.
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -614,13 +713,35 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
   );
   const [landUseFilter, setLandUseFilter] = useState<LandUseFilter>('all');
   const [recentSaleOnly, setRecentSaleOnly] = useState(false);
+  const [recentChangeOnly, setRecentChangeOnly] = useState(false);
   const [minScorePct, setMinScorePct] = useState(0); // 0-100
+
+  const authenticated = auth.status === 'authenticated';
+
+  // Analytics: one workspace_open per authenticated mount (no PII —
+  // borough only).
+  const openTracked = useRef(false);
+  useEffect(() => {
+    if (!authenticated || openTracked.current) return;
+    openTracked.current = true;
+    trackEvent('workspace_open', { borough });
+  }, [authenticated, borough]);
+
+  // Analytics: filter_change fires once per filter TYPE per mount, so a
+  // dragged range slider or repeated toggles don't spam events.
+  const trackedFilters = useRef<Set<string>>(new Set());
+  const noteFilterChange = (filter: string) => {
+    if (trackedFilters.current.has(filter)) return;
+    trackedFilters.current.add(filter);
+    trackEvent('filter_change', { borough, filter });
+  };
 
   const filterCount =
     (hideLandmarked ? 1 : 0) +
     (zoningFamilies.size < 4 ? 1 : 0) +
     (landUseFilter !== 'all' ? 1 : 0) +
     (recentSaleOnly ? 1 : 0) +
+    (recentChangeOnly ? 1 : 0) +
     (minScorePct > 0 ? 1 : 0);
 
   const resetFilters = () => {
@@ -628,6 +749,7 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
     setZoningFamilies(new Set(DEFAULT_ZONING_FAMILIES));
     setLandUseFilter('all');
     setRecentSaleOnly(false);
+    setRecentChangeOnly(false);
     setMinScorePct(0);
   };
 
@@ -653,6 +775,7 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
       if (!zoningFamilies.has(zoningFamilyOf(r.zoning_district_1))) return false;
       if (luSet.size > 0 && !luSet.has(r.land_use ?? '')) return false;
       if (recentSaleOnly && !r.has_recent_sale_5yr) return false;
+      if (recentChangeOnly && !r.recent_change) return false;
       if (
         minScore > 0 &&
         (typeof r.score_calibrated !== 'number' ||
@@ -667,6 +790,7 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
     zoningFamilies,
     landUseFilter,
     recentSaleOnly,
+    recentChangeOnly,
     minScorePct,
   ]);
 
@@ -689,16 +813,49 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
     [sorted, selectedBbl],
   );
 
-  // Scroll the selected row into view in the list when picked from map.
-  // jsdom doesn't implement scrollIntoView, so guard for the test
-  // environment (and any odd browsers that don't ship it).
+  // Any change to the filter/sort configuration resets to the first page —
+  // the previous page offset is meaningless against a reordered set.
+  useEffect(() => {
+    setPage(0);
+  }, [
+    sortKey,
+    direction,
+    hideLandmarked,
+    zoningFamilies,
+    landUseFilter,
+    recentSaleOnly,
+    recentChangeOnly,
+    minScorePct,
+  ]);
+
+  const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const clampedPage = Math.min(page, pageCount - 1);
+  const visible = showAll
+    ? sorted
+    : sorted.slice(clampedPage * PAGE_SIZE, (clampedPage + 1) * PAGE_SIZE);
+  const visibleStart = showAll ? 0 : clampedPage * PAGE_SIZE;
+
+  // Scroll the selected row into view in the list when picked from map —
+  // jumping to its page first if pagination has it off-screen. jsdom
+  // doesn't implement scrollIntoView, so guard for the test environment
+  // (and any odd browsers that don't ship it).
   useEffect(() => {
     if (!selectedBbl) return;
+    if (!showAll) {
+      const idx = sorted.findIndex((r) => r.bbl === selectedBbl);
+      if (idx >= 0) {
+        const targetPage = Math.floor(idx / PAGE_SIZE);
+        if (targetPage !== clampedPage) {
+          setPage(targetPage);
+          return; // effect re-runs after the page renders, then scrolls
+        }
+      }
+    }
     const el = document.getElementById(`parcel-row-${selectedBbl}`);
     if (el && typeof el.scrollIntoView === 'function') {
       el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
-  }, [selectedBbl]);
+  }, [selectedBbl, sorted, showAll, clampedPage]);
 
   const toggleSort = (key: SortKey) => {
     if (key === sortKey) {
@@ -775,8 +932,18 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
             </span>
             <button
               type="button"
-              onClick={() => downloadCSV(sorted, borough)}
-              className={`inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-900 hover:bg-slate-50 ${FOCUS_RING}`}
+              disabled={sorted.length === 0}
+              title={
+                sorted.length === 0
+                  ? 'No rows match your filters — nothing to export'
+                  : `Export all ${sorted.length} filtered rows as CSV`
+              }
+              onClick={() => {
+                // Exports ALL filtered rows (not just the visible page).
+                downloadCsv(sorted, borough);
+                trackEvent('csv_export', { borough, rows: sorted.length });
+              }}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-900 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white ${FOCUS_RING}`}
             >
               <Download className="h-3.5 w-3.5" />
               CSV
@@ -802,7 +969,10 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
                       <button
                         key={fam}
                         type="button"
-                        onClick={() => toggleZoningFamily(fam)}
+                        onClick={() => {
+                          noteFilterChange('zoning_family');
+                          toggleZoningFamily(fam);
+                        }}
                         aria-pressed={active}
                         className={`inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium ${FOCUS_RING} ${
                           active
@@ -828,9 +998,10 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
                 <select
                   id="parcel-intel-landuse"
                   value={landUseFilter}
-                  onChange={(e) =>
-                    setLandUseFilter(e.target.value as LandUseFilter)
-                  }
+                  onChange={(e) => {
+                    noteFilterChange('land_use');
+                    setLandUseFilter(e.target.value as LandUseFilter);
+                  }}
                   className={`h-7 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-900 ${FOCUS_RING}`}
                 >
                   <option value="all">All</option>
@@ -841,7 +1012,7 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
                 </select>
               </div>
 
-              {/* Hide landmarked + recent-sale toggles */}
+              {/* Landmarks, sale recency, and aerial-change toggles */}
               <div className="flex flex-col gap-1">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
                   Filters
@@ -851,7 +1022,10 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
                     <input
                       type="checkbox"
                       checked={hideLandmarked}
-                      onChange={(e) => setHideLandmarked(e.target.checked)}
+                      onChange={(e) => {
+                        noteFilterChange('hide_landmarked');
+                        setHideLandmarked(e.target.checked);
+                      }}
                       className={`h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-700 ${FOCUS_RING}`}
                     />
                     Hide landmarked
@@ -860,10 +1034,25 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
                     <input
                       type="checkbox"
                       checked={recentSaleOnly}
-                      onChange={(e) => setRecentSaleOnly(e.target.checked)}
+                      onChange={(e) => {
+                        noteFilterChange('recent_sale');
+                        setRecentSaleOnly(e.target.checked);
+                      }}
                       className={`h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-700 ${FOCUS_RING}`}
                     />
                     Sold in last 5 yrs
+                  </label>
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={recentChangeOnly}
+                      onChange={(e) => {
+                        noteFilterChange('recent_change');
+                        setRecentChangeOnly(e.target.checked);
+                      }}
+                      className={`h-3.5 w-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-700 ${FOCUS_RING}`}
+                    />
+                    Recently changed
                   </label>
                 </div>
               </div>
@@ -883,7 +1072,10 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
                   max={100}
                   step={5}
                   value={minScorePct}
-                  onChange={(e) => setMinScorePct(Number(e.target.value))}
+                  onChange={(e) => {
+                    noteFilterChange('min_score');
+                    setMinScorePct(Number(e.target.value));
+                  }}
                   className={`h-2 cursor-pointer accent-slate-900 ${FOCUS_RING}`}
                 />
               </div>
@@ -1014,7 +1206,7 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
                     </td>
                   </tr>
                 ) : (
-                  sorted.map((r, i) => {
+                  visible.map((r, i) => {
                     const isSel = r.bbl === selectedBbl;
                     const ariaLabel = `Open detail for ${r.address || '—'}, BBL ${r.bbl}`;
                     return (
@@ -1035,7 +1227,7 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
                           isSel ? 'bg-sky-50' : 'hover:bg-slate-50'
                         }`}
                       >
-                        <td className="px-3 py-2 text-xs text-slate-500">{i + 1}</td>
+                        <td className="px-3 py-2 text-xs text-slate-500">{visibleStart + i + 1}</td>
                         <td className="px-3 py-2">
                           <div className="font-medium text-slate-900">
                             {r.address || '—'}
@@ -1094,6 +1286,60 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
               </tbody>
             </table>
           </div>
+
+          {/* Pagination footer — only when there's more than one page's
+              worth of rows. CSV export always covers ALL filtered rows. */}
+          {sorted.length > PAGE_SIZE && (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-3 py-2">
+              <span className="text-xs text-slate-600">
+                {showAll
+                  ? `Showing all ${sorted.length} parcels`
+                  : `Showing ${visibleStart + 1}–${Math.min(
+                      visibleStart + PAGE_SIZE,
+                      sorted.length,
+                    )} of ${sorted.length}`}
+              </span>
+              <div className="flex items-center gap-1.5">
+                {!showAll && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.max(0, p - 1))}
+                      disabled={clampedPage === 0}
+                      aria-label="Previous page"
+                      className={`inline-flex h-7 items-center gap-1 rounded-md border border-slate-300 bg-white px-2 text-xs font-medium text-slate-900 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white ${FOCUS_RING}`}
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                      Prev
+                    </button>
+                    <span className="px-1 text-xs tabular-nums text-slate-600">
+                      {clampedPage + 1} / {pageCount}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                      disabled={clampedPage >= pageCount - 1}
+                      aria-label="Next page"
+                      className={`inline-flex h-7 items-center gap-1 rounded-md border border-slate-300 bg-white px-2 text-xs font-medium text-slate-900 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white ${FOCUS_RING}`}
+                    >
+                      Next
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAll((v) => !v);
+                    setPage(0);
+                  }}
+                  className={`inline-flex h-7 items-center rounded-md px-2 text-xs font-medium text-slate-600 hover:bg-white hover:text-slate-900 ${FOCUS_RING}`}
+                >
+                  {showAll ? 'Show pages' : `Show all ${sorted.length}`}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,9 +1,20 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap } from 'react-leaflet';
 import type { LatLngBoundsExpression, LatLngTuple } from 'leaflet';
 import type { ParcelIntelRow } from '@/lib/api';
+import {
+  colorForRank,
+  legendBands,
+  membershipKey,
+  scoreRankByBbl,
+} from './parcel-intel-map-support';
+
+// Rendering >500 CircleMarkers makes pan/zoom sluggish (each one is an
+// SVG node). Clustering would need a new dependency, so we cap to the
+// top-N by score and say so with a note chip.
+const MAX_MARKERS = 500;
 
 // Borough-level bbox fallbacks, used when a borough has zero rows with
 // lat/lng. Approximate; the user only sees these on the cold path.
@@ -22,32 +33,32 @@ type Props = {
   onSelect: (bbl: string) => void;
 };
 
-// Color the score by tier so the map at a glance shows distribution
-// rather than just dot density. We're working in a small range
-// (top-100 are all ≥ 0.85 typically) so we tier by rank position.
-function colorForRank(rank: number, total: number): string {
-  const r = rank / total;
-  if (r < 0.1) return '#dc2626'; // top 10% — rose-600
-  if (r < 0.3) return '#f59e0b'; // top 30% — amber-500
-  if (r < 0.6) return '#10b981'; // top 60% — emerald-500
-  return '#0ea5e9'; // rest — sky-500
-}
-
 /**
- * Fits the map to the markers' bounding box on first render and
- * whenever the row set changes. Also calls `invalidateSize` once after
- * mount because Leaflet's container can be measured at 0 px when the
- * dynamic-import skeleton transitions to the real component, which
- * leaves the map locked at the wrong zoom and tile-layer coords.
+ * Fits the map to the markers' bounding box on first render and whenever
+ * the SET of rows changes (`boundsKey` tracks membership, not sort order,
+ * so re-sorting the table never yanks the viewport). Also calls
+ * `invalidateSize` once after mount because Leaflet's container can be
+ * measured at 0 px when the dynamic-import skeleton transitions to the
+ * real component, which leaves the map locked at the wrong zoom and
+ * tile-layer coords.
  */
 function FitBoundsAndInvalidate({
   rows,
+  boundsKey,
   fallback,
 }: {
   rows: ParcelIntelRow[];
+  boundsKey: string;
   fallback: LatLngBoundsExpression;
 }) {
   const map = useMap();
+
+  // Latest rows without retriggering the fit effect — the fit is keyed
+  // on membership (boundsKey), not on array identity.
+  const rowsRef = useRef(rows);
+  useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
 
   // Safety: a fresh-mounted Leaflet map sometimes reports container
   // size as 0 when its parent height is set via flexbox. invalidateSize
@@ -58,8 +69,9 @@ function FitBoundsAndInvalidate({
   }, [map]);
 
   useEffect(() => {
+    void boundsKey; // effect keyed on set membership, not row order
     const points: LatLngTuple[] = [];
-    for (const r of rows) {
+    for (const r of rowsRef.current) {
       if (typeof r.lat === 'number' && typeof r.lng === 'number') {
         points.push([r.lat, r.lng]);
       }
@@ -76,7 +88,7 @@ function FitBoundsAndInvalidate({
       return;
     }
     map.fitBounds(points, { padding: [32, 32], animate: false });
-  }, [map, rows, fallback]);
+  }, [map, boundsKey, fallback]);
   return null;
 }
 
@@ -111,6 +123,11 @@ export function ParcelIntelMap({ borough, rows, selectedBbl, onSelect }: Props) 
   );
   const total = rows.length;
 
+  // Marker color keys on score rank (score_calibrated descending), NOT
+  // the display/sort order the workspace passes rows in — sorting the
+  // table by lot area must not recolor the map.
+  const scoreRanks = useMemo(() => scoreRankByBbl(rows), [rows]);
+
   // Filter rows that lack geometry — we still show them in the list
   // but they don't get a dot on the map.
   const mappable = useMemo(
@@ -120,6 +137,30 @@ export function ParcelIntelMap({ borough, rows, selectedBbl, onSelect }: Props) 
       ),
     [rows],
   );
+
+  // Cap rendered markers to the best-scoring MAX_MARKERS. The selected
+  // parcel is always rendered even when it ranks below the cap.
+  const rendered = useMemo(() => {
+    if (mappable.length <= MAX_MARKERS) return mappable;
+    const byRank = [...mappable].sort(
+      (a, b) =>
+        (scoreRanks.get(a.bbl) ?? Infinity) - (scoreRanks.get(b.bbl) ?? Infinity),
+    );
+    const top = byRank.slice(0, MAX_MARKERS);
+    if (selectedBbl && !top.some((r) => r.bbl === selectedBbl)) {
+      const sel = mappable.find((r) => r.bbl === selectedBbl);
+      if (sel) top.push(sel);
+    }
+    return top;
+  }, [mappable, scoreRanks, selectedBbl]);
+
+  const capped = mappable.length > rendered.length;
+
+  // Refit bounds only when the SET of mappable BBLs changes — never on
+  // a re-sort of the same rows.
+  const boundsKey = useMemo(() => membershipKey(mappable), [mappable]);
+
+  const bands = useMemo(() => legendBands(total), [total]);
 
   // A computed initial center/zoom that already targets the borough
   // even before FitBoundsAndInvalidate runs. Prevents the brief
@@ -144,11 +185,12 @@ export function ParcelIntelMap({ borough, rows, selectedBbl, onSelect }: Props) 
           subdomains={['a', 'b', 'c', 'd']}
           maxZoom={19}
         />
-        <FitBoundsAndInvalidate rows={mappable} fallback={fallback} />
+        <FitBoundsAndInvalidate rows={mappable} boundsKey={boundsKey} fallback={fallback} />
         <PanToSelected rows={rows} selectedBbl={selectedBbl} />
-        {mappable.map((r, idx) => {
+        {rendered.map((r) => {
           const isSelected = r.bbl === selectedBbl;
-          const baseColor = colorForRank(idx, total);
+          const scoreRank = scoreRanks.get(r.bbl) ?? total - 1;
+          const baseColor = colorForRank(scoreRank, total);
           return (
             <CircleMarker
               key={r.bbl}
@@ -169,7 +211,7 @@ export function ParcelIntelMap({ borough, rows, selectedBbl, onSelect }: Props) 
                 <div className="text-xs">
                   <div className="font-semibold">{r.address ?? r.bbl}</div>
                   <div className="text-slate-600">
-                    Rank #{idx + 1} ·{' '}
+                    Rank #{scoreRank + 1} ·{' '}
                     {typeof r.score_calibrated === 'number'
                       ? `${(r.score_calibrated * 100).toFixed(0)}%`
                       : '—'}
@@ -181,26 +223,25 @@ export function ParcelIntelMap({ borough, rows, selectedBbl, onSelect }: Props) 
         })}
       </MapContainer>
 
-      {/* Legend */}
+      {/* Legend — bands derived from the actual row count */}
       <div className="pointer-events-none absolute right-2 top-2 z-[400] rounded-md border border-slate-200 bg-white/95 px-2.5 py-1.5 text-xs font-medium uppercase tracking-wide text-slate-700 shadow-sm backdrop-blur">
         <div className="mb-1 text-slate-500">Rank</div>
-        <div className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-white" style={{ background: '#dc2626' }} />
-          <span>Top 10</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-white" style={{ background: '#f59e0b' }} />
-          <span>11-30</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-white" style={{ background: '#10b981' }} />
-          <span>31-60</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-white" style={{ background: '#0ea5e9' }} />
-          <span>61+</span>
-        </div>
+        {bands.map((band) => (
+          <div key={band.label} className="flex items-center gap-1.5">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-white"
+              style={{ background: band.color }}
+            />
+            <span>{band.label}</span>
+          </div>
+        ))}
       </div>
+
+      {capped && (
+        <div className="absolute left-2 top-2 z-[400] rounded-full border border-slate-200 bg-white/95 px-2.5 py-1 text-xs font-medium text-slate-700 shadow-sm backdrop-blur">
+          Showing top {MAX_MARKERS} of {mappable.length} on map
+        </div>
+      )}
 
       {mappable.length === 0 && (
         <div className="absolute inset-x-2 top-12 z-[400] rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 shadow-sm">

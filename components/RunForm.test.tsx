@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   push: vi.fn(),
   createRun: vi.fn(),
   getFeaturedDemos: vi.fn(),
+  getRunOptions: vi.fn(),
   rememberRecentRun: vi.fn(),
   authState: {
     status: 'authenticated' as 'authenticated' | 'unauthenticated' | 'loading',
@@ -30,6 +31,7 @@ vi.mock('@/lib/api', async () => {
     ...actual,
     createRun: mocks.createRun,
     getFeaturedDemos: mocks.getFeaturedDemos,
+    getRunOptions: mocks.getRunOptions,
   };
 });
 
@@ -62,6 +64,9 @@ beforeEach(() => {
   // contract: the empty/error message must NEVER appear before the fetch
   // resolves. Individual tests can override.
   mocks.getFeaturedDemos.mockReturnValue(new Promise(() => {}));
+  mocks.getRunOptions.mockReset();
+  // Default: the options fetch never resolves → chips show hardcoded fallbacks.
+  mocks.getRunOptions.mockReturnValue(new Promise(() => {}));
   mocks.authState.status = 'authenticated';
   mocks.authState.user = { id: 'u-test', email: 'test@example.com' };
 });
@@ -73,6 +78,38 @@ describe('RunForm', () => {
     expect(screen.getByTestId('baseline-year-chip')).toHaveTextContent('2017');
     expect(screen.getByTestId('segmentation-chip')).toHaveTextContent('SAM2');
     expect(screen.queryByText('unet')).not.toBeInTheDocument();
+  });
+
+  it('renders the server-provided locked values once run options load', async () => {
+    mocks.getRunOptions.mockResolvedValueOnce({
+      imagery_years: [2025],
+      baseline_years: [2018],
+      segmentation_backends: ['sam2'],
+      outputs: ['previews', 'change', 'mesh'],
+      defaults: {
+        imagery_year: 2025,
+        baseline_year: 2018,
+        segmentation_backend: 'sam2',
+        outputs: ['previews', 'change', 'mesh'],
+        aoi_radius_m: 120,
+      },
+    });
+    render(<RunForm />);
+    await waitFor(() =>
+      expect(screen.getByTestId('imagery-year-chip')).toHaveTextContent('2025'),
+    );
+    expect(screen.getByTestId('baseline-year-chip')).toHaveTextContent('2018');
+    expect(screen.getByTestId('segmentation-chip')).toHaveTextContent('SAM2');
+  });
+
+  it('keeps the hardcoded fallbacks when the options fetch fails', async () => {
+    mocks.getRunOptions.mockRejectedValueOnce(new Error('offline'));
+    render(<RunForm />);
+    await waitFor(() =>
+      expect(screen.getByTestId('imagery-year-chip')).toHaveTextContent('2024'),
+    );
+    expect(screen.getByTestId('baseline-year-chip')).toHaveTextContent('2017');
+    expect(screen.getByTestId('segmentation-chip')).toHaveTextContent('SAM2');
   });
 
   it('shows sign-up + sign-in CTAs when unauthenticated and does not call createRun', () => {
@@ -165,7 +202,9 @@ describe('RunForm', () => {
       ]);
       render(<RunForm initialFeatured={[]} />);
       await waitFor(() => expect(mocks.getFeaturedDemos).toHaveBeenCalledTimes(1));
-      expect(screen.getByRole('option', { name: 'Fallback demo' })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('option', { name: 'Fallback demo' }),
+      ).toBeInTheDocument();
     });
   });
 });

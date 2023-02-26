@@ -5,7 +5,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-import { createRun, ApiError, getFeaturedDemos, type DemoFeaturedRun } from '@/lib/api';
+import {
+  createRun,
+  ApiError,
+  getFeaturedDemos,
+  getRunOptions,
+  type DemoFeaturedRun,
+  type RunOptions,
+} from '@/lib/api';
+import { trackEvent } from '@/lib/analytics';
 import { useAuth } from '@/lib/auth';
 import {
   buildCitylensCreateRunPayload,
@@ -46,8 +54,32 @@ export function RunForm({ initialFeatured }: RunFormProps = {}) {
     hasInitial ? 'loaded' : 'loading',
   );
   const [selectedDemoRunId, setSelectedDemoRunId] = useState<string>('');
+  // Server-locked run options (imagery/baseline year, backend). Fetched on
+  // mount so the locked chips reflect what the server will actually enforce;
+  // on any error we keep the hardcoded fallbacks below.
+  const [runOptions, setRunOptions] = useState<RunOptions | null>(null);
 
   const signedIn = auth.status === 'authenticated';
+
+  useEffect(() => {
+    let alive = true;
+    getRunOptions()
+      .then((opts) => {
+        if (alive && opts?.defaults) setRunOptions(opts);
+      })
+      .catch(() => {
+        // Fall back to the hardcoded defaults — chips still render.
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const lockedImageryYear = runOptions?.defaults?.imagery_year ?? DEFAULTS.imagery_year;
+  const lockedBaselineYear = runOptions?.defaults?.baseline_year ?? DEFAULTS.baseline_year;
+  const lockedBackend = (
+    runOptions?.defaults?.segmentation_backend ?? DEFAULTS.segmentation_backend
+  ).toUpperCase();
 
   useEffect(() => {
     // Skip the client fetch only if the server already gave us a populated
@@ -134,6 +166,8 @@ export function RunForm({ initialFeatured }: RunFormProps = {}) {
       const payload = buildCitylensCreateRunPayload(parsed.data);
       const { runId } = await createRun(payload);
       rememberRecentRun(runId);
+      // No PII in the payload — deliberately not the address or run id.
+      trackEvent('run_created');
       toast.success('Run created', { description: runId });
       router.push(`/runs/${encodeURIComponent(runId)}`);
     } catch (err: unknown) {
@@ -231,7 +265,7 @@ export function RunForm({ initialFeatured }: RunFormProps = {}) {
             data-testid="imagery-year-chip"
             className="h-10 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
           >
-            2024
+            {lockedImageryYear}
           </div>
         </div>
 
@@ -241,7 +275,7 @@ export function RunForm({ initialFeatured }: RunFormProps = {}) {
             data-testid="baseline-year-chip"
             className="h-10 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
           >
-            2017
+            {lockedBaselineYear}
           </div>
         </div>
 
@@ -251,7 +285,7 @@ export function RunForm({ initialFeatured }: RunFormProps = {}) {
             data-testid="segmentation-chip"
             className="h-10 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
           >
-            SAM2
+            {lockedBackend}
           </div>
           <div className="text-xs text-slate-500">Public MVP supports SAM2 only.</div>
         </div>
