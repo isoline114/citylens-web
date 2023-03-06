@@ -1,17 +1,12 @@
 import Link from 'next/link';
 import { ArrowRight, Building2, MapPin } from 'lucide-react';
 import { fetchParcelIntelIndexOnServer } from '@/lib/api.server';
-import {
-  formatAuc,
-  formatPrecisionAt100,
-  resolveParcelIntelMetrics,
-} from '@/lib/parcel-intel-metrics';
 import { BoroughCardPrefetch } from './borough-card-prefetch';
 
 export const metadata = {
   title: 'Parcel Intelligence — CityLens',
   description:
-    'Top redevelopment candidates per NYC borough, ranked by a calibrated model trained on PLUTO + DOB + LPC + ACRIS.',
+    'Find and qualify NYC development-site leads with current parcel facts, ownership context, aerial evidence, and an acquisition pipeline.',
 };
 
 // SSR with 5-minute revalidation; sweep cadence is monthly so this is plenty.
@@ -42,7 +37,6 @@ function formatGenerated(iso: string | null): string {
 export default async function ParcelIntelIndexPage() {
   const index = await fetchParcelIntelIndexOnServer();
   const generatedLabel = formatGenerated(index.generated_at);
-  const metrics = resolveParcelIntelMetrics(index.model_metadata);
   const modelType =
     typeof index.model_metadata?.model_type === 'string'
       ? (index.model_metadata.model_type as string).toUpperCase()
@@ -52,6 +46,14 @@ export default async function ParcelIntelIndexPage() {
     | number
     | undefined;
   const labelWindow = index.model_metadata?.label_window as string | undefined;
+  const staleSources = Object.values(index.data_sources ?? {}).flatMap((value) => {
+    if (!value || typeof value !== 'object') return [];
+    const status = value as Record<string, unknown>;
+    if (status.stale !== true) return [];
+    const source = typeof status.source === 'string' ? status.source : 'A required source';
+    const age = typeof status.age_days === 'number' ? ` (${status.age_days} days old)` : '';
+    return [`${source}${age}`];
+  });
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 md:py-12">
@@ -61,13 +63,13 @@ export default async function ParcelIntelIndexPage() {
           NYC parcel intelligence · v1
         </div>
         <h1 className="mt-4 text-balance text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">
-          Top redevelopment candidates per borough.
+          Find the sites worth pursuing this week.
         </h1>
         <p className="mt-3 max-w-prose text-base leading-7 text-slate-600">
-          A calibrated gradient-boosted classifier scores every NYC tax lot using PLUTO
-          + DOB permits + LPC landmarks + ACRIS deed history. Ranked under temporal
-          holdout (PLUTO {metrics.featureYear} features → {metrics.labelWindow} NB filings)
-          at AUC {formatAuc(metrics.auc)} / P@100 = {formatPrecisionAt100(metrics.precisionAt100)}.
+          CityLens ranks all NYC tax lots, refreshes the displayed parcel facts from
+          current city records, and gives your team a place to qualify, watch, underwrite,
+          and advance the best development-site leads. Priority is ordinal—not a promise
+          that a parcel will transact or receive a permit.
         </p>
         {(modelType || featureYear || labelWindow || generatedLabel) && (
           <p className="mt-2 text-xs text-slate-500">
@@ -80,6 +82,13 @@ export default async function ParcelIntelIndexPage() {
           </p>
         )}
       </header>
+
+      {staleSources.length > 0 && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <strong>Freshness warning:</strong> {staleSources.join(', ')}. Verify the
+          latest city records before acquisition diligence.
+        </div>
+      )}
 
       {index.boroughs.length === 0 ? (
         <section className="rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center">
@@ -95,10 +104,6 @@ export default async function ParcelIntelIndexPage() {
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {index.boroughs.map((b) => {
             const accent = BOROUGH_ACCENTS[b.slug] ?? 'bg-slate-500';
-            const topPct =
-              typeof b.top_score === 'number'
-                ? `${Math.round(b.top_score * 100)}%`
-                : null;
             return (
               <BoroughCardPrefetch key={b.slug}>
                 <Link
@@ -119,8 +124,7 @@ export default async function ParcelIntelIndexPage() {
                         {b.display_name}
                       </h2>
                       <p className="mt-2 text-sm text-slate-600">
-                        {b.count} ranked candidates
-                        {topPct ? `, top score ${topPct}` : ''}
+                        {b.count} prioritized parcel leads
                       </p>
                     </div>
                     <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-700" />

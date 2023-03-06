@@ -11,6 +11,8 @@ function row(overrides: Partial<ParcelIntelRow>): ParcelIntelRow {
     score_calibrated: 0.9,
     score_calibrated_p10: null,
     score_calibrated_p90: null,
+    priority_rank: 1,
+    priority_tier: 'highest',
     lot_area_sqft: 5000,
     allowed_far: 4,
     max_floor_area_sqft: 20000,
@@ -31,15 +33,18 @@ function row(overrides: Partial<ParcelIntelRow>): ParcelIntelRow {
     block_id: '305029',
     block_rank: 1,
     redev_status: 'still_vacant',
+    opportunity_category: 'ground_up_candidate',
     top_features: [],
     ...overrides,
   };
 }
 
 const EXPECTED_HEADER =
-  'Address,BBL,Borough,Score (%),Rank,Zoning,Land use,Lot area (sqft),' +
+  'Address,BBL,Borough,Priority rank,Priority tier,Opportunity,Zoning,Land use,Lot area (sqft),' +
   'Allowed FAR,Built FAR %,Unused floor area (sqft),Last sale price,' +
-  'Last sale year,Years held,Landmark,Historic district,Status,Top model factors';
+  'Last sale year,Years held,Landmark,Historic district,Status,Latest NB filing year,' +
+  'Latest NB status,PLUTO facts as of,ACRIS ownership as of,DOB activity as of,' +
+  'Imagery observed through,Top model factors';
 
 describe('buildCsv', () => {
   it('emits the whitelisted human-label header row', () => {
@@ -62,7 +67,7 @@ describe('buildCsv', () => {
     const lines = csv.split('\n');
     expect(lines).toHaveLength(2);
     expect(lines[1]).toBe(
-      '100 E 21ST ST,3050290001,BK,90.0,1,R7A,11,5000,4,25,15000,1500000,2021,5,no,no,still_vacant,lot_area (+32%)',
+      '100 E 21ST ST,3050290001,BK,1,highest,ground_up_candidate,R7A,11,5000,4,25,15000,1500000,2021,5,no,no,still_vacant,,,,,,,lot_area (+32%)',
     );
     expect(csv).not.toContain('[object Object]');
   });
@@ -83,7 +88,7 @@ describe('buildCsv', () => {
     const csv = buildCsv([
       row({
         address: null,
-        score_calibrated: null,
+        priority_rank: null,
         last_sale_price: null,
         last_sale_year: null,
         years_held: null,
@@ -93,9 +98,9 @@ describe('buildCsv', () => {
     ]);
     const cells = csv.split('\n')[1].split(',');
     expect(cells[0]).toBe(''); // Address
-    expect(cells[3]).toBe(''); // Score (%)
-    expect(cells[10]).toBe(''); // Unused floor area
-    expect(cells[11]).toBe(''); // Last sale price
+    expect(cells[3]).toBe('1'); // Export-local rank fallback
+    expect(cells[11]).toBe(''); // Unused floor area
+    expect(cells[12]).toBe(''); // Last sale price
   });
 
   it('flattens top_features into a single semicolon-joined column', () => {
@@ -114,12 +119,12 @@ describe('buildCsv', () => {
 
   it('ranks by score descending regardless of row order', () => {
     const csv = buildCsv([
-      row({ bbl: '1000000001', score_calibrated: 0.5 }),
-      row({ bbl: '1000000002', score_calibrated: 0.9 }),
-      row({ bbl: '1000000003', score_calibrated: null }),
+      row({ bbl: '1000000001', score_calibrated: 0.5, priority_rank: null }),
+      row({ bbl: '1000000002', score_calibrated: 0.9, priority_rank: null }),
+      row({ bbl: '1000000003', score_calibrated: null, priority_rank: null }),
     ]);
     const lines = csv.split('\n').slice(1);
-    const rankOf = (line: string) => line.split(',')[4];
+    const rankOf = (line: string) => line.split(',')[3];
     expect(rankOf(lines[0])).toBe('2'); // 0.5 → second
     expect(rankOf(lines[1])).toBe('1'); // 0.9 → first
     expect(rankOf(lines[2])).toBe('3'); // null score sorts last

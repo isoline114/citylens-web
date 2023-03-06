@@ -8,20 +8,20 @@
  * values from the published `model_metadata` (manifest.json) when the publisher
  * emits them.
  *
- * The fallback values are the deployed model's temporal-holdout results — see
- * `source`. Update them only alongside a model change. Once
+ * Fallback metric values are deliberately null: a UI must never silently show
+ * stale performance. Once
  * `citylens-parcel-intel/scripts/publish_sweep.py` emits `auc` /
  * `precision_at_100` into the manifest, the live path takes over automatically.
  */
 
 export type ParcelIntelMetrics = {
-  /** ROC AUC under temporal holdout. */
-  auc: number;
+  /** ROC AUC under population-level tax-block holdout. */
+  auc: number | null;
   /**
    * Precision@100 — share of the top-100 ranked parcels that received a
    * new-building permit within the holdout window.
    */
-  precisionAt100: number;
+  precisionAt100: number | null;
   /** PLUTO snapshot year the features are frozen at. */
   featureYear: number;
   /** Label window for NB-permit outcomes. */
@@ -30,16 +30,14 @@ export type ParcelIntelMetrics = {
   source: string;
 };
 
-// Authoritative source: citylens-parcel-intel/data/nyc/backtest/
-// temporal_2018_2019_2024.json → `calibrated` block (AUC 0.9786, P@100 0.85,
-// P@1000 0.86). The previously-shown P@100 0.92 was overstated relative to this
-// artifact; 0.85 is the real top-100 precision under temporal holdout.
+// Authoritative values arrive from the publisher's model_metadata, sourced
+// from citylens-parcel-intel/data/nyc/backtest/temporal_2018_2019_2024.json.
 export const FALLBACK_PARCEL_INTEL_METRICS: ParcelIntelMetrics = {
-  auc: 0.978,
-  precisionAt100: 0.85,
+  auc: null,
+  precisionAt100: null,
   featureYear: 2018,
   labelWindow: '2019-2024',
-  source: 'temporal_2018_2019_2024.json (calibrated)',
+  source: 'temporal_2018_2019_2024.json (population block holdout)',
 };
 
 function toFiniteNumber(value: unknown): number | null {
@@ -71,8 +69,8 @@ export function resolveParcelIntelMetrics(
       : null;
 
   return {
-    auc: auc ?? FALLBACK_PARCEL_INTEL_METRICS.auc,
-    precisionAt100: precisionAt100 ?? FALLBACK_PARCEL_INTEL_METRICS.precisionAt100,
+    auc,
+    precisionAt100,
     featureYear: featureYear ?? FALLBACK_PARCEL_INTEL_METRICS.featureYear,
     labelWindow: labelWindow ?? FALLBACK_PARCEL_INTEL_METRICS.labelWindow,
     source: FALLBACK_PARCEL_INTEL_METRICS.source,
@@ -80,11 +78,11 @@ export function resolveParcelIntelMetrics(
 }
 
 /** Format AUC as a 3-decimal string, e.g. `0.978`. */
-export function formatAuc(auc: number): string {
-  return auc.toFixed(3);
+export function formatAuc(auc: number | null): string {
+  return auc === null ? 'not yet reported' : auc.toFixed(3);
 }
 
 /** Format P@100 as a 2-decimal string, e.g. `0.92`. */
-export function formatPrecisionAt100(precisionAt100: number): string {
-  return precisionAt100.toFixed(2);
+export function formatPrecisionAt100(precisionAt100: number | null): string {
+  return precisionAt100 === null ? 'not yet reported' : precisionAt100.toFixed(2);
 }

@@ -6,6 +6,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
   ArrowUpDown,
+  Bell,
+  Bookmark,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -15,16 +17,36 @@ import {
   Filter,
   Lock,
   MapPin,
+  Save,
   TrendingDown,
   TrendingUp,
   X,
 } from 'lucide-react';
 
 import { useAuth } from '@/lib/auth';
-import type { ParcelIntelRow, TopFeature } from '@/lib/api';
+import {
+  listParcelSavedSearches,
+  listParcelWorkflow,
+  removeParcelSavedSearch,
+  removeParcelWorkflow,
+  saveParcelSearch,
+  saveParcelWorkflow,
+  type ParcelIntelRow,
+  type ParcelSavedSearch,
+  type ParcelWorkflowItem,
+  type ParcelWorkflowSnapshot,
+  type TopFeature,
+} from '@/lib/api';
 import { trackEvent } from '@/lib/analytics';
 import { downloadCsv } from './parcel-intel-csv';
 import { explainParcel, type Reason } from './parcel-intel-explain';
+import {
+  LandBasisCalculator,
+  ParcelBriefActions,
+  WorkflowEditor,
+  WORKFLOW_STAGE_LABELS,
+  type WorkflowDraft,
+} from './parcel-acquisition-tools';
 
 // Leaflet must not render on the server (window/document references).
 // next/dynamic's `loading` callback can't receive props; the skeleton
@@ -39,6 +61,7 @@ type Props = {
   rows: ParcelIntelRow[];
   borough: string;
   boroughDisplayName: string;
+  initialBbl?: string | null;
 };
 
 type SortKey =
@@ -57,6 +80,14 @@ type ZoningFamily = 'R' | 'C' | 'M' | 'Other';
 // Condensed land-use buckets for the filter dropdown. PLUTO has 11 codes;
 // most users think in coarser product terms.
 type LandUseFilter = 'all' | 'residential' | 'commercial' | 'industrial' | 'vacant';
+type PriorityFilter = 'all' | 'highest' | 'high_or_better' | 'medium_or_better';
+type OpportunityFilter =
+  | 'all'
+  | 'ground_up'
+  | 'vacant_site'
+  | 'ground_up_candidate'
+  | 'conversion_or_overbuilt'
+  | 'active_project';
 const LAND_USE_GROUPS: Record<LandUseFilter, Set<string>> = {
   all: new Set(),
   residential: new Set(['01', '02', '03', '04']),
@@ -67,6 +98,29 @@ const LAND_USE_GROUPS: Record<LandUseFilter, Set<string>> = {
 
 type Direction = 'asc' | 'desc';
 
+const WATCHED_PARCEL_FIELDS = [
+  'zoning_district_1',
+  'land_use',
+  'year_built',
+  'allowed_far',
+  'unused_floor_area_sqft',
+  'owner_name',
+  'last_sale_year',
+  'latest_nb_filing_year',
+  'latest_nb_status',
+  'redev_status',
+  'observed_imagery_year',
+] as const satisfies readonly (keyof ParcelWorkflowSnapshot & keyof ParcelIntelRow)[];
+
+export function hasWatchedParcelChanged(
+  item: ParcelWorkflowItem,
+  row: ParcelIntelRow,
+): boolean {
+  return WATCHED_PARCEL_FIELDS.some(
+    (field) => (item.snapshot[field] ?? null) !== (row[field] ?? null),
+  );
+}
+
 // Shared focus-ring style. Apply to every interactive element so keyboard
 // users get a consistent visible affordance (sky-blue ring with an offset
 // so it doesn't blend into adjacent surfaces).
@@ -74,7 +128,7 @@ const FOCUS_RING =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white';
 
 const SORT_LABELS: Record<SortKey, string> = {
-  score_calibrated: 'Score',
+  score_calibrated: 'Priority',
   lot_area_sqft: 'Lot',
   last_sale_price: 'Last sale',
   years_held: 'Held',
@@ -105,9 +159,28 @@ function formatNumber(value: number | null | undefined): string {
   return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
-function formatScore(value: number | null | undefined): string {
-  if (value === null || value === undefined) return '—';
-  return `${(value * 100).toFixed(1)}%`;
+function formatPriority(row: ParcelIntelRow): string {
+  if (typeof row.priority_rank === 'number') return `#${row.priority_rank}`;
+  return row.priority_tier ? `${row.priority_tier} priority` : 'Ranked';
+}
+
+function priorityTierLabel(value: ParcelIntelRow['priority_tier']): string {
+  return {
+    highest: 'Highest priority',
+    high: 'High priority',
+    medium: 'Medium priority',
+    watch: 'Watch',
+  }[value ?? 'watch'];
+}
+
+function opportunityLabel(value: ParcelIntelRow['opportunity_category']): string {
+  return {
+    vacant_site: 'Vacant site',
+    ground_up_candidate: 'Ground-up candidate',
+    conversion_or_overbuilt: 'Conversion / overbuilt',
+    active_project: 'Active project',
+    completed_project: 'Completed project',
+  }[value ?? 'ground_up_candidate'];
 }
 
 // CSV serialization lives in ./parcel-intel-csv (pure `buildCsv` +
@@ -498,9 +571,17 @@ function ParcelLinksRow({ row }: { row: ParcelIntelRow }) {
 function ParcelDetailPanel({
   row,
   onClose,
+  workflowItem,
+  workflowBusy,
+  onSaveWorkflow,
+  onRemoveWorkflow,
 }: {
   row: ParcelIntelRow | null;
   onClose: () => void;
+  workflowItem: ParcelWorkflowItem | null;
+  workflowBusy: boolean;
+  onSaveWorkflow: (draft: WorkflowDraft) => Promise<void>;
+  onRemoveWorkflow: () => Promise<void>;
 }) {
   if (!row) {
     return (
@@ -512,7 +593,7 @@ function ParcelDetailPanel({
           No parcel selected
         </p>
         <p className="mt-1 max-w-xs text-xs text-slate-500">
-          Click a row or a map marker to see why it scored high.
+          Click a row or a map marker to review why it was prioritized.
         </p>
       </aside>
     );
@@ -532,6 +613,9 @@ function ParcelDetailPanel({
             {row.zoning_district_1 ?? '—'} · land use {row.land_use ?? '—'} ·{' '}
             {row.year_built && row.year_built > 0 ? row.year_built : 'no build yr'}
           </p>
+          <span className="mt-2 inline-flex rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-800 ring-1 ring-inset ring-violet-200">
+            {opportunityLabel(row.opportunity_category)}
+          </span>
         </div>
         <button
           type="button"
@@ -556,10 +640,10 @@ function ParcelDetailPanel({
         )}
         <div className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-2.5">
           <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Score
+            Priority
           </dt>
           <dd className="mt-0.5 text-base font-semibold text-slate-950">
-            {formatScore(row.score_calibrated)}
+            {formatPriority(row)} · {priorityTierLabel(row.priority_tier)}
           </dd>
         </div>
         <div className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-2.5">
@@ -619,6 +703,21 @@ function ParcelDetailPanel({
         </div>
       </dl>
 
+      {row.assemblage_id && (row.assemblage_lot_count ?? 0) >= 2 && (
+        <section className="mt-3 rounded-lg border border-violet-200 bg-violet-50 p-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-violet-900">
+            Assemblage opportunity · {row.assemblage_lot_count} adjacent lots
+          </h4>
+          <div className="mt-2 grid grid-cols-2 gap-3 text-xs text-violet-900">
+            <div><span className="block text-violet-600">Combined lot</span>{formatNumber(row.assemblage_combined_lot_area_sqft)} sqft</div>
+            <div><span className="block text-violet-600">Combined envelope</span>{formatNumber(row.assemblage_combined_buildable_sqft)} sqft</div>
+          </div>
+          <p className="mt-2 font-mono text-[10px] text-violet-700">
+            {(row.assemblage_member_bbls ?? []).join(' · ')}
+          </p>
+        </section>
+      )}
+
       <ParcelLinksRow row={row} />
 
       {(row.recent_change ||
@@ -631,7 +730,7 @@ function ParcelDetailPanel({
               className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-900 ring-1 ring-inset ring-emerald-200"
               title="Physical change observed in current aerial imagery compared with the 2017 baseline; verify the event date during diligence."
             >
-              Recently changed
+              Change observed in 2017→{row.change_latest_imagery_year ?? 'latest'}
             </span>
           )}
           {row.redev_status === 'active' && (
@@ -639,7 +738,7 @@ function ParcelDetailPanel({
               className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-800 ring-1 ring-inset ring-sky-200"
               title="DOB has issued an NB permit on this BBL since the model's 2018 feature year, but the build hasn't been recorded as complete yet. The model still surfaces it as a similar-pattern candidate; verify against current DOB filings."
             >
-              Active project
+              Active project{row.latest_nb_filing_year ? ` · NB ${row.latest_nb_filing_year}` : ''}
             </span>
           )}
           {row.redev_status === 'already_built' && (
@@ -663,9 +762,36 @@ function ParcelDetailPanel({
         </div>
       )}
 
+      <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+        <div className="font-semibold text-slate-800">Current-fact provenance</div>
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+          <span>PLUTO {row.property_facts_as_of ? `retrieved ${row.property_facts_as_of}` : 'date unavailable'}</span>
+          <span>ACRIS {row.ownership_as_of ? `retrieved ${row.ownership_as_of}` : 'date unavailable'}</span>
+          <span>DOB {row.project_activity_as_of ? `retrieved ${row.project_activity_as_of}` : 'date unavailable'}</span>
+          {row.observed_imagery_year && <span>Imagery observed through {row.observed_imagery_year}</span>}
+        </div>
+        {row.property_facts_current === false && (
+          <p className="mt-2 font-medium text-amber-800">
+            Current lot match unavailable. Verify all capacity facts before acquisition use.
+          </p>
+        )}
+        {(row.data_warnings ?? []).map((warning) => (
+          <p key={warning} className="mt-1 text-amber-800">{warning}</p>
+        ))}
+      </div>
+
+      <ParcelBriefActions row={row} />
+      <LandBasisCalculator row={row} />
+      <WorkflowEditor
+        item={workflowItem}
+        busy={workflowBusy}
+        onSave={onSaveWorkflow}
+        onRemove={onRemoveWorkflow}
+      />
+
       <div className="mt-4">
         <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Why it scored high
+          Why CityLens prioritized it
         </h4>
         <ul className="mt-2 space-y-2">
           {reasons.length > 0 ? (
@@ -692,12 +818,19 @@ const DEFAULT_ZONING_FAMILIES: Set<ZoningFamily> = new Set([
   'Other',
 ]);
 
-export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Props) {
+export function ParcelIntelWorkspace({
+  rows,
+  borough,
+  boroughDisplayName,
+  initialBbl = null,
+}: Props) {
   const auth = useAuth();
   const [sortKey, setSortKey] = useState<SortKey>('score_calibrated');
   const [direction, setDirection] = useState<Direction>('desc');
   const [hideLandmarked, setHideLandmarked] = useState(false);
-  const [selectedBbl, setSelectedBbl] = useState<string | null>(null);
+  const [selectedBbl, setSelectedBbl] = useState<string | null>(() =>
+    initialBbl && rows.some((row) => row.bbl === initialBbl) ? initialBbl : null,
+  );
 
   // Pagination (0-based page of PAGE_SIZE rows, with a "show all" escape
   // hatch). Sorting and filtering always operate on the FULL set; only
@@ -705,8 +838,8 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
   const [page, setPage] = useState(0);
   const [showAll, setShowAll] = useState(false);
 
-  // Filter state. Default values match the unfiltered list so a fresh
-  // visit shows the full top-N. Disclosure stays collapsed by default.
+  // Start with the acquisition buyer's core use case: vacant and underbuilt
+  // ground-up sites. Active and overbuilt projects remain one filter away.
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [zoningFamilies, setZoningFamilies] = useState<Set<ZoningFamily>>(
     new Set(DEFAULT_ZONING_FAMILIES),
@@ -714,7 +847,17 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
   const [landUseFilter, setLandUseFilter] = useState<LandUseFilter>('all');
   const [recentSaleOnly, setRecentSaleOnly] = useState(false);
   const [recentChangeOnly, setRecentChangeOnly] = useState(false);
-  const [minScorePct, setMinScorePct] = useState(0); // 0-100
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
+  const [opportunityFilter, setOpportunityFilter] = useState<OpportunityFilter>('ground_up');
+  const [pipelineOnly, setPipelineOnly] = useState(false);
+
+  const [workflow, setWorkflow] = useState<Map<string, ParcelWorkflowItem>>(new Map());
+  const [workflowBusyBbl, setWorkflowBusyBbl] = useState<string | null>(null);
+  const [workflowError, setWorkflowError] = useState<string | null>(null);
+  const [savedSearches, setSavedSearches] = useState<ParcelSavedSearch[]>([]);
+  const [saveViewOpen, setSaveViewOpen] = useState(false);
+  const [saveViewName, setSaveViewName] = useState('');
+  const [saveViewFrequency, setSaveViewFrequency] = useState<'off' | 'daily' | 'weekly'>('weekly');
 
   const authenticated = auth.status === 'authenticated';
 
@@ -725,6 +868,29 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
     if (!authenticated || openTracked.current) return;
     openTracked.current = true;
     trackEvent('workspace_open', { borough });
+  }, [authenticated, borough]);
+
+  useEffect(() => {
+    if (!authenticated) return;
+    let cancelled = false;
+    Promise.all([listParcelWorkflow(), listParcelSavedSearches()])
+      .then(([items, searches]) => {
+        if (cancelled) return;
+        setWorkflow(
+          new Map(
+            items
+              .filter((item) => item.borough === borough)
+              .map((item) => [item.bbl, item]),
+          ),
+        );
+        setSavedSearches(searches.filter((search) => search.borough === borough));
+      })
+      .catch(() => {
+        if (!cancelled) setWorkflowError('Pipeline sync is temporarily unavailable.');
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [authenticated, borough]);
 
   // Analytics: filter_change fires once per filter TYPE per mount, so a
@@ -742,7 +908,9 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
     (landUseFilter !== 'all' ? 1 : 0) +
     (recentSaleOnly ? 1 : 0) +
     (recentChangeOnly ? 1 : 0) +
-    (minScorePct > 0 ? 1 : 0);
+    (priorityFilter !== 'all' ? 1 : 0) +
+    (opportunityFilter !== 'ground_up' ? 1 : 0) +
+    (pipelineOnly ? 1 : 0);
 
   const resetFilters = () => {
     setHideLandmarked(false);
@@ -750,7 +918,9 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
     setLandUseFilter('all');
     setRecentSaleOnly(false);
     setRecentChangeOnly(false);
-    setMinScorePct(0);
+    setPriorityFilter('all');
+    setOpportunityFilter('ground_up');
+    setPipelineOnly(false);
   };
 
   const toggleZoningFamily = (fam: ZoningFamily) => {
@@ -769,19 +939,32 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
 
   const filtered = useMemo(() => {
     const luSet = LAND_USE_GROUPS[landUseFilter];
-    const minScore = minScorePct / 100;
+    const tierWeight = { highest: 0, high: 1, medium: 2, watch: 3 } as const;
+    const maxTier = {
+      all: 3,
+      highest: 0,
+      high_or_better: 1,
+      medium_or_better: 2,
+    }[priorityFilter];
     return rows.filter((r) => {
       if (hideLandmarked && (r.is_landmark || r.is_historic_district)) return false;
       if (!zoningFamilies.has(zoningFamilyOf(r.zoning_district_1))) return false;
       if (luSet.size > 0 && !luSet.has(r.land_use ?? '')) return false;
       if (recentSaleOnly && !r.has_recent_sale_5yr) return false;
       if (recentChangeOnly && !r.recent_change) return false;
+      if (tierWeight[r.priority_tier ?? 'watch'] > maxTier) return false;
       if (
-        minScore > 0 &&
-        (typeof r.score_calibrated !== 'number' ||
-          r.score_calibrated < minScore)
-      )
-        return false;
+        opportunityFilter === 'ground_up' &&
+        !['vacant_site', 'ground_up_candidate'].includes(
+          r.opportunity_category ?? 'ground_up_candidate',
+        )
+      ) return false;
+      if (
+        opportunityFilter !== 'all' &&
+        opportunityFilter !== 'ground_up' &&
+        r.opportunity_category !== opportunityFilter
+      ) return false;
+      if (pipelineOnly && !workflow.has(r.bbl)) return false;
       return true;
     });
   }, [
@@ -791,7 +974,10 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
     landUseFilter,
     recentSaleOnly,
     recentChangeOnly,
-    minScorePct,
+    priorityFilter,
+    opportunityFilter,
+    pipelineOnly,
+    workflow,
   ]);
 
   const sorted = useMemo(() => {
@@ -809,8 +995,8 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
   }, [filtered, sortKey, direction]);
 
   const selected = useMemo(
-    () => sorted.find((r) => r.bbl === selectedBbl) ?? null,
-    [sorted, selectedBbl],
+    () => rows.find((r) => r.bbl === selectedBbl) ?? null,
+    [rows, selectedBbl],
   );
 
   // Any change to the filter/sort configuration resets to the first page —
@@ -825,8 +1011,158 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
     landUseFilter,
     recentSaleOnly,
     recentChangeOnly,
-    minScorePct,
+    priorityFilter,
+    opportunityFilter,
+    pipelineOnly,
   ]);
+
+  const watchedUpdates = useMemo(
+    () =>
+      rows.filter((row) => {
+        const item = workflow.get(row.bbl);
+        if (!item?.watching) return false;
+        return hasWatchedParcelChanged(item, row);
+      }).length,
+    [rows, workflow],
+  );
+
+  const saveWorkflowForSelected = async (draft: WorkflowDraft) => {
+    if (!selected) return;
+    const previous = workflow.get(selected.bbl);
+    setWorkflowBusyBbl(selected.bbl);
+    setWorkflowError(null);
+    const now = new Date().toISOString();
+    const optimistic: ParcelWorkflowItem = {
+      bbl: selected.bbl,
+      borough,
+      ...draft,
+      snapshot: {
+        property_facts_as_of: selected.property_facts_as_of ?? null,
+        zoning_district_1: selected.zoning_district_1,
+        land_use: selected.land_use,
+        year_built: selected.year_built,
+        allowed_far: selected.allowed_far,
+        unused_floor_area_sqft: selected.unused_floor_area_sqft,
+        owner_name: selected.owner_name ?? null,
+        last_sale_year: selected.last_sale_year,
+        latest_nb_filing_year: selected.latest_nb_filing_year ?? null,
+        latest_nb_status: selected.latest_nb_status ?? null,
+        redev_status: selected.redev_status,
+        observed_imagery_year: selected.observed_imagery_year ?? null,
+      },
+      saved_at: workflow.get(selected.bbl)?.saved_at ?? now,
+      updated_at: now,
+    };
+    setWorkflow((current) => new Map(current).set(selected.bbl, optimistic));
+    try {
+      const saved = await saveParcelWorkflow(selected.bbl, {
+        borough,
+        ...draft,
+        snapshot: optimistic.snapshot,
+      });
+      setWorkflow((current) => new Map(current).set(selected.bbl, saved));
+      trackEvent('parcel_pipeline_save', { borough, stage: draft.stage });
+    } catch {
+      setWorkflow((current) => {
+        const next = new Map(current);
+        if (previous) next.set(selected.bbl, previous);
+        else next.delete(selected.bbl);
+        return next;
+      });
+      setWorkflowError('Could not save this parcel. Please retry.');
+    } finally {
+      setWorkflowBusyBbl(null);
+    }
+  };
+
+  const removeSelectedFromWorkflow = async () => {
+    if (!selected) return;
+    const previous = workflow.get(selected.bbl);
+    setWorkflowBusyBbl(selected.bbl);
+    setWorkflow((current) => {
+      const next = new Map(current);
+      next.delete(selected.bbl);
+      return next;
+    });
+    try {
+      await removeParcelWorkflow(selected.bbl);
+      trackEvent('parcel_pipeline_remove', { borough });
+    } catch {
+      if (previous) setWorkflow((current) => new Map(current).set(selected.bbl, previous));
+      setWorkflowError('Could not remove this parcel. Please retry.');
+    } finally {
+      setWorkflowBusyBbl(null);
+    }
+  };
+
+  const applySavedSearch = (search: ParcelSavedSearch) => {
+    const f = search.filters;
+    setLandUseFilter(f.landUseFilter);
+    setPriorityFilter(f.priorityFilter);
+    setOpportunityFilter(f.opportunityFilter);
+    setHideLandmarked(Boolean(f.hideLandmarked));
+    setRecentSaleOnly(Boolean(f.recentSaleOnly));
+    setRecentChangeOnly(Boolean(f.recentChangeOnly));
+    setPipelineOnly(Boolean(f.pipelineOnly));
+    if (f.zoningFamilies.length > 0) {
+      setZoningFamilies(new Set(f.zoningFamilies));
+    }
+    setSortKey(f.sortKey);
+    setDirection(f.direction);
+    trackEvent('parcel_saved_search_apply', { borough, cadence: search.alert_frequency });
+  };
+
+  const deleteSavedSearch = async (search: ParcelSavedSearch) => {
+    const previousIndex = savedSearches.findIndex(
+      (candidate) => candidate.search_id === search.search_id,
+    );
+    setSavedSearches((current) =>
+      current.filter((candidate) => candidate.search_id !== search.search_id),
+    );
+    setWorkflowError(null);
+    try {
+      await removeParcelSavedSearch(search.search_id);
+      trackEvent('parcel_saved_search_remove', { borough });
+    } catch {
+      setSavedSearches((current) => {
+        const next = [...current];
+        next.splice(Math.max(previousIndex, 0), 0, search);
+        return next;
+      });
+      setWorkflowError('Could not remove this saved view. Please retry.');
+    }
+  };
+
+  const persistCurrentView = async () => {
+    const name = saveViewName.trim();
+    if (!name) return;
+    const searchId = `${borough}-${Date.now().toString(36)}`;
+    try {
+      const saved = await saveParcelSearch(searchId, {
+        name,
+        borough,
+        alert_frequency: saveViewFrequency,
+        filters: {
+          landUseFilter,
+          priorityFilter,
+          opportunityFilter,
+          hideLandmarked,
+          recentSaleOnly,
+          recentChangeOnly,
+          pipelineOnly,
+          zoningFamilies: Array.from(zoningFamilies),
+          sortKey,
+          direction,
+        },
+      });
+      setSavedSearches((current) => [...current, saved]);
+      setSaveViewName('');
+      setSaveViewOpen(false);
+      trackEvent('parcel_saved_search', { borough, cadence: saveViewFrequency });
+    } catch {
+      setWorkflowError('Could not save this view. Please retry.');
+    }
+  };
 
   const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const clampedPage = Math.min(page, pageCount - 1);
@@ -904,28 +1240,77 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
 
       {/* LIST + DETAIL — right pane */}
       <div className="order-1 flex flex-col gap-4 lg:order-2">
+        {(workflowError || watchedUpdates > 0) && (
+          <div className={`rounded-lg border px-3 py-2 text-xs ${workflowError ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
+            {workflowError ?? `${watchedUpdates} watched parcel${watchedUpdates === 1 ? '' : 's'} changed since you saved them.`}
+          </div>
+        )}
+
+        {savedSearches.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-slate-500">Saved views</span>
+            {savedSearches.map((search) => (
+              <span
+                key={search.search_id}
+                className="inline-flex h-7 items-center overflow-hidden rounded-full border border-slate-300 bg-white text-xs text-slate-700"
+              >
+                <button
+                  type="button"
+                  onClick={() => applySavedSearch(search)}
+                  title={`${search.alert_frequency} review cadence`}
+                  className={`inline-flex h-full items-center gap-1 px-2.5 hover:bg-slate-50 ${FOCUS_RING}`}
+                >
+                  {search.alert_frequency !== 'off' && <Bell className="h-3 w-3" />}
+                  {search.name}
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Delete saved view ${search.name}`}
+                  onClick={() => void deleteSavedSearch(search)}
+                  className={`inline-flex h-full items-center border-l border-slate-200 px-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-700 ${FOCUS_RING}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => setFiltersOpen((v) => !v)}
-            aria-expanded={filtersOpen}
-            aria-controls="parcel-intel-filters"
-            className={`inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-900 hover:bg-slate-50 ${FOCUS_RING}`}
-          >
-            <Filter className="h-3.5 w-3.5" />
-            Filters
-            {filterCount > 0 && (
-              <span className="ml-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-sky-500 px-1 text-[10px] font-semibold text-white">
-                {filterCount}
-              </span>
-            )}
-            {filtersOpen ? (
-              <ChevronUp className="h-3.5 w-3.5" />
-            ) : (
-              <ChevronDown className="h-3.5 w-3.5" />
-            )}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((v) => !v)}
+              aria-expanded={filtersOpen}
+              aria-controls="parcel-intel-filters"
+              className={`inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-900 hover:bg-slate-50 ${FOCUS_RING}`}
+            >
+              <Filter className="h-3.5 w-3.5" />
+              Filters
+              {filterCount > 0 && (
+                <span className="ml-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-sky-500 px-1 text-[10px] font-semibold text-white">
+                  {filterCount}
+                </span>
+              )}
+              {filtersOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+            <button
+              type="button"
+              aria-pressed={pipelineOnly}
+              onClick={() => setPipelineOnly((value) => !value)}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium ${FOCUS_RING} ${pipelineOnly ? 'border-sky-600 bg-sky-50 text-sky-900' : 'border-slate-300 bg-white text-slate-900 hover:bg-slate-50'}`}
+            >
+              <Bookmark className="h-3.5 w-3.5" /> Pipeline ({workflow.size})
+            </button>
+            <button
+              type="button"
+              onClick={() => setSaveViewOpen((value) => !value)}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-900 hover:bg-slate-50 ${FOCUS_RING}`}
+            >
+              <Save className="h-3.5 w-3.5" /> Save view
+            </button>
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-500">
               {sorted.length} of {rows.length}
@@ -950,6 +1335,40 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
             </button>
           </div>
         </div>
+
+        {saveViewOpen && (
+          <div className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <label className="min-w-48 flex-1 text-xs font-medium text-slate-700">
+              View name
+              <input
+                value={saveViewName}
+                onChange={(event) => setSaveViewName(event.target.value)}
+                placeholder="High-priority vacant sites"
+                className={`mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2 text-sm ${FOCUS_RING}`}
+              />
+            </label>
+            <label className="text-xs font-medium text-slate-700">
+              Review cadence
+              <select
+                value={saveViewFrequency}
+                onChange={(event) => setSaveViewFrequency(event.target.value as 'off' | 'daily' | 'weekly')}
+                className={`mt-1 h-9 rounded-md border border-slate-300 bg-white px-2 text-sm ${FOCUS_RING}`}
+              >
+                <option value="weekly">Weekly</option>
+                <option value="daily">Daily</option>
+                <option value="off">Off</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              disabled={!saveViewName.trim()}
+              onClick={() => void persistCurrentView()}
+              className={`h-9 rounded-md bg-slate-900 px-3 text-xs font-medium text-white disabled:opacity-50 ${FOCUS_RING}`}
+            >
+              Save current filters
+            </button>
+          </div>
+        )}
 
         {filtersOpen && (
           <div
@@ -1057,27 +1476,46 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
                 </div>
               </div>
 
-              {/* Score range */}
-              <div className="flex min-w-[180px] flex-col gap-1">
-                <label
-                  htmlFor="parcel-intel-minscore"
-                  className="text-xs font-medium uppercase tracking-wide text-slate-500"
-                >
-                  Min score: {minScorePct}%
+              <div className="flex flex-col gap-1">
+                <label htmlFor="parcel-intel-priority" className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Priority
                 </label>
-                <input
-                  id="parcel-intel-minscore"
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={minScorePct}
-                  onChange={(e) => {
-                    noteFilterChange('min_score');
-                    setMinScorePct(Number(e.target.value));
+                <select
+                  id="parcel-intel-priority"
+                  value={priorityFilter}
+                  onChange={(event) => {
+                    noteFilterChange('priority');
+                    setPriorityFilter(event.target.value as PriorityFilter);
                   }}
-                  className={`h-2 cursor-pointer accent-slate-900 ${FOCUS_RING}`}
-                />
+                  className={`h-7 rounded-md border border-slate-300 bg-white px-2 text-xs ${FOCUS_RING}`}
+                >
+                  <option value="all">All ranks</option>
+                  <option value="highest">Highest only</option>
+                  <option value="high_or_better">High or better</option>
+                  <option value="medium_or_better">Medium or better</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label htmlFor="parcel-intel-opportunity" className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Opportunity
+                </label>
+                <select
+                  id="parcel-intel-opportunity"
+                  value={opportunityFilter}
+                  onChange={(event) => {
+                    noteFilterChange('opportunity');
+                    setOpportunityFilter(event.target.value as OpportunityFilter);
+                  }}
+                  className={`h-7 rounded-md border border-slate-300 bg-white px-2 text-xs ${FOCUS_RING}`}
+                >
+                  <option value="all">All categories</option>
+                  <option value="ground_up">Ground-up acquisition sites</option>
+                  <option value="vacant_site">Vacant sites</option>
+                  <option value="ground_up_candidate">Ground-up candidates</option>
+                  <option value="conversion_or_overbuilt">Conversion / overbuilt</option>
+                  <option value="active_project">Active projects</option>
+                </select>
               </div>
 
               {filterCount > 0 && (
@@ -1094,7 +1532,14 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
         )}
 
         {/* Detail panel */}
-        <ParcelDetailPanel row={selected} onClose={() => setSelectedBbl(null)} />
+        <ParcelDetailPanel
+          row={selected}
+          onClose={() => setSelectedBbl(null)}
+          workflowItem={selected ? workflow.get(selected.bbl) ?? null : null}
+          workflowBusy={selected ? workflowBusyBbl === selected.bbl : false}
+          onSaveWorkflow={saveWorkflowForSelected}
+          onRemoveWorkflow={removeSelectedFromWorkflow}
+        />
 
         {/* Compact list */}
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -1234,6 +1679,11 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
                           </div>
                           <div className="font-mono text-xs text-slate-500">
                             {r.bbl}
+                            {workflow.has(r.bbl) && (
+                              <span className="ml-1 rounded-full bg-sky-50 px-1 font-sans text-sky-800">
+                                {WORKFLOW_STAGE_LABELS[workflow.get(r.bbl)!.stage]}
+                              </span>
+                            )}
                             {r.is_landmark && (
                               <span className="ml-1 rounded-full bg-rose-50 px-1 text-rose-700">
                                 LPC
@@ -1252,9 +1702,15 @@ export function ParcelIntelWorkspace({ rows, borough, boroughDisplayName }: Prop
                             {formatCurrency(r.last_sale_price)} ·{' '}
                             {r.years_held ?? '—'}y held
                           </div>
+                          <div className="mt-0.5 text-[11px] text-slate-500">
+                            {opportunityLabel(r.opportunity_category)}
+                          </div>
                         </td>
                         <td className="px-3 py-2 font-semibold text-slate-900">
-                          {formatScore(r.score_calibrated)}
+                          <div>{formatPriority(r)}</div>
+                          <div className="text-[10px] font-normal text-slate-500">
+                            {priorityTierLabel(r.priority_tier)}
+                          </div>
                         </td>
                         <td className="px-3 py-2 text-xs text-slate-700">
                           {formatNumber(r.lot_area_sqft)}

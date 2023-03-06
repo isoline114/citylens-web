@@ -33,15 +33,14 @@ describe('HomePage', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: /Building-level urban change detection/i,
+        name: /Find NYC development sites before the broker call/i,
       }),
     ).toBeInTheDocument();
 
-    expect(screen.getByRole('link', { name: /view featured demo/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Create a run' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /api docs/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Explore parcel opportunities/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /See aerial evidence/i })).toBeInTheDocument();
 
-    expect(screen.getByText(/NYC, 5 boroughs/i)).toBeInTheDocument();
+    expect(screen.getByText(/NYC acquisition intelligence · all 5 boroughs/i)).toBeInTheDocument();
 
     // "What you get per run" — real-output panel
     expect(
@@ -58,13 +57,13 @@ describe('HomePage', () => {
     expect(screen.getByTestId('run-form')).toBeInTheDocument();
   });
 
-  it('omits the "View featured demo" CTA gracefully when no demos load', async () => {
+  it('omits the aerial-evidence CTA gracefully when no demos load', async () => {
     mocks.fetchFeaturedDemosOnServer.mockResolvedValueOnce([]);
 
     const tree = await HomePage();
     render(tree);
 
-    expect(screen.queryByRole('link', { name: /view featured demo/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /See aerial evidence/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/no featured demos found/i)).not.toBeInTheDocument();
   });
 });

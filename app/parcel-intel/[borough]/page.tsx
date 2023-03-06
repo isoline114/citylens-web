@@ -39,16 +39,18 @@ export async function generateMetadata({
   const name = DISPLAY_NAMES[borough] ?? 'Borough';
   return {
     title: `${name} parcel intelligence — CityLens`,
-    description: `Top redevelopment candidates in ${name}, ranked by P(redevelopment) under temporal holdout.`,
+    description: `Priority development-site leads in ${name}, with current parcel facts, ownership context, and acquisition workflow.`,
   };
 }
 
 export default async function BoroughParcelIntelPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ borough: string }>;
+  searchParams: Promise<{ bbl?: string }>;
 }) {
-  const { borough } = await params;
+  const [{ borough }, { bbl }] = await Promise.all([params, searchParams]);
   if (!VALID_BOROUGHS.has(borough)) notFound();
   const displayName = DISPLAY_NAMES[borough];
 
@@ -98,7 +100,7 @@ export default async function BoroughParcelIntelPage({
         </h1>
         <p className="mt-2 max-w-prose text-sm text-slate-600">
           {sweep && sweep.rows.length > 0
-            ? `${sweep.rows.length} parcels ranked by calibrated probability of new-building permit issuance. Click any row or marker for the full feature breakdown and the per-parcel reasoning.`
+            ? `${sweep.rows.length} parcel leads ranked into priority tiers. Open a site to review current facts, provenance, acquisition notes, and a quick land-basis screen.`
             : 'No data published for this borough yet.'}
         </p>
       </header>
@@ -109,6 +111,7 @@ export default async function BoroughParcelIntelPage({
             rows={sweep.rows}
             borough={borough}
             boroughDisplayName={displayName}
+            initialBbl={bbl ?? null}
           />
           <MethodologyPanel metrics={metrics} />
         </>
@@ -130,7 +133,6 @@ export default async function BoroughParcelIntelPage({
 // `neonAuth &&` guard above keeps the prod-only semantics explicit.
 
 function MethodologyPanel({ metrics }: { metrics: ParcelIntelMetrics }) {
-  const pct100 = Math.round(metrics.precisionAt100 * 100);
   return (
     <section className="mt-12 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
       <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200">
@@ -141,10 +143,10 @@ function MethodologyPanel({ metrics }: { metrics: ParcelIntelMetrics }) {
         How the ranking works
       </h2>
       <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-        Every NYC tax lot (~858k parcels) is scored by a calibrated gradient-boosted
-        classifier trained on PLUTO 2018 features against actual New-Building permits
-        filed 2019-2024. The model emits a per-parcel probability that reflects how
-        much each parcel looks like a known redevelopment.
+        Every NYC tax lot (~858k parcels) receives a model ranking based on a frozen
+        PLUTO 2018 feature snapshot and subsequent 2019–2024 New-Building activity.
+        CityLens presents the output as an ordinal priority tier—not as a literal
+        probability of a future acquisition or permit.
       </p>
 
       <dl className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -171,29 +173,29 @@ function MethodologyPanel({ metrics }: { metrics: ParcelIntelMetrics }) {
             Honesty guardrails
           </dt>
           <dd className="mt-2 text-xs leading-5 text-slate-600">
-            <strong>Temporal holdout:</strong> features frozen at PLUTO 2018, labels
-            taken from 2019-2024 NB filings — so the model can&apos;t see post-event
-            ground truth. <strong>Year-built bucketed</strong> at 2010 to prevent
+            <strong>Forward-label design:</strong> features are frozen at PLUTO 2018 and
+            labels come from 2019–2024 NB filings, preventing post-event attributes from
+            entering the feature row. This is not a prospective 2026 cohort test.
+            <strong> Year-built is bucketed</strong> at 2010 to prevent
             redevelopment leakage. <strong>Stratified hard-negative sampling</strong>{' '}
             (5× positives) so the 770k easy negatives don&apos;t swamp training.
-            <strong> Isotonic post-calibration</strong> on a temporal validation slice
-            so the probabilities are monotone and well-ordered, not just relative ranks.
+            Headline metrics come from population-level held-out tax blocks; same-cohort
+            historical-fit diagnostics are retained separately and are not promoted.
           </dd>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <dt className="flex items-center gap-2 text-sm font-semibold text-slate-900">
             <MapPin className="h-4 w-4 text-amber-600" />
-            What a high score means
+            What a high priority means
           </dt>
           <dd className="mt-2 text-xs leading-5 text-slate-600">
-            <strong>P@100 = {formatPrecisionAt100(metrics.precisionAt100)}</strong>: {pct100} of
-            every 100 top-scored parcels actually received an NB permit in the{' '}
-            {metrics.labelWindow} holdout window. <strong>AUC = {formatAuc(metrics.auc)}</strong>{' '}
-            in aggregate. A high score is <em>not</em> a guarantee — it&apos;s
-            &quot;this parcel looks structurally similar to the redevelopments we&apos;ve
-            seen.&quot; Verify against current LPC status, ACRIS owner chain, and DOB filings
-            before acting.
+            The current artifact reports population held-out P@100 of{' '}
+            <strong>{formatPrecisionAt100(metrics.precisionAt100)}</strong> and AUC{' '}
+            <strong>{formatAuc(metrics.auc)}</strong>. These numbers measure ranking on the
+            historical evaluation cohort and should not be read as independent prospective
+            2026 performance. A high-priority parcel looks structurally similar to past
+            redevelopments; it is not necessarily available, feasible, or acquirable.
           </dd>
         </div>
       </dl>
@@ -203,9 +205,10 @@ function MethodologyPanel({ metrics }: { metrics: ParcelIntelMetrics }) {
           <strong>Caveats.</strong> Some &quot;parcels&quot; in PLUTO are administrative entities
           (transit ROW, condo billing units, institutional campuses) and don&apos;t
           represent realistic redev sites. We filter these via lot-area bands and
-          land-use exclusions, but a few slip through. The per-parcel reasoning is
-          rule-based, not a SHAP-style attribution — it surfaces the strongest features
-          the model actually consumed, not a literal coefficient breakdown.
+          land-use exclusions and separate overbuilt/conversion sites from ground-up leads.
+          The plain-language reasons are rule-based; the separate model-attribution section
+          contains the published SHAP contributions. Always verify city records and zoning
+          counsel before acting.
         </p>
       </div>
     </section>

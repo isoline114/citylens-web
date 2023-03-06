@@ -21,8 +21,6 @@ export type Reason = {
 };
 
 const VACANT_LAND_USE = '11';
-const RES_LAND_USES = new Set(['01', '02', '03', '04']);
-const COMM_LAND_USES = new Set(['05', '06']);
 
 function moneyShort(n: number | null | undefined): string {
   if (n === null || n === undefined) return '';

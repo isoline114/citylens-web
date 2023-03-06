@@ -355,6 +355,8 @@ export type ParcelIntelRow = {
   score_calibrated: number | null;
   score_calibrated_p10: number | null;
   score_calibrated_p90: number | null;
+  priority_rank?: number | null;
+  priority_tier?: 'highest' | 'high' | 'medium' | 'watch';
   lot_area_sqft: number | null;
   allowed_far: number | null;
   max_floor_area_sqft: number | null;
@@ -368,6 +370,8 @@ export type ParcelIntelRow = {
   // transit ROW) lack polygon geometry — those have null lat/lng.
   lat: number | null;
   lng: number | null;
+  /** Current NYC tax-lot GeoJSON geometry, used to outline the selected site. */
+  parcel_geometry?: Record<string, unknown> | null;
   last_sale_price: number | null;
   last_sale_year: number | null;
   years_held: number | null;
@@ -389,12 +393,31 @@ export type ParcelIntelRow = {
   /** Top-K SHAP attributions for the parcel. Empty when SHAP is unavailable. */
   top_features: TopFeature[];
   /**
-   * Validation status against the latest PLUTO snapshot + DOB labels:
+   * Validation status against the latest PLUTO snapshot + current DOB:
    *   - "still_vacant"  — clean redev candidate (default).
-   *   - "active"        — NB-permitted 2019-2024 OR year_built bumped post-2018.
+   *   - "active"        — recent non-closed NB activity or year_built bump.
    *   - "already_built" — completed; publisher should have filtered out before us.
    */
   redev_status: 'still_vacant' | 'active' | 'already_built';
+  latest_nb_filing_year?: number | null;
+  latest_nb_status?: string | null;
+  opportunity_category?:
+    | 'vacant_site'
+    | 'ground_up_candidate'
+    | 'conversion_or_overbuilt'
+    | 'active_project'
+    | 'completed_project';
+  property_facts_current?: boolean;
+  property_facts_as_of?: string | null;
+  ownership_as_of?: string | null;
+  project_activity_as_of?: string | null;
+  data_warnings?: string[];
+  assemblage_id?: string | null;
+  assemblage_lot_count?: number | null;
+  assemblage_combined_lot_area_sqft?: number | null;
+  assemblage_combined_buildable_sqft?: number | null;
+  assemblage_member_bbls?: string[];
+  observed_imagery_year?: number | null;
 };
 
 export type ParcelIntelBorough = {
@@ -408,6 +431,9 @@ export type ParcelIntelIndex = {
   boroughs: ParcelIntelBorough[];
   generated_at: string | null;
   model_metadata: Record<string, unknown>;
+  data_sources?: Record<string, unknown>;
+  age_days?: number | null;
+  stale?: boolean;
 };
 
 export type ParcelIntelSweepResponse = {
@@ -415,6 +441,89 @@ export type ParcelIntelSweepResponse = {
   rows: ParcelIntelRow[];
   generated_at: string | null;
   model_metadata: Record<string, unknown>;
+  data_sources?: Record<string, unknown>;
+};
+
+export type ParcelWorkflowStage =
+  | 'new'
+  | 'reviewing'
+  | 'contacted'
+  | 'underwriting'
+  | 'pursue'
+  | 'pass';
+
+export type ParcelWorkflowSnapshot = {
+  property_facts_as_of: string | null;
+  zoning_district_1: string | null;
+  land_use: string | null;
+  year_built: number | null;
+  allowed_far: number | null;
+  unused_floor_area_sqft: number | null;
+  owner_name: string | null;
+  last_sale_year: number | null;
+  latest_nb_filing_year: number | null;
+  latest_nb_status: string | null;
+  redev_status: 'still_vacant' | 'active' | 'already_built' | null;
+  observed_imagery_year: number | null;
+};
+
+export type ParcelWorkflowItem = {
+  bbl: string;
+  borough: string;
+  stage: ParcelWorkflowStage;
+  notes: string;
+  tags: string[];
+  assignee: string | null;
+  watching: boolean;
+  decision_reason: string | null;
+  outcome:
+    | 'unknown'
+    | 'owner_contacted'
+    | 'meeting_scheduled'
+    | 'offer_submitted'
+    | 'under_contract'
+    | 'closed'
+    | 'lost';
+  snapshot: ParcelWorkflowSnapshot;
+  saved_at: string;
+  updated_at: string;
+};
+
+export type ParcelSavedSearchFilters = {
+  landUseFilter: 'all' | 'residential' | 'commercial' | 'industrial' | 'vacant';
+  priorityFilter: 'all' | 'highest' | 'high_or_better' | 'medium_or_better';
+  opportunityFilter:
+    | 'all'
+    | 'ground_up'
+    | 'vacant_site'
+    | 'ground_up_candidate'
+    | 'conversion_or_overbuilt'
+    | 'active_project';
+  hideLandmarked: boolean;
+  recentSaleOnly: boolean;
+  recentChangeOnly: boolean;
+  pipelineOnly: boolean;
+  zoningFamilies: Array<'R' | 'C' | 'M' | 'Other'>;
+  sortKey:
+    | 'score_calibrated'
+    | 'lot_area_sqft'
+    | 'last_sale_price'
+    | 'years_held'
+    | 'year_built'
+    | 'num_floors'
+    | 'allowed_far'
+    | 'far_utilization_pct';
+  direction: 'asc' | 'desc';
+};
+
+export type ParcelSavedSearch = {
+  search_id: string;
+  name: string;
+  borough: string;
+  filters: ParcelSavedSearchFilters;
+  alert_frequency: 'off' | 'daily' | 'weekly';
+  created_at: string;
+  updated_at: string;
 };
 
 export async function getParcelIntelIndex(): Promise<ParcelIntelIndex> {
@@ -432,5 +541,47 @@ export async function getParcelIntelSweep(
     `/v1/parcel-intel/sweep?${params.toString()}`,
     undefined,
     { includeAuth: false },
+  );
+}
+
+export async function listParcelWorkflow(): Promise<ParcelWorkflowItem[]> {
+  return requestJson<ParcelWorkflowItem[]>('/v1/parcel-intel/workflow');
+}
+
+export async function saveParcelWorkflow(
+  bbl: string,
+  item: Omit<ParcelWorkflowItem, 'bbl' | 'saved_at' | 'updated_at'>,
+): Promise<ParcelWorkflowItem> {
+  return requestJson<ParcelWorkflowItem>(
+    `/v1/parcel-intel/workflow/${encodeURIComponent(bbl)}`,
+    { method: 'PUT', body: JSON.stringify(item) },
+  );
+}
+
+export async function removeParcelWorkflow(bbl: string): Promise<void> {
+  await requestJson<unknown>(
+    `/v1/parcel-intel/workflow/${encodeURIComponent(bbl)}`,
+    { method: 'DELETE' },
+  );
+}
+
+export async function listParcelSavedSearches(): Promise<ParcelSavedSearch[]> {
+  return requestJson<ParcelSavedSearch[]>('/v1/parcel-intel/saved-searches');
+}
+
+export async function saveParcelSearch(
+  searchId: string,
+  item: Pick<ParcelSavedSearch, 'name' | 'borough' | 'filters' | 'alert_frequency'>,
+): Promise<ParcelSavedSearch> {
+  return requestJson<ParcelSavedSearch>(
+    `/v1/parcel-intel/saved-searches/${encodeURIComponent(searchId)}`,
+    { method: 'PUT', body: JSON.stringify(item) },
+  );
+}
+
+export async function removeParcelSavedSearch(searchId: string): Promise<void> {
+  await requestJson<unknown>(
+    `/v1/parcel-intel/saved-searches/${encodeURIComponent(searchId)}`,
+    { method: 'DELETE' },
   );
 }

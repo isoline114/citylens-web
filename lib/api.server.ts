@@ -102,6 +102,7 @@ export async function fetchParcelIntelIndexOnServer(): Promise<ParcelIntelIndex>
     boroughs: [],
     generated_at: null,
     model_metadata: {},
+    data_sources: {},
   };
   if (process.env.CITYLENS_DISABLE_SSR_PARCEL_INTEL === '1') return empty;
 

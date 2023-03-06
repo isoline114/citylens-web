@@ -62,51 +62,38 @@ export default async function HomePage() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
               </span>
-              v0.1 · NYC, 5 boroughs · public demos free
+              NYC acquisition intelligence · all 5 boroughs
             </div>
 
             <h1 className="text-balance text-4xl font-semibold tracking-tight text-slate-950 md:text-[3.25rem] md:leading-[1.05]">
-              Building-level urban change detection from aerial imagery.
+              Find NYC development sites before the broker call.
             </h1>
 
             <p className="max-w-prose text-base leading-7 text-slate-600 md:text-lg md:leading-8">
-              Type any NYC address. CityLens fuses the latest orthophoto with NYC&apos;s
-              baseline footprints and NYS LiDAR, then returns a classified{' '}
-              <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[13px] text-slate-800 ring-1 ring-inset ring-slate-200">
-                change.geojson
-              </code>
-              , a LOD1{' '}
-              <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[13px] text-slate-800 ring-1 ring-inset ring-slate-200">
-                mesh.ply
-              </code>
-              , and a rendered preview — every input SHA-256 recorded.
+              CityLens ranks every tax lot, refreshes current zoning and project activity,
+              explains why each lead matters, and gives your team a pipeline for deciding
+              what to call on, underwrite, pursue, or pass.
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <Link
+                href="/parcel-intel"
+                className="group inline-flex h-11 items-center justify-center gap-2 rounded-md bg-slate-900 px-5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-800"
+              >
+                Explore parcel opportunities
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
               {featured.length > 0 && (
                 <Link
                   href="#featured-demos"
-                  className="group inline-flex h-11 items-center justify-center gap-2 rounded-md bg-slate-900 px-5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-800"
+                  className="inline-flex h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-5 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50"
                 >
-                  View featured demo
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  See aerial evidence
                 </Link>
               )}
-              <Link
-                href="#create"
-                className="inline-flex h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-5 text-sm font-medium text-slate-900 transition-colors hover:bg-slate-50"
-              >
-                Create a run
-              </Link>
-              <Link
-                href="/docs"
-                className="inline-flex h-11 items-center justify-center text-sm font-medium text-slate-600 hover:text-slate-900"
-              >
-                API docs →
-              </Link>
             </div>
             <p className="text-xs text-slate-500">
-              Public demos don&apos;t require sign-in. Creating a custom run requires a free account.
+              Create a free account to open the full ranked workspace and acquisition pipeline.
             </p>
           </div>
 
@@ -173,7 +160,7 @@ export default async function HomePage() {
               How it works
             </div>
             <h2 id="how-it-works" className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
-              Address in. Reproducible artifacts out.
+              Discover. Qualify. Pursue.
             </h2>
           </div>
         </div>
@@ -183,13 +170,12 @@ export default async function HomePage() {
             n={1}
             accent="sky"
             icon={<MapPin className="h-4 w-4" />}
-            title="Type an NYC address"
-            body="We geocode it, snap to a 250m AOI, and pull the latest USGS NAIP orthophoto."
+            title="Start with ranked opportunities"
+            body="Scan priority development-site leads across all five boroughs instead of assembling a list by hand."
             visual={
               <div className="font-mono text-[13px] text-slate-700">
-                <span className="text-slate-400">&gt;</span> 100 E 21st St,{' '}
-                <span className="text-sky-700">Brooklyn</span>
-                <span className="ml-0.5 inline-block h-3.5 w-1.5 translate-y-0.5 animate-pulse bg-slate-400" />
+                <span className="text-slate-400">#1</span>{' '}
+                <span className="text-sky-700">Highest priority</span> · Brooklyn
               </div>
             }
           />
@@ -197,15 +183,15 @@ export default async function HomePage() {
             n={2}
             accent="amber"
             icon={<Layers className="h-4 w-4" />}
-            title="Fuse imagery + footprints + LiDAR"
-            body="SAM2 segments rooftops; we align them against NYC OpenData footprints and lift heights from NYS LiDAR p95."
+            title="Verify current facts"
+            body="Review current PLUTO capacity, DOB activity, ACRIS ownership, constraints, and dated aerial observations in one brief."
             visual={
               <div className="flex items-center gap-1.5">
-                <FuseChip label="orthophoto" tone="bg-sky-100 text-sky-800 ring-sky-200" />
+                <FuseChip label="PLUTO" tone="bg-sky-100 text-sky-800 ring-sky-200" />
                 <span className="text-slate-300">+</span>
-                <FuseChip label="footprints" tone="bg-amber-100 text-amber-800 ring-amber-200" />
+                <FuseChip label="DOB" tone="bg-amber-100 text-amber-800 ring-amber-200" />
                 <span className="text-slate-300">+</span>
-                <FuseChip label="LiDAR" tone="bg-emerald-100 text-emerald-800 ring-emerald-200" />
+                <FuseChip label="ACRIS" tone="bg-emerald-100 text-emerald-800 ring-emerald-200" />
               </div>
             }
           />
@@ -213,13 +199,13 @@ export default async function HomePage() {
             n={3}
             accent="emerald"
             icon={<Sparkles className="h-4 w-4" />}
-            title="Get classified change + 3D mesh"
-            body="Per-building change class, vertex-colored LOD1 mesh, and a one-page run summary — all downloadable."
+            title="Move the lead forward"
+            body="Save it, assign a stage, add notes and tags, watch for changes, and run a quick maximum-land-basis screen."
             visual={
               <div className="flex items-center gap-1.5 font-mono text-[11px]">
-                <ArtifactPill label="preview.png" />
-                <ArtifactPill label="change.geojson" />
-                <ArtifactPill label="mesh.ply" />
+                <ArtifactPill label="reviewing" />
+                <ArtifactPill label="underwriting" />
+                <ArtifactPill label="pursue" />
               </div>
             }
           />

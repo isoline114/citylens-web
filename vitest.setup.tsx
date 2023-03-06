@@ -5,11 +5,17 @@ import { vi } from 'vitest';
 
 vi.mock('next/image', () => ({
   default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => {
-    const { src, alt, priority, fill, placeholder, ...rest } = props as React.ImgHTMLAttributes<HTMLImageElement> & {
+    const { src, alt, ...rest } = props as React.ImgHTMLAttributes<HTMLImageElement> & {
       priority?: boolean;
       fill?: boolean;
       placeholder?: string;
+      unoptimized?: boolean;
     };
+    delete rest.priority;
+    delete rest.fill;
+    delete rest.placeholder;
+    delete rest.unoptimized;
+    // eslint-disable-next-line @next/next/no-img-element
     return <img src={typeof src === 'string' ? src : ''} alt={alt} {...rest} />;
   },
 }));

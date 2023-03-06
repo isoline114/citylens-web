@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap } from 'react-leaflet';
+import { CircleMarker, GeoJSON, MapContainer, TileLayer, Tooltip, useMap } from 'react-leaflet';
 import type { LatLngBoundsExpression, LatLngTuple } from 'leaflet';
+import type { GeoJsonObject } from 'geojson';
 import type { ParcelIntelRow } from '@/lib/api';
 import {
   colorForRank,
@@ -161,6 +162,12 @@ export function ParcelIntelMap({ borough, rows, selectedBbl, onSelect }: Props) 
   const boundsKey = useMemo(() => membershipKey(mappable), [mappable]);
 
   const bands = useMemo(() => legendBands(total), [total]);
+  const selectedGeometry = useMemo(
+    () => rows.find((row) => row.bbl === selectedBbl)?.parcel_geometry as
+      | GeoJsonObject
+      | undefined,
+    [rows, selectedBbl],
+  );
 
   // A computed initial center/zoom that already targets the borough
   // even before FitBoundsAndInvalidate runs. Prevents the brief
@@ -187,6 +194,18 @@ export function ParcelIntelMap({ borough, rows, selectedBbl, onSelect }: Props) 
         />
         <FitBoundsAndInvalidate rows={mappable} boundsKey={boundsKey} fallback={fallback} />
         <PanToSelected rows={rows} selectedBbl={selectedBbl} />
+        {selectedGeometry && (
+          <GeoJSON
+            key={`parcel-outline-${selectedBbl}`}
+            data={selectedGeometry}
+            style={{
+              color: '#0f172a',
+              weight: 3,
+              fillColor: '#38bdf8',
+              fillOpacity: 0.22,
+            }}
+          />
+        )}
         {rendered.map((r) => {
           const isSelected = r.bbl === selectedBbl;
           const scoreRank = scoreRanks.get(r.bbl) ?? total - 1;
@@ -211,10 +230,8 @@ export function ParcelIntelMap({ borough, rows, selectedBbl, onSelect }: Props) 
                 <div className="text-xs">
                   <div className="font-semibold">{r.address ?? r.bbl}</div>
                   <div className="text-slate-600">
-                    Rank #{scoreRank + 1} ·{' '}
-                    {typeof r.score_calibrated === 'number'
-                      ? `${(r.score_calibrated * 100).toFixed(0)}%`
-                      : '—'}
+                    Priority #{r.priority_rank ?? scoreRank + 1} ·{' '}
+                    {r.priority_tier ? `${r.priority_tier.replace('_', ' ')} tier` : 'ranked lead'}
                   </div>
                 </div>
               </Tooltip>

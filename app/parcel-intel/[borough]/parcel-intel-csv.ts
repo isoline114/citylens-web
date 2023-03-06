@@ -32,16 +32,9 @@ const COLUMNS: Column[] = [
   { header: 'Address', value: (r) => r.address },
   { header: 'BBL', value: (r) => r.bbl },
   { header: 'Borough', value: (r) => r.borough },
-  {
-    header: 'Score (%)',
-    value: (r) =>
-      typeof r.score_calibrated === 'number'
-        ? (r.score_calibrated * 100).toFixed(1)
-        : null,
-  },
-  // Rank is by calibrated score (descending) within the exported set, not
-  // the on-screen sort order — matches the map's rank-coded marker colors.
-  { header: 'Rank', value: (_r, scoreRank) => scoreRank },
+  { header: 'Priority rank', value: (r, scoreRank) => r.priority_rank ?? scoreRank },
+  { header: 'Priority tier', value: (r) => r.priority_tier },
+  { header: 'Opportunity', value: (r) => r.opportunity_category },
   { header: 'Zoning', value: (r) => r.zoning_district_1 },
   { header: 'Land use', value: (r) => r.land_use },
   { header: 'Lot area (sqft)', value: (r) => r.lot_area_sqft },
@@ -60,6 +53,12 @@ const COLUMNS: Column[] = [
   { header: 'Landmark', value: (r) => (r.is_landmark ? 'yes' : 'no') },
   { header: 'Historic district', value: (r) => (r.is_historic_district ? 'yes' : 'no') },
   { header: 'Status', value: (r) => r.redev_status },
+  { header: 'Latest NB filing year', value: (r) => r.latest_nb_filing_year },
+  { header: 'Latest NB status', value: (r) => r.latest_nb_status },
+  { header: 'PLUTO facts as of', value: (r) => r.property_facts_as_of },
+  { header: 'ACRIS ownership as of', value: (r) => r.ownership_as_of },
+  { header: 'DOB activity as of', value: (r) => r.project_activity_as_of },
+  { header: 'Imagery observed through', value: (r) => r.observed_imagery_year },
   { header: 'Top model factors', value: (r) => flattenTopFeatures(r.top_features) },
 ];
 

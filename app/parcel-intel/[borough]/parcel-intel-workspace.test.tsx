@@ -23,6 +23,19 @@ vi.mock('@/lib/analytics', () => ({
   trackEvent: mocks.trackEvent,
 }));
 
+vi.mock('@/lib/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api')>();
+  return {
+    ...actual,
+    listParcelWorkflow: vi.fn(() => new Promise(() => undefined)),
+    listParcelSavedSearches: vi.fn(() => new Promise(() => undefined)),
+    saveParcelWorkflow: vi.fn(),
+    removeParcelWorkflow: vi.fn(),
+    saveParcelSearch: vi.fn(),
+    removeParcelSavedSearch: vi.fn(),
+  };
+});
+
 // Stub the dynamic-imported leaflet map so jsdom doesn't choke on
 // window.requestAnimationFrame / Leaflet's DOM globals.
 vi.mock('./parcel-intel-map', () => ({
@@ -31,8 +44,11 @@ vi.mock('./parcel-intel-map', () => ({
   ),
 }));
 
-import { ParcelIntelWorkspace } from './parcel-intel-workspace';
-import type { ParcelIntelRow } from '@/lib/api';
+import {
+  hasWatchedParcelChanged,
+  ParcelIntelWorkspace,
+} from './parcel-intel-workspace';
+import type { ParcelIntelRow, ParcelWorkflowItem } from '@/lib/api';
 
 function row(overrides: Partial<ParcelIntelRow>): ParcelIntelRow {
   return {
@@ -42,6 +58,8 @@ function row(overrides: Partial<ParcelIntelRow>): ParcelIntelRow {
     score_calibrated: 0.5,
     score_calibrated_p10: null,
     score_calibrated_p90: null,
+    priority_rank: 1,
+    priority_tier: 'highest',
     lot_area_sqft: 5000,
     allowed_far: 4,
     max_floor_area_sqft: 20000,
@@ -62,10 +80,63 @@ function row(overrides: Partial<ParcelIntelRow>): ParcelIntelRow {
     block_id: '300000',
     block_rank: 1,
     redev_status: 'still_vacant',
+    opportunity_category: 'ground_up_candidate',
+    property_facts_current: true,
     top_features: [],
     ...overrides,
   };
 }
+
+function workflowItem(overrides: Partial<ParcelWorkflowItem> = {}): ParcelWorkflowItem {
+  return {
+    bbl: '3000000001',
+    borough: 'brooklyn',
+    stage: 'new',
+    notes: '',
+    tags: [],
+    assignee: null,
+    watching: true,
+    decision_reason: null,
+    outcome: 'unknown',
+    snapshot: {
+      property_facts_as_of: '2026-06-01',
+      zoning_district_1: 'R7A',
+      land_use: '11',
+      year_built: 1900,
+      allowed_far: 4,
+      unused_floor_area_sqft: 15000,
+      owner_name: null,
+      last_sale_year: null,
+      latest_nb_filing_year: null,
+      latest_nb_status: null,
+      redev_status: 'still_vacant',
+      observed_imagery_year: 2024,
+    },
+    saved_at: '2026-06-01T00:00:00Z',
+    updated_at: '2026-06-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+describe('watched parcel comparisons', () => {
+  it('ignores a source refresh date when parcel facts are unchanged', () => {
+    expect(
+      hasWatchedParcelChanged(
+        workflowItem(),
+        row({ property_facts_as_of: '2026-07-17', observed_imagery_year: 2024 }),
+      ),
+    ).toBe(false);
+  });
+
+  it('detects a decision-relevant parcel fact change', () => {
+    expect(
+      hasWatchedParcelChanged(
+        workflowItem(),
+        row({ zoning_district_1: 'R8A', observed_imagery_year: 2024 }),
+      ),
+    ).toBe(true);
+  });
+});
 
 describe('ParcelIntelWorkspace', () => {
   beforeEach(() => {
@@ -160,9 +231,9 @@ describe('ParcelIntelWorkspace', () => {
     expect(tableRow).not.toBeNull();
     fireEvent.click(tableRow as HTMLTableRowElement);
 
-    // The "Why it scored high" heading appears (uppercase tracking).
+    // The prioritization explanation heading appears.
     expect(
-      screen.getByRole('heading', { name: /Why it scored high/i }),
+      screen.getByRole('heading', { name: /Why CityLens prioritized it/i }),
     ).toBeInTheDocument();
     // Vacant residential reason should appear.
     expect(
@@ -170,6 +241,8 @@ describe('ParcelIntelWorkspace', () => {
     ).toBeInTheDocument();
     // Recent priced sale reason.
     expect(screen.getByText(/Sold for \$5\.0M 2022/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Disposition reason/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Outcome$/i)).toBeInTheDocument();
   });
 
   it('renders model attribution section when top_features are present', () => {
@@ -307,12 +380,12 @@ describe('ParcelIntelWorkspace', () => {
     expect(screen.queryByText('COMM')).not.toBeInTheDocument();
   });
 
-  it('min-score range slider filters out low-score rows', () => {
+  it('opportunity filter separates ground-up from overbuilt rows', () => {
     mocks.authState.status = 'authenticated';
     mocks.authState.user = { id: 'u1', email: 'a@b' };
     const rows = [
-      row({ bbl: '3000000001', address: 'HIGH', score_calibrated: 0.95 }),
-      row({ bbl: '3000000002', address: 'LOW', score_calibrated: 0.4 }),
+      row({ bbl: '3000000001', address: 'GROUND UP', opportunity_category: 'ground_up_candidate' }),
+      row({ bbl: '3000000002', address: 'OVERBUILT', opportunity_category: 'conversion_or_overbuilt' }),
     ];
     render(
       <ParcelIntelWorkspace
@@ -323,10 +396,11 @@ describe('ParcelIntelWorkspace', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: /^Filters$/i }));
-    const slider = screen.getByLabelText(/Min score/i);
-    fireEvent.change(slider, { target: { value: '50' } });
-    expect(screen.getByText('HIGH')).toBeInTheDocument();
-    expect(screen.queryByText('LOW')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Opportunity/i), {
+      target: { value: 'ground_up_candidate' },
+    });
+    expect(screen.getByText('GROUND UP')).toBeInTheDocument();
+    expect(screen.queryByText('OVERBUILT')).not.toBeInTheDocument();
   });
 
   it('filters to recently changed parcels', () => {
@@ -370,7 +444,27 @@ describe('ParcelIntelWorkspace', () => {
     fireEvent.click(screen.getByText('OWNER PLACE').closest('tr') as HTMLTableRowElement);
 
     expect(screen.getByText('OWNER PLACE HOLDINGS LLC')).toBeInTheDocument();
-    expect(screen.getByText('Recently changed')).toBeInTheDocument();
+    expect(screen.getByText(/Change observed in 2017→/)).toBeInTheDocument();
+  });
+
+  it('opens a shared parcel brief from the initial BBL', () => {
+    mocks.authState.status = 'authenticated';
+    mocks.authState.user = { id: 'u1', email: 'a@b' };
+    render(
+      <ParcelIntelWorkspace
+        rows={[
+          row({
+            bbl: '3000000042',
+            address: 'SHARED BRIEF',
+            opportunity_category: 'active_project',
+          }),
+        ]}
+        borough="brooklyn"
+        boroughDisplayName="Brooklyn"
+        initialBbl="3000000042"
+      />,
+    );
+    expect(screen.getByRole('heading', { name: 'SHARED BRIEF' })).toBeInTheDocument();
   });
 
   it('disables the CSV export button when no rows match the filters', () => {
@@ -387,7 +481,9 @@ describe('ParcelIntelWorkspace', () => {
     expect(csvButton).toBeEnabled();
 
     fireEvent.click(screen.getByRole('button', { name: /^Filters$/i }));
-    fireEvent.change(screen.getByLabelText(/Min score/i), { target: { value: '90' } });
+    fireEvent.change(screen.getByLabelText(/Opportunity/i), {
+      target: { value: 'active_project' },
+    });
     expect(screen.getByRole('button', { name: /CSV/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /CSV/i })).toHaveAttribute(
       'title',

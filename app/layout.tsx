@@ -15,7 +15,7 @@ import { publicAssetPath } from '@/lib/site';
 
 const title = 'CityLens';
 const description =
-  'Urban change detection and 3D reconstruction from any NYC address. Sign up free, get 5 runs per month, download change.geojson and PLY mesh artifacts.';
+  'Find, qualify, and pursue NYC development-site opportunities with current parcel facts, ownership context, aerial evidence, and acquisition workflow.';
 
 export const metadata: Metadata = {
   // Canonical host is www — matches the production deployment and sitemap.
@@ -62,6 +62,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   <Link href="/parcel-intel" className="text-slate-700 hover:text-slate-950">
                     Parcels
                   </Link>
+                  <Link href="/pricing" className="text-slate-700 hover:text-slate-950">
+                    Pricing
+                  </Link>
                   <Link href="/docs" className="text-slate-700 hover:text-slate-950">
                     Docs
                   </Link>
@@ -82,6 +85,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 </Link>
                 <Link href="/parcel-intel" className="shrink-0 text-slate-700 hover:text-slate-950">
                   Parcels
+                </Link>
+                <Link href="/pricing" className="shrink-0 text-slate-700 hover:text-slate-950">
+                  Pricing
                 </Link>
                 <Link href="/docs" className="shrink-0 text-slate-700 hover:text-slate-950">
                   Docs
@@ -116,7 +122,7 @@ function SiteFooter() {
           />
           <span className="font-medium text-slate-900">CityLens</span>
           <span className="text-slate-400">·</span>
-          <span>NYC building change detection</span>
+          <span>NYC development-site intelligence</span>
         </div>
         <nav className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <Link href="/" className="hover:text-slate-900">
@@ -128,6 +134,10 @@ function SiteFooter() {
           <Link href="/docs" className="hover:text-slate-900">
             API docs
           </Link>
+          <Link href="/pricing" className="hover:text-slate-900">Pricing</Link>
+          <Link href="/contact" className="hover:text-slate-900">Contact</Link>
+          <Link href="/privacy" className="hover:text-slate-900">Privacy</Link>
+          <Link href="/terms" className="hover:text-slate-900">Terms</Link>
           <Link href="/account/api-keys" className="hover:text-slate-900">
             API keys
           </Link>
