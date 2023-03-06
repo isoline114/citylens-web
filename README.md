@@ -1,5 +1,16 @@
 # citylens-web
 
+The Parcel Intelligence surface at `/parcel-intel` is one citywide explorer,
+not five separate borough workspaces. Borough and eligibility filters update the
+same map/list, and selecting a lot opens its overview, underwriting, workflow,
+official-source links, provenance, and model explanation in an in-place parcel
+panel. Legacy `/parcel-intel/<borough>` links redirect into the citywide route.
+
+The UI consumes `published_sweep@v5` ranking/eligibility evidence. Model
+attributions describe historical DOB **activity records** (which can include
+filings, trade permits, and renewals tied to one job) and are never presented as
+a count of completed buildings or as evidence that an owner intends to sell.
+
 CityLens product frontend. Live at **https://www.citylens.dev**.
 
 [`citylens-web`](https://github.com/joshvern/citylens-web) is the user-facing
@@ -15,11 +26,11 @@ Next.js app for CityLens. It pairs with:
 
 - **Public, no sign-in**: featured demo runs (real precomputed CityLens
   output), the run-options API, the docs page, and the `/parcel-intel`
-  borough picker (NYC redevelopment-candidate rankings).
+  citywide map preview (NYC redevelopment-candidate rankings).
 - **Account-backed**: creating new runs, viewing your run history, the
-  monthly-quota dashboard, and the `/parcel-intel/[borough]` workspace
-  (server-side auth-gated map + list + SHAP attribution). Free plan includes
-  5 runs per month.
+  monthly-quota dashboard, and the complete `/parcel-intel` explorer with
+  parcel overview, underwriting, workflow, and model-attribution panels. Free
+  plan includes 5 runs per month.
 - **Auth**: email + password via Neon Auth. The browser obtains a
   short-lived JWT and includes it as `Authorization: Bearer <token>` on
   authenticated API calls. Normal users do not configure API keys.
@@ -72,7 +83,6 @@ Standard artifact filenames the UI renders:
 | `NEON_AUTH_BASE_URL` | Neon Auth managed URL (provisioned by the Vercel ↔ Neon integration). |
 | `NEON_AUTH_COOKIE_SECRET` | ≥32 chars; signs Neon Auth session cookies. |
 | `CITYLENS_API_INTERNAL_URL` | Optional override for the SSR-side API URL (e.g. private VPC). |
-| `CITYLENS_SERVER_API_KEY` | Optional server-only `clk_live_` key used by authenticated parcel-intel SSR to request the full feed; set in Vercel production. |
 | `NEXT_PUBLIC_ERROR_REPORTING_DSN` | Optional browser-safe error ingestion endpoint; reporting is disabled when unset. |
 | `NEXT_PUBLIC_SITE_BASE_PATH` | Optional path prefix when hosted under a subpath. |
 

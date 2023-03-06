@@ -357,6 +357,20 @@ export type ParcelIntelRow = {
   score_calibrated_p90: number | null;
   priority_rank?: number | null;
   priority_tier?: 'highest' | 'high' | 'medium' | 'watch';
+  /** Original order from the historical redevelopment-similarity model. */
+  model_rank?: number | null;
+  /** Rank among parcels that pass current acquisition eligibility gates. */
+  acquisition_rank?: number | null;
+  citywide_rank?: number | null;
+  acquisition_eligible?: boolean | null;
+  acquisition_status?:
+    | 'eligible'
+    | 'active_project'
+    | 'completed_project'
+    | 'constrained'
+    | 'incomplete_data'
+    | null;
+  acquisition_exclusion_reasons?: string[];
   lot_area_sqft: number | null;
   allowed_far: number | null;
   max_floor_area_sqft: number | null;
@@ -382,6 +396,9 @@ export type ParcelIntelRow = {
   block_rank: number | null;
   /** Current deed owner from the ACRIS sidecar, when published. */
   owner_name?: string | null;
+  owner_name_source?: 'acris' | 'pluto' | null;
+  /** NYC PLUTO owner category; public/tax-exempt classes are not ranked. */
+  owner_type?: string | null;
   /** Detected building-change observations from the published CityLens index. */
   change_added_count?: number;
   change_demolished_count?: number;
@@ -395,12 +412,20 @@ export type ParcelIntelRow = {
   /**
    * Validation status against the latest PLUTO snapshot + current DOB:
    *   - "still_vacant"  — clean redev candidate (default).
-   *   - "active"        — recent non-closed NB activity or year_built bump.
-   *   - "already_built" — completed; publisher should have filtered out before us.
+   *   - "active"        — recent non-terminated project activity or year_built bump.
+   *   - "already_built" — completed project or current PLUTO build-out evidence.
    */
   redev_status: 'still_vacant' | 'active' | 'already_built';
   latest_nb_filing_year?: number | null;
   latest_nb_status?: string | null;
+  latest_project_filing_year?: number | null;
+  latest_project_status?: string | null;
+  latest_project_type?:
+    | 'new_building'
+    | 'alt_co_new_building'
+    | 'demolition'
+    | null;
+  latest_project_job_number?: string | null;
   opportunity_category?:
     | 'vacant_site'
     | 'ground_up_candidate'
@@ -432,6 +457,7 @@ export type ParcelIntelIndex = {
   generated_at: string | null;
   model_metadata: Record<string, unknown>;
   data_sources?: Record<string, unknown>;
+  quality_gate?: Record<string, unknown>;
   age_days?: number | null;
   stale?: boolean;
 };
@@ -442,6 +468,7 @@ export type ParcelIntelSweepResponse = {
   generated_at: string | null;
   model_metadata: Record<string, unknown>;
   data_sources?: Record<string, unknown>;
+  quality_gate?: Record<string, unknown>;
 };
 
 export type ParcelWorkflowStage =
@@ -535,12 +562,13 @@ export async function getParcelIntelIndex(): Promise<ParcelIntelIndex> {
 export async function getParcelIntelSweep(
   borough: string,
   top: number = 1000,
+  opts?: { includeAuth?: boolean },
 ): Promise<ParcelIntelSweepResponse> {
   const params = new URLSearchParams({ borough, top: String(top) });
   return requestJson<ParcelIntelSweepResponse>(
     `/v1/parcel-intel/sweep?${params.toString()}`,
     undefined,
-    { includeAuth: false },
+    { includeAuth: opts?.includeAuth ?? false },
   );
 }
 

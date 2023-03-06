@@ -15,7 +15,6 @@ import {
   parseFeaturedDemosResponse,
   type DemoFeaturedRun,
   type ParcelIntelIndex,
-  type ParcelIntelSweepResponse,
 } from '@/lib/api';
 
 /**
@@ -30,21 +29,6 @@ function serverApiBase(): string {
   const pub = process.env.NEXT_PUBLIC_CITYLENS_API_BASE;
   if (pub && pub.trim()) return pub.trim().replace(/\/+$/, '');
   return 'https://api.citylens.dev';
-}
-
-/**
- * Parcel-intel SSR runs on behalf of the signed-in product, but it cannot use
- * the browser's short-lived session token. In production Vercel supplies a
- * dedicated CityLens API key so these requests receive the full commercial
- * feed. Keeping the header construction here makes the public index and the
- * borough sweep follow the same contract while preserving local/CI behavior
- * when the key is intentionally absent.
- */
-function parcelIntelHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  const apiKey = process.env.CITYLENS_SERVER_API_KEY?.trim();
-  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
-  return headers;
 }
 
 /**
@@ -82,8 +66,8 @@ export async function fetchFeaturedDemosOnServer(): Promise<DemoFeaturedRun[]> {
 }
 
 /**
- * Fetch /v1/parcel-intel/index server-side. Powers the borough picker
- * at /parcel-intel — 5 borough cards SSR'd into the HTML.
+ * Fetch /v1/parcel-intel/index server-side. Powers the citywide explorer shell
+ * at /parcel-intel without embedding parcel rows into the SSR HTML.
  *
  * Like featured demos, this short-circuits when
  * `CITYLENS_DISABLE_SSR_PARCEL_INTEL=1` is set so Playwright e2e
@@ -103,6 +87,7 @@ export async function fetchParcelIntelIndexOnServer(): Promise<ParcelIntelIndex>
     generated_at: null,
     model_metadata: {},
     data_sources: {},
+    quality_gate: {},
   };
   if (process.env.CITYLENS_DISABLE_SSR_PARCEL_INTEL === '1') return empty;
 
@@ -110,44 +95,12 @@ export async function fetchParcelIntelIndexOnServer(): Promise<ParcelIntelIndex>
   try {
     const res = await fetch(url, {
       next: { revalidate: 300 },
-      headers: parcelIntelHeaders(),
+      headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(6_000),
     });
     if (!res.ok) return empty;
     return (await res.json()) as ParcelIntelIndex;
   } catch {
     return empty;
-  }
-}
-
-/**
- * Fetch /v1/parcel-intel/sweep server-side for a specific borough.
- * Used by the borough list page to SSR the table on first paint.
- *
- * Returns null on failure so the page can render an explicit empty state
- * (rather than a 500). Pages should treat null and `rows.length === 0`
- * the same way.
- *
- * Timeout: 8s — sweep responses are 5-10x larger than index, so we
- * give them more headroom on cold engine instances.
- */
-export async function fetchParcelIntelSweepOnServer(
-  borough: string,
-  top: number = 100,
-): Promise<ParcelIntelSweepResponse | null> {
-  if (process.env.CITYLENS_DISABLE_SSR_PARCEL_INTEL === '1') return null;
-
-  const params = new URLSearchParams({ borough, top: String(top) });
-  const url = `${serverApiBase()}/v1/parcel-intel/sweep?${params.toString()}`;
-  try {
-    const res = await fetch(url, {
-      next: { revalidate: 300 },
-      headers: parcelIntelHeaders(),
-      signal: AbortSignal.timeout(8_000),
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as ParcelIntelSweepResponse;
-  } catch {
-    return null;
   }
 }

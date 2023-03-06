@@ -2,29 +2,16 @@ import type { MetadataRoute } from 'next';
 
 const BASE = 'https://www.citylens.dev';
 
-const BOROUGH_SLUGS = [
-  'manhattan',
-  'brooklyn',
-  'queens',
-  'bronx',
-  'staten_island',
-] as const;
-
 /**
  * Public, indexable routes only. Authenticated surfaces (/runs, /account)
- * are intentionally absent — they're also disallowed in robots.ts. The
- * borough workspaces are listed because the PAGE is public (it renders the
- * sign-in gate); the parcel data behind it stays server-gated.
+ * are intentionally absent — they're also disallowed in robots.ts. Parcel
+ * intelligence has one canonical citywide route; legacy borough paths
+ * redirect into query-filtered views and should not be indexed separately.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
   const routes: Array<{ path: string; priority: number; changeFrequency: 'daily' | 'weekly' | 'monthly' }> = [
     { path: '/', priority: 1, changeFrequency: 'weekly' },
     { path: '/parcel-intel', priority: 0.9, changeFrequency: 'weekly' },
-    ...BOROUGH_SLUGS.map((slug) => ({
-      path: `/parcel-intel/${slug}`,
-      priority: 0.8,
-      changeFrequency: 'weekly' as const,
-    })),
     { path: '/docs', priority: 0.7, changeFrequency: 'monthly' },
     { path: '/pricing', priority: 0.8, changeFrequency: 'monthly' },
     { path: '/contact', priority: 0.7, changeFrequency: 'monthly' },

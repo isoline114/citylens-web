@@ -220,8 +220,14 @@ function currency(value: number): string {
   }).format(value);
 }
 
-export function LandBasisCalculator({ row }: { row: ParcelIntelRow }) {
-  const [open, setOpen] = useState(false);
+export function LandBasisCalculator({
+  row,
+  defaultOpen = false,
+}: {
+  row: ParcelIntelRow;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   const [valuePerSqft, setValuePerSqft] = useState(900);
   const [hardCostPerSqft, setHardCostPerSqft] = useState(400);
   const [efficiencyPct, setEfficiencyPct] = useState(80);

@@ -85,13 +85,15 @@ export function explainParcel(row: ParcelIntelRow): Reason[] {
       typeof row.years_held === 'number'
         ? `${row.years_held} year${row.years_held === 1 ? '' : 's'} ago`
         : 'recently';
+    const alreadyAcquired = row.acquisition_exclusion_reasons?.includes(
+      'recently_acquired',
+    );
     reasons.push({
       label: `Sold for ${priceLabel} ${yearLabel}`,
-      detail:
-        `Last arms-length deed transfer was ${priceLabel} (${heldLabel}). ` +
-        'A fresh, priced acquisition is one of the strongest signals that a ' +
-        'developer is preparing to file a New Building permit.',
-      tone: 'positive',
+      detail: alreadyAcquired
+        ? `The parcel changed hands ${heldLabel}; treat the new owner as active market context, not a fresh seller lead.`
+        : `Last arms-length deed transfer was ${priceLabel} (${heldLabel}). The ownership event is a development-intent signal, but outreach still requires current seller verification.`,
+      tone: alreadyAcquired ? 'caution' : 'neutral',
     });
   }
 

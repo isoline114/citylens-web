@@ -1,7 +1,6 @@
-import Link from 'next/link';
-import { ArrowRight, Building2, MapPin } from 'lucide-react';
+import { BookOpen, Building2, Database, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { fetchParcelIntelIndexOnServer } from '@/lib/api.server';
-import { BoroughCardPrefetch } from './borough-card-prefetch';
+import { ParcelIntelExplorer } from './parcel-intel-explorer';
 
 export const metadata = {
   title: 'Parcel Intelligence — CityLens',
@@ -11,14 +10,6 @@ export const metadata = {
 
 // SSR with 5-minute revalidation; sweep cadence is monthly so this is plenty.
 export const revalidate = 300;
-
-const BOROUGH_ACCENTS: Record<string, string> = {
-  manhattan: 'bg-sky-500',
-  brooklyn: 'bg-emerald-500',
-  queens: 'bg-amber-500',
-  bronx: 'bg-rose-500',
-  staten_island: 'bg-violet-500',
-};
 
 function formatGenerated(iso: string | null): string {
   if (!iso) return '';
@@ -34,7 +25,12 @@ function formatGenerated(iso: string | null): string {
   }
 }
 
-export default async function ParcelIntelIndexPage() {
+export default async function ParcelIntelIndexPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ borough?: string; bbl?: string }>;
+}) {
+  const { borough, bbl } = await searchParams;
   const index = await fetchParcelIntelIndexOnServer();
   const generatedLabel = formatGenerated(index.generated_at);
   const modelType =
@@ -54,32 +50,50 @@ export default async function ParcelIntelIndexPage() {
     const age = typeof status.age_days === 'number' ? ` (${status.age_days} days old)` : '';
     return [`${source}${age}`];
   });
+  const qualityGatePassed = index.quality_gate?.passed === true;
+  const qualityGateFailed =
+    Object.keys(index.quality_gate ?? {}).length > 0 && !qualityGatePassed;
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 md:py-12">
-      <header className="mb-8 md:mb-10">
+    <main className="mx-auto max-w-[1480px] px-4 py-7 sm:px-6 md:py-10 xl:px-8">
+      <header className="mb-7 max-w-3xl md:mb-8">
         <div className="inline-flex items-center gap-2 self-start rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-800 ring-1 ring-inset ring-sky-200">
           <Building2 className="h-3.5 w-3.5" />
           NYC parcel intelligence · v1
         </div>
-        <h1 className="mt-4 text-balance text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">
+        <h1 className="mt-4 text-balance text-3xl font-semibold tracking-[-0.03em] text-slate-950 md:text-5xl">
           Find the sites worth pursuing this week.
         </h1>
-        <p className="mt-3 max-w-prose text-base leading-7 text-slate-600">
+        <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600 md:text-lg md:leading-8">
           CityLens ranks all NYC tax lots, refreshes the displayed parcel facts from
           current city records, and gives your team a place to qualify, watch, underwrite,
           and advance the best development-site leads. Priority is ordinal—not a promise
           that a parcel will transact or receive a permit.
         </p>
         {(modelType || featureYear || labelWindow || generatedLabel) && (
-          <p className="mt-2 text-xs text-slate-500">
-            {modelType && <span>model: {modelType}</span>}
-            {featureYear !== undefined && featureYear !== null && (
-              <span> · feature_year: {String(featureYear)}</span>
+          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-600">
+            {generatedLabel && (
+              <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                Refreshed {generatedLabel}
+              </span>
             )}
-            {labelWindow && <span> · labels: {labelWindow}</span>}
-            {generatedLabel && <span> · refreshed {generatedLabel}</span>}
-          </p>
+            {modelType && (
+              <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                {modelType} ranking model
+              </span>
+            )}
+            {featureYear !== undefined && featureYear !== null && labelWindow && (
+              <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                {String(featureYear)} features · {labelWindow} outcomes
+              </span>
+            )}
+            {qualityGatePassed && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-800 ring-1 ring-inset ring-emerald-200">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Top 100 per borough eligibility-checked
+              </span>
+            )}
+          </div>
         )}
       </header>
 
@@ -87,6 +101,14 @@ export default async function ParcelIntelIndexPage() {
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           <strong>Freshness warning:</strong> {staleSources.join(', ')}. Verify the
           latest city records before acquisition diligence.
+        </div>
+      )}
+
+      {qualityGateFailed && (
+        <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-950">
+          <strong>Acquisition quality warning:</strong> the published feed did not
+          pass its project-leakage, rank-integrity, or coverage checks. Do not use it
+          for outreach until the feed is republished.
         </div>
       )}
 
@@ -101,40 +123,87 @@ export default async function ParcelIntelIndexPage() {
           </p>
         </section>
       ) : (
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {index.boroughs.map((b) => {
-            const accent = BOROUGH_ACCENTS[b.slug] ?? 'bg-slate-500';
-            return (
-              <BoroughCardPrefetch key={b.slug}>
-                <Link
-                  href={`/parcel-intel/${b.slug}`}
-                  className="group relative block overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                >
-                  <span
-                    className={`absolute inset-y-0 left-0 w-1 ${accent}`}
-                    aria-hidden="true"
-                  />
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                        <MapPin className="h-3.5 w-3.5" />
-                        Borough
-                      </div>
-                      <h2 className="mt-1 text-xl font-semibold text-slate-950">
-                        {b.display_name}
-                      </h2>
-                      <p className="mt-2 text-sm text-slate-600">
-                        {b.count} prioritized parcel leads
-                      </p>
-                    </div>
-                    <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-700" />
-                  </div>
-                </Link>
-              </BoroughCardPrefetch>
-            );
-          })}
-        </section>
+        <>
+          <ParcelIntelExplorer
+            boroughs={index.boroughs}
+            initialBorough={borough ?? null}
+            initialBbl={bbl ?? null}
+          />
+          <MethodologyDisclosure
+            modelType={modelType}
+            featureYear={featureYear}
+            labelWindow={labelWindow}
+          />
+        </>
       )}
     </main>
+  );
+}
+
+function MethodologyDisclosure({
+  modelType,
+  featureYear,
+  labelWindow,
+}: {
+  modelType: string | null;
+  featureYear: string | number | undefined;
+  labelWindow: string | undefined;
+}) {
+  return (
+    <details className="group mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden hover:bg-slate-50">
+        <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <BookOpen className="h-4 w-4 text-sky-600" />
+          How CityLens ranks and qualifies parcels
+        </span>
+        <span className="text-xs font-medium text-slate-500 group-open:hidden">
+          View methodology and limitations
+        </span>
+        <span className="hidden text-xs font-medium text-slate-500 group-open:inline">
+          Hide methodology
+        </span>
+      </summary>
+      <div className="grid gap-3 border-t border-slate-200 bg-slate-50 p-4 md:grid-cols-3 md:p-5">
+        <MethodCard
+          icon={Database}
+          title="Source records"
+          body="Current parcel facts combine NYC PLUTO, ACRIS ownership, DOB project activity, LPC constraints, and available CityLens aerial-change observations. Source dates remain visible on every parcel."
+        />
+        <MethodCard
+          icon={ShieldCheck}
+          title="What rank means"
+          body={`${modelType ?? 'The'} model uses ${
+            featureYear ?? 'historical'
+          } features and ${
+            labelWindow ?? 'later'
+          } outcomes. Current DOB projects and constrained or incomplete parcels are removed before acquisition rank is assigned. Rank remains an ordinal screening signal—not a probability that a site will transact.`}
+        />
+        <MethodCard
+          icon={TriangleAlert}
+          title="Required diligence"
+          body="Administrative lots, active projects, stale ownership, zoning overlays, tenancy, and site conditions can invalidate a lead. Verify official records and professional advice before outreach or underwriting."
+        />
+      </div>
+    </details>
+  );
+}
+
+function MethodCard({
+  icon: Icon,
+  title,
+  body,
+}: {
+  icon: typeof Database;
+  title: string;
+  body: string;
+}) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-4">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+        <Icon className="h-4 w-4 text-sky-600" />
+        {title}
+      </h3>
+      <p className="mt-2 text-xs leading-5 text-slate-600">{body}</p>
+    </section>
   );
 }

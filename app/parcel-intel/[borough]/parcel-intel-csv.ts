@@ -13,7 +13,7 @@ type CellValue = string | number | boolean | null | undefined;
 
 type Column = {
   header: string;
-  value: (row: ParcelIntelRow, scoreRank: number) => CellValue;
+  value: (row: ParcelIntelRow) => CellValue;
 };
 
 /** Flatten SHAP attributions to `"lot_area (+32%); zoning (-18%)"`. */
@@ -32,8 +32,27 @@ const COLUMNS: Column[] = [
   { header: 'Address', value: (r) => r.address },
   { header: 'BBL', value: (r) => r.bbl },
   { header: 'Borough', value: (r) => r.borough },
-  { header: 'Priority rank', value: (r, scoreRank) => r.priority_rank ?? scoreRank },
+  { header: 'NYC acquisition rank', value: (r) => r.citywide_rank },
+  {
+    header: 'Borough acquisition rank',
+    value: (r) => r.acquisition_rank ?? r.priority_rank,
+  },
+  { header: 'Original model rank', value: (r) => r.model_rank },
   { header: 'Priority tier', value: (r) => r.priority_tier },
+  {
+    header: 'Acquisition eligible',
+    value: (r) =>
+      r.acquisition_eligible === null || r.acquisition_eligible === undefined
+        ? null
+        : r.acquisition_eligible
+          ? 'yes'
+          : 'no',
+  },
+  { header: 'Acquisition status', value: (r) => r.acquisition_status },
+  {
+    header: 'Exclusion reasons',
+    value: (r) => (r.acquisition_exclusion_reasons ?? []).join('; '),
+  },
   { header: 'Opportunity', value: (r) => r.opportunity_category },
   { header: 'Zoning', value: (r) => r.zoning_district_1 },
   { header: 'Land use', value: (r) => r.land_use },
@@ -50,11 +69,16 @@ const COLUMNS: Column[] = [
   { header: 'Last sale price', value: (r) => r.last_sale_price },
   { header: 'Last sale year', value: (r) => r.last_sale_year },
   { header: 'Years held', value: (r) => r.years_held },
+  { header: 'Owner', value: (r) => r.owner_name },
+  { header: 'Owner source', value: (r) => r.owner_name_source },
+  { header: 'PLUTO owner type', value: (r) => r.owner_type },
   { header: 'Landmark', value: (r) => (r.is_landmark ? 'yes' : 'no') },
   { header: 'Historic district', value: (r) => (r.is_historic_district ? 'yes' : 'no') },
   { header: 'Status', value: (r) => r.redev_status },
-  { header: 'Latest NB filing year', value: (r) => r.latest_nb_filing_year },
-  { header: 'Latest NB status', value: (r) => r.latest_nb_status },
+  { header: 'Latest project type', value: (r) => r.latest_project_type },
+  { header: 'Latest project filing year', value: (r) => r.latest_project_filing_year },
+  { header: 'Latest project status', value: (r) => r.latest_project_status },
+  { header: 'Latest project job number', value: (r) => r.latest_project_job_number },
   { header: 'PLUTO facts as of', value: (r) => r.property_facts_as_of },
   { header: 'ACRIS ownership as of', value: (r) => r.ownership_as_of },
   { header: 'DOB activity as of', value: (r) => r.project_activity_as_of },
@@ -74,26 +98,14 @@ function csvEscape(value: CellValue): string {
 
 /**
  * Serialize rows to CSV. Rows are exported in the order given (the current
- * sort), while the Rank column reflects score order. An empty input yields
- * just the header row.
+ * sort). Acquisition ranks come only from the server-side eligibility gate;
+ * excluded rows deliberately keep blank ranks. An empty input yields just the
+ * header row.
  */
 export function buildCsv(rows: ParcelIntelRow[]): string {
-  // Score-rank lookup: 1-based rank by score_calibrated descending. Rows
-  // with a null score sort last; ties keep their incoming relative order.
-  const byScore = rows
-    .map((r, i) => ({ bbl: r.bbl, i, score: r.score_calibrated }))
-    .sort((a, b) => {
-      const as = typeof a.score === 'number' ? a.score : -Infinity;
-      const bs = typeof b.score === 'number' ? b.score : -Infinity;
-      return bs - as || a.i - b.i;
-    });
-  const rankByIndex = new Map<number, number>();
-  byScore.forEach((entry, rank) => rankByIndex.set(entry.i, rank + 1));
-
   const lines = [COLUMNS.map((c) => csvEscape(c.header)).join(',')];
-  rows.forEach((row, i) => {
-    const scoreRank = rankByIndex.get(i) ?? i + 1;
-    lines.push(COLUMNS.map((c) => csvEscape(c.value(row, scoreRank))).join(','));
+  rows.forEach((row) => {
+    lines.push(COLUMNS.map((c) => csvEscape(c.value(row))).join(','));
   });
   return lines.join('\n');
 }
