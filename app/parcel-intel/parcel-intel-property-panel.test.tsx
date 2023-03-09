@@ -103,6 +103,33 @@ describe('ParcelIntelPropertyPanel', () => {
     expect(mocks.listParcelWorkflow).not.toHaveBeenCalled();
   });
 
+  it('explains and links acquisition-blocking ZAP entitlement activity', () => {
+    render(
+      <ParcelIntelPropertyPanel
+        row={{
+          ...parcel,
+          acquisition_status: 'active_project',
+          acquisition_eligible: false,
+          acquisition_exclusion_reasons: ['approved_land_use_project'],
+          latest_project_type: 'land_use_entitlement',
+          latest_project_status: 'Completed — approved',
+          latest_project_job_number: '2023K0205',
+          latest_project_url: 'https://zap.planning.nyc.gov/projects/2023K0205',
+          land_use_activity_as_of: '2026-07-22',
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/NYC Planning records completed — approved/i)).toBeInTheDocument();
+    expect(screen.getByText(/Project 2023K0205/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Open official project record/i })).toHaveAttribute(
+      'href',
+      'https://zap.planning.nyc.gov/projects/2023K0205',
+    );
+    expect(screen.getByText('ZAP 2026-07-22')).toBeInTheDocument();
+  });
+
   it('loads the authenticated acquisition workflow into the parcel panel', async () => {
     mocks.authStatus = 'authenticated';
     render(<ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />);

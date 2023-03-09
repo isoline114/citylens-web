@@ -327,16 +327,30 @@ export function ParcelIntelPropertyPanel({ row, onClose }: Props) {
                       Existing project activity detected
                     </h4>
                     <p className="mt-1 text-xs leading-5 text-amber-900">
-                      Recent DOB {row.latest_project_type === 'alt_co_new_building'
-                        ? 'ALT-CO new-building'
-                        : row.latest_project_type === 'demolition'
-                          ? 'demolition'
-                          : 'New Building'} activity suggests this site is already committed.
-                      Treat it as market context, not an acquisition lead.
+                      {row.latest_project_type === 'land_use_entitlement'
+                        ? `NYC Planning records ${row.latest_project_status?.toLowerCase() || 'active'} land-use entitlement activity`
+                        : `Recent DOB ${row.latest_project_type === 'alt_co_new_building'
+                            ? 'ALT-CO new-building'
+                            : row.latest_project_type === 'demolition'
+                              ? 'demolition'
+                              : 'New Building'} activity`}{' '}
+                      suggests this site is already committed. Treat it as market context,
+                      not an acquisition lead.
                       {row.latest_project_job_number
-                        ? ` Job ${row.latest_project_job_number}.`
+                        ? ` Project ${row.latest_project_job_number}.`
                         : ''}
                     </p>
+                    {row.latest_project_url && (
+                      <a
+                        href={row.latest_project_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-amber-950 underline decoration-amber-400 underline-offset-2"
+                      >
+                        Open official project record
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
@@ -515,6 +529,7 @@ export function ParcelIntelPropertyPanel({ row, onClose }: Props) {
                   {row.ownership_as_of ?? 'date unavailable'}
                 </span>
                 <span>DOB {row.project_activity_as_of ?? 'date unavailable'}</span>
+                <span>ZAP {row.land_use_activity_as_of ?? 'date unavailable'}</span>
                 {row.observed_imagery_year && (
                   <span>Imagery through {row.observed_imagery_year}</span>
                 )}

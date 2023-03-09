@@ -424,8 +424,10 @@ export type ParcelIntelRow = {
     | 'new_building'
     | 'alt_co_new_building'
     | 'demolition'
+    | 'land_use_entitlement'
     | null;
   latest_project_job_number?: string | null;
+  latest_project_url?: string | null;
   opportunity_category?:
     | 'vacant_site'
     | 'ground_up_candidate'
@@ -436,6 +438,7 @@ export type ParcelIntelRow = {
   property_facts_as_of?: string | null;
   ownership_as_of?: string | null;
   project_activity_as_of?: string | null;
+  land_use_activity_as_of?: string | null;
   data_warnings?: string[];
   assemblage_id?: string | null;
   assemblage_lot_count?: number | null;
