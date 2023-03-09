@@ -42,6 +42,10 @@ export default async function ParcelIntelIndexPage({
     | number
     | undefined;
   const labelWindow = index.model_metadata?.label_window as string | undefined;
+  const performanceScope =
+    typeof index.model_metadata?.performance_scope === 'string'
+      ? (index.model_metadata.performance_scope as string)
+      : null;
   const staleSources = Object.values(index.data_sources ?? {}).flatMap((value) => {
     if (!value || typeof value !== 'object') return [];
     const status = value as Record<string, unknown>;
@@ -82,11 +86,15 @@ export default async function ParcelIntelIndexPage({
                 {modelType} ranking model
               </span>
             )}
-            {featureYear !== undefined && featureYear !== null && labelWindow && (
+            {performanceScope ? (
+              <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                {performanceScope}
+              </span>
+            ) : featureYear !== undefined && featureYear !== null && labelWindow ? (
               <span className="rounded-full bg-slate-100 px-2.5 py-1">
                 {String(featureYear)} features · {labelWindow} outcomes
               </span>
-            )}
+            ) : null}
             {qualityGatePassed && (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-800 ring-1 ring-inset ring-emerald-200">
                 <ShieldCheck className="h-3.5 w-3.5" />
@@ -133,6 +141,7 @@ export default async function ParcelIntelIndexPage({
             modelType={modelType}
             featureYear={featureYear}
             labelWindow={labelWindow}
+            performanceScope={performanceScope}
           />
         </>
       )}
@@ -144,10 +153,12 @@ function MethodologyDisclosure({
   modelType,
   featureYear,
   labelWindow,
+  performanceScope,
 }: {
   modelType: string | null;
   featureYear: string | number | undefined;
   labelWindow: string | undefined;
+  performanceScope: string | null;
 }) {
   return (
     <details className="group mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -172,11 +183,10 @@ function MethodologyDisclosure({
         <MethodCard
           icon={ShieldCheck}
           title="What rank means"
-          body={`${modelType ?? 'The'} model uses ${
-            featureYear ?? 'historical'
-          } features and ${
-            labelWindow ?? 'later'
-          } outcomes. Current DOB projects and constrained or incomplete parcels are removed before acquisition rank is assigned. Rank remains an ordinal screening signal—not a probability that a site will transact.`}
+          body={`${modelType ?? 'The'} model evidence covers ${
+            performanceScope ??
+            `${featureYear ?? 'historical'} features and ${labelWindow ?? 'later'} outcomes`
+          }. Current DOB projects and constrained or incomplete parcels are removed before acquisition rank is assigned. Rank remains an ordinal screening signal—not a probability that a site will transact.`}
         />
         <MethodCard
           icon={TriangleAlert}
