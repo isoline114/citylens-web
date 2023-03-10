@@ -138,6 +138,32 @@ const COLUMNS: Column[] = [
   { header: 'Owner', value: (r) => r.owner_name },
   { header: 'Owner source', value: (r) => r.owner_name_source },
   { header: 'PLUTO owner type', value: (r) => r.owner_type },
+  { header: 'Owner entity type', value: (r) => r.owner_entity_type },
+  { header: 'Owner portfolio ID', value: (r) => r.owner_portfolio_id },
+  {
+    header: 'Owner portfolio tax lots',
+    value: (r) => r.owner_portfolio_lot_count,
+  },
+  {
+    header: 'Owner portfolio boroughs',
+    value: (r) => r.owner_portfolio_borough_count,
+  },
+  {
+    header: 'Owner portfolio lot area (sqft)',
+    value: (r) => r.owner_portfolio_total_lot_area_sqft,
+  },
+  {
+    header: 'Owner portfolio current leads',
+    value: (r) => r.owner_portfolio_candidate_count,
+  },
+  {
+    header: 'Owner portfolio match method',
+    value: (r) => r.owner_portfolio_match_method,
+  },
+  {
+    header: 'Owner portfolio data retrieved',
+    value: (r) => r.owner_portfolio_data_as_of,
+  },
   { header: 'Landmark', value: (r) => (r.is_landmark ? 'yes' : 'no') },
   { header: 'Historic district', value: (r) => (r.is_historic_district ? 'yes' : 'no') },
   { header: 'Status', value: (r) => r.redev_status },

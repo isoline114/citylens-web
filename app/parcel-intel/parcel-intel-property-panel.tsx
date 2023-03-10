@@ -40,6 +40,7 @@ type PanelTab = 'overview' | 'underwrite' | 'workflow';
 type Props = {
   row: ParcelIntelRow;
   onClose: () => void;
+  onViewOwnerPortfolio?: (ownerPortfolioId: string) => void;
 };
 
 type ExternalParcelLink = { label: string; href: string };
@@ -89,6 +90,24 @@ function modelFeatureValue(feature: TopFeature): string {
 function formatNumber(value: number | null | undefined): string {
   if (value === null || value === undefined) return '—';
   return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
+function ownerEntityLabel(
+  value: ParcelIntelRow['owner_entity_type'],
+): string {
+  return {
+    llc: 'LLC',
+    corp: 'corporation',
+    partnership: 'partnership',
+    trust: 'trust',
+    hdfc: 'HDFC',
+    nonprofit: 'nonprofit',
+    religious: 'religious organization',
+    government: 'government',
+    estate: 'estate',
+    individual: 'individual',
+    unknown: 'legal entity',
+  }[value ?? 'unknown'];
 }
 
 function formatCurrency(value: number | null | undefined): string {
@@ -178,7 +197,11 @@ function workflowSnapshot(row: ParcelIntelRow): ParcelWorkflowItem['snapshot'] {
   };
 }
 
-export function ParcelIntelPropertyPanel({ row, onClose }: Props) {
+export function ParcelIntelPropertyPanel({
+  row,
+  onClose,
+  onViewOwnerPortfolio,
+}: Props) {
   const auth = useAuth();
   const [tab, setTab] = useState<PanelTab>('overview');
   const [workflowItem, setWorkflowItem] = useState<ParcelWorkflowItem | null>(null);
@@ -431,6 +454,82 @@ export function ParcelIntelPropertyPanel({ row, onClose }: Props) {
                 value={row.year_built && row.year_built > 0 ? String(row.year_built) : 'None recorded'}
               />
             </dl>
+
+            {row.owner_portfolio_id &&
+              (row.owner_portfolio_lot_count ?? 0) >= 2 && (
+                <section className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50 p-3">
+                  <div className="flex items-start gap-2">
+                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-indigo-700" />
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs font-semibold uppercase tracking-wide text-indigo-950">
+                        Current PLUTO owner portfolio
+                      </h4>
+                      <div className="mt-2 grid grid-cols-3 gap-2">
+                        <div>
+                          <div className="text-lg font-semibold text-indigo-950">
+                            {formatNumber(row.owner_portfolio_lot_count)}
+                          </div>
+                          <div className="text-[10px] uppercase tracking-wide text-indigo-700">
+                            Tax lots
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-semibold text-indigo-950">
+                            {formatNumber(row.owner_portfolio_borough_count)}
+                          </div>
+                          <div className="text-[10px] uppercase tracking-wide text-indigo-700">
+                            Boroughs
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-semibold text-indigo-950">
+                            {formatNumber(row.owner_portfolio_candidate_count)}
+                          </div>
+                          <div className="text-[10px] uppercase tracking-wide text-indigo-700">
+                            Current leads
+                          </div>
+                        </div>
+                      </div>
+                      <p className="mt-2 text-xs leading-5 text-indigo-900">
+                        {formatNumber(row.owner_portfolio_total_lot_area_sqft)} sf
+                        across current tax lots ·{' '}
+                        {ownerEntityLabel(row.owner_entity_type)}
+                      </p>
+                      <p className="mt-2 text-[11px] leading-4 text-indigo-800">
+                        Exact normalized PLUTO legal name only. Related LLCs are
+                        not inferred, and same-name entities still require
+                        ownership verification.
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {onViewOwnerPortfolio && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onViewOwnerPortfolio(row.owner_portfolio_id as string)
+                            }
+                            className="inline-flex h-8 items-center rounded-lg bg-indigo-950 px-3 text-xs font-medium text-white hover:bg-indigo-800"
+                          >
+                            View current candidate holdings
+                          </button>
+                        )}
+                        <a
+                          href="https://data.cityofnewyork.us/d/64uk-42ks"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-indigo-800 hover:text-indigo-950"
+                        >
+                          PLUTO source
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                      <p className="mt-2 text-[10px] text-indigo-700">
+                        Data retrieved{' '}
+                        {row.owner_portfolio_data_as_of ?? 'date unavailable'}
+                      </p>
+                    </div>
+                  </div>
+                </section>
+              )}
 
             {row.tax_lien_sale_year && (
               <section className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">

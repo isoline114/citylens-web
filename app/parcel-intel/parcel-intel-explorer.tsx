@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUpRight,
+  Building2,
   Download,
   Layers3,
   LoaderCircle,
@@ -54,6 +55,7 @@ const DEFAULT_FILTERS: ExplorerFilters = {
   priority: 'all',
   opportunity: 'uncommitted',
   query: '',
+  ownerPortfolioId: null,
 };
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error';
@@ -245,6 +247,9 @@ export function ParcelIntelExplorer({
   const floodplainParcelCount = opportunityScope.filter(
     (row) => row.floodplain_1pct === true,
   ).length;
+  const ownerPortfolioParcelCount = opportunityScope.filter(
+    (row) => (row.owner_portfolio_lot_count ?? 0) >= 2,
+  ).length;
   const uncommittedCount = opportunityScope.filter(
     (row) =>
       row.acquisition_eligible ??
@@ -272,7 +277,14 @@ export function ParcelIntelExplorer({
     key: K,
     value: ExplorerFilters[K],
   ) => {
-    setFilters((current) => ({ ...current, [key]: value }));
+    setFilters((current) => ({
+      ...current,
+      [key]: value,
+      ownerPortfolioId:
+        key === 'opportunity' && value !== 'portfolio'
+          ? null
+          : current.ownerPortfolioId,
+    }));
     setLeadLimit(30);
     const nextBorough = key === 'borough' ? String(value) : filters.borough;
     if (selectedBbl) {
@@ -289,6 +301,23 @@ export function ParcelIntelExplorer({
   const closeParcel = () => {
     setSelectedBbl(null);
     syncExplorerUrl(filters.borough, null);
+  };
+
+  const focusOwnerPortfolio = (ownerPortfolioId: string) => {
+    setFilters({
+      ...DEFAULT_FILTERS,
+      borough: 'all',
+      opportunity: 'portfolio',
+      ownerPortfolioId,
+    });
+    setLeadLimit(30);
+    setSelectedBbl(null);
+    syncExplorerUrl('all', null);
+  };
+
+  const clearOwnerPortfolioFocus = () => {
+    setFilters((current) => ({ ...current, ownerPortfolioId: null }));
+    setLeadLimit(30);
   };
 
   const exportFilteredRows = async () => {
@@ -489,6 +518,9 @@ export function ParcelIntelExplorer({
               {isAuthenticated && (
                 <option value="floodplain">1% floodplain exposure</option>
               )}
+              {isAuthenticated && (
+                <option value="portfolio">Multi-lot legal owners</option>
+              )}
               <option value="assemblage">Assemblage opportunities</option>
               <option value="vacant_site">Vacant sites</option>
               <option value="ground_up_candidate">Ground-up candidates</option>
@@ -564,6 +596,7 @@ export function ParcelIntelExplorer({
               key={selectedDetail.bbl}
               row={selectedDetail}
               onClose={closeParcel}
+              onViewOwnerPortfolio={focusOwnerPortfolio}
             />
           ) : selectedSummary && detailState === 'loading' ? (
             <div
@@ -628,6 +661,24 @@ export function ParcelIntelExplorer({
             </div>
           ) : (
             <>
+          {filters.ownerPortfolioId && (
+            <div className="flex items-center justify-between gap-3 border-b border-indigo-200 bg-indigo-50 px-4 py-3 text-xs text-indigo-950">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 shrink-0 text-indigo-700" />
+                <span>
+                  Showing current candidate holdings with the same exact
+                  normalized PLUTO legal name.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={clearOwnerPortfolioFocus}
+                className="shrink-0 font-semibold text-indigo-800 hover:text-indigo-950"
+              >
+                Show all portfolios
+              </button>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2 border-b border-slate-200 p-3">
             <button
               type="button"
@@ -646,6 +697,26 @@ export function ParcelIntelExplorer({
                 {uncommittedCount.toLocaleString()}
               </div>
             </button>
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => updateFilter('opportunity', 'portfolio')}
+                aria-pressed={filters.opportunity === 'portfolio'}
+                className={`rounded-xl px-3 py-2 text-left transition-colors ${
+                  filters.opportunity === 'portfolio'
+                    ? 'bg-indigo-100 ring-2 ring-inset ring-indigo-400'
+                    : 'bg-indigo-50 hover:bg-indigo-100'
+                }`}
+              >
+                <div className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-indigo-700">
+                  <Building2 className="h-3 w-3" />
+                  Multi-lot owners
+                </div>
+                <div className="text-lg font-semibold text-indigo-950">
+                  {ownerPortfolioParcelCount.toLocaleString()}
+                </div>
+              </button>
+            )}
             {isAuthenticated && (
               <button
                 type="button"

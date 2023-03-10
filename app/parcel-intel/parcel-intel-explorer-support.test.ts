@@ -49,6 +49,7 @@ const filters: ExplorerFilters = {
   priority: 'all',
   opportunity: 'all',
   query: '',
+  ownerPortfolioId: null,
 };
 
 describe('parcel citywide explorer support', () => {
@@ -179,5 +180,37 @@ describe('parcel citywide explorer support', () => {
         opportunity: 'floodplain',
       }).map((item) => item.bbl),
     ).toEqual(['overlap']);
+  });
+
+  it('filters multi-lot legal-owner portfolios without changing rank order', () => {
+    const rows = [
+      row({ bbl: 'single', owner_portfolio_lot_count: 1 }),
+      row({
+        bbl: 'portfolio-a',
+        citywide_rank: 8,
+        owner_portfolio_id: 'owner-a',
+        owner_portfolio_lot_count: 4,
+      }),
+      row({
+        bbl: 'portfolio-b',
+        citywide_rank: 12,
+        owner_portfolio_id: 'owner-b',
+        owner_portfolio_lot_count: 9,
+      }),
+    ];
+
+    expect(
+      filterExplorerRows(rows, {
+        ...filters,
+        opportunity: 'portfolio',
+      }).map((item) => item.bbl),
+    ).toEqual(['portfolio-a', 'portfolio-b']);
+    expect(
+      filterExplorerRows(rows, {
+        ...filters,
+        opportunity: 'portfolio',
+        ownerPortfolioId: 'owner-b',
+      }).map((item) => item.bbl),
+    ).toEqual(['portfolio-b']);
   });
 });

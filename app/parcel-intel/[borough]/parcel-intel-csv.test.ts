@@ -56,6 +56,10 @@ const EXPECTED_HEADER =
   'Immediate-hazard violations,Violation data retrieved,FEMA 2007 FIRM 1% tax-lot overlap,' +
   'FEMA 2015 PFIRM 1% tax-lot overlap,Any 1% floodplain tax-lot overlap,' +
   'Floodplain data retrieved,Owner,Owner source,PLUTO owner type,' +
+  'Owner entity type,Owner portfolio ID,Owner portfolio tax lots,' +
+  'Owner portfolio boroughs,Owner portfolio lot area (sqft),' +
+  'Owner portfolio current leads,Owner portfolio match method,' +
+  'Owner portfolio data retrieved,' +
   'Landmark,Historic district,' +
   'Status,Latest project type,Latest project filing year,Latest project status,' +
   'Latest project job number,PLUTO facts as of,ACRIS ownership as of,DOB activity as of,' +

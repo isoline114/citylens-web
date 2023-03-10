@@ -422,6 +422,31 @@ export type ParcelIntelRow = {
   owner_name_source?: 'acris' | 'pluto' | null;
   /** NYC PLUTO owner category; public/tax-exempt classes are not ranked. */
   owner_type?: string | null;
+  /** Conservative legal-entity classification from the current PLUTO name. */
+  owner_entity_type?:
+    | 'unknown'
+    | 'individual'
+    | 'llc'
+    | 'corp'
+    | 'partnership'
+    | 'trust'
+    | 'estate'
+    | 'government'
+    | 'religious'
+    | 'nonprofit'
+    | 'hdfc'
+    | null;
+  /**
+   * Exact normalized current-PLUTO legal-name portfolio. This is diligence
+   * context only: it does not infer beneficial ownership or related LLCs.
+   */
+  owner_portfolio_id?: string | null;
+  owner_portfolio_match_method?: 'exact_normalized_pluto_owner_name' | null;
+  owner_portfolio_lot_count?: number | null;
+  owner_portfolio_borough_count?: number | null;
+  owner_portfolio_total_lot_area_sqft?: number | null;
+  owner_portfolio_candidate_count?: number | null;
+  owner_portfolio_data_as_of?: string | null;
   /** Detected building-change observations from the published CityLens index. */
   change_added_count?: number;
   change_demolished_count?: number;
@@ -523,6 +548,11 @@ export type ParcelIntelMapRow = Pick<
   | 'critical_violation_count'
   | 'floodplain_1pct'
   | 'owner_name'
+  | 'owner_entity_type'
+  | 'owner_portfolio_id'
+  | 'owner_portfolio_lot_count'
+  | 'owner_portfolio_borough_count'
+  | 'owner_portfolio_candidate_count'
   | 'recent_change'
   | 'opportunity_category'
   | 'assemblage_lot_count'

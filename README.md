@@ -12,13 +12,16 @@ Full borough payloads are deferred until the user requests a CSV. The explorer
 also exposes multi-lot assemblage candidates, a signed-in filter for official
 NYC DOF final tax-lien sale history, a filter for parcels with current Class 1
 ECB or Class C HPD immediately hazardous records, a signed-in 1% annual-chance
-floodplain screen, and the accepted model's clearly labeled forward-test hit
-rate. Parcel detail separates DOB Safety, OATH/ECB, and HPD counts and keeps
-the adopted 2007 FIRM separate from the 2015 preliminary FIRM. It links each
-official source and warns that tax-lot overlap is not building-level flood
-depth or site-specific diligence. These overlays are verification context—not
-ranking inputs, current seller intent, or proof that an issue remains
-uncorrected.
+floodplain screen, a signed-in exact-name current-PLUTO legal-owner portfolio
+filter, and the accepted model's clearly labeled forward-test hit rate. A user
+can open a parcel and focus the citywide map on other current candidates with
+the same exact normalized legal name. The portfolio card explicitly does not
+infer beneficial ownership or related LLCs. Parcel detail separates DOB Safety,
+OATH/ECB, and HPD counts and keeps the adopted 2007 FIRM separate from the 2015
+preliminary FIRM. It links each official source and warns that tax-lot overlap
+is not building-level flood depth or site-specific diligence. These overlays
+are verification context—not ranking inputs, current seller intent, or proof
+that an issue remains uncorrected.
 
 The UI consumes `published_sweep@v5` ranking/eligibility evidence. Model
 attributions describe historical DOB **activity records** (which can include

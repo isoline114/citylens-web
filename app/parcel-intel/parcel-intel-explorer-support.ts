@@ -48,6 +48,7 @@ export type ExplorerOpportunity =
   | 'tax_lien'
   | 'violations'
   | 'floodplain'
+  | 'portfolio'
   | 'vacant_site'
   | 'ground_up_candidate'
   | 'conversion_or_overbuilt'
@@ -58,6 +59,7 @@ export type ExplorerFilters = {
   priority: ExplorerPriority;
   opportunity: ExplorerOpportunity;
   query: string;
+  ownerPortfolioId: string | null;
 };
 
 export type ParcelExplorerRow = ParcelIntelMapRow;
@@ -82,6 +84,12 @@ export function filterExplorerRows<T extends ParcelExplorerRow>(
   const query = filters.query.trim().toLowerCase();
   return rows.filter((row) => {
     if (filters.borough !== 'all' && row.borough !== filters.borough) return false;
+    if (
+      filters.ownerPortfolioId &&
+      row.owner_portfolio_id !== filters.ownerPortfolioId
+    ) {
+      return false;
+    }
     if (filters.priority === 'highest' && row.priority_tier !== 'highest') return false;
     if (
       filters.priority === 'high_or_better' &&
@@ -107,6 +115,10 @@ export function filterExplorerRows<T extends ParcelExplorerRow>(
       }
     } else if (filters.opportunity === 'floodplain') {
       if (row.floodplain_1pct !== true) {
+        return false;
+      }
+    } else if (filters.opportunity === 'portfolio') {
+      if ((row.owner_portfolio_lot_count ?? 0) < 2) {
         return false;
       }
     } else if (filters.opportunity === 'uncommitted') {

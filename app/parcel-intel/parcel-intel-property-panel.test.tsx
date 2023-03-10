@@ -221,6 +221,41 @@ describe('ParcelIntelPropertyPanel', () => {
     );
   });
 
+  it('shows conservative current-owner portfolio context and can focus it', () => {
+    const onViewOwnerPortfolio = vi.fn();
+    render(
+      <ParcelIntelPropertyPanel
+        row={{
+          ...parcel,
+          owner_entity_type: 'llc',
+          owner_portfolio_id: 'portfolio-123',
+          owner_portfolio_match_method: 'exact_normalized_pluto_owner_name',
+          owner_portfolio_lot_count: 9,
+          owner_portfolio_borough_count: 3,
+          owner_portfolio_total_lot_area_sqft: 72000,
+          owner_portfolio_candidate_count: 4,
+          owner_portfolio_data_as_of: '2026-07-23',
+        }}
+        onClose={vi.fn()}
+        onViewOwnerPortfolio={onViewOwnerPortfolio}
+      />,
+    );
+
+    expect(
+      screen.getByText(/Current PLUTO owner portfolio/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Related LLCs are not inferred/i)).toBeInTheDocument();
+    expect(screen.getByText(/same-name entities still require/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /PLUTO source/i })).toHaveAttribute(
+      'href',
+      'https://data.cityofnewyork.us/d/64uk-42ks',
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: /View current candidate holdings/i }),
+    );
+    expect(onViewOwnerPortfolio).toHaveBeenCalledWith('portfolio-123');
+  });
+
   it('loads the authenticated acquisition workflow into the parcel panel', async () => {
     mocks.authStatus = 'authenticated';
     render(<ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />);
