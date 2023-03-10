@@ -107,6 +107,34 @@ const COLUMNS: Column[] = [
     value: (r) => r.critical_violation_count,
   },
   { header: 'Violation data retrieved', value: (r) => r.violation_data_as_of },
+  {
+    header: 'FEMA 2007 FIRM 1% tax-lot overlap',
+    value: (r) =>
+      r.firm07_floodplain === null || r.firm07_floodplain === undefined
+        ? null
+        : r.firm07_floodplain
+          ? 'yes'
+          : 'no',
+  },
+  {
+    header: 'FEMA 2015 PFIRM 1% tax-lot overlap',
+    value: (r) =>
+      r.pfirm15_floodplain === null || r.pfirm15_floodplain === undefined
+        ? null
+        : r.pfirm15_floodplain
+          ? 'yes'
+          : 'no',
+  },
+  {
+    header: 'Any 1% floodplain tax-lot overlap',
+    value: (r) =>
+      r.floodplain_1pct === null || r.floodplain_1pct === undefined
+        ? null
+        : r.floodplain_1pct
+          ? 'yes'
+          : 'no',
+  },
+  { header: 'Floodplain data retrieved', value: (r) => r.floodplain_data_as_of },
   { header: 'Owner', value: (r) => r.owner_name },
   { header: 'Owner source', value: (r) => r.owner_name_source },
   { header: 'PLUTO owner type', value: (r) => r.owner_type },

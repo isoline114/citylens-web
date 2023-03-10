@@ -191,6 +191,9 @@ export function ParcelIntelPropertyPanel({ row, onClose }: Props) {
       (row.ecb_active_count ?? 0) +
       (row.hpd_open_count ?? 0) >
     0;
+  const hasFloodplainScreen =
+    typeof row.firm07_floodplain === 'boolean' &&
+    typeof row.pfirm15_floodplain === 'boolean';
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -575,6 +578,105 @@ export function ParcelIntelPropertyPanel({ row, onClose }: Props) {
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   ))}
+                </div>
+              </section>
+            )}
+
+            {hasFloodplainScreen && (
+              <section
+                className={`mt-3 rounded-xl border p-3 ${
+                  row.floodplain_1pct
+                    ? 'border-sky-300 bg-sky-50'
+                    : 'border-slate-200 bg-slate-50'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4
+                      className={`text-xs font-semibold uppercase tracking-wide ${
+                        row.floodplain_1pct ? 'text-sky-950' : 'text-slate-800'
+                      }`}
+                    >
+                      1% annual-chance floodplain screen
+                    </h4>
+                    <p
+                      className={`mt-1 text-xs leading-5 ${
+                        row.floodplain_1pct ? 'text-sky-900' : 'text-slate-600'
+                      }`}
+                    >
+                      {row.floodplain_1pct
+                        ? 'PLUTO flags some portion of this tax lot inside at least one mapped 1% annual-chance floodplain.'
+                        : 'PLUTO does not flag this tax lot in either of the two parcel-level 1% annual-chance floodplain fields.'}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${
+                      row.floodplain_1pct
+                        ? 'bg-sky-700 text-white'
+                        : 'bg-white text-slate-700 ring-1 ring-inset ring-slate-300'
+                    }`}
+                  >
+                    {row.floodplain_1pct ? 'Mapped overlap' : 'No PLUTO flag'}
+                  </span>
+                </div>
+
+                <dl className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="rounded-lg border border-white/80 bg-white p-2.5">
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      FEMA 2007 FIRM
+                    </dt>
+                    <dd className="mt-1 text-sm font-semibold text-slate-950">
+                      {row.firm07_floodplain ? 'Tax-lot overlap' : 'Not flagged'}
+                    </dd>
+                    <div className="mt-1 text-[11px] text-slate-600">
+                      Adopted map
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-white/80 bg-white p-2.5">
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      FEMA 2015 PFIRM
+                    </dt>
+                    <dd className="mt-1 text-sm font-semibold text-slate-950">
+                      {row.pfirm15_floodplain ? 'Tax-lot overlap' : 'Not flagged'}
+                    </dd>
+                    <div className="mt-1 text-[11px] text-slate-600">
+                      Preliminary planning map
+                    </div>
+                  </div>
+                </dl>
+
+                <p
+                  className={`mt-3 text-[11px] leading-4 ${
+                    row.floodplain_1pct ? 'text-sky-900' : 'text-slate-600'
+                  }`}
+                >
+                  A parcel overlap does not prove that an existing building lies
+                  inside the mapped portion, establish a site elevation, or replace
+                  survey, insurance, code, and resilience review
+                  {row.floodplain_data_as_of
+                    ? ` · PLUTO retrieved ${row.floodplain_data_as_of}`
+                    : ''}
+                  .
+                </p>
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                  <a
+                    href="https://data.cityofnewyork.us/d/64uk-42ks"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-sky-950 underline decoration-sky-300 underline-offset-2"
+                  >
+                    Official PLUTO source
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                  <a
+                    href="https://www.nyc.gov/site/floodmaps/maps/overview.page"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-sky-950 underline decoration-sky-300 underline-offset-2"
+                  >
+                    NYC flood-map guidance
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
                 </div>
               </section>
             )}

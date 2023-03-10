@@ -47,6 +47,7 @@ export type ExplorerOpportunity =
   | 'assemblage'
   | 'tax_lien'
   | 'violations'
+  | 'floodplain'
   | 'vacant_site'
   | 'ground_up_candidate'
   | 'conversion_or_overbuilt'
@@ -102,6 +103,10 @@ export function filterExplorerRows<T extends ParcelExplorerRow>(
       }
     } else if (filters.opportunity === 'violations') {
       if ((row.critical_violation_count ?? 0) <= 0) {
+        return false;
+      }
+    } else if (filters.opportunity === 'floodplain') {
+      if (row.floodplain_1pct !== true) {
         return false;
       }
     } else if (filters.opportunity === 'uncommitted') {

@@ -193,6 +193,34 @@ describe('ParcelIntelPropertyPanel', () => {
     );
   });
 
+  it('keeps adopted and preliminary floodplain screens distinct', () => {
+    render(
+      <ParcelIntelPropertyPanel
+        row={{
+          ...parcel,
+          firm07_floodplain: false,
+          pfirm15_floodplain: true,
+          floodplain_1pct: true,
+          floodplain_data_as_of: '2026-07-23',
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText(/1% annual-chance floodplain screen/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Mapped overlap')).toBeInTheDocument();
+    expect(screen.getByText('Adopted map')).toBeInTheDocument();
+    expect(screen.getByText('Preliminary planning map')).toBeInTheDocument();
+    expect(screen.getByText(/does not prove that an existing building/i)).toBeInTheDocument();
+    expect(screen.getByText(/PLUTO retrieved 2026-07-23/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Official PLUTO source/i })).toHaveAttribute(
+      'href',
+      'https://data.cityofnewyork.us/d/64uk-42ks',
+    );
+  });
+
   it('loads the authenticated acquisition workflow into the parcel panel', async () => {
     mocks.authStatus = 'authenticated';
     render(<ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />);

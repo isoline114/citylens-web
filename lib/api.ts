@@ -408,6 +408,11 @@ export type ParcelIntelRow = {
   hpd_latest_inspection_date?: string | null;
   critical_violation_count?: number | null;
   violation_data_as_of?: string | null;
+  /** PLUTO parcel intersection with FEMA 1% annual-chance floodplains. */
+  firm07_floodplain?: boolean | null;
+  pfirm15_floodplain?: boolean | null;
+  floodplain_1pct?: boolean | null;
+  floodplain_data_as_of?: string | null;
   is_landmark: boolean;
   is_historic_district: boolean;
   block_id: string | null;
@@ -516,6 +521,7 @@ export type ParcelIntelMapRow = Pick<
   | 'years_held'
   | 'tax_lien_sale_year'
   | 'critical_violation_count'
+  | 'floodplain_1pct'
   | 'owner_name'
   | 'recent_change'
   | 'opportunity_category'

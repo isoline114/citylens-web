@@ -53,7 +53,9 @@ const EXPECTED_HEADER =
   'Tax-lien data retrieved,DOB Safety active violations,DOB Safety latest issue,' +
   'OATH ECB active violations,OATH ECB Class 1 violations,OATH ECB reported balance,' +
   'OATH ECB latest issue,HPD open violations,HPD Class C violations,HPD latest inspection,' +
-  'Immediate-hazard violations,Violation data retrieved,Owner,Owner source,PLUTO owner type,' +
+  'Immediate-hazard violations,Violation data retrieved,FEMA 2007 FIRM 1% tax-lot overlap,' +
+  'FEMA 2015 PFIRM 1% tax-lot overlap,Any 1% floodplain tax-lot overlap,' +
+  'Floodplain data retrieved,Owner,Owner source,PLUTO owner type,' +
   'Landmark,Historic district,' +
   'Status,Latest project type,Latest project filing year,Latest project status,' +
   'Latest project job number,PLUTO facts as of,ACRIS ownership as of,DOB activity as of,' +

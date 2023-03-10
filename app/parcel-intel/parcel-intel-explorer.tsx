@@ -242,6 +242,9 @@ export function ParcelIntelExplorer({
   const criticalViolationParcelCount = opportunityScope.filter(
     (row) => (row.critical_violation_count ?? 0) > 0,
   ).length;
+  const floodplainParcelCount = opportunityScope.filter(
+    (row) => row.floodplain_1pct === true,
+  ).length;
   const uncommittedCount = opportunityScope.filter(
     (row) =>
       row.acquisition_eligible ??
@@ -483,6 +486,9 @@ export function ParcelIntelExplorer({
               {isAuthenticated && (
                 <option value="violations">Immediate-hazard violations</option>
               )}
+              {isAuthenticated && (
+                <option value="floodplain">1% floodplain exposure</option>
+              )}
               <option value="assemblage">Assemblage opportunities</option>
               <option value="vacant_site">Vacant sites</option>
               <option value="ground_up_candidate">Ground-up candidates</option>
@@ -675,6 +681,25 @@ export function ParcelIntelExplorer({
                 </div>
                 <div className="text-lg font-semibold text-rose-950">
                   {criticalViolationParcelCount.toLocaleString()}
+                </div>
+              </button>
+            )}
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => updateFilter('opportunity', 'floodplain')}
+                aria-pressed={filters.opportunity === 'floodplain'}
+                className={`rounded-xl px-3 py-2 text-left transition-colors ${
+                  filters.opportunity === 'floodplain'
+                    ? 'bg-sky-100 ring-2 ring-inset ring-sky-400'
+                    : 'bg-sky-50 hover:bg-sky-100'
+                }`}
+              >
+                <div className="text-[11px] uppercase tracking-wide text-sky-700">
+                  1% floodplain
+                </div>
+                <div className="text-lg font-semibold text-sky-950">
+                  {floodplainParcelCount.toLocaleString()}
                 </div>
               </button>
             )}

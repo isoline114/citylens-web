@@ -165,4 +165,19 @@ describe('parcel citywide explorer support', () => {
       }).map((item) => item.bbl),
     ).toEqual(['critical']);
   });
+
+  it('filters parcels with either official 1% floodplain overlap flag', () => {
+    const rows = [
+      row({ bbl: 'outside', floodplain_1pct: false }),
+      row({ bbl: 'overlap', floodplain_1pct: true }),
+      row({ bbl: 'not-loaded', floodplain_1pct: null }),
+    ];
+
+    expect(
+      filterExplorerRows(rows, {
+        ...filters,
+        opportunity: 'floodplain',
+      }).map((item) => item.bbl),
+    ).toEqual(['overlap']);
+  });
 });
