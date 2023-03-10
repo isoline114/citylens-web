@@ -101,6 +101,19 @@ function formatCurrency(value: number | null | undefined): string {
   }).format(value);
 }
 
+function formatIsoDate(value: string | null | undefined): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? '');
+  if (!match) return value ?? null;
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(
+    new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))),
+  );
+}
+
 function parseBbl(
   bbl: string,
 ): { borough: string; block: string; lot: string } | null {
@@ -410,6 +423,56 @@ export function ParcelIntelPropertyPanel({ row, onClose }: Props) {
                 value={row.year_built && row.year_built > 0 ? String(row.year_built) : 'None recorded'}
               />
             </dl>
+
+            {row.tax_lien_sale_year && (
+              <section className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <div className="flex items-start gap-2">
+                  <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-amber-950">
+                      {row.tax_lien_sale_year} final tax-lien sale record
+                    </h4>
+                    <p className="mt-1 text-xs leading-5 text-amber-900">
+                      NYC DOF included this tax lot in its final{' '}
+                      {formatIsoDate(row.tax_lien_sale_date) ??
+                        `${row.tax_lien_sale_year}`}{' '}
+                      lien-sale list
+                      {row.tax_lien_water_debt_only
+                        ? ' for a water-debt-only record'
+                        : ''}
+                      . This historical distress signal does not prove a balance remains
+                      unpaid, that foreclosure occurred, or that the property is for
+                      sale. Verify current payoff and status before outreach.
+                    </p>
+                    {row.tax_lien_data_as_of && (
+                      <p className="mt-1 text-[11px] text-amber-800">
+                        Official dataset retrieved {row.tax_lien_data_as_of}.
+                      </p>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      <a
+                        href="https://www.nyc.gov/site/finance/property/property-lien-sales.page"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-amber-950 underline decoration-amber-400 underline-offset-2"
+                      >
+                        NYC DOF guidance
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                      <a
+                        href="https://data.cityofnewyork.us/d/9rz4-mjek"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-amber-950 underline decoration-amber-400 underline-offset-2"
+                      >
+                        Official source data
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
 
             {(row.assemblage_lot_count ?? 0) >= 2 && (
               <section className="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3">

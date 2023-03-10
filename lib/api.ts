@@ -390,6 +390,11 @@ export type ParcelIntelRow = {
   last_sale_year: number | null;
   years_held: number | null;
   has_recent_sale_5yr: boolean;
+  /** Historical NYC DOF final tax-lien sale record; not current debt status. */
+  tax_lien_sale_date?: string | null;
+  tax_lien_sale_year?: number | null;
+  tax_lien_water_debt_only?: boolean | null;
+  tax_lien_data_as_of?: string | null;
   is_landmark: boolean;
   is_historic_district: boolean;
   block_id: string | null;
@@ -496,6 +501,7 @@ export type ParcelIntelMapRow = Pick<
   | 'last_sale_price'
   | 'last_sale_year'
   | 'years_held'
+  | 'tax_lien_sale_year'
   | 'owner_name'
   | 'recent_change'
   | 'opportunity_category'

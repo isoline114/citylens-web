@@ -49,7 +49,8 @@ const EXPECTED_HEADER =
   'Address,BBL,Borough,NYC acquisition rank,Borough acquisition rank,Original model rank,' +
   'Priority tier,Acquisition eligible,Acquisition status,Exclusion reasons,Opportunity,' +
   'Zoning,Land use,Lot area (sqft),Allowed FAR,Built FAR %,Unused floor area (sqft),' +
-  'Last sale price,Last sale year,Years held,Owner,Owner source,PLUTO owner type,Landmark,Historic district,' +
+  'Last sale price,Last sale year,Years held,Final tax-lien sale date,Tax-lien water debt only,' +
+  'Tax-lien data retrieved,Owner,Owner source,PLUTO owner type,Landmark,Historic district,' +
   'Status,Latest project type,Latest project filing year,Latest project status,' +
   'Latest project job number,PLUTO facts as of,ACRIS ownership as of,DOB activity as of,' +
   'Imagery observed through,Top model factors';

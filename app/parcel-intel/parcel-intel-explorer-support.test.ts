@@ -136,4 +136,18 @@ describe('parcel citywide explorer support', () => {
       }).map((item) => item.bbl),
     ).toEqual(['pair', 'cluster']);
   });
+
+  it('filters official final tax-lien sale history without treating it as a score', () => {
+    const rows = [
+      row({ bbl: 'no-record', tax_lien_sale_year: null }),
+      row({ bbl: 'final-sale', tax_lien_sale_year: 2025 }),
+    ];
+
+    expect(
+      filterExplorerRows(rows, {
+        ...filters,
+        opportunity: 'tax_lien',
+      }).map((item) => item.bbl),
+    ).toEqual(['final-sale']);
+  });
 });

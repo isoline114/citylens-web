@@ -9,8 +9,10 @@ The explorer renders its public preview immediately, upgrades authenticated
 users with one compact 5,000-row citywide request, and fetches polygon,
 explanation, provenance, and underwriting detail only when a parcel is opened.
 Full borough payloads are deferred until the user requests a CSV. The explorer
-also exposes multi-lot assemblage candidates and the accepted model's clearly
-labeled forward-test hit rate.
+also exposes multi-lot assemblage candidates, a signed-in filter for official
+NYC DOF final tax-lien sale history, and the accepted model's clearly labeled
+forward-test hit rate. Lien-sale matches are presented as historical diligence
+signals with verification links—not as current debt or seller intent.
 
 The UI consumes `published_sweep@v5` ranking/eligibility evidence. Model
 attributions describe historical DOB **activity records** (which can include

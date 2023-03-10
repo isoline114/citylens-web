@@ -130,6 +130,28 @@ describe('ParcelIntelPropertyPanel', () => {
     expect(screen.getByText('ZAP 2026-07-22')).toBeInTheDocument();
   });
 
+  it('labels final tax-lien sale history as diligence rather than current debt', () => {
+    render(
+      <ParcelIntelPropertyPanel
+        row={{
+          ...parcel,
+          tax_lien_sale_date: '2025-06-01',
+          tax_lien_sale_year: 2025,
+          tax_lien_water_debt_only: false,
+          tax_lien_data_as_of: '2026-07-23',
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/2025 final tax-lien sale record/i)).toBeInTheDocument();
+    expect(screen.getByText(/does not prove a balance remains unpaid/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Official source data/i })).toHaveAttribute(
+      'href',
+      'https://data.cityofnewyork.us/d/9rz4-mjek',
+    );
+  });
+
   it('loads the authenticated acquisition workflow into the parcel panel', async () => {
     mocks.authStatus = 'authenticated';
     render(<ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />);

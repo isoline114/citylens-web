@@ -45,6 +45,7 @@ export type ExplorerOpportunity =
   | 'all'
   | 'uncommitted'
   | 'assemblage'
+  | 'tax_lien'
   | 'vacant_site'
   | 'ground_up_candidate'
   | 'conversion_or_overbuilt'
@@ -92,6 +93,10 @@ export function filterExplorerRows<T extends ParcelExplorerRow>(
         !row.assemblage_lot_count ||
         row.assemblage_lot_count < 2
       ) {
+        return false;
+      }
+    } else if (filters.opportunity === 'tax_lien') {
+      if (row.tax_lien_sale_year === null || row.tax_lien_sale_year === undefined) {
         return false;
       }
     } else if (filters.opportunity === 'uncommitted') {

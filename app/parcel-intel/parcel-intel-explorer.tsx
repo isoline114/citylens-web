@@ -236,6 +236,9 @@ export function ParcelIntelExplorer({
   const assemblageCount = opportunityScope.filter(
     (row) => (row.assemblage_lot_count ?? 0) >= 2,
   ).length;
+  const taxLienCount = opportunityScope.filter(
+    (row) => row.tax_lien_sale_year !== null && row.tax_lien_sale_year !== undefined,
+  ).length;
   const uncommittedCount = opportunityScope.filter(
     (row) =>
       row.acquisition_eligible ??
@@ -471,6 +474,9 @@ export function ParcelIntelExplorer({
             >
               <option value="all">All opportunities</option>
               <option value="uncommitted">Qualified acquisition leads</option>
+              {isAuthenticated && (
+                <option value="tax_lien">Final lien-sale history</option>
+              )}
               <option value="assemblage">Assemblage opportunities</option>
               <option value="vacant_site">Vacant sites</option>
               <option value="ground_up_candidate">Ground-up candidates</option>
@@ -610,7 +616,11 @@ export function ParcelIntelExplorer({
             </div>
           ) : (
             <>
-          <div className="grid grid-cols-2 gap-2 border-b border-slate-200 p-3">
+          <div
+            className={`grid gap-2 border-b border-slate-200 p-3 ${
+              isAuthenticated ? 'grid-cols-3' : 'grid-cols-2'
+            }`}
+          >
             <button
               type="button"
               onClick={() => updateFilter('opportunity', 'uncommitted')}
@@ -628,6 +638,25 @@ export function ParcelIntelExplorer({
                 {uncommittedCount.toLocaleString()}
               </div>
             </button>
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => updateFilter('opportunity', 'tax_lien')}
+                aria-pressed={filters.opportunity === 'tax_lien'}
+                className={`rounded-xl px-3 py-2 text-left transition-colors ${
+                  filters.opportunity === 'tax_lien'
+                    ? 'bg-amber-100 ring-2 ring-inset ring-amber-400'
+                    : 'bg-amber-50 hover:bg-amber-100'
+                }`}
+              >
+                <div className="text-[11px] uppercase tracking-wide text-amber-700">
+                  Lien-sale records
+                </div>
+                <div className="text-lg font-semibold text-amber-950">
+                  {taxLienCount.toLocaleString()}
+                </div>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => updateFilter('opportunity', 'assemblage')}

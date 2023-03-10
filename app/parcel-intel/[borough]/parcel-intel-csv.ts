@@ -69,6 +69,18 @@ const COLUMNS: Column[] = [
   { header: 'Last sale price', value: (r) => r.last_sale_price },
   { header: 'Last sale year', value: (r) => r.last_sale_year },
   { header: 'Years held', value: (r) => r.years_held },
+  { header: 'Final tax-lien sale date', value: (r) => r.tax_lien_sale_date },
+  {
+    header: 'Tax-lien water debt only',
+    value: (r) =>
+      r.tax_lien_water_debt_only === null ||
+      r.tax_lien_water_debt_only === undefined
+        ? null
+        : r.tax_lien_water_debt_only
+          ? 'yes'
+          : 'no',
+  },
+  { header: 'Tax-lien data retrieved', value: (r) => r.tax_lien_data_as_of },
   { header: 'Owner', value: (r) => r.owner_name },
   { header: 'Owner source', value: (r) => r.owner_name_source },
   { header: 'PLUTO owner type', value: (r) => r.owner_type },
