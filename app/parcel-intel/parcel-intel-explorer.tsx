@@ -239,6 +239,9 @@ export function ParcelIntelExplorer({
   const taxLienCount = opportunityScope.filter(
     (row) => row.tax_lien_sale_year !== null && row.tax_lien_sale_year !== undefined,
   ).length;
+  const criticalViolationParcelCount = opportunityScope.filter(
+    (row) => (row.critical_violation_count ?? 0) > 0,
+  ).length;
   const uncommittedCount = opportunityScope.filter(
     (row) =>
       row.acquisition_eligible ??
@@ -477,6 +480,9 @@ export function ParcelIntelExplorer({
               {isAuthenticated && (
                 <option value="tax_lien">Final lien-sale history</option>
               )}
+              {isAuthenticated && (
+                <option value="violations">Immediate-hazard violations</option>
+              )}
               <option value="assemblage">Assemblage opportunities</option>
               <option value="vacant_site">Vacant sites</option>
               <option value="ground_up_candidate">Ground-up candidates</option>
@@ -616,11 +622,7 @@ export function ParcelIntelExplorer({
             </div>
           ) : (
             <>
-          <div
-            className={`grid gap-2 border-b border-slate-200 p-3 ${
-              isAuthenticated ? 'grid-cols-3' : 'grid-cols-2'
-            }`}
-          >
+          <div className="grid grid-cols-2 gap-2 border-b border-slate-200 p-3">
             <button
               type="button"
               onClick={() => updateFilter('opportunity', 'uncommitted')}
@@ -654,6 +656,25 @@ export function ParcelIntelExplorer({
                 </div>
                 <div className="text-lg font-semibold text-amber-950">
                   {taxLienCount.toLocaleString()}
+                </div>
+              </button>
+            )}
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => updateFilter('opportunity', 'violations')}
+                aria-pressed={filters.opportunity === 'violations'}
+                className={`rounded-xl px-3 py-2 text-left transition-colors ${
+                  filters.opportunity === 'violations'
+                    ? 'bg-rose-100 ring-2 ring-inset ring-rose-400'
+                    : 'bg-rose-50 hover:bg-rose-100'
+                }`}
+              >
+                <div className="text-[11px] uppercase tracking-wide text-rose-700">
+                  Immediate hazards
+                </div>
+                <div className="text-lg font-semibold text-rose-950">
+                  {criticalViolationParcelCount.toLocaleString()}
                 </div>
               </button>
             )}

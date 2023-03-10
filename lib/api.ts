@@ -395,6 +395,19 @@ export type ParcelIntelRow = {
   tax_lien_sale_year?: number | null;
   tax_lien_water_debt_only?: boolean | null;
   tax_lien_data_as_of?: string | null;
+  /** Current official violation snapshots; authenticated diligence only. */
+  dob_safety_active_count?: number;
+  dob_safety_latest_issue_date?: string | null;
+  ecb_active_count?: number;
+  ecb_class_1_count?: number;
+  /** Signed agency-reported balance; credits can make this negative. */
+  ecb_balance_due?: number;
+  ecb_latest_issue_date?: string | null;
+  hpd_open_count?: number;
+  hpd_class_c_count?: number;
+  hpd_latest_inspection_date?: string | null;
+  critical_violation_count?: number | null;
+  violation_data_as_of?: string | null;
   is_landmark: boolean;
   is_historic_district: boolean;
   block_id: string | null;
@@ -502,6 +515,7 @@ export type ParcelIntelMapRow = Pick<
   | 'last_sale_year'
   | 'years_held'
   | 'tax_lien_sale_year'
+  | 'critical_violation_count'
   | 'owner_name'
   | 'recent_change'
   | 'opportunity_category'

@@ -81,6 +81,32 @@ const COLUMNS: Column[] = [
           : 'no',
   },
   { header: 'Tax-lien data retrieved', value: (r) => r.tax_lien_data_as_of },
+  {
+    header: 'DOB Safety active violations',
+    value: (r) => r.dob_safety_active_count,
+  },
+  {
+    header: 'DOB Safety latest issue',
+    value: (r) => r.dob_safety_latest_issue_date,
+  },
+  { header: 'OATH ECB active violations', value: (r) => r.ecb_active_count },
+  {
+    header: 'OATH ECB Class 1 violations',
+    value: (r) => r.ecb_class_1_count,
+  },
+  { header: 'OATH ECB reported balance', value: (r) => r.ecb_balance_due },
+  { header: 'OATH ECB latest issue', value: (r) => r.ecb_latest_issue_date },
+  { header: 'HPD open violations', value: (r) => r.hpd_open_count },
+  { header: 'HPD Class C violations', value: (r) => r.hpd_class_c_count },
+  {
+    header: 'HPD latest inspection',
+    value: (r) => r.hpd_latest_inspection_date,
+  },
+  {
+    header: 'Immediate-hazard violations',
+    value: (r) => r.critical_violation_count,
+  },
+  { header: 'Violation data retrieved', value: (r) => r.violation_data_as_of },
   { header: 'Owner', value: (r) => r.owner_name },
   { header: 'Owner source', value: (r) => r.owner_name_source },
   { header: 'PLUTO owner type', value: (r) => r.owner_type },

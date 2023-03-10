@@ -138,6 +138,9 @@ describe('ParcelIntelExplorer', () => {
 
     expect(screen.getByText(/Preview coverage/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Sign in for the full map/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('option', { name: /Immediate-hazard violations/i }),
+    ).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('citywide-map-stub')).toHaveTextContent('2 mapped rows'));
     expect(screen.getByTestId('citywide-map-stub')).toHaveAttribute(
       'data-overlay',
@@ -169,6 +172,9 @@ describe('ParcelIntelExplorer', () => {
     render(<ParcelIntelExplorer boroughs={boroughs} />);
 
     expect(screen.getByText(/Full workspace coverage/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('option', { name: /Immediate-hazard violations/i }),
+    ).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('citywide-map-stub')).toHaveTextContent('2 mapped rows'));
     expect(mocks.getParcelIntelMap).toHaveBeenCalledWith(1000, {
       includeAuth: true,

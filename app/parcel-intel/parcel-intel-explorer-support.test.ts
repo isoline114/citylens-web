@@ -150,4 +150,19 @@ describe('parcel citywide explorer support', () => {
       }).map((item) => item.bbl),
     ).toEqual(['final-sale']);
   });
+
+  it('filters parcels with official immediate-hazard violation records', () => {
+    const rows = [
+      row({ bbl: 'none', critical_violation_count: 0 }),
+      row({ bbl: 'critical', critical_violation_count: 3 }),
+      row({ bbl: 'not-loaded', critical_violation_count: null }),
+    ];
+
+    expect(
+      filterExplorerRows(rows, {
+        ...filters,
+        opportunity: 'violations',
+      }).map((item) => item.bbl),
+    ).toEqual(['critical']);
+  });
 });

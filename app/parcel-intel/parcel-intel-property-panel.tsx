@@ -186,6 +186,11 @@ export function ParcelIntelPropertyPanel({ row, onClose }: Props) {
   const [workflowError, setWorkflowError] = useState<string | null>(null);
   const reasons = useMemo(() => explainParcel(row), [row]);
   const links = useMemo(() => externalParcelLinks(row), [row]);
+  const hasViolationSnapshot =
+    (row.dob_safety_active_count ?? 0) +
+      (row.ecb_active_count ?? 0) +
+      (row.hpd_open_count ?? 0) >
+    0;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -470,6 +475,106 @@ export function ParcelIntelPropertyPanel({ row, onClose }: Props) {
                       </a>
                     </div>
                   </div>
+                </div>
+              </section>
+            )}
+
+            {hasViolationSnapshot && (
+              <section className="mt-3 rounded-xl border border-rose-200 bg-rose-50/70 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-rose-950">
+                      Open violation snapshot
+                    </h4>
+                    <p className="mt-1 text-xs leading-5 text-rose-900">
+                      Current official agency statuses joined by BBL. Counts are
+                      diligence flags, not ranking inputs or evidence that this
+                      property is available.
+                    </p>
+                  </div>
+                  {(row.critical_violation_count ?? 0) > 0 && (
+                    <span className="shrink-0 rounded-full bg-rose-700 px-2 py-1 text-[11px] font-semibold text-white">
+                      {formatNumber(row.critical_violation_count)} immediate-hazard{' '}
+                      {(row.critical_violation_count ?? 0) === 1
+                        ? 'record'
+                        : 'records'}
+                    </span>
+                  )}
+                </div>
+
+                <dl className="mt-3 grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-lg border border-rose-100 bg-white p-2.5">
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      DOB Safety active
+                    </dt>
+                    <dd className="mt-1 text-lg font-semibold text-slate-950">
+                      {formatNumber(row.dob_safety_active_count)}
+                    </dd>
+                    <div className="mt-1 text-[11px] leading-4 text-slate-600">
+                      Latest issue{' '}
+                      {formatIsoDate(row.dob_safety_latest_issue_date) ?? 'unavailable'}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-rose-100 bg-white p-2.5">
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      OATH / ECB active
+                    </dt>
+                    <dd className="mt-1 text-lg font-semibold text-slate-950">
+                      {formatNumber(row.ecb_active_count)}
+                    </dd>
+                    <div className="mt-1 text-[11px] leading-4 text-slate-600">
+                      {formatNumber(row.ecb_class_1_count)} Class 1
+                      immediately hazardous · reported balance{' '}
+                      {formatCurrency(row.ecb_balance_due)}
+                    </div>
+                    <div className="mt-1 text-[11px] leading-4 text-slate-600">
+                      Latest issue {formatIsoDate(row.ecb_latest_issue_date) ?? 'unavailable'}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-rose-100 bg-white p-2.5">
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      HPD open
+                    </dt>
+                    <dd className="mt-1 text-lg font-semibold text-slate-950">
+                      {formatNumber(row.hpd_open_count)}
+                    </dd>
+                    <div className="mt-1 text-[11px] leading-4 text-slate-600">
+                      {formatNumber(row.hpd_class_c_count)} Class C immediately
+                      hazardous
+                    </div>
+                    <div className="mt-1 text-[11px] leading-4 text-slate-600">
+                      Latest inspection{' '}
+                      {formatIsoDate(row.hpd_latest_inspection_date) ?? 'unavailable'}
+                    </div>
+                  </div>
+                </dl>
+
+                <p className="mt-3 text-[11px] leading-4 text-rose-900">
+                  A building can have multiple records. Verify current status,
+                  correction, hearing, and payment details in the agency systems
+                  before underwriting or outreach
+                  {row.violation_data_as_of
+                    ? ` · data retrieved ${row.violation_data_as_of}`
+                    : ''}
+                  .
+                </p>
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                  {[
+                    ['DOB Safety source', 'https://data.cityofnewyork.us/d/855j-jady'],
+                    ['OATH / ECB source', 'https://data.cityofnewyork.us/d/6bgk-3dad'],
+                    ['HPD source', 'https://data.cityofnewyork.us/d/wvxf-dwi5'],
+                  ].map(([label, href]) => (
+                    <a
+                      key={href}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-rose-950 underline decoration-rose-300 underline-offset-2"
+                    >
+                      {label}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ))}
                 </div>
               </section>
             )}

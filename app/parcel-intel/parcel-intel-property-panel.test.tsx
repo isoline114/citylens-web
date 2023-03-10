@@ -152,6 +152,47 @@ describe('ParcelIntelPropertyPanel', () => {
     );
   });
 
+  it('renders official current violation diligence without changing rank semantics', () => {
+    render(
+      <ParcelIntelPropertyPanel
+        row={{
+          ...parcel,
+          dob_safety_active_count: 4,
+          dob_safety_latest_issue_date: '2026-07-20',
+          ecb_active_count: 3,
+          ecb_class_1_count: 2,
+          ecb_balance_due: -3125,
+          ecb_latest_issue_date: '2026-07-18',
+          hpd_open_count: 7,
+          hpd_class_c_count: 1,
+          hpd_latest_inspection_date: '2026-07-19',
+          critical_violation_count: 3,
+          violation_data_as_of: '2026-07-23',
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/Open violation snapshot/i)).toBeInTheDocument();
+    expect(screen.getByText(/3 immediate-hazard records/i)).toBeInTheDocument();
+    expect(screen.getByText(/2 Class 1 immediately hazardous/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 Class C immediately hazardous/i)).toBeInTheDocument();
+    expect(screen.getByText(/not ranking inputs/i)).toBeInTheDocument();
+    expect(screen.getByText(/data retrieved 2026-07-23/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /DOB Safety source/i })).toHaveAttribute(
+      'href',
+      'https://data.cityofnewyork.us/d/855j-jady',
+    );
+    expect(screen.getByRole('link', { name: /OATH \/ ECB source/i })).toHaveAttribute(
+      'href',
+      'https://data.cityofnewyork.us/d/6bgk-3dad',
+    );
+    expect(screen.getByRole('link', { name: /HPD source/i })).toHaveAttribute(
+      'href',
+      'https://data.cityofnewyork.us/d/wvxf-dwi5',
+    );
+  });
+
   it('loads the authenticated acquisition workflow into the parcel panel', async () => {
     mocks.authStatus = 'authenticated';
     render(<ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />);
