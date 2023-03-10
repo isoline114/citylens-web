@@ -14,6 +14,7 @@ import {
   MapPinned,
   Search,
   Sparkles,
+  TrendingUp,
   TriangleAlert,
   X,
 } from 'lucide-react';
@@ -41,6 +42,7 @@ import {
 } from './parcel-intel-explorer-support';
 import { downloadCsv } from './[borough]/parcel-intel-csv';
 import { ParcelIntelPropertyPanel } from './parcel-intel-property-panel';
+import { ParcelWorkflowInsights } from './parcel-workflow-insights';
 
 const ParcelIntelExplorerMap = dynamic(
   () =>
@@ -91,6 +93,7 @@ export function ParcelIntelExplorer({
   const auth = useAuth();
   const router = useRouter();
   const [rows, setRows] = useState<ParcelIntelMapRow[]>([]);
+  const [feedGeneratedAt, setFeedGeneratedAt] = useState<string | null>(null);
   const [loadState, setLoadState] = useState<LoadState>('idle');
   const [failedBoroughs, setFailedBoroughs] = useState<string[]>([]);
   const [selectedDetail, setSelectedDetail] = useState<ParcelIntelRow | null>(
@@ -111,42 +114,60 @@ export function ParcelIntelExplorer({
   const [overlay, setOverlay] = useState<ExplorerOverlay>('borough');
   const [selectedBbl, setSelectedBbl] = useState<string | null>(initialBbl);
   const [leadLimit, setLeadLimit] = useState(30);
+  const [insightsOpen, setInsightsOpen] = useState(false);
 
   const isAuthenticated = auth.status === 'authenticated';
   const totalAvailable = boroughs.reduce((sum, borough) => sum + borough.count, 0);
 
   const loadLegacySweeps = async (
     includeAuth: boolean,
-  ): Promise<{ rows: ParcelIntelMapRow[]; failures: string[] }> => {
+  ): Promise<{
+    rows: ParcelIntelMapRow[];
+    failures: string[];
+    generatedAt: string | null;
+  }> => {
     const results = await Promise.allSettled(
       boroughs.map(async (borough) => {
         const sweep = await getParcelIntelSweep(borough.slug, 1000, {
           includeAuth,
         });
-        return sweep.rows.map((row) => ({
-          ...row,
-          borough: borough.slug,
-        }));
+        return {
+          rows: sweep.rows.map((row) => ({
+            ...row,
+            borough: borough.slug,
+          })),
+          generatedAt: sweep.generated_at,
+        };
       }),
     );
     const legacyRows: ParcelIntelMapRow[] = [];
     const failures: string[] = [];
+    let generatedAt: string | null = null;
     results.forEach((result, index) => {
       if (result.status === 'fulfilled') {
-        legacyRows.push(...result.value);
+        legacyRows.push(...result.value.rows);
+        generatedAt ??= result.value.generatedAt;
       } else {
         failures.push(boroughs[index]?.slug ?? `borough-${index + 1}`);
       }
     });
-    return { rows: legacyRows, failures };
+    return { rows: legacyRows, failures, generatedAt };
   };
 
   const loadExplorerRows = async (
     includeAuth: boolean,
-  ): Promise<{ rows: ParcelIntelMapRow[]; failures: string[] }> => {
+  ): Promise<{
+    rows: ParcelIntelMapRow[];
+    failures: string[];
+    generatedAt: string | null;
+  }> => {
     try {
       const response = await getParcelIntelMap(1000, { includeAuth });
-      return { rows: response.rows, failures: [] };
+      return {
+        rows: response.rows,
+        failures: [],
+        generatedAt: response.generated_at,
+      };
     } catch {
       // Backwards-compatible during the coordinated engine/web rollout.
       return loadLegacySweeps(includeAuth);
@@ -164,6 +185,7 @@ export function ParcelIntelExplorer({
       if (cancelled || fullInventoryLoaded.current) return;
       const unique = new Map(result.rows.map((row) => [row.bbl, row]));
       setRows([...unique.values()]);
+      setFeedGeneratedAt(result.generatedAt);
       setFailedBoroughs(result.failures);
       setLoadState(unique.size > 0 ? 'ready' : 'error');
     });
@@ -187,6 +209,7 @@ export function ParcelIntelExplorer({
       fullInventoryLoaded.current = includeAuth;
       const unique = new Map(result.rows.map((row) => [row.bbl, row]));
       setRows([...unique.values()]);
+      setFeedGeneratedAt(result.generatedAt);
       setFailedBoroughs(result.failures);
       setLoadState(unique.size > 0 ? 'ready' : 'error');
     });
@@ -434,9 +457,24 @@ export function ParcelIntelExplorer({
             {isAuthenticated
               ? `Full workspace coverage · ${totalAvailable.toLocaleString()} available`
               : `Preview coverage · sign in to load all ${totalAvailable.toLocaleString()}`}
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => setInsightsOpen((value) => !value)}
+                aria-expanded={insightsOpen}
+                className="ml-2 inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
+              >
+                <TrendingUp className="h-3.5 w-3.5 text-emerald-300" />
+                Outcome insights
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {isAuthenticated && insightsOpen && (
+        <ParcelWorkflowInsights onClose={() => setInsightsOpen(false)} />
+      )}
 
       {!isAuthenticated && auth.status !== 'loading' && (
         <div className="flex flex-col gap-3 border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between md:px-7">
@@ -595,6 +633,7 @@ export function ParcelIntelExplorer({
             <ParcelIntelPropertyPanel
               key={selectedDetail.bbl}
               row={selectedDetail}
+              feedGeneratedAt={feedGeneratedAt}
               onClose={closeParcel}
               onViewOwnerPortfolio={focusOwnerPortfolio}
             />

@@ -49,9 +49,11 @@ const OUTCOMES: Array<[ParcelWorkflowItem['outcome'], string]> = [
   ['unknown', 'No outcome yet'],
   ['owner_contacted', 'Owner contacted'],
   ['meeting_scheduled', 'Meeting scheduled'],
+  ['qualified', 'Qualified after contact'],
   ['offer_submitted', 'Offer submitted'],
   ['under_contract', 'Under contract'],
   ['closed', 'Closed'],
+  ['rejected', 'Rejected after diligence'],
   ['lost', 'Lost'],
 ];
 

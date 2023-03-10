@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   BriefcaseBusiness,
   Building2,
+  Clock3,
   ExternalLink,
   FileSearch,
   LockKeyhole,
@@ -15,10 +16,12 @@ import {
 import { useAuth } from '@/lib/auth';
 import {
   listParcelWorkflow,
+  listParcelWorkflowEvents,
   removeParcelWorkflow,
   saveParcelWorkflow,
   type ParcelIntelRow,
   type ParcelWorkflowItem,
+  type ParcelWorkflowEvent,
   type TopFeature,
 } from '@/lib/api';
 import {
@@ -39,6 +42,7 @@ type PanelTab = 'overview' | 'underwrite' | 'workflow';
 
 type Props = {
   row: ParcelIntelRow;
+  feedGeneratedAt?: string | null;
   onClose: () => void;
   onViewOwnerPortfolio?: (ownerPortfolioId: string) => void;
 };
@@ -180,15 +184,26 @@ export function externalParcelLinks(row: ParcelIntelRow): ExternalParcelLink[] {
   return links;
 }
 
-function workflowSnapshot(row: ParcelIntelRow): ParcelWorkflowItem['snapshot'] {
+function workflowSnapshot(
+  row: ParcelIntelRow,
+  feedGeneratedAt?: string | null,
+): ParcelWorkflowItem['snapshot'] {
   return {
+    feed_generated_at: feedGeneratedAt ?? null,
     property_facts_as_of: row.property_facts_as_of ?? null,
+    citywide_rank: row.citywide_rank ?? null,
+    acquisition_rank: row.acquisition_rank ?? null,
+    priority_tier: row.priority_tier ?? null,
+    opportunity_category: row.opportunity_category ?? null,
+    score_calibrated: row.score_calibrated ?? null,
     zoning_district_1: row.zoning_district_1,
     land_use: row.land_use,
     year_built: row.year_built,
     allowed_far: row.allowed_far,
     unused_floor_area_sqft: row.unused_floor_area_sqft,
     owner_name: row.owner_name ?? null,
+    owner_entity_type: row.owner_entity_type ?? null,
+    owner_portfolio_lot_count: row.owner_portfolio_lot_count ?? null,
     last_sale_year: row.last_sale_year,
     latest_nb_filing_year: row.latest_nb_filing_year ?? null,
     latest_nb_status: row.latest_nb_status ?? null,
@@ -199,12 +214,14 @@ function workflowSnapshot(row: ParcelIntelRow): ParcelWorkflowItem['snapshot'] {
 
 export function ParcelIntelPropertyPanel({
   row,
+  feedGeneratedAt,
   onClose,
   onViewOwnerPortfolio,
 }: Props) {
   const auth = useAuth();
   const [tab, setTab] = useState<PanelTab>('overview');
   const [workflowItem, setWorkflowItem] = useState<ParcelWorkflowItem | null>(null);
+  const [workflowEvents, setWorkflowEvents] = useState<ParcelWorkflowEvent[]>([]);
   const [workflowBusy, setWorkflowBusy] = useState(false);
   const [workflowError, setWorkflowError] = useState<string | null>(null);
   const reasons = useMemo(() => explainParcel(row), [row]);
@@ -229,6 +246,7 @@ export function ParcelIntelPropertyPanel({
   useEffect(() => {
     setTab('overview');
     setWorkflowItem(null);
+    setWorkflowEvents([]);
     setWorkflowError(null);
     if (auth.status !== 'authenticated') return;
     let cancelled = false;
@@ -246,6 +264,24 @@ export function ParcelIntelPropertyPanel({
     };
   }, [auth.status, row.bbl]);
 
+  useEffect(() => {
+    if (auth.status !== 'authenticated' || !workflowItem) {
+      setWorkflowEvents([]);
+      return;
+    }
+    let cancelled = false;
+    void listParcelWorkflowEvents(row.bbl)
+      .then((events) => {
+        if (!cancelled) setWorkflowEvents(events);
+      })
+      .catch(() => {
+        if (!cancelled) setWorkflowEvents([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.status, row.bbl, workflowItem]);
+
   const saveWorkflow = async (draft: WorkflowDraft) => {
     setWorkflowBusy(true);
     setWorkflowError(null);
@@ -253,7 +289,7 @@ export function ParcelIntelPropertyPanel({
       const saved = await saveParcelWorkflow(row.bbl, {
         borough: row.borough ?? 'unknown',
         ...draft,
-        snapshot: workflowSnapshot(row),
+        snapshot: workflowSnapshot(row, feedGeneratedAt),
       });
       setWorkflowItem(saved);
     } catch {
@@ -925,12 +961,52 @@ export function ParcelIntelPropertyPanel({
 
         {tab === 'workflow' &&
           (auth.status === 'authenticated' ? (
-            <WorkflowEditor
-              item={workflowItem}
-              busy={workflowBusy}
-              onSave={saveWorkflow}
-              onRemove={removeWorkflow}
-            />
+            <>
+              <WorkflowEditor
+                item={workflowItem}
+                busy={workflowBusy}
+                onSave={saveWorkflow}
+                onRemove={removeWorkflow}
+              />
+              {workflowEvents.length > 0 && (
+                <section className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+                  <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-700">
+                    <Clock3 className="h-3.5 w-3.5" />
+                    Decision history
+                  </h4>
+                  <ol className="mt-2 space-y-2">
+                    {workflowEvents.slice(0, 8).map((event) => (
+                      <li
+                        key={event.event_id}
+                        className="border-l-2 border-slate-200 pl-3 text-xs"
+                      >
+                        <div className="font-medium capitalize text-slate-900">
+                          {event.event_type}
+                          {event.to_stage ? ` · ${event.to_stage}` : ''}
+                          {event.to_outcome && event.to_outcome !== 'unknown'
+                            ? ` · ${event.to_outcome.replaceAll('_', ' ')}`
+                            : ''}
+                        </div>
+                        <div className="mt-0.5 text-slate-500">
+                          {new Intl.DateTimeFormat('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          }).format(new Date(event.occurred_at))}
+                          {event.changed_fields.length > 0
+                            ? ` · ${event.changed_fields.length} field${
+                                event.changed_fields.length === 1 ? '' : 's'
+                              } changed`
+                            : ''}
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              )}
+            </>
           ) : (
             <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white ring-1 ring-slate-200">

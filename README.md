@@ -15,7 +15,11 @@ ECB or Class C HPD immediately hazardous records, a signed-in 1% annual-chance
 floodplain screen, a signed-in exact-name current-PLUTO legal-owner portfolio
 filter, and the accepted model's clearly labeled forward-test hit rate. A user
 can open a parcel and focus the citywide map on other current candidates with
-the same exact normalized legal name. The portfolio card explicitly does not
+the same exact normalized legal name. Signed-in users can open Outcome Insights
+to see prospective saved/contacted/qualified/offered/contracted/closed cohorts
+with explicit denominators and minimum-sample warnings. Each parcel workflow
+also exposes its value-minimized decision history. Those user-entered outcomes
+are kept separate from historical model accuracy. The portfolio card explicitly does not
 infer beneficial ownership or related LLCs. Parcel detail separates DOB Safety,
 OATH/ECB, and HPD counts and keeps the adopted 2007 FIRM separate from the 2015
 preliminary FIRM. It links each official source and warns that tax-lot overlap

@@ -572,13 +572,27 @@ export type ParcelWorkflowStage =
   | 'pass';
 
 export type ParcelWorkflowSnapshot = {
+  feed_generated_at: string | null;
   property_facts_as_of: string | null;
+  citywide_rank: number | null;
+  acquisition_rank: number | null;
+  priority_tier: 'highest' | 'high' | 'medium' | 'watch' | null;
+  opportunity_category:
+    | 'vacant_site'
+    | 'ground_up_candidate'
+    | 'conversion_or_overbuilt'
+    | 'active_project'
+    | 'completed_project'
+    | null;
+  score_calibrated: number | null;
   zoning_district_1: string | null;
   land_use: string | null;
   year_built: number | null;
   allowed_far: number | null;
   unused_floor_area_sqft: number | null;
   owner_name: string | null;
+  owner_entity_type: ParcelIntelRow['owner_entity_type'];
+  owner_portfolio_lot_count: number | null;
   last_sale_year: number | null;
   latest_nb_filing_year: number | null;
   latest_nb_status: string | null;
@@ -599,13 +613,88 @@ export type ParcelWorkflowItem = {
     | 'unknown'
     | 'owner_contacted'
     | 'meeting_scheduled'
+    | 'qualified'
     | 'offer_submitted'
     | 'under_contract'
     | 'closed'
+    | 'rejected'
     | 'lost';
   snapshot: ParcelWorkflowSnapshot;
   saved_at: string;
   updated_at: string;
+};
+
+export type ParcelWorkflowEvent = {
+  event_id: string;
+  schema_version: 'citylens/parcel-workflow-event@v1';
+  bbl: string;
+  event_type: 'created' | 'updated' | 'archived' | 'restored';
+  occurred_at: string;
+  from_stage: ParcelWorkflowStage | null;
+  to_stage: ParcelWorkflowStage | null;
+  from_outcome: ParcelWorkflowItem['outcome'] | null;
+  to_outcome: ParcelWorkflowItem['outcome'] | null;
+  from_decision_reason: string | null;
+  to_decision_reason: string | null;
+  changed_fields: string[];
+};
+
+export type ParcelWorkflowRate = {
+  numerator: number;
+  denominator: number;
+  rate: number | null;
+  sufficient_denominator: boolean;
+};
+
+export type ParcelWorkflowCohort = {
+  dimension: 'borough' | 'rank_band' | 'opportunity';
+  value: string;
+  total: number;
+  contacted: number;
+  qualified: number;
+  offer_submitted: number;
+  under_contract: number;
+  closed: number;
+  rejected: number;
+  lost: number;
+  contacted_rate: number | null;
+  qualified_rate: number | null;
+  close_rate: number | null;
+};
+
+export type ParcelWorkflowAnalytics = {
+  schema_version: 'citylens/parcel-workflow-analytics@v1';
+  generated_at: string;
+  measurement_status: 'collecting' | 'directional' | 'usable';
+  measurement_label: string;
+  total_records: number;
+  active_records: number;
+  archived_records: number;
+  event_history_records: number;
+  rank_snapshot_records: number;
+  minimum_cohort_size: number;
+  minimum_rate_denominator: number;
+  stage_counts: Record<string, number>;
+  outcome_counts: Record<string, number>;
+  decision_reason_counts: Record<string, number>;
+  funnel: {
+    saved: number;
+    contacted: number;
+    meeting_scheduled: number;
+    qualified: number;
+    offer_submitted: number;
+    under_contract: number;
+    closed: number;
+    rejected: number;
+    lost: number;
+    contacted_per_saved: ParcelWorkflowRate;
+    qualified_per_contacted: ParcelWorkflowRate;
+    offer_per_qualified: ParcelWorkflowRate;
+    contract_per_offer: ParcelWorkflowRate;
+    close_per_contract: ParcelWorkflowRate;
+  };
+  cohorts: ParcelWorkflowCohort[];
+  warnings: string[];
 };
 
 export type ParcelSavedSearchFilters = {
@@ -691,6 +780,20 @@ export async function getParcelIntelParcel(
 
 export async function listParcelWorkflow(): Promise<ParcelWorkflowItem[]> {
   return requestJson<ParcelWorkflowItem[]>('/v1/parcel-intel/workflow');
+}
+
+export async function getParcelWorkflowAnalytics(): Promise<ParcelWorkflowAnalytics> {
+  return requestJson<ParcelWorkflowAnalytics>(
+    '/v1/parcel-intel/workflow/analytics',
+  );
+}
+
+export async function listParcelWorkflowEvents(
+  bbl: string,
+): Promise<ParcelWorkflowEvent[]> {
+  return requestJson<ParcelWorkflowEvent[]>(
+    `/v1/parcel-intel/workflow/${encodeURIComponent(bbl)}/events`,
+  );
 }
 
 export async function saveParcelWorkflow(
