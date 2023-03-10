@@ -5,6 +5,12 @@ not five separate borough workspaces. Borough and eligibility filters update the
 same map/list, and selecting a lot opens its overview, underwriting, workflow,
 official-source links, provenance, and model explanation in an in-place parcel
 panel. Legacy `/parcel-intel/<borough>` links redirect into the citywide route.
+The explorer renders its public preview immediately, upgrades authenticated
+users with one compact 5,000-row citywide request, and fetches polygon,
+explanation, provenance, and underwriting detail only when a parcel is opened.
+Full borough payloads are deferred until the user requests a CSV. The explorer
+also exposes multi-lot assemblage candidates and the accepted model's clearly
+labeled forward-test hit rate.
 
 The UI consumes `published_sweep@v5` ranking/eligibility evidence. Model
 attributions describe historical DOB **activity records** (which can include

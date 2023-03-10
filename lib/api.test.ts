@@ -6,6 +6,8 @@ import {
   createRun,
   getDemoRun,
   getFeaturedDemos,
+  getParcelIntelMap,
+  getParcelIntelParcel,
   getRun,
   getRuns,
   joinApiUrl,
@@ -210,6 +212,41 @@ describe('non-demo fetches attach Bearer token', () => {
 
     await expect(getRun('run-1')).rejects.toMatchObject({ status: 401 });
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('parcel intelligence progressive reads', () => {
+  function stubFetch(body: unknown) {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => body,
+      text: async () => JSON.stringify(body),
+    } as Response);
+    vi.stubGlobal('fetch', mockFetch);
+    return mockFetch;
+  }
+
+  it('loads the public compact citywide map without authentication', async () => {
+    setAuthTokenGetter(async () => 'tok-abc');
+    const mockFetch = stubFetch({ rows: [], generated_at: null });
+
+    await getParcelIntelMap(250, { includeAuth: false });
+
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/v1/parcel-intel/map?top_per_borough=250');
+    expect(new Headers(init.headers).has('Authorization')).toBe(false);
+  });
+
+  it('loads full selected-parcel detail with the user token', async () => {
+    setAuthTokenGetter(async () => 'tok-abc');
+    const mockFetch = stubFetch({ bbl: '3000010001' });
+
+    await getParcelIntelParcel('3000010001', { includeAuth: true });
+
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/v1/parcel-intel/parcel/3000010001');
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer tok-abc');
   });
 });
 

@@ -121,4 +121,19 @@ describe('parcel citywide explorer support', () => {
       }).map((item) => item.bbl),
     ).toEqual(['vacant', 'ground-up', 'conversion']);
   });
+
+  it('filters multi-lot common-owner assemblages', () => {
+    const rows = [
+      row({ bbl: 'single', assemblage_lot_count: null }),
+      row({ bbl: 'pair', assemblage_lot_count: 2 }),
+      row({ bbl: 'cluster', assemblage_lot_count: 4 }),
+    ];
+
+    expect(
+      filterExplorerRows(rows, {
+        ...filters,
+        opportunity: 'assemblage',
+      }).map((item) => item.bbl),
+    ).toEqual(['pair', 'cluster']);
+  });
 });

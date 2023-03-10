@@ -20,6 +20,7 @@ import {
   explorerRowColor,
   opportunityLabel,
   priorityLabel,
+  type ParcelExplorerRow,
   type ExplorerOverlay,
 } from './parcel-intel-explorer-support';
 
@@ -29,8 +30,9 @@ const NYC_BOUNDS: LatLngBoundsExpression = [
 ];
 
 type Props = {
-  rows: ParcelIntelRow[];
+  rows: ParcelExplorerRow[];
   selectedBbl: string | null;
+  selectedRow?: ParcelIntelRow | null;
   overlay: ExplorerOverlay;
   onSelect: (bbl: string) => void;
 };
@@ -39,7 +41,7 @@ function FitExplorerBounds({
   rows,
   selectedBbl,
 }: {
-  rows: ParcelIntelRow[];
+  rows: ParcelExplorerRow[];
   selectedBbl: string | null;
 }) {
   const map = useMap();
@@ -77,7 +79,7 @@ function PanToSelection({
   rows,
   selectedBbl,
 }: {
-  rows: ParcelIntelRow[];
+  rows: ParcelExplorerRow[];
   selectedBbl: string | null;
 }) {
   const map = useMap();
@@ -144,6 +146,7 @@ function OverlayLegend({ overlay }: { overlay: ExplorerOverlay }) {
 export function ParcelIntelExplorerMap({
   rows,
   selectedBbl,
+  selectedRow = null,
   overlay,
   onSelect,
 }: Props) {
@@ -154,11 +157,10 @@ export function ParcelIntelExplorerMap({
       ),
     [rows],
   );
-  const selected = useMemo(
-    () => rows.find((row) => row.bbl === selectedBbl) ?? null,
-    [rows, selectedBbl],
-  );
-  const selectedGeometry = selected?.parcel_geometry as GeoJsonObject | null | undefined;
+  const selectedGeometry = selectedRow?.parcel_geometry as
+    | GeoJsonObject
+    | null
+    | undefined;
 
   return (
     <div

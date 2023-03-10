@@ -474,6 +474,39 @@ export type ParcelIntelSweepResponse = {
   quality_gate?: Record<string, unknown>;
 };
 
+export type ParcelIntelMapRow = Pick<
+  ParcelIntelRow,
+  | 'bbl'
+  | 'address'
+  | 'borough'
+  | 'score_calibrated'
+  | 'priority_rank'
+  | 'priority_tier'
+  | 'model_rank'
+  | 'acquisition_rank'
+  | 'citywide_rank'
+  | 'acquisition_eligible'
+  | 'acquisition_status'
+  | 'lot_area_sqft'
+  | 'unused_floor_area_sqft'
+  | 'far_utilization_pct'
+  | 'zoning_district_1'
+  | 'lat'
+  | 'lng'
+  | 'last_sale_price'
+  | 'last_sale_year'
+  | 'years_held'
+  | 'owner_name'
+  | 'recent_change'
+  | 'opportunity_category'
+  | 'assemblage_lot_count'
+>;
+
+export type ParcelIntelMapResponse = {
+  rows: ParcelIntelMapRow[];
+  generated_at: string | null;
+};
+
 export type ParcelWorkflowStage =
   | 'new'
   | 'reviewing'
@@ -570,6 +603,31 @@ export async function getParcelIntelSweep(
   const params = new URLSearchParams({ borough, top: String(top) });
   return requestJson<ParcelIntelSweepResponse>(
     `/v1/parcel-intel/sweep?${params.toString()}`,
+    undefined,
+    { includeAuth: opts?.includeAuth ?? false },
+  );
+}
+
+export async function getParcelIntelMap(
+  topPerBorough: number = 1000,
+  opts?: { includeAuth?: boolean },
+): Promise<ParcelIntelMapResponse> {
+  const params = new URLSearchParams({
+    top_per_borough: String(topPerBorough),
+  });
+  return requestJson<ParcelIntelMapResponse>(
+    `/v1/parcel-intel/map?${params.toString()}`,
+    undefined,
+    { includeAuth: opts?.includeAuth ?? false },
+  );
+}
+
+export async function getParcelIntelParcel(
+  bbl: string,
+  opts?: { includeAuth?: boolean },
+): Promise<ParcelIntelRow> {
+  return requestJson<ParcelIntelRow>(
+    `/v1/parcel-intel/parcel/${encodeURIComponent(bbl)}`,
     undefined,
     { includeAuth: opts?.includeAuth ?? false },
   );

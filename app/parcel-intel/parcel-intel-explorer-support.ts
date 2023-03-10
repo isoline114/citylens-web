@@ -1,4 +1,4 @@
-import type { ParcelIntelRow } from '@/lib/api';
+import type { ParcelIntelMapRow, ParcelIntelRow } from '@/lib/api';
 
 export const BOROUGH_LABELS: Record<string, string> = {
   manhattan: 'Manhattan',
@@ -44,6 +44,7 @@ export type ExplorerPriority = 'all' | 'highest' | 'high_or_better';
 export type ExplorerOpportunity =
   | 'all'
   | 'uncommitted'
+  | 'assemblage'
   | 'vacant_site'
   | 'ground_up_candidate'
   | 'conversion_or_overbuilt'
@@ -56,8 +57,10 @@ export type ExplorerFilters = {
   query: string;
 };
 
+export type ParcelExplorerRow = ParcelIntelMapRow;
+
 export function explorerRowColor(
-  row: ParcelIntelRow,
+  row: ParcelExplorerRow,
   overlay: ExplorerOverlay,
 ): string {
   if (overlay === 'borough') {
@@ -69,10 +72,10 @@ export function explorerRowColor(
   return PRIORITY_COLORS[row.priority_tier ?? 'watch'] ?? PRIORITY_COLORS.watch;
 }
 
-export function filterExplorerRows(
-  rows: ParcelIntelRow[],
+export function filterExplorerRows<T extends ParcelExplorerRow>(
+  rows: T[],
   filters: ExplorerFilters,
-): ParcelIntelRow[] {
+): T[] {
   const query = filters.query.trim().toLowerCase();
   return rows.filter((row) => {
     if (filters.borough !== 'all' && row.borough !== filters.borough) return false;
@@ -84,7 +87,14 @@ export function filterExplorerRows(
     ) {
       return false;
     }
-    if (filters.opportunity === 'uncommitted') {
+    if (filters.opportunity === 'assemblage') {
+      if (
+        !row.assemblage_lot_count ||
+        row.assemblage_lot_count < 2
+      ) {
+        return false;
+      }
+    } else if (filters.opportunity === 'uncommitted') {
       const eligible =
         row.acquisition_eligible ??
         [
@@ -106,7 +116,7 @@ export function filterExplorerRows(
   });
 }
 
-export function sortExplorerRows(rows: ParcelIntelRow[]): ParcelIntelRow[] {
+export function sortExplorerRows<T extends ParcelExplorerRow>(rows: T[]): T[] {
   return [...rows].sort((a, b) => {
     const rankDelta =
       (a.citywide_rank ??

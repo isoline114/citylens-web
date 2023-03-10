@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUpRight,
   Download,
@@ -13,12 +13,16 @@ import {
   MapPinned,
   Search,
   Sparkles,
+  TriangleAlert,
   X,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import {
+  getParcelIntelMap,
+  getParcelIntelParcel,
   getParcelIntelSweep,
   type ParcelIntelBorough,
+  type ParcelIntelMapRow,
   type ParcelIntelRow,
 } from '@/lib/api';
 import {
@@ -53,6 +57,7 @@ const DEFAULT_FILTERS: ExplorerFilters = {
 };
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error';
+type DetailState = 'idle' | 'loading' | 'ready' | 'error';
 
 type Props = {
   boroughs: ParcelIntelBorough[];
@@ -83,9 +88,15 @@ export function ParcelIntelExplorer({
 }: Props) {
   const auth = useAuth();
   const router = useRouter();
-  const [rows, setRows] = useState<ParcelIntelRow[]>([]);
+  const [rows, setRows] = useState<ParcelIntelMapRow[]>([]);
   const [loadState, setLoadState] = useState<LoadState>('idle');
   const [failedBoroughs, setFailedBoroughs] = useState<string[]>([]);
+  const [selectedDetail, setSelectedDetail] = useState<ParcelIntelRow | null>(
+    null,
+  );
+  const [detailState, setDetailState] = useState<DetailState>('idle');
+  const [exporting, setExporting] = useState(false);
+  const fullInventoryLoaded = useRef(false);
   const [filters, setFilters] = useState<ExplorerFilters>(() => ({
     ...DEFAULT_FILTERS,
     borough: boroughs.some((borough) => borough.slug === initialBorough)
@@ -102,44 +113,86 @@ export function ParcelIntelExplorer({
   const isAuthenticated = auth.status === 'authenticated';
   const totalAvailable = boroughs.reduce((sum, borough) => sum + borough.count, 0);
 
-  useEffect(() => {
-    if (auth.status === 'loading' || boroughs.length === 0) return;
-    let cancelled = false;
-    setLoadState('loading');
-    setFailedBoroughs([]);
-
-    void Promise.allSettled(
+  const loadLegacySweeps = async (
+    includeAuth: boolean,
+  ): Promise<{ rows: ParcelIntelMapRow[]; failures: string[] }> => {
+    const results = await Promise.allSettled(
       boroughs.map(async (borough) => {
         const sweep = await getParcelIntelSweep(borough.slug, 1000, {
-          includeAuth: isAuthenticated,
+          includeAuth,
         });
         return sweep.rows.map((row) => ({
           ...row,
-          // The API uses compact NYC codes (for example, "BK") while the
-          // application routes and filters use canonical slugs ("brooklyn").
-          // The request already establishes the row's borough, so normalize
-          // it at this boundary before it reaches links, filters, or overlays.
           borough: borough.slug,
         }));
       }),
-    ).then((results) => {
-      if (cancelled) return;
-      const nextRows: ParcelIntelRow[] = [];
-      const failures: string[] = [];
-      results.forEach((result, index) => {
-        if (result.status === 'fulfilled') nextRows.push(...result.value);
-        else failures.push(boroughs[index]?.slug ?? `borough-${index + 1}`);
-      });
-      const unique = new Map(nextRows.map((row) => [row.bbl, row]));
+    );
+    const legacyRows: ParcelIntelMapRow[] = [];
+    const failures: string[] = [];
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        legacyRows.push(...result.value);
+      } else {
+        failures.push(boroughs[index]?.slug ?? `borough-${index + 1}`);
+      }
+    });
+    return { rows: legacyRows, failures };
+  };
+
+  const loadExplorerRows = async (
+    includeAuth: boolean,
+  ): Promise<{ rows: ParcelIntelMapRow[]; failures: string[] }> => {
+    try {
+      const response = await getParcelIntelMap(1000, { includeAuth });
+      return { rows: response.rows, failures: [] };
+    } catch {
+      // Backwards-compatible during the coordinated engine/web rollout.
+      return loadLegacySweeps(includeAuth);
+    }
+  };
+
+  // Render the public citywide preview immediately; auth initialization no
+  // longer holds the map behind a full-page skeleton.
+  useEffect(() => {
+    if (boroughs.length === 0) return;
+    let cancelled = false;
+    setLoadState('loading');
+    setFailedBoroughs([]);
+    void loadExplorerRows(false).then((result) => {
+      if (cancelled || fullInventoryLoaded.current) return;
+      const unique = new Map(result.rows.map((row) => [row.bbl, row]));
       setRows([...unique.values()]);
-      setFailedBoroughs(failures);
+      setFailedBoroughs(result.failures);
       setLoadState(unique.size > 0 ? 'ready' : 'error');
     });
-
     return () => {
       cancelled = true;
     };
-  }, [auth.status, boroughs, isAuthenticated]);
+    // Borough metadata changes only when the page is regenerated.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boroughs]);
+
+  // Authenticated users upgrade the already-visible preview to the compact
+  // 5,000-row inventory in one request. Signing out immediately downgrades
+  // the in-memory inventory so premium owner data never lingers in the UI.
+  useEffect(() => {
+    if (auth.status === 'loading' || boroughs.length === 0) return;
+    const includeAuth = auth.status === 'authenticated';
+    if (!includeAuth && !fullInventoryLoaded.current) return;
+    let cancelled = false;
+    void loadExplorerRows(includeAuth).then((result) => {
+      if (cancelled) return;
+      fullInventoryLoaded.current = includeAuth;
+      const unique = new Map(result.rows.map((row) => [row.bbl, row]));
+      setRows([...unique.values()]);
+      setFailedBoroughs(result.failures);
+      setLoadState(unique.size > 0 ? 'ready' : 'error');
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.status, boroughs]);
 
   const filtered = useMemo(
     () => filterExplorerRows(rows, filters),
@@ -150,12 +203,38 @@ export function ParcelIntelExplorer({
     [rows, filters],
   );
   const ranked = useMemo(() => sortExplorerRows(filtered), [filtered]);
-  const selected = useMemo(
+  const selectedSummary = useMemo(
     () => rows.find((row) => row.bbl === selectedBbl) ?? null,
     [rows, selectedBbl],
   );
-  const activeProjectCount = opportunityScope.filter(
-    (row) => row.opportunity_category === 'active_project',
+
+  useEffect(() => {
+    if (!selectedBbl || !selectedSummary) {
+      setSelectedDetail(null);
+      setDetailState('idle');
+      return;
+    }
+    let cancelled = false;
+    setSelectedDetail(null);
+    setDetailState('loading');
+    void getParcelIntelParcel(selectedBbl, {
+      includeAuth: isAuthenticated,
+    })
+      .then((detail) => {
+        if (cancelled) return;
+        setSelectedDetail({ ...detail, borough: selectedSummary.borough });
+        setDetailState('ready');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setDetailState('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, selectedBbl, selectedSummary]);
+  const assemblageCount = opportunityScope.filter(
+    (row) => (row.assemblage_lot_count ?? 0) >= 2,
   ).length;
   const uncommittedCount = opportunityScope.filter(
     (row) =>
@@ -201,6 +280,37 @@ export function ParcelIntelExplorer({
   const closeParcel = () => {
     setSelectedBbl(null);
     syncExplorerUrl(filters.borough, null);
+  };
+
+  const exportFilteredRows = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const targets =
+        filters.borough === 'all'
+          ? boroughs
+          : boroughs.filter((borough) => borough.slug === filters.borough);
+      const results = await Promise.all(
+        targets.map(async (borough) => {
+          const sweep = await getParcelIntelSweep(borough.slug, 1000, {
+            includeAuth: isAuthenticated,
+          });
+          return sweep.rows.map((row) => ({
+            ...row,
+            borough: borough.slug,
+          }));
+        }),
+      );
+      const exportRows = sortExplorerRows(
+        filterExplorerRows(results.flat(), filters),
+      );
+      downloadCsv(
+        exportRows,
+        filters.borough === 'all' ? 'citywide' : filters.borough,
+      );
+    } finally {
+      setExporting(false);
+    }
   };
 
   const resetExplorer = () => {
@@ -361,6 +471,7 @@ export function ParcelIntelExplorer({
             >
               <option value="all">All opportunities</option>
               <option value="uncommitted">Qualified acquisition leads</option>
+              <option value="assemblage">Assemblage opportunities</option>
               <option value="vacant_site">Vacant sites</option>
               <option value="ground_up_candidate">Ground-up candidates</option>
               <option value="conversion_or_overbuilt">Conversion / overbuilt</option>
@@ -380,18 +491,17 @@ export function ParcelIntelExplorer({
             )}
             <button
               type="button"
-              disabled={ranked.length === 0}
-              onClick={() =>
-                downloadCsv(
-                  ranked,
-                  filters.borough === 'all' ? 'citywide' : filters.borough,
-                )
-              }
+              disabled={ranked.length === 0 || exporting}
+              onClick={() => void exportFilteredRows()}
               className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
               title={`Export ${ranked.length.toLocaleString()} filtered parcels`}
             >
-              <Download className="h-3.5 w-3.5" />
-              CSV
+              {exporting ? (
+                <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              {exporting ? 'Preparing…' : 'CSV'}
             </button>
           </div>
         </div>
@@ -406,7 +516,7 @@ export function ParcelIntelExplorer({
 
       <div className="grid min-h-[740px] gap-0 lg:h-[760px] lg:grid-cols-[minmax(0,1fr)_460px]">
         <div className="min-h-[560px] p-3 md:p-4 lg:h-[760px]">
-          {auth.status === 'loading' || loadState === 'idle' || loadState === 'loading' ? (
+          {loadState === 'idle' || loadState === 'loading' ? (
             <ExplorerMapSkeleton />
           ) : loadState === 'error' ? (
             <div className="flex h-full min-h-[520px] items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 p-8 text-center">
@@ -423,6 +533,7 @@ export function ParcelIntelExplorer({
             <ParcelIntelExplorerMap
               rows={filtered}
               selectedBbl={selectedBbl}
+              selectedRow={selectedDetail}
               overlay={overlay}
               onSelect={selectParcel}
             />
@@ -430,12 +541,43 @@ export function ParcelIntelExplorer({
         </div>
 
         <aside className="flex min-h-0 flex-col overflow-hidden border-t border-slate-200 bg-white lg:h-[760px] lg:border-l lg:border-t-0">
-          {selected ? (
+          {selectedDetail ? (
             <ParcelIntelPropertyPanel
-              key={selected.bbl}
-              row={selected}
+              key={selectedDetail.bbl}
+              row={selectedDetail}
               onClose={closeParcel}
             />
+          ) : selectedSummary && detailState === 'loading' ? (
+            <div
+              className="flex h-full flex-col items-center justify-center p-6 text-center"
+              role="status"
+            >
+              <LoaderCircle className="h-6 w-6 animate-spin text-sky-600" />
+              <h3 className="mt-3 text-sm font-semibold text-slate-950">
+                Loading parcel diligence
+              </h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Fetching geometry, ownership, project history, and model evidence.
+              </p>
+            </div>
+          ) : selectedSummary && detailState === 'error' ? (
+            <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+              <TriangleAlert className="h-7 w-7 text-amber-500" />
+              <h3 className="mt-3 text-sm font-semibold text-slate-950">
+                Parcel detail is temporarily unavailable
+              </h3>
+              <p className="mt-1 max-w-xs text-xs leading-5 text-slate-600">
+                The ranked map is still available. Close this panel and try the
+                parcel again in a moment.
+              </p>
+              <button
+                type="button"
+                onClick={closeParcel}
+                className="mt-4 text-xs font-medium text-sky-700 hover:text-sky-900"
+              >
+                Back to ranked parcels
+              </button>
+            </div>
           ) : selectedBbl && loadState === 'ready' ? (
             <div className="flex h-full flex-col items-center justify-center p-6 text-center">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100">
@@ -488,19 +630,19 @@ export function ParcelIntelExplorer({
             </button>
             <button
               type="button"
-              onClick={() => updateFilter('opportunity', 'active_project')}
-              aria-pressed={filters.opportunity === 'active_project'}
+              onClick={() => updateFilter('opportunity', 'assemblage')}
+              aria-pressed={filters.opportunity === 'assemblage'}
               className={`rounded-xl px-3 py-2 text-left transition-colors ${
-                filters.opportunity === 'active_project'
-                  ? 'bg-amber-100 ring-2 ring-inset ring-amber-400'
-                  : 'bg-amber-50 hover:bg-amber-100'
+                filters.opportunity === 'assemblage'
+                  ? 'bg-violet-100 ring-2 ring-inset ring-violet-400'
+                  : 'bg-violet-50 hover:bg-violet-100'
               }`}
             >
-              <div className="text-[11px] uppercase tracking-wide text-amber-700">
-                Active projects
+              <div className="text-[11px] uppercase tracking-wide text-violet-700">
+                Assemblages
               </div>
-              <div className="text-lg font-semibold text-amber-950">
-                {activeProjectCount.toLocaleString()}
+              <div className="text-lg font-semibold text-violet-950">
+                {assemblageCount.toLocaleString()}
               </div>
             </button>
           </div>

@@ -46,6 +46,18 @@ export default async function ParcelIntelIndexPage({
     typeof index.model_metadata?.performance_scope === 'string'
       ? (index.model_metadata.performance_scope as string)
       : null;
+  const precisionAt100 =
+    typeof index.model_metadata?.precision_at_100 === 'number'
+      ? (index.model_metadata.precision_at_100 as number)
+      : null;
+  const precisionAt1000 =
+    typeof index.model_metadata?.precision_at_1000 === 'number'
+      ? (index.model_metadata.precision_at_1000 as number)
+      : null;
+  const evaluationBaseRate =
+    typeof index.model_metadata?.spatial_cv_base_rate === 'number'
+      ? (index.model_metadata.spatial_cv_base_rate as number)
+      : null;
   const staleSources = Object.values(index.data_sources ?? {}).flatMap((value) => {
     if (!value || typeof value !== 'object') return [];
     const status = value as Record<string, unknown>;
@@ -142,6 +154,9 @@ export default async function ParcelIntelIndexPage({
             featureYear={featureYear}
             labelWindow={labelWindow}
             performanceScope={performanceScope}
+            precisionAt100={precisionAt100}
+            precisionAt1000={precisionAt1000}
+            evaluationBaseRate={evaluationBaseRate}
           />
         </>
       )}
@@ -154,12 +169,33 @@ function MethodologyDisclosure({
   featureYear,
   labelWindow,
   performanceScope,
+  precisionAt100,
+  precisionAt1000,
+  evaluationBaseRate,
 }: {
   modelType: string | null;
   featureYear: string | number | undefined;
   labelWindow: string | undefined;
   performanceScope: string | null;
+  precisionAt100: number | null;
+  precisionAt1000: number | null;
+  evaluationBaseRate: number | null;
 }) {
+  const forwardTestBody =
+    precisionAt100 !== null && precisionAt1000 !== null
+      ? `In the untouched 2024→2025 cohort, ${(precisionAt100 * 100).toFixed(
+          0,
+        )}% of the top 100 and ${(precisionAt1000 * 100).toFixed(
+          1,
+        )}% of the top 1,000 received a DOB new-building filing within one year${
+          evaluationBaseRate !== null
+            ? `, versus a ${(evaluationBaseRate * 100).toFixed(
+                3,
+              )}% eligible-population base rate`
+            : ''
+        }. This measures filing hazard—not seller intent, acquisition, or closing probability.`
+      : 'Forward-test hit rates are unavailable for this feed. Treat the rank as a screening order, not a conversion probability.';
+
   return (
     <details className="group mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden hover:bg-slate-50">
@@ -174,7 +210,7 @@ function MethodologyDisclosure({
           Hide methodology
         </span>
       </summary>
-      <div className="grid gap-3 border-t border-slate-200 bg-slate-50 p-4 md:grid-cols-3 md:p-5">
+      <div className="grid gap-3 border-t border-slate-200 bg-slate-50 p-4 md:grid-cols-2 md:p-5 xl:grid-cols-4">
         <MethodCard
           icon={Database}
           title="Source records"
@@ -187,6 +223,11 @@ function MethodologyDisclosure({
             performanceScope ??
             `${featureYear ?? 'historical'} features and ${labelWindow ?? 'later'} outcomes`
           }. Current DOB projects and constrained or incomplete parcels are removed before acquisition rank is assigned. Rank remains an ordinal screening signal—not a probability that a site will transact.`}
+        />
+        <MethodCard
+          icon={Database}
+          title="Forward-test hit rate"
+          body={forwardTestBody}
         />
         <MethodCard
           icon={TriangleAlert}

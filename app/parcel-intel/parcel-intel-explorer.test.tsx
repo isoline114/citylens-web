@@ -4,6 +4,8 @@ import type { ParcelIntelRow } from '@/lib/api';
 
 const mocks = vi.hoisted(() => ({
   authStatus: 'unauthenticated' as 'loading' | 'unauthenticated' | 'authenticated',
+  getParcelIntelMap: vi.fn(),
+  getParcelIntelParcel: vi.fn(),
   getParcelIntelSweep: vi.fn(),
   routerReplace: vi.fn(),
 }));
@@ -27,7 +29,12 @@ vi.mock('@/lib/auth', () => ({
 
 vi.mock('@/lib/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/api')>();
-  return { ...actual, getParcelIntelSweep: mocks.getParcelIntelSweep };
+  return {
+    ...actual,
+    getParcelIntelMap: mocks.getParcelIntelMap,
+    getParcelIntelParcel: mocks.getParcelIntelParcel,
+    getParcelIntelSweep: mocks.getParcelIntelSweep,
+  };
 });
 
 vi.mock('./parcel-intel-explorer-map', () => ({
@@ -96,8 +103,22 @@ const boroughs = [
 
 beforeEach(() => {
   mocks.authStatus = 'unauthenticated';
+  mocks.getParcelIntelMap.mockReset();
+  mocks.getParcelIntelParcel.mockReset();
   mocks.getParcelIntelSweep.mockReset();
   mocks.routerReplace.mockReset();
+  mocks.getParcelIntelMap.mockImplementation(
+    async () => ({
+      rows: [
+        row('1000010001', 'manhattan'),
+        row('3000010001', 'brooklyn'),
+      ],
+      generated_at: '2026-07-19T00:00:00Z',
+    }),
+  );
+  mocks.getParcelIntelParcel.mockImplementation(async (bbl: string) =>
+    row(bbl, bbl.startsWith('1') ? 'MN' : 'BK'),
+  );
   mocks.getParcelIntelSweep.mockImplementation(async (borough: string) => ({
     borough,
     rows: [
@@ -122,10 +143,25 @@ describe('ParcelIntelExplorer', () => {
       'data-overlay',
       'borough',
     );
-    expect(mocks.getParcelIntelSweep).toHaveBeenCalledTimes(2);
-    for (const call of mocks.getParcelIntelSweep.mock.calls) {
-      expect(call[2]).toEqual({ includeAuth: false });
-    }
+    expect(mocks.getParcelIntelMap).toHaveBeenCalledWith(1000, {
+      includeAuth: false,
+    });
+    expect(mocks.getParcelIntelSweep).not.toHaveBeenCalled();
+  });
+
+  it('does not hold the public map behind auth initialization', async () => {
+    mocks.authStatus = 'loading';
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId('citywide-map-stub')).toHaveTextContent(
+        '2 mapped rows',
+      ),
+    );
+    expect(mocks.getParcelIntelMap).toHaveBeenCalledWith(1000, {
+      includeAuth: false,
+    });
   });
 
   it('requests the full authenticated overlay for signed-in users', async () => {
@@ -134,12 +170,13 @@ describe('ParcelIntelExplorer', () => {
 
     expect(screen.getByText(/Full workspace coverage/i)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('citywide-map-stub')).toHaveTextContent('2 mapped rows'));
-    for (const call of mocks.getParcelIntelSweep.mock.calls) {
-      expect(call[2]).toEqual({ includeAuth: true });
-    }
+    expect(mocks.getParcelIntelMap).toHaveBeenCalledWith(1000, {
+      includeAuth: true,
+    });
+    expect(mocks.getParcelIntelSweep).not.toHaveBeenCalled();
   });
 
-  it('normalizes API borough codes before opening the unified property panel', async () => {
+  it('loads full parcel detail only after opening a map summary', async () => {
     render(<ParcelIntelExplorer boroughs={boroughs} />);
 
     await screen.findByText('2 mapped rows');
@@ -151,13 +188,18 @@ describe('ParcelIntelExplorer', () => {
     );
 
     const brooklynLead = await screen.findByRole('button', {
-      name: /BK test site/i,
+      name: /brooklyn test site/i,
     });
     fireEvent.click(brooklynLead);
 
-    expect(screen.getByTestId('property-panel-stub')).toHaveTextContent(
-      'brooklyn:3000010001',
+    await waitFor(() =>
+      expect(screen.getByTestId('property-panel-stub')).toHaveTextContent(
+        'brooklyn:3000010001',
+      ),
     );
+    expect(mocks.getParcelIntelParcel).toHaveBeenCalledWith('3000010001', {
+      includeAuth: false,
+    });
     expect(mocks.routerReplace).toHaveBeenLastCalledWith(
       '/parcel-intel?borough=brooklyn&bbl=3000010001',
       { scroll: false },
