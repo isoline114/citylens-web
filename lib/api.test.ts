@@ -8,6 +8,7 @@ import {
   getFeaturedDemos,
   getParcelIntelMap,
   getParcelIntelParcel,
+  getParcelWorkflow,
   getParcelWorkflowActions,
   getParcelWorkflowAlerts,
   getRun,
@@ -100,6 +101,26 @@ describe('api client', () => {
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain('/v1/parcel-intel/workflow/alerts');
+    expect(new Headers(init.headers).get('Authorization')).toBe(
+      'Bearer tok-abc',
+    );
+  });
+
+  it('loads one authenticated workflow record without listing the pipeline', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => null,
+      text: async () => '',
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await getParcelWorkflow('3020960069')).toBeNull();
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/v1/parcel-intel/workflow/3020960069');
+    expect(url).not.toContain('/events');
+    expect(init.cache).toBe('no-store');
     expect(new Headers(init.headers).get('Authorization')).toBe(
       'Bearer tok-abc',
     );

@@ -1,10 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ParcelIntelRow } from '@/lib/api';
+import type { ParcelIntelRow, ParcelWorkflowItem } from '@/lib/api';
 
 const mocks = vi.hoisted(() => ({
   authStatus: 'unauthenticated' as 'unauthenticated' | 'authenticated',
-  listParcelWorkflow: vi.fn(),
+  getParcelWorkflow: vi.fn(),
+  listParcelWorkflowEvents: vi.fn(),
   saveParcelWorkflow: vi.fn(),
   removeParcelWorkflow: vi.fn(),
 }));
@@ -20,7 +21,8 @@ vi.mock('@/lib/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/api')>();
   return {
     ...actual,
-    listParcelWorkflow: mocks.listParcelWorkflow,
+    getParcelWorkflow: mocks.getParcelWorkflow,
+    listParcelWorkflowEvents: mocks.listParcelWorkflowEvents,
     saveParcelWorkflow: mocks.saveParcelWorkflow,
     removeParcelWorkflow: mocks.removeParcelWorkflow,
   };
@@ -70,8 +72,10 @@ const parcel: ParcelIntelRow = {
 
 beforeEach(() => {
   mocks.authStatus = 'unauthenticated';
-  mocks.listParcelWorkflow.mockReset();
-  mocks.listParcelWorkflow.mockResolvedValue([]);
+  mocks.getParcelWorkflow.mockReset();
+  mocks.getParcelWorkflow.mockResolvedValue(null);
+  mocks.listParcelWorkflowEvents.mockReset();
+  mocks.listParcelWorkflowEvents.mockResolvedValue([]);
   mocks.saveParcelWorkflow.mockReset();
   mocks.removeParcelWorkflow.mockReset();
 });
@@ -100,7 +104,7 @@ describe('ParcelIntelPropertyPanel', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Workflow' }));
     expect(screen.getByText('Sign in to manage this opportunity')).toBeInTheDocument();
-    expect(mocks.listParcelWorkflow).not.toHaveBeenCalled();
+    expect(mocks.getParcelWorkflow).not.toHaveBeenCalled();
   });
 
   it('explains and links acquisition-blocking ZAP entitlement activity', () => {
@@ -353,9 +357,194 @@ describe('ParcelIntelPropertyPanel', () => {
     mocks.authStatus = 'authenticated';
     render(<ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />);
 
-    await waitFor(() => expect(mocks.listParcelWorkflow).toHaveBeenCalledOnce());
+    await waitFor(() =>
+      expect(mocks.getParcelWorkflow).toHaveBeenCalledWith(parcel.bbl),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Workflow' }));
     expect(screen.getByRole('button', { name: /Add to pipeline/i })).toBeInTheDocument();
+  });
+
+  it('guards loading and saves a canonical lead from the parcel header', async () => {
+    mocks.authStatus = 'authenticated';
+    let resolveWorkflow: (item: ParcelWorkflowItem | null) => void =
+      () => undefined;
+    mocks.getParcelWorkflow.mockReturnValue(
+      new Promise<ParcelWorkflowItem | null>((resolve) => {
+        resolveWorkflow = resolve;
+      }),
+    );
+    const saved: ParcelWorkflowItem = {
+      bbl: parcel.bbl,
+      borough: 'brooklyn',
+      stage: 'new',
+      notes: '',
+      tags: [],
+      assignee: null,
+      watching: true,
+      decision_reason: null,
+      next_action: null,
+      next_action_due_date: null,
+      outcome: 'unknown',
+      snapshot: {
+        feed_generated_at: '2026-07-24T09:15:49Z',
+        property_facts_as_of: '2026-07-24',
+        citywide_rank: 1,
+        acquisition_rank: 1,
+        priority_tier: 'highest',
+        opportunity_category: 'ground_up_candidate',
+        score_calibrated: 0.94,
+        zoning_district_1: 'R7-1',
+        land_use: '06',
+        year_built: 1928,
+        allowed_far: 4.8,
+        unused_floor_area_sqft: 120000,
+        owner_name: 'Example Owner LLC',
+        owner_entity_type: null,
+        owner_portfolio_lot_count: null,
+        last_sale_year: 2025,
+        latest_nb_filing_year: null,
+        latest_nb_status: null,
+        redev_status: 'active',
+        observed_imagery_year: null,
+        tax_lien_sale_year: null,
+        critical_violation_count: null,
+        floodplain_1pct: null,
+        environmental_review_required: null,
+        environmental_designation_number: null,
+        environmental_designation_kind: null,
+        mandatory_inclusionary_housing: null,
+        nearest_transit_complex_id: null,
+        nearest_transit_station_name: null,
+        nearest_transit_station_distance_m: null,
+        transit_access_tier: null,
+        transit_data_as_of: null,
+        recent_change: null,
+      },
+      saved_at: '2026-07-24T09:40:00Z',
+      updated_at: '2026-07-24T09:40:00Z',
+    };
+    mocks.saveParcelWorkflow.mockResolvedValue(saved);
+
+    render(<ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />);
+
+    const quickSave = screen.getByTestId('workflow-quick-save');
+    expect(quickSave).toBeDisabled();
+    expect(quickSave).toHaveTextContent('Checking pipeline');
+    fireEvent.click(screen.getByRole('button', { name: 'Workflow' }));
+    expect(screen.getByText('Checking pipeline status…')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Add to pipeline' }),
+    ).not.toBeInTheDocument();
+
+    resolveWorkflow(null);
+    await waitFor(() => expect(quickSave).toBeEnabled());
+    expect(quickSave).toHaveTextContent('Save lead');
+    fireEvent.click(quickSave);
+
+    await waitFor(() =>
+      expect(mocks.saveParcelWorkflow).toHaveBeenCalledWith(parcel.bbl, {
+        borough: 'brooklyn',
+        stage: 'new',
+        notes: '',
+        tags: [],
+        assignee: null,
+        watching: true,
+        decision_reason: null,
+        next_action: null,
+        next_action_due_date: null,
+        outcome: 'unknown',
+      }),
+    );
+    expect(await screen.findByText('Saved to your pipeline')).toBeInTheDocument();
+    expect(screen.getByTestId('workflow-quick-save')).toHaveTextContent(
+      'In pipeline · Open',
+    );
+  });
+
+  it('does not apply a completed save to a different parcel', async () => {
+    mocks.authStatus = 'authenticated';
+    let resolveSave: (item: ParcelWorkflowItem) => void = () => undefined;
+    mocks.saveParcelWorkflow.mockReturnValue(
+      new Promise<ParcelWorkflowItem>((resolve) => {
+        resolveSave = resolve;
+      }),
+    );
+    const { rerender } = render(
+      <ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />,
+    );
+    const quickSave = await screen.findByTestId('workflow-quick-save');
+    await waitFor(() => expect(quickSave).toBeEnabled());
+    fireEvent.click(quickSave);
+
+    const otherParcel = {
+      ...parcel,
+      bbl: '3020960070',
+      address: '102 E 21 STREET',
+    };
+    rerender(
+      <ParcelIntelPropertyPanel row={otherParcel} onClose={vi.fn()} />,
+    );
+    await waitFor(() =>
+      expect(mocks.getParcelWorkflow).toHaveBeenCalledWith(otherParcel.bbl),
+    );
+
+    resolveSave({
+      bbl: parcel.bbl,
+      borough: 'brooklyn',
+      stage: 'new',
+      notes: '',
+      tags: [],
+      assignee: null,
+      watching: true,
+      decision_reason: null,
+      next_action: null,
+      next_action_due_date: null,
+      outcome: 'unknown',
+      snapshot: {
+        feed_generated_at: '2026-07-24T09:15:49Z',
+        property_facts_as_of: '2026-07-24',
+        citywide_rank: 1,
+        acquisition_rank: 1,
+        priority_tier: 'highest',
+        opportunity_category: 'ground_up_candidate',
+        score_calibrated: 0.94,
+        zoning_district_1: 'R7-1',
+        land_use: '06',
+        year_built: 1928,
+        allowed_far: 4.8,
+        unused_floor_area_sqft: 120000,
+        owner_name: 'Example Owner LLC',
+        owner_entity_type: null,
+        owner_portfolio_lot_count: null,
+        last_sale_year: 2025,
+        latest_nb_filing_year: null,
+        latest_nb_status: null,
+        redev_status: 'active',
+        observed_imagery_year: null,
+        tax_lien_sale_year: null,
+        critical_violation_count: null,
+        floodplain_1pct: null,
+        environmental_review_required: null,
+        environmental_designation_number: null,
+        environmental_designation_kind: null,
+        mandatory_inclusionary_housing: null,
+        nearest_transit_complex_id: null,
+        nearest_transit_station_name: null,
+        nearest_transit_station_distance_m: null,
+        transit_access_tier: null,
+        transit_data_as_of: null,
+        recent_change: null,
+      },
+      saved_at: '2026-07-24T09:40:00Z',
+      updated_at: '2026-07-24T09:40:00Z',
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('workflow-quick-save')).toHaveTextContent(
+        'Save lead',
+      ),
+    );
+    expect(screen.queryByText('Saved to your pipeline')).not.toBeInTheDocument();
   });
 
   it('explains model factors without presenting activity records as completed buildings', () => {

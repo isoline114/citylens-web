@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   BadgeCheck,
+  BookmarkPlus,
   BriefcaseBusiness,
   Building2,
   CheckCircle2,
@@ -17,6 +18,7 @@ import {
   Gauge,
   Info,
   LockKeyhole,
+  LoaderCircle,
   MapPin,
   ShieldCheck,
   TriangleAlert,
@@ -24,7 +26,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import {
-  listParcelWorkflow,
+  getParcelWorkflow,
   listParcelWorkflowEvents,
   removeParcelWorkflow,
   saveParcelWorkflow,
@@ -503,6 +505,23 @@ export function ParcelIntelPropertyPanel({
   const [workflowEvents, setWorkflowEvents] = useState<ParcelWorkflowEvent[]>([]);
   const [workflowBusy, setWorkflowBusy] = useState(false);
   const [workflowError, setWorkflowError] = useState<string | null>(null);
+  const [workflowLoadState, setWorkflowLoadState] = useState<
+    'idle' | 'loading' | 'ready' | 'error'
+  >('idle');
+  const [workflowContextBbl, setWorkflowContextBbl] = useState<string | null>(
+    null,
+  );
+  const [workflowReloadKey, setWorkflowReloadKey] = useState(0);
+  const activeBblRef = useRef(row.bbl);
+  const workflowMutationIdRef = useRef(0);
+  const effectiveWorkflowLoadState =
+    workflowContextBbl === row.bbl
+      ? workflowLoadState
+      : auth.status === 'authenticated'
+        ? 'loading'
+        : 'idle';
+  const visibleWorkflowError =
+    workflowContextBbl === row.bbl ? workflowError : null;
   const reasons = useMemo(() => explainParcel(row), [row]);
   const links = useMemo(() => externalParcelLinks(row), [row]);
   const hasViolationSnapshot =
@@ -529,25 +548,39 @@ export function ParcelIntelPropertyPanel({
   }, [onClose]);
 
   useEffect(() => {
+    activeBblRef.current = row.bbl;
+    workflowMutationIdRef.current += 1;
     setTab('overview');
     setWorkflowItem(null);
     setWorkflowEvents([]);
+    setWorkflowBusy(false);
     setWorkflowError(null);
-    if (auth.status !== 'authenticated') return;
+    setWorkflowContextBbl(row.bbl);
+    if (auth.status !== 'authenticated') {
+      setWorkflowLoadState('idle');
+      return;
+    }
+    setWorkflowLoadState('loading');
     let cancelled = false;
-    void listParcelWorkflow()
-      .then((items) => {
+    void getParcelWorkflow(row.bbl)
+      .then((item) => {
         if (!cancelled) {
-          setWorkflowItem(items.find((item) => item.bbl === row.bbl) ?? null);
+          setWorkflowItem(item);
+          setWorkflowLoadState('ready');
         }
       })
       .catch(() => {
-        if (!cancelled) setWorkflowError('Pipeline status could not be loaded.');
+        if (!cancelled) {
+          setWorkflowError(
+            'Pipeline status could not be loaded. Saving is disabled to protect existing work.',
+          );
+          setWorkflowLoadState('error');
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, [auth.status, row.bbl]);
+  }, [auth.status, row.bbl, workflowReloadKey]);
 
   useEffect(() => {
     if (auth.status !== 'authenticated' || !workflowItem) {
@@ -567,34 +600,93 @@ export function ParcelIntelPropertyPanel({
     };
   }, [auth.status, row.bbl, workflowItem]);
 
-  const saveWorkflow = async (draft: WorkflowDraft) => {
+  const saveWorkflow = async (
+    draft: WorkflowDraft,
+    options?: { openAfterSave?: boolean },
+  ) => {
+    if (effectiveWorkflowLoadState !== 'ready') return;
+    const bbl = row.bbl;
+    const mutationId = workflowMutationIdRef.current + 1;
+    workflowMutationIdRef.current = mutationId;
     setWorkflowBusy(true);
     setWorkflowError(null);
     try {
-      const saved = await saveParcelWorkflow(row.bbl, {
+      const saved = await saveParcelWorkflow(bbl, {
         borough: row.borough ?? 'unknown',
         ...draft,
       });
+      if (
+        workflowMutationIdRef.current !== mutationId ||
+        activeBblRef.current !== bbl
+      ) {
+        return;
+      }
       setWorkflowItem(saved);
+      if (options?.openAfterSave) setTab('workflow');
       window.dispatchEvent(new Event('citylens:workflow-updated'));
     } catch {
-      setWorkflowError('Could not save this parcel. Please retry.');
+      if (
+        workflowMutationIdRef.current === mutationId &&
+        activeBblRef.current === bbl
+      ) {
+        setWorkflowError('Could not save this parcel. Please retry.');
+      }
     } finally {
-      setWorkflowBusy(false);
+      if (
+        workflowMutationIdRef.current === mutationId &&
+        activeBblRef.current === bbl
+      ) {
+        setWorkflowBusy(false);
+      }
     }
   };
 
+  const quickSaveWorkflow = () =>
+    saveWorkflow(
+      {
+        stage: 'new',
+        notes: '',
+        tags: [],
+        assignee: null,
+        watching: true,
+        decision_reason: null,
+        next_action: null,
+        next_action_due_date: null,
+        outcome: 'unknown',
+      },
+      { openAfterSave: true },
+    );
+
   const removeWorkflow = async () => {
+    const bbl = row.bbl;
+    const mutationId = workflowMutationIdRef.current + 1;
+    workflowMutationIdRef.current = mutationId;
     setWorkflowBusy(true);
     setWorkflowError(null);
     try {
-      await removeParcelWorkflow(row.bbl);
+      await removeParcelWorkflow(bbl);
+      if (
+        workflowMutationIdRef.current !== mutationId ||
+        activeBblRef.current !== bbl
+      ) {
+        return;
+      }
       setWorkflowItem(null);
       window.dispatchEvent(new Event('citylens:workflow-updated'));
     } catch {
-      setWorkflowError('Could not remove this parcel. Please retry.');
+      if (
+        workflowMutationIdRef.current === mutationId &&
+        activeBblRef.current === bbl
+      ) {
+        setWorkflowError('Could not remove this parcel. Please retry.');
+      }
     } finally {
-      setWorkflowBusy(false);
+      if (
+        workflowMutationIdRef.current === mutationId &&
+        activeBblRef.current === bbl
+      ) {
+        setWorkflowBusy(false);
+      }
     }
   };
 
@@ -648,6 +740,47 @@ export function ParcelIntelPropertyPanel({
               : 'Ranked'}
           </span>
         </div>
+        {auth.status === 'authenticated' && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              data-testid="workflow-quick-save"
+              disabled={workflowBusy || effectiveWorkflowLoadState !== 'ready'}
+              onClick={() => {
+                if (workflowItem) {
+                  setTab('workflow');
+                  return;
+                }
+                void quickSaveWorkflow();
+              }}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {effectiveWorkflowLoadState === 'idle' ||
+              effectiveWorkflowLoadState === 'loading' ? (
+                <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+              ) : effectiveWorkflowLoadState === 'error' ? (
+                <CircleAlert className="h-3.5 w-3.5" />
+              ) : workflowItem ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
+              ) : (
+                <BookmarkPlus className="h-3.5 w-3.5" />
+              )}
+              {effectiveWorkflowLoadState === 'idle' ||
+              effectiveWorkflowLoadState === 'loading'
+                ? 'Checking pipeline…'
+                : effectiveWorkflowLoadState === 'error'
+                  ? 'Pipeline unavailable'
+                  : workflowItem
+                  ? 'In pipeline · Open'
+                  : 'Save lead'}
+            </button>
+            <span className="text-[11px] leading-4 text-slate-500">
+              {workflowItem
+                ? 'Saved facts stay fixed; workflow updates never rewrite the original rank.'
+                : 'Creates the canonical save-time snapshot, then opens follow-up planning.'}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="grid shrink-0 grid-cols-4 border-b border-slate-200 bg-slate-50 p-1.5">
@@ -677,9 +810,18 @@ export function ParcelIntelPropertyPanel({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
-        {workflowError && (
-          <div className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
-            {workflowError}
+        {visibleWorkflowError && (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+            <span>{visibleWorkflowError}</span>
+            {effectiveWorkflowLoadState === 'error' && (
+              <button
+                type="button"
+                onClick={() => setWorkflowReloadKey((value) => value + 1)}
+                className="shrink-0 rounded-md border border-rose-300 bg-white px-2 py-1 font-semibold hover:bg-rose-100"
+              >
+                Retry
+              </button>
+            )}
           </div>
         )}
 
@@ -1532,17 +1674,31 @@ export function ParcelIntelPropertyPanel({
 
         {tab === 'workflow' &&
           (auth.status === 'authenticated' ? (
-            <>
-              <WorkflowEditor
-                item={workflowItem}
-                suggestedNextAction={
-                  row.decision_audit?.readiness?.recommended_action
-                }
-                busy={workflowBusy}
-                onSave={saveWorkflow}
-                onRemove={removeWorkflow}
-              />
-              {workflowEvents.length > 0 && (
+            effectiveWorkflowLoadState === 'idle' ||
+            effectiveWorkflowLoadState === 'loading' ? (
+              <div
+                className="flex min-h-48 items-center justify-center gap-2 text-sm text-slate-500"
+                role="status"
+              >
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+                Checking pipeline status…
+              </div>
+            ) : effectiveWorkflowLoadState === 'error' ? (
+              <div className="flex min-h-48 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-rose-50 p-5 text-center text-sm text-rose-800">
+                Retry the pipeline check before creating or changing this lead.
+              </div>
+            ) : (
+              <>
+                <WorkflowEditor
+                  item={workflowItem}
+                  suggestedNextAction={
+                    row.decision_audit?.readiness?.recommended_action
+                  }
+                  busy={workflowBusy}
+                  onSave={(draft) => saveWorkflow(draft)}
+                  onRemove={removeWorkflow}
+                />
+                {workflowEvents.length > 0 && (
                 <section className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
                   <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-700">
                     <Clock3 className="h-3.5 w-3.5" />
@@ -1579,8 +1735,9 @@ export function ParcelIntelPropertyPanel({
                     ))}
                   </ol>
                 </section>
-              )}
-            </>
+                )}
+              </>
+            )
           ) : (
             <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white ring-1 ring-slate-200">

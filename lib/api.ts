@@ -1045,6 +1045,15 @@ export async function listParcelWorkflow(): Promise<ParcelWorkflowItem[]> {
   return requestJson<ParcelWorkflowItem[]>('/v1/parcel-intel/workflow');
 }
 
+export async function getParcelWorkflow(
+  bbl: string,
+): Promise<ParcelWorkflowItem | null> {
+  return requestJson<ParcelWorkflowItem | null>(
+    `/v1/parcel-intel/workflow/${encodeURIComponent(bbl)}`,
+    { cache: 'no-store' },
+  );
+}
+
 export async function getParcelWorkflowAnalytics(): Promise<ParcelWorkflowAnalytics> {
   return requestJson<ParcelWorkflowAnalytics>(
     '/v1/parcel-intel/workflow/analytics',

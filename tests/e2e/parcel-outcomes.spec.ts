@@ -199,6 +199,59 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   );
 
   await page.route(
+    '**/v1/parcel-intel/workflow/3020960069',
+    async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          contentType: 'application/json',
+          body: 'null',
+        });
+        return;
+      }
+      if (route.request().method() !== 'PUT') {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          bbl: '3020960069',
+          borough: 'brooklyn',
+          stage: 'new',
+          notes: '',
+          tags: [],
+          assignee: null,
+          watching: true,
+          decision_reason: null,
+          next_action: null,
+          next_action_due_date: null,
+          outcome: 'unknown',
+          snapshot: {
+            feed_generated_at: '2026-07-24T09:15:49Z',
+            property_facts_as_of: '2026-07-24',
+            citywide_rank: 82,
+            acquisition_rank: 21,
+            priority_tier: 'highest',
+            opportunity_category: 'ground_up_candidate',
+          },
+          saved_at: '2026-07-24T09:40:00Z',
+          updated_at: '2026-07-24T09:40:00Z',
+        }),
+      });
+    },
+  );
+
+  await page.route(
+    '**/v1/parcel-intel/workflow/3020960069/events',
+    async (route) => {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: '[]',
+      });
+    },
+  );
+
+  await page.route(
     '**/v1/parcel-intel/workflow/actions',
     async (route) => {
       await route.fulfill({
@@ -524,6 +577,13 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await page.getByRole('button', { name: 'Close action queue' }).click();
 
   await page.getByRole('button', { name: /100 E 21 STREET/i }).click();
+  await expect(page.getByTestId('workflow-quick-save')).toHaveText('Save lead');
+  await page.getByTestId('workflow-quick-save').click();
+  await expect(page.getByText('Saved to your pipeline')).toBeVisible();
+  await expect(page.getByTestId('workflow-quick-save')).toContainText(
+    'In pipeline · Open',
+  );
+  await page.getByRole('button', { name: 'Overview' }).click();
   await expect(page.getByTestId('mih-diligence')).toContainText(
     'Mandatory Inclusionary Housing screen',
   );
@@ -575,7 +635,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     'not a purchase recommendation',
   );
   await page
-    .getByRole('button', { name: 'Use this as the first action' })
+    .getByRole('button', { name: 'Review workflow' })
     .click();
   await expect(
     page.getByRole('textbox', { name: 'Next action', exact: true }),
