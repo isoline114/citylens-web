@@ -198,6 +198,51 @@ describe('ParcelIntelExplorer', () => {
     });
   });
 
+  it('keeps the mobile ranking compact until the user expands it', async () => {
+    const rankedRows = Array.from({ length: 12 }, (_, index) => ({
+      ...row(`100001${String(index + 1).padStart(4, '0')}`, 'manhattan'),
+      address: `${index + 1} TEST AVENUE`,
+      citywide_rank: index + 1,
+      priority_rank: index + 1,
+    }));
+    mocks.getParcelIntelMap.mockResolvedValue({
+      rows: rankedRows,
+      generated_at: '2026-07-24T00:00:00Z',
+    });
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    const eleventhLead = await screen.findByRole('button', {
+      name: /11 TEST AVENUE/i,
+    });
+    expect(eleventhLead).toHaveClass('hidden', 'sm:block');
+
+    const expand = screen.getByRole('button', {
+      name: /Show more ranked leads · 2 remaining/i,
+    });
+    expect(expand).toHaveAttribute('aria-expanded', 'false');
+    expect(expand).toHaveAttribute(
+      'aria-controls',
+      'parcel-acquisition-ranking',
+    );
+
+    fireEvent.click(expand);
+
+    expect(eleventhLead).not.toHaveClass('hidden');
+    expect(
+      screen.getByRole('button', { name: /Show fewer ranked leads/i }),
+    ).toHaveAttribute('aria-expanded', 'true');
+
+    fireEvent.change(screen.getByLabelText('Filter by borough'), {
+      target: { value: 'manhattan' },
+    });
+
+    expect(eleventhLead).toHaveClass('hidden', 'sm:block');
+    expect(
+      screen.getByRole('button', { name: /Show more ranked leads/i }),
+    ).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('requests the full authenticated overlay for signed-in users', async () => {
     mocks.authStatus = 'authenticated';
     render(<ParcelIntelExplorer boroughs={boroughs} />);

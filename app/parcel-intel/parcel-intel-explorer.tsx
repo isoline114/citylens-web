@@ -66,6 +66,10 @@ const DEFAULT_FILTERS: ExplorerFilters = {
   ownerPortfolioId: null,
 };
 
+const INITIAL_LEAD_LIMIT = 30;
+const MOBILE_COMPACT_LEAD_LIMIT = 10;
+const LEAD_PAGE_SIZE = 30;
+
 type LoadState = 'idle' | 'loading' | 'ready' | 'error';
 type DetailState = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -118,7 +122,8 @@ export function ParcelIntelExplorer({
   // immediately legible; users can still switch to priority or opportunity.
   const [overlay, setOverlay] = useState<ExplorerOverlay>('borough');
   const [selectedBbl, setSelectedBbl] = useState<string | null>(initialBbl);
-  const [leadLimit, setLeadLimit] = useState(30);
+  const [leadLimit, setLeadLimit] = useState(INITIAL_LEAD_LIMIT);
+  const [mobileRankingExpanded, setMobileRankingExpanded] = useState(false);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -351,7 +356,8 @@ export function ParcelIntelExplorer({
           ? null
           : current.ownerPortfolioId,
     }));
-    setLeadLimit(30);
+    setLeadLimit(INITIAL_LEAD_LIMIT);
+    setMobileRankingExpanded(false);
     const nextBorough = key === 'borough' ? String(value) : filters.borough;
     if (selectedBbl) {
       setSelectedBbl(null);
@@ -376,14 +382,16 @@ export function ParcelIntelExplorer({
       opportunity: 'portfolio',
       ownerPortfolioId,
     });
-    setLeadLimit(30);
+    setLeadLimit(INITIAL_LEAD_LIMIT);
+    setMobileRankingExpanded(false);
     setSelectedBbl(null);
     syncExplorerUrl('all', null);
   };
 
   const clearOwnerPortfolioFocus = () => {
     setFilters((current) => ({ ...current, ownerPortfolioId: null }));
-    setLeadLimit(30);
+    setLeadLimit(INITIAL_LEAD_LIMIT);
+    setMobileRankingExpanded(false);
   };
 
   const exportFilteredRows = async () => {
@@ -419,7 +427,8 @@ export function ParcelIntelExplorer({
 
   const resetExplorer = () => {
     setFilters(DEFAULT_FILTERS);
-    setLeadLimit(30);
+    setLeadLimit(INITIAL_LEAD_LIMIT);
+    setMobileRankingExpanded(false);
     setSelectedBbl(null);
     syncExplorerUrl('all', null);
   };
@@ -1021,18 +1030,25 @@ export function ParcelIntelExplorer({
               {ranked.length.toLocaleString()}
             </span>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-2 lg:max-h-[560px]">
+          <div
+            id="parcel-acquisition-ranking"
+            className="min-h-0 flex-1 overflow-y-auto p-2 lg:max-h-[560px]"
+          >
             {ranked.length === 0 ? (
               <div className="p-6 text-center text-sm text-slate-500">
                 No parcels match these filters.
               </div>
             ) : (
-              ranked.slice(0, leadLimit).map((row) => (
+              ranked.slice(0, leadLimit).map((row, index) => (
                 <button
                   key={row.bbl}
                   type="button"
                   onClick={() => selectParcel(row.bbl)}
                   className={`mb-1 w-full rounded-xl border px-3 py-3 text-left transition-colors ${
+                    !mobileRankingExpanded && index >= MOBILE_COMPACT_LEAD_LIMIT
+                      ? 'hidden sm:block'
+                      : ''
+                  } ${
                     selectedBbl === row.bbl
                       ? 'border-sky-300 bg-sky-50'
                       : 'border-transparent hover:border-slate-200 hover:bg-slate-50'
@@ -1069,13 +1085,47 @@ export function ParcelIntelExplorer({
                 </button>
               ))
             )}
+            {ranked.length > MOBILE_COMPACT_LEAD_LIMIT && (
+              <div className="mt-1 grid gap-2 sm:hidden">
+                <button
+                  type="button"
+                  aria-controls="parcel-acquisition-ranking"
+                  aria-expanded={mobileRankingExpanded}
+                  onClick={() =>
+                    setMobileRankingExpanded((current) => !current)
+                  }
+                  className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-900"
+                >
+                  {mobileRankingExpanded
+                    ? 'Show fewer ranked leads'
+                    : `Show more ranked leads · ${(
+                        ranked.length - MOBILE_COMPACT_LEAD_LIMIT
+                      ).toLocaleString()} remaining`}
+                </button>
+                {mobileRankingExpanded && ranked.length > leadLimit && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setLeadLimit((current) => current + LEAD_PAGE_SIZE)
+                    }
+                    className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-900"
+                  >
+                    Load {Math.min(LEAD_PAGE_SIZE, ranked.length - leadLimit)} more
+                    · {(ranked.length - leadLimit).toLocaleString()} remaining
+                  </button>
+                )}
+              </div>
+            )}
             {ranked.length > leadLimit && (
               <button
                 type="button"
-                onClick={() => setLeadLimit((current) => current + 30)}
-                className="mt-1 inline-flex h-9 w-full items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-900"
+                onClick={() =>
+                  setLeadLimit((current) => current + LEAD_PAGE_SIZE)
+                }
+                className="mt-1 hidden h-9 w-full items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-900 sm:inline-flex"
               >
-                Show 30 more · {ranked.length - leadLimit} remaining
+                Show {Math.min(LEAD_PAGE_SIZE, ranked.length - leadLimit)} more ·{' '}
+                {(ranked.length - leadLimit).toLocaleString()} remaining
               </button>
             )}
           </div>
