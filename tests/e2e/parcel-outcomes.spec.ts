@@ -38,6 +38,12 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
             lot_area_sqft: 5_000,
             land_use: '01',
             mandatory_inclusionary_housing: true,
+            nearest_transit_station_name: 'Church Av',
+            nearest_transit_station_distance_m: 420,
+            nearest_transit_routes: ['B', 'Q'],
+            nearest_transit_ada_status: 'full',
+            transit_station_count_800m: 2,
+            transit_access_tier: 'walkable',
           },
         ],
       }),
@@ -96,6 +102,15 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
           mih_options: ['Option 1'],
           mih_area_count: 1,
           mih_data_as_of: '2026-07-24',
+          nearest_transit_complex_id: '628',
+          nearest_transit_station_name: 'Church Av',
+          nearest_transit_station_distance_m: 420,
+          nearest_transit_routes: ['B', 'Q'],
+          nearest_transit_ada_status: 'full',
+          transit_station_count_400m: 0,
+          transit_station_count_800m: 2,
+          transit_access_tier: 'walkable',
+          transit_data_as_of: '2026-07-24',
           decision_audit: {
             schema_version: 'citylens/parcel-decision-audit@v1',
             overall_status: 'screened_with_flags',
@@ -157,6 +172,18 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
                 summary:
                   'Review before underwriting: 1% floodplain overlap; mandatory inclusionary housing mapped-area overlap.',
                 source: 'NYC PLUTO/FEMA and NYC Planning MIH',
+                as_of: '2026-07-24',
+                affects_model_rank: false,
+                affects_acquisition_eligibility: false,
+              },
+              {
+                key: 'transit_access',
+                layer: 'current_diligence',
+                label: 'Subway/SIR accessibility',
+                status: 'verified',
+                summary:
+                  'Nearest MTA station complex: Church Av, 420 m straight-line; routes B, Q; 2 complexes within 800 m.',
+                source: 'MTA Subway Stations',
                 as_of: '2026-07-24',
                 affects_model_rank: false,
                 affects_acquisition_eligibility: false,
@@ -415,6 +442,9 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   );
 
   await page.goto('/parcel-intel');
+  await expect(
+    page.getByRole('button', { name: /Subway\/SIR ≤800 m/i }),
+  ).toContainText('1');
   await page.getByRole('button', { name: 'Action queue' }).click();
   await expect(
     page.getByRole('heading', { name: 'What needs attention next?' }),
@@ -451,6 +481,15 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(page.getByTestId('mih-diligence')).toContainText(
     'Mapped overlap',
   );
+  await expect(page.getByTestId('transit-diligence')).toContainText(
+    'Church Av',
+  );
+  await expect(page.getByTestId('transit-diligence')).toContainText(
+    '420 m',
+  );
+  await expect(page.getByTestId('transit-diligence')).toContainText(
+    'not a walking route',
+  );
   await page.getByRole('button', { name: 'Underwrite' }).click();
   await expect(page.getByTestId('mih-underwriting-warning')).toContainText(
     'MIH scenario required',
@@ -469,6 +508,9 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     'not seller intent',
   );
   await expect(page.getByTestId('decision-audit-current_diligence')).toContainText(
+    'Diligence only · no rank effect',
+  );
+  await expect(page.getByTestId('decision-audit-transit_access')).toContainText(
     'Diligence only · no rank effect',
   );
   await expect(page.getByTestId('parcel-decision-readiness')).toContainText(

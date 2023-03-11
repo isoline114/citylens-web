@@ -179,6 +179,42 @@ const COLUMNS: Column[] = [
     header: 'MIH data retrieved',
     value: (r) => r.mih_data_as_of,
   },
+  {
+    header: 'Nearest MTA station complex ID',
+    value: (r) => r.nearest_transit_complex_id,
+  },
+  {
+    header: 'Nearest MTA station',
+    value: (r) => r.nearest_transit_station_name,
+  },
+  {
+    header: 'Nearest MTA station straight-line distance (m)',
+    value: (r) => r.nearest_transit_station_distance_m,
+  },
+  {
+    header: 'Nearest MTA daytime routes',
+    value: (r) => r.nearest_transit_routes?.join(' | ') ?? null,
+  },
+  {
+    header: 'Nearest MTA ADA status',
+    value: (r) => r.nearest_transit_ada_status,
+  },
+  {
+    header: 'MTA station complexes within 400 m',
+    value: (r) => r.transit_station_count_400m,
+  },
+  {
+    header: 'MTA station complexes within 800 m',
+    value: (r) => r.transit_station_count_800m,
+  },
+  {
+    header: 'MTA straight-line access tier',
+    value: (r) => r.transit_access_tier,
+  },
+  {
+    header: 'MTA station data retrieved',
+    value: (r) => r.transit_data_as_of,
+  },
   { header: 'Owner', value: (r) => r.owner_name },
   { header: 'Owner source', value: (r) => r.owner_name_source },
   { header: 'PLUTO owner type', value: (r) => r.owner_type },

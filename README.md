@@ -10,8 +10,9 @@ Signed-in users also have a private watchlist change center. It compares the
 baseline captured when a parcel entered the acquisition workflow with the
 current atomic feed and surfaces owner, sale-year, zoning, priority,
 opportunity, lien, violation, flood, imagery, portfolio-size, and
-environmental-designation and MIH mapped-area changes, plus feed-removal
-changes. A feed-removal alert asks the user to verify current
+environmental-designation, MIH mapped-area, and meaningful transit-complex or
+access-tier changes, plus feed-removal changes. Distance-only centroid noise
+does not create a transit alert. A feed-removal alert asks the user to verify current
 official records; it never invents a disposition or seller-intent claim.
 The explorer renders its public preview immediately, upgrades authenticated
 users with one compact 5,000-row citywide request, and fetches polygon,
@@ -32,13 +33,18 @@ NYC DOF final tax-lien sale history, a filter for parcels with current Class 1
 ECB or Class C HPD immediately hazardous records, a signed-in 1% annual-chance
 floodplain screen, a signed-in exact-name current-PLUTO legal-owner portfolio
 filter, a signed-in PLUTO E-designation/restrictive-declaration screen, a
-signed-in current NYC Planning MIH mapped-area screen, and the accepted
-model's clearly labeled forward-test hit rate. Environmental instruments are
+signed-in current NYC Planning MIH mapped-area screen, an official MTA
+subway/SIR proximity screen, and the accepted model's clearly labeled
+forward-test hit rate. Environmental instruments are
 presented only as current air/noise/hazardous-materials diligence requirements;
 none is described as proof of contamination or as an automatic prohibition.
 The MIH card and underwriting warning explicitly treat an overlap as a dated
 spatial reference—not a legal applicability determination or affordability
-pro forma—and link the official map, current Appendix F, and HPD guidance. A user
+pro forma—and link the official map, current Appendix F, and HPD guidance.
+The MTA card reports the nearest station complex, straight-line meters,
+daytime routes, ADA status, and 400/800 m complex counts. It explicitly does
+not claim an entrance-level walking route, travel time, service frequency, or
+zoning effect, and it links the dated official MTA source. A user
 can open a parcel and focus the citywide map on other current candidates with
 the same exact normalized legal name. Signed-in users can open Outcome Insights
 to see fixed-horizon 30-day contact, 90-day qualification, 180-day offer,

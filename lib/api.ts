@@ -494,6 +494,25 @@ export type ParcelIntelRow = {
   mih_options?: string[] | null;
   mih_area_count?: number | null;
   mih_data_as_of?: string | null;
+  /**
+   * Current MTA station-complex proximity from the tax-lot centroid.
+   * Distance is great-circle, not a walking route, entrance distance, travel
+   * time, frequency, or zoning determination.
+   */
+  nearest_transit_complex_id?: string | null;
+  nearest_transit_station_name?: string | null;
+  nearest_transit_station_distance_m?: number | null;
+  nearest_transit_routes?: string[] | null;
+  nearest_transit_ada_status?: 'full' | 'partial' | 'none' | null;
+  transit_station_count_400m?: number | null;
+  transit_station_count_800m?: number | null;
+  transit_access_tier?:
+    | 'very_close'
+    | 'walkable'
+    | 'limited'
+    | 'distant'
+    | null;
+  transit_data_as_of?: string | null;
   is_landmark: boolean;
   is_historic_district: boolean;
   block_id: string | null;
@@ -632,6 +651,12 @@ export type ParcelIntelMapRow = Pick<
   | 'floodplain_1pct'
   | 'environmental_review_required'
   | 'mandatory_inclusionary_housing'
+  | 'nearest_transit_station_name'
+  | 'nearest_transit_station_distance_m'
+  | 'nearest_transit_routes'
+  | 'nearest_transit_ada_status'
+  | 'transit_station_count_800m'
+  | 'transit_access_tier'
   | 'owner_name'
   | 'owner_entity_type'
   | 'owner_portfolio_id'
@@ -694,6 +719,16 @@ export type ParcelWorkflowSnapshot = {
     | 'other'
     | null;
   mandatory_inclusionary_housing: boolean | null;
+  nearest_transit_complex_id: string | null;
+  nearest_transit_station_name: string | null;
+  nearest_transit_station_distance_m: number | null;
+  transit_access_tier:
+    | 'very_close'
+    | 'walkable'
+    | 'limited'
+    | 'distant'
+    | null;
+  transit_data_as_of: string | null;
   recent_change: boolean | null;
 };
 
@@ -890,6 +925,7 @@ export type ParcelWorkflowAlert = {
     | 'flood_overlay_changed'
     | 'environmental_review_changed'
     | 'mih_overlay_changed'
+    | 'transit_access_changed'
     | 'imagery_change_signal_changed'
     | 'owner_portfolio_size_changed';
   severity: 'urgent' | 'high' | 'medium' | 'low';

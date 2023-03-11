@@ -279,6 +279,41 @@ describe('ParcelIntelPropertyPanel', () => {
     );
   });
 
+  it('shows dated MTA proximity without claiming walk time or service quality', () => {
+    render(
+      <ParcelIntelPropertyPanel
+        row={{
+          ...parcel,
+          nearest_transit_complex_id: '628',
+          nearest_transit_station_name: 'Church Av',
+          nearest_transit_station_distance_m: 420,
+          nearest_transit_routes: ['B', 'Q'],
+          nearest_transit_ada_status: 'full',
+          transit_station_count_400m: 0,
+          transit_station_count_800m: 2,
+          transit_access_tier: 'walkable',
+          transit_data_as_of: '2026-07-24',
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const card = screen.getByTestId('transit-diligence');
+    expect(card).toHaveTextContent('Subway / SIR access screen');
+    expect(card).toHaveTextContent('Church Av');
+    expect(card).toHaveTextContent('420 m');
+    expect(card).toHaveTextContent('not a walking route');
+    expect(card).toHaveTextContent('MTA data retrieved 2026-07-24');
+    expect(screen.getByText('B')).toBeInTheDocument();
+    expect(screen.getByText('Q')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Official MTA station data/i }),
+    ).toHaveAttribute(
+      'href',
+      'https://data.ny.gov/Transportation/MTA-Subway-Stations/39hk-dx4f',
+    );
+  });
+
   it('shows conservative current-owner portfolio context and can focus it', () => {
     const onViewOwnerPortfolio = vi.fn();
     render(

@@ -59,6 +59,11 @@ const EXPECTED_HEADER =
   'Environmental designation type,Environmental designation number,' +
   'Environmental designation data retrieved,MIH mapped-area tax-lot overlap,' +
   'MIH mapped options,MIH area record count,MIH data retrieved,' +
+  'Nearest MTA station complex ID,Nearest MTA station,' +
+  'Nearest MTA station straight-line distance (m),Nearest MTA daytime routes,' +
+  'Nearest MTA ADA status,MTA station complexes within 400 m,' +
+  'MTA station complexes within 800 m,MTA straight-line access tier,' +
+  'MTA station data retrieved,' +
   'Owner,Owner source,PLUTO owner type,' +
   'Owner entity type,Owner portfolio ID,Owner portfolio tax lots,' +
   'Owner portfolio boroughs,Owner portfolio lot area (sqft),' +
@@ -200,6 +205,38 @@ describe('buildCsv', () => {
     );
     expect(cells[headers.indexOf('MIH area record count')]).toBe('2');
     expect(cells[headers.indexOf('MIH data retrieved')]).toBe('2026-07-24');
+    expect(cells[headers.indexOf('NYC acquisition rank')]).toBe('1');
+  });
+
+  it('exports dated MTA station proximity without changing rank', () => {
+    const csv = buildCsv([
+      row({
+        nearest_transit_complex_id: '628',
+        nearest_transit_station_name: 'Church Av',
+        nearest_transit_station_distance_m: 420,
+        nearest_transit_routes: ['B', 'Q'],
+        nearest_transit_ada_status: 'full',
+        transit_station_count_400m: 0,
+        transit_station_count_800m: 2,
+        transit_access_tier: 'walkable',
+        transit_data_as_of: '2026-07-24',
+      }),
+    ]);
+    const headers = EXPECTED_HEADER.split(',');
+    const cells = csv.split('\n')[1].split(',');
+    expect(cells[headers.indexOf('Nearest MTA station')]).toBe('Church Av');
+    expect(
+      cells[
+        headers.indexOf('Nearest MTA station straight-line distance (m)')
+      ],
+    ).toBe('420');
+    expect(cells[headers.indexOf('Nearest MTA daytime routes')]).toBe('B | Q');
+    expect(cells[headers.indexOf('MTA station complexes within 800 m')]).toBe(
+      '2',
+    );
+    expect(cells[headers.indexOf('MTA station data retrieved')]).toBe(
+      '2026-07-24',
+    );
     expect(cells[headers.indexOf('NYC acquisition rank')]).toBe('1');
   });
 

@@ -217,6 +217,22 @@ describe('parcel citywide explorer support', () => {
     ).toEqual(['overlap']);
   });
 
+  it('filters current MTA station proximity within 800 straight-line meters', () => {
+    const rows = [
+      row({ bbl: 'near', nearest_transit_station_distance_m: 420 }),
+      row({ bbl: 'boundary', nearest_transit_station_distance_m: 800 }),
+      row({ bbl: 'far', nearest_transit_station_distance_m: 801 }),
+      row({ bbl: 'not-loaded', nearest_transit_station_distance_m: null }),
+    ];
+
+    expect(
+      filterExplorerRows(rows, {
+        ...filters,
+        opportunity: 'transit_800m',
+      }).map((item) => item.bbl),
+    ).toEqual(['near', 'boundary']);
+  });
+
   it('filters multi-lot legal-owner portfolios without changing rank order', () => {
     const rows = [
       row({ bbl: 'single', owner_portfolio_lot_count: 1 }),

@@ -1297,6 +1297,87 @@ export function ParcelIntelPropertyPanel({
               </section>
             )}
 
+            {typeof row.nearest_transit_station_distance_m === 'number' && (
+              <section
+                className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50 p-3"
+                data-testid="transit-diligence"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-cyan-950">
+                      Subway / SIR access screen
+                    </h4>
+                    <p className="mt-1 text-sm font-semibold text-slate-950">
+                      {row.nearest_transit_station_name ?? 'Unnamed station complex'}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-cyan-950 ring-1 ring-inset ring-cyan-300">
+                    {row.nearest_transit_station_distance_m.toLocaleString()} m
+                  </span>
+                </div>
+
+                {(row.nearest_transit_routes?.length ?? 0) > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Daytime routes">
+                    {row.nearest_transit_routes?.map((route) => (
+                      <span
+                        key={route}
+                        className="inline-flex min-w-6 items-center justify-center rounded-full bg-slate-950 px-2 py-1 text-[11px] font-bold text-white"
+                      >
+                        {route}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <dl className="mt-3 grid grid-cols-3 gap-2">
+                  <div className="rounded-lg bg-white p-2 ring-1 ring-inset ring-cyan-100">
+                    <dt className="text-[10px] uppercase tracking-wide text-slate-500">
+                      ≤400 m
+                    </dt>
+                    <dd className="mt-0.5 text-sm font-semibold text-slate-950">
+                      {row.transit_station_count_400m ?? 0}
+                    </dd>
+                  </div>
+                  <div className="rounded-lg bg-white p-2 ring-1 ring-inset ring-cyan-100">
+                    <dt className="text-[10px] uppercase tracking-wide text-slate-500">
+                      ≤800 m
+                    </dt>
+                    <dd className="mt-0.5 text-sm font-semibold text-slate-950">
+                      {row.transit_station_count_800m ?? 0}
+                    </dd>
+                  </div>
+                  <div className="rounded-lg bg-white p-2 ring-1 ring-inset ring-cyan-100">
+                    <dt className="text-[10px] uppercase tracking-wide text-slate-500">
+                      ADA
+                    </dt>
+                    <dd className="mt-0.5 text-sm font-semibold capitalize text-slate-950">
+                      {row.nearest_transit_ada_status ?? 'unknown'}
+                    </dd>
+                  </div>
+                </dl>
+
+                <p className="mt-3 text-[11px] leading-4 text-cyan-950">
+                  Great-circle distance from the tax-lot centroid to the MTA
+                  station-complex centroid. This is not a walking route,
+                  entrance distance, travel time, service-frequency measure, or
+                  zoning determination
+                  {row.transit_data_as_of
+                    ? ` · MTA data retrieved ${row.transit_data_as_of}`
+                    : ''}
+                  .
+                </p>
+                <a
+                  href="https://data.ny.gov/Transportation/MTA-Subway-Stations/39hk-dx4f"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-cyan-950 underline decoration-cyan-300 underline-offset-2"
+                >
+                  Official MTA station data
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </section>
+            )}
+
             {(row.assemblage_lot_count ?? 0) >= 2 && (
               <section className="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3">
                 <h4 className="text-xs font-semibold uppercase tracking-wide text-violet-900">

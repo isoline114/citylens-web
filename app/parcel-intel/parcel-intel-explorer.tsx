@@ -307,6 +307,12 @@ export function ParcelIntelExplorer({
   const mihParcelCount = opportunityScope.filter(
     (row) => row.mandatory_inclusionary_housing === true,
   ).length;
+  const transit800mParcelCount = opportunityScope.filter(
+    (row) =>
+      row.nearest_transit_station_distance_m !== null &&
+      row.nearest_transit_station_distance_m !== undefined &&
+      row.nearest_transit_station_distance_m <= 800,
+  ).length;
   const ownerPortfolioParcelCount = opportunityScope.filter(
     (row) => (row.owner_portfolio_lot_count ?? 0) >= 2,
   ).length;
@@ -665,6 +671,9 @@ export function ParcelIntelExplorer({
                 <option value="mih">MIH mapped-area overlap</option>
               )}
               {isAuthenticated && (
+                <option value="transit_800m">Subway/SIR within 800 m</option>
+              )}
+              {isAuthenticated && (
                 <option value="portfolio">Multi-lot legal owners</option>
               )}
               <option value="assemblage">Assemblage opportunities</option>
@@ -959,6 +968,26 @@ export function ParcelIntelExplorer({
                 </div>
                 <div className="text-lg font-semibold text-fuchsia-950">
                   {mihParcelCount.toLocaleString()}
+                </div>
+              </button>
+            )}
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => updateFilter('opportunity', 'transit_800m')}
+                aria-pressed={filters.opportunity === 'transit_800m'}
+                className={`rounded-xl px-3 py-2 text-left transition-colors ${
+                  filters.opportunity === 'transit_800m'
+                    ? 'bg-cyan-100 ring-2 ring-inset ring-cyan-400'
+                    : 'bg-cyan-50 hover:bg-cyan-100'
+                }`}
+              >
+                <div className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-cyan-800">
+                  <MapPinned className="h-3 w-3" />
+                  Subway/SIR ≤800 m
+                </div>
+                <div className="text-lg font-semibold text-cyan-950">
+                  {transit800mParcelCount.toLocaleString()}
                 </div>
               </button>
             )}

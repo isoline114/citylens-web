@@ -50,6 +50,7 @@ export type ExplorerOpportunity =
   | 'floodplain'
   | 'environmental_review'
   | 'mih'
+  | 'transit_800m'
   | 'portfolio'
   | 'vacant_site'
   | 'ground_up_candidate'
@@ -127,6 +128,14 @@ export function filterExplorerRows<T extends ParcelExplorerRow>(
       if (row.mandatory_inclusionary_housing !== true) {
         return false;
       }
+    } else if (filters.opportunity === 'transit_800m') {
+      if (
+        row.nearest_transit_station_distance_m === null ||
+        row.nearest_transit_station_distance_m === undefined ||
+        row.nearest_transit_station_distance_m > 800
+      ) {
+        return false;
+      }
     } else if (filters.opportunity === 'portfolio') {
       if ((row.owner_portfolio_lot_count ?? 0) < 2) {
         return false;
@@ -147,7 +156,13 @@ export function filterExplorerRows<T extends ParcelExplorerRow>(
       row.opportunity_category !== filters.opportunity
     ) return false;
     if (!query) return true;
-    return [row.address, row.bbl, row.owner_name, row.zoning_district_1]
+    return [
+      row.address,
+      row.bbl,
+      row.owner_name,
+      row.zoning_district_1,
+      row.nearest_transit_station_name,
+    ]
       .filter((value): value is string => typeof value === 'string')
       .some((value) => value.toLowerCase().includes(query));
   });
