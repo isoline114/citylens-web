@@ -21,14 +21,16 @@ jobs:
     env:
       CITYLENS_DISABLE_SSR_DEMOS: '1'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
-          node-version: 20.11.1
+          node-version: 20.19.0
           cache: npm
 
       - run: npm ci
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
       - run: npx playwright install --with-deps chromium
 
       - run: npm run lint

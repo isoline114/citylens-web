@@ -3,11 +3,11 @@
   "private": true,
   "version": "0.1.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19.0"
   },
   "volta": {
-    "node": "20.11.1",
-    "npm": "10.2.4"
+    "node": "20.19.0",
+    "npm": "10.8.2"
   },
   "scripts": {
     "dev": "next dev",
@@ -20,13 +20,13 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@neondatabase/auth": "^0.3.0-beta",
+    "@neondatabase/auth": "0.4.2-beta",
     "@react-three/fiber": "^9.0.0",
     "@vercel/analytics": "^2.0.1",
     "clsx": "^2.1.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",
-    "next": "^16.2.4",
+    "next": "^16.2.11",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-leaflet": "^5.0.0",
@@ -48,16 +48,27 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@types/three": "^0.183.1",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^5.2.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^16.2.4",
-    "jsdom": "^25.0.1",
+    "eslint-config-next": "^16.2.11",
+    "jsdom": "^29.1.1",
     "png-to-ico": "^2.1.8",
-    "postcss": "^8.4.49",
-    "sharp": "^0.33.5",
+    "postcss": "^8.5.22",
+    "sharp": "^0.35.3",
     "tailwindcss": "^3.4.16",
     "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "@better-auth/core": "1.6.25",
+    "@better-auth/passkey": "1.6.25",
+    "better-auth": "1.6.25",
+    "kysely": "0.28.17",
+    "next@^16.2.11": {
+      "postcss": "8.5.22",
+      "sharp": "0.35.3"
+    }
   }
 }

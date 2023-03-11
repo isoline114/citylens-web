@@ -181,7 +181,9 @@ describe('ParcelWorkflowActionsPanel', () => {
     await waitFor(() =>
       expect(mocks.snooze).toHaveBeenCalledWith('3020960069', 1),
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Snoozed 1' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Snoozed 1' }),
+    );
     expect(
       await screen.findByRole('button', { name: 'Restore reminder' }),
     ).toBeInTheDocument();

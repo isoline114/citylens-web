@@ -169,6 +169,9 @@ adoption source because they are plan-dependent; the engine's bounded,
 
 ## Local development
 
+Use Node `20.19.0` and npm `10.8.2`; both are pinned through Volta in
+`package.json`.
+
 ```bash
 npm install
 npm run dev
@@ -185,6 +188,7 @@ npm run lint     # ESLint flat config (eslint-config-next 16)
 npm test         # vitest
 npm run test:e2e # Playwright (requires host browser libs)
 npm run build    # Next.js production build (Turbopack)
+npm audit --audit-level=high
 ```
 
 Playwright builds and owns an isolated production server (port `3100` by
@@ -192,8 +196,15 @@ default) and never reuses an unknown development server. Override with
 `PLAYWRIGHT_PORT=<port> npm run test:e2e` when needed. CI uses its own
 production server on port `3000`.
 
-CI runs lint + build + vitest + Playwright on every PR. See
+CI fails on high/critical npm advisories, then runs lint + build + vitest +
+Playwright on every PR. See
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
+`@neondatabase/auth` currently pins an older Better Auth line internally.
+`package.json` intentionally overrides Better Auth and its passkey/core
+packages to the reviewed patched `1.6.25` release. Do not remove those
+overrides until the upstream Neon package carries a non-vulnerable line and
+the complete auth route, unit, build, browser, and `npm audit` gates pass.
 
 The production Next.js config disables `X-Powered-By` and applies the
 clickjacking, MIME-sniffing, referrer, browser-capability, and narrow CSP
