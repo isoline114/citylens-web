@@ -15,6 +15,12 @@ official records; it never invents a disposition or seller-intent claim.
 The explorer renders its public preview immediately, upgrades authenticated
 users with one compact 5,000-row citywide request, and fetches polygon,
 explanation, provenance, and underwriting detail only when a parcel is opened.
+The selected-parcel panel also has a Decision Audit tab. It separates the
+historical next-year DOB filing signal from current acquisition gates,
+post-score diligence overlays, source dates, and user-entered workflow
+evidence. Historical top-100/top-1,000 precision is shown as cohort-level
+forward-test performance, never as seller intent or a parcel transaction
+probability.
 Full borough payloads are deferred until the user requests a CSV. The explorer
 also exposes multi-lot assemblage candidates, a signed-in filter for official
 NYC DOF final tax-lien sale history, a filter for parcels with current Class 1
@@ -75,8 +81,8 @@ Next.js app for CityLens. It pairs with:
   citywide map preview (NYC redevelopment-candidate rankings).
 - **Account-backed**: creating new runs, viewing your run history, the
   monthly-quota dashboard, and the complete `/parcel-intel` explorer with
-  parcel overview, underwriting, workflow, and model-attribution panels. Free
-  plan includes 5 runs per month.
+  parcel overview, decision audit, underwriting, workflow, and
+  model-attribution panels. Free plan includes 5 runs per month.
 - **Auth**: email + password via Neon Auth. The browser obtains a
   short-lived JWT and includes it as `Authorization: Bearer <token>` on
   authenticated API calls. Normal users do not configure API keys.
@@ -151,6 +157,11 @@ npm test         # vitest
 npm run test:e2e # Playwright (requires host browser libs)
 npm run build    # Next.js production build (Turbopack)
 ```
+
+Playwright builds and owns an isolated production server (port `3100` by
+default) and never reuses an unknown development server. Override with
+`PLAYWRIGHT_PORT=<port> npm run test:e2e` when needed. CI uses its own
+production server on port `3000`.
 
 CI runs lint + build + vitest + Playwright on every PR. See
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml).

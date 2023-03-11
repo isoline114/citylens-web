@@ -44,6 +44,112 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   });
 
   await page.route(
+    '**/v1/parcel-intel/parcel/3020960069',
+    async (route) => {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          bbl: '3020960069',
+          borough: 'brooklyn',
+          address: '100 E 21 STREET',
+          score_calibrated: 0.42,
+          score_calibrated_p10: 0.31,
+          score_calibrated_p90: 0.53,
+          priority_rank: 21,
+          priority_tier: 'highest',
+          model_rank: 65,
+          acquisition_rank: 21,
+          citywide_rank: 82,
+          acquisition_eligible: true,
+          acquisition_status: 'eligible',
+          acquisition_exclusion_reasons: [],
+          lot_area_sqft: 5000,
+          allowed_far: 2,
+          max_floor_area_sqft: 10000,
+          unused_floor_area_sqft: 5000,
+          far_utilization_pct: 50,
+          zoning_district_1: 'R6',
+          land_use: '01',
+          year_built: 1930,
+          num_floors: 2,
+          lat: 40.65,
+          lng: -73.96,
+          last_sale_price: 1_400_000,
+          last_sale_year: 2025,
+          years_held: 1,
+          has_recent_sale_5yr: true,
+          is_landmark: false,
+          is_historic_district: false,
+          block_id: '302096',
+          block_rank: 1,
+          top_features: [],
+          redev_status: 'still_vacant',
+          opportunity_category: 'ground_up_candidate',
+          property_facts_current: true,
+          property_facts_as_of: '2026-07-24',
+          ownership_as_of: '2026-07-15',
+          project_activity_as_of: '2026-07-22',
+          land_use_activity_as_of: '2026-07-24',
+          data_warnings: [],
+          decision_audit: {
+            schema_version: 'citylens/parcel-decision-audit@v1',
+            overall_status: 'screened_with_flags',
+            overall_label: 'Eligible lead with diligence flags',
+            validation: {
+              target: 'dob_nb_job_filing',
+              evaluation_scope: '2024 PLUTO to 2025 DOB NB filings',
+              precision_at_100: 0.34,
+              precision_at_1000: 0.104,
+              base_rate: 0.0012439591,
+              prospective_validated: false,
+              disclaimer:
+                'Historical next-year DOB new-building filing performance is not seller intent, transaction probability, or acquisition conversion.',
+            },
+            checks: [
+              {
+                key: 'historical_model',
+                layer: 'model_signal',
+                label: 'Historical redevelopment signal',
+                status: 'informational',
+                summary: 'Historical screening order, not a parcel probability.',
+                source: 'Accepted model bundle',
+                as_of: '2025-2025',
+                affects_model_rank: true,
+                affects_acquisition_eligibility: false,
+              },
+              {
+                key: 'acquisition_eligibility',
+                layer: 'eligibility_gate',
+                label: 'Current acquisition gate',
+                status: 'verified',
+                summary: 'This lead passed current project and ownership gates.',
+                source: 'CityLens deterministic acquisition policy',
+                as_of: '2026-07-24',
+                affects_model_rank: false,
+                affects_acquisition_eligibility: true,
+              },
+              {
+                key: 'current_diligence',
+                layer: 'current_diligence',
+                label: 'Current diligence overlays',
+                status: 'review',
+                summary: 'Review before underwriting: 1% floodplain overlap.',
+                source: 'NYC PLUTO/FEMA',
+                as_of: '2026-07-24',
+                affects_model_rank: false,
+                affects_acquisition_eligibility: false,
+              },
+            ],
+            limitations: [
+              'The historical target is not owner willingness to sell.',
+            ],
+          },
+        }),
+      });
+    },
+  );
+
+  await page.route(
     '**/v1/parcel-intel/workflow/actions',
     async (route) => {
       await route.fulfill({
@@ -315,6 +421,29 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     page.getByLabel('2 workflow items need attention'),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Close action queue' }).click();
+
+  await page.getByRole('button', { name: /100 E 21 STREET/i }).click();
+  await page.getByRole('button', { name: 'Audit' }).click();
+  await expect(page.getByTestId('parcel-decision-audit')).toContainText(
+    'Eligible lead with diligence flags',
+  );
+  await expect(page.getByTestId('parcel-decision-audit')).toContainText(
+    '34.0%',
+  );
+  await expect(page.getByTestId('parcel-decision-audit')).toContainText(
+    '10.4%',
+  );
+  await expect(page.getByTestId('parcel-decision-audit')).toContainText(
+    'not seller intent',
+  );
+  await expect(page.getByTestId('decision-audit-current_diligence')).toContainText(
+    'Diligence only · no rank effect',
+  );
+  await page
+    .getByRole('button', {
+      name: 'Close parcel panel and return to ranked parcels',
+    })
+    .click();
 
   await page.getByRole('button', { name: 'Outcome insights' }).click();
 

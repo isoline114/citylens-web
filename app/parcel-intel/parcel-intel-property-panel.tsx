@@ -4,14 +4,21 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
+  BadgeCheck,
   BriefcaseBusiness,
   Building2,
+  CircleAlert,
   Clock3,
+  Database,
   ExternalLink,
   FileSearch,
+  Gauge,
+  Info,
   LockKeyhole,
   MapPin,
+  ShieldCheck,
   TriangleAlert,
+  XCircle,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import {
@@ -20,6 +27,8 @@ import {
   removeParcelWorkflow,
   saveParcelWorkflow,
   type ParcelIntelRow,
+  type ParcelDecisionAudit,
+  type ParcelDecisionAuditCheck,
   type ParcelWorkflowItem,
   type ParcelWorkflowEvent,
   type TopFeature,
@@ -38,7 +47,7 @@ import {
   priorityLabel,
 } from './parcel-intel-explorer-support';
 
-type PanelTab = 'overview' | 'underwrite' | 'workflow';
+type PanelTab = 'overview' | 'audit' | 'underwrite' | 'workflow';
 
 type Props = {
   row: ParcelIntelRow;
@@ -136,6 +145,45 @@ function formatIsoDate(value: string | null | undefined): string | null {
   );
 }
 
+function formatRate(value: number | null): string {
+  if (value === null) return 'Not reported';
+  const percentage = value * 100;
+  return `${percentage < 1 ? percentage.toFixed(2) : percentage.toFixed(1)}%`;
+}
+
+const AUDIT_STATUS_STYLES: Record<
+  ParcelDecisionAuditCheck['status'],
+  { label: string; className: string }
+> = {
+  verified: {
+    label: 'Verified in feed',
+    className: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
+  },
+  review: {
+    label: 'Review required',
+    className: 'bg-amber-50 text-amber-900 ring-amber-200',
+  },
+  excluded: {
+    label: 'Excluded',
+    className: 'bg-rose-50 text-rose-800 ring-rose-200',
+  },
+  unavailable: {
+    label: 'Unavailable',
+    className: 'bg-slate-100 text-slate-700 ring-slate-200',
+  },
+  informational: {
+    label: 'Context only',
+    className: 'bg-sky-50 text-sky-800 ring-sky-200',
+  },
+};
+
+const AUDIT_LAYER_LABELS: Record<ParcelDecisionAuditCheck['layer'], string> = {
+  model_signal: 'Historical model signal',
+  eligibility_gate: 'Current acquisition gate',
+  current_diligence: 'Current diligence only',
+  source_freshness: 'Source provenance',
+};
+
 function parseBbl(
   bbl: string,
 ): { borough: string; block: string; lot: string } | null {
@@ -181,6 +229,194 @@ export function externalParcelLinks(row: ParcelIntelRow): ExternalParcelLink[] {
     );
   }
   return links;
+}
+
+function ParcelDecisionAuditPanel({
+  audit,
+  workflowItem,
+  signedIn,
+}: {
+  audit: ParcelDecisionAudit | undefined;
+  workflowItem: ParcelWorkflowItem | null;
+  signedIn: boolean;
+}) {
+  if (!audit) {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <div className="flex items-center gap-2 font-semibold">
+          <TriangleAlert className="h-4 w-4" />
+          Decision audit unavailable
+        </div>
+        <p className="mt-1 text-xs leading-5">
+          This parcel response predates the evidence-audit contract. Reload the
+          parcel or verify the source records directly.
+        </p>
+      </div>
+    );
+  }
+
+  const overallStyle = {
+    screened: 'border-emerald-200 bg-emerald-50 text-emerald-950',
+    screened_with_flags: 'border-amber-200 bg-amber-50 text-amber-950',
+    excluded: 'border-rose-200 bg-rose-50 text-rose-950',
+    incomplete: 'border-slate-300 bg-slate-100 text-slate-950',
+  }[audit.overall_status];
+
+  return (
+    <div data-testid="parcel-decision-audit">
+      <section className={`rounded-xl border p-4 ${overallStyle}`}>
+        <div className="flex items-start gap-2">
+          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">
+              Decision evidence audit
+            </div>
+            <h4 className="mt-1 text-base font-semibold">{audit.overall_label}</h4>
+            <p className="mt-1 text-xs leading-5 opacity-80">
+              This status organizes available evidence. It is not a purchase
+              recommendation, appraisal, seller-intent score, or completed diligence.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-700">
+          <Gauge className="h-3.5 w-3.5" />
+          Historical forward validation
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {[
+            ['Top 100', formatRate(audit.validation.precision_at_100)],
+            ['Top 1,000', formatRate(audit.validation.precision_at_1000)],
+            ['Base rate', formatRate(audit.validation.base_rate)],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-lg bg-slate-50 p-2.5">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                {label}
+              </div>
+              <div className="mt-1 text-sm font-semibold text-slate-950">
+                {value}
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] leading-4 text-slate-600">
+          {audit.validation.evaluation_scope}
+        </p>
+        <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-sky-50 p-2 text-[11px] leading-4 text-sky-900">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          {audit.validation.disclaimer}
+        </p>
+      </section>
+
+      <section className="mt-3 space-y-2" aria-label="Decision audit checks">
+        {audit.checks.map((check) => {
+          const status = AUDIT_STATUS_STYLES[check.status];
+          const Icon =
+            check.status === 'verified'
+              ? BadgeCheck
+              : check.status === 'excluded'
+                ? XCircle
+                : check.status === 'review'
+                  ? CircleAlert
+                  : Database;
+          return (
+            <article
+              key={check.key}
+              className="rounded-xl border border-slate-200 bg-white p-3"
+              data-testid={`decision-audit-${check.key}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 items-start gap-2">
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                      {AUDIT_LAYER_LABELS[check.layer]}
+                    </div>
+                    <h5 className="mt-0.5 text-xs font-semibold text-slate-950">
+                      {check.label}
+                    </h5>
+                  </div>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ring-1 ring-inset ${status.className}`}
+                >
+                  {status.label}
+                </span>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-slate-600">
+                {check.summary}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-500">
+                <span>{check.source}</span>
+                {check.as_of && <span>As of {check.as_of}</span>}
+                {check.affects_model_rank ? (
+                  <span className="font-semibold text-violet-700">Model input</span>
+                ) : check.affects_acquisition_eligibility ? (
+                  <span className="font-semibold text-emerald-700">
+                    Eligibility gate
+                  </span>
+                ) : (
+                  <span>Diligence only · no rank effect</span>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </section>
+
+      <section className="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3">
+        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-violet-900">
+          <BriefcaseBusiness className="h-3.5 w-3.5" />
+          User workflow evidence
+        </div>
+        {signedIn ? (
+          workflowItem ? (
+            <div className="mt-2 text-xs leading-5 text-violet-950">
+              <span className="font-semibold capitalize">{workflowItem.stage}</span>
+              {' · '}
+              <span className="capitalize">
+                {workflowItem.outcome.replaceAll('_', ' ')}
+              </span>
+              <div className="mt-1 text-violet-800">
+                {workflowItem.next_action
+                  ? `${workflowItem.next_action}${
+                      workflowItem.next_action_due_date
+                        ? ` · due ${workflowItem.next_action_due_date}`
+                        : ' · no due date'
+                    }`
+                  : 'No next action has been recorded.'}
+              </div>
+            </div>
+          ) : (
+            <p className="mt-2 text-xs leading-5 text-violet-800">
+              This parcel is not yet in your acquisition workflow. User-entered
+              disposition evidence remains separate from model and source evidence.
+            </p>
+          )
+        ) : (
+          <p className="mt-2 text-xs leading-5 text-violet-800">
+            Sign in to add private notes, actions, and outcomes. Those fields never
+            alter the historical model rank.
+          </p>
+        )}
+      </section>
+
+      <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <summary className="cursor-pointer text-xs font-semibold text-slate-800">
+          What this audit cannot prove
+        </summary>
+        <ul className="mt-2 space-y-1.5 pl-4 text-[11px] leading-4 text-slate-600">
+          {audit.limitations.map((limitation) => (
+            <li key={limitation} className="list-disc">
+              {limitation}
+            </li>
+          ))}
+        </ul>
+      </details>
+    </div>
+  );
 }
 
 export function ParcelIntelPropertyPanel({
@@ -341,10 +577,11 @@ export function ParcelIntelPropertyPanel({
         </div>
       </div>
 
-      <div className="grid shrink-0 grid-cols-3 border-b border-slate-200 bg-slate-50 p-1.5">
+      <div className="grid shrink-0 grid-cols-4 border-b border-slate-200 bg-slate-50 p-1.5">
         {(
           [
             ['overview', FileSearch, 'Overview'],
+            ['audit', ShieldCheck, 'Audit'],
             ['underwrite', Building2, 'Underwrite'],
             ['workflow', BriefcaseBusiness, 'Workflow'],
           ] as const
@@ -1010,6 +1247,14 @@ export function ParcelIntelPropertyPanel({
               )}
             </section>
           </div>
+        )}
+
+        {tab === 'audit' && (
+          <ParcelDecisionAuditPanel
+            audit={row.decision_audit}
+            workflowItem={workflowItem}
+            signedIn={auth.status === 'authenticated'}
+          />
         )}
 
         {tab === 'underwrite' && (

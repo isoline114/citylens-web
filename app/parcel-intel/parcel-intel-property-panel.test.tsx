@@ -318,6 +318,85 @@ describe('ParcelIntelPropertyPanel', () => {
     expect(screen.getByText(/Contributions explain this model score/i)).toBeInTheDocument();
   });
 
+  it('separates historical model, current gates, diligence, and workflow evidence', () => {
+    render(
+      <ParcelIntelPropertyPanel
+        row={{
+          ...parcel,
+          acquisition_eligible: true,
+          acquisition_status: 'eligible',
+          property_facts_current: true,
+          decision_audit: {
+            schema_version: 'citylens/parcel-decision-audit@v1',
+            overall_status: 'screened_with_flags',
+            overall_label: 'Eligible lead with diligence flags',
+            validation: {
+              target: 'dob_nb_job_filing',
+              evaluation_scope: '2024 PLUTO to 2025 DOB NB filings',
+              precision_at_100: 0.34,
+              precision_at_1000: 0.104,
+              base_rate: 0.0012439591,
+              prospective_validated: false,
+              disclaimer:
+                'Historical next-year DOB new-building filing performance is not seller intent, transaction probability, or acquisition conversion.',
+            },
+            checks: [
+              {
+                key: 'historical_model',
+                layer: 'model_signal',
+                label: 'Historical redevelopment signal',
+                status: 'informational',
+                summary: 'Historical screening order, not a parcel probability.',
+                source: 'Accepted model bundle',
+                as_of: '2025-2025',
+                affects_model_rank: true,
+                affects_acquisition_eligibility: false,
+              },
+              {
+                key: 'acquisition_eligibility',
+                layer: 'eligibility_gate',
+                label: 'Current acquisition gate',
+                status: 'verified',
+                summary: 'This lead passed current project and ownership gates.',
+                source: 'CityLens deterministic acquisition policy',
+                as_of: '2026-07-24',
+                affects_model_rank: false,
+                affects_acquisition_eligibility: true,
+              },
+              {
+                key: 'current_diligence',
+                layer: 'current_diligence',
+                label: 'Current diligence overlays',
+                status: 'review',
+                summary: 'Review before underwriting: 1% floodplain overlap.',
+                source: 'NYC PLUTO/FEMA',
+                as_of: '2026-07-24',
+                affects_model_rank: false,
+                affects_acquisition_eligibility: false,
+              },
+            ],
+            limitations: [
+              'The historical target is not owner willingness to sell.',
+            ],
+          },
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Audit' }));
+
+    expect(screen.getByText('Eligible lead with diligence flags')).toBeInTheDocument();
+    expect(screen.getByText('34.0%')).toBeInTheDocument();
+    expect(screen.getByText('10.4%')).toBeInTheDocument();
+    expect(screen.getByText('0.12%')).toBeInTheDocument();
+    expect(screen.getByText('Model input')).toBeInTheDocument();
+    expect(screen.getByText('Eligibility gate')).toBeInTheDocument();
+    expect(screen.getByText('Diligence only · no rank effect')).toBeInTheDocument();
+    expect(screen.getByText(/not seller intent/i)).toBeInTheDocument();
+    expect(screen.getByText(/Sign in to add private notes/i)).toBeInTheDocument();
+  });
+
   it('does not emit city-system links for malformed BBLs', () => {
     expect(externalParcelLinks({ ...parcel, bbl: 'bad', lat: null, lng: null })).toEqual([]);
   });

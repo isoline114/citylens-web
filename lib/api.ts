@@ -348,6 +348,50 @@ export type TopFeature = {
   contribution_pct: number;
 };
 
+export type ParcelDecisionAuditStatus =
+  | 'verified'
+  | 'review'
+  | 'excluded'
+  | 'unavailable'
+  | 'informational';
+
+export type ParcelDecisionAuditCheck = {
+  key: string;
+  layer:
+    | 'model_signal'
+    | 'eligibility_gate'
+    | 'current_diligence'
+    | 'source_freshness';
+  label: string;
+  status: ParcelDecisionAuditStatus;
+  summary: string;
+  source: string;
+  as_of: string | null;
+  affects_model_rank: boolean;
+  affects_acquisition_eligibility: boolean;
+};
+
+export type ParcelDecisionAudit = {
+  schema_version: 'citylens/parcel-decision-audit@v1';
+  overall_status:
+    | 'screened'
+    | 'screened_with_flags'
+    | 'excluded'
+    | 'incomplete';
+  overall_label: string;
+  validation: {
+    target: string;
+    evaluation_scope: string;
+    precision_at_100: number | null;
+    precision_at_1000: number | null;
+    base_rate: number | null;
+    prospective_validated: boolean;
+    disclaimer: string;
+  };
+  checks: ParcelDecisionAuditCheck[];
+  limitations: string[];
+};
+
 export type ParcelIntelRow = {
   bbl: string;
   address: string | null;
@@ -506,6 +550,8 @@ export type ParcelIntelRow = {
   assemblage_combined_buildable_sqft?: number | null;
   assemblage_member_bbls?: string[];
   observed_imagery_year?: number | null;
+  /** Server-built separation of model, eligibility, diligence, and freshness evidence. */
+  decision_audit?: ParcelDecisionAudit;
 };
 
 export type ParcelIntelBorough = {

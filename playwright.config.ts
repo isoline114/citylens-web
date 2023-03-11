@@ -1,5 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const port = Number.parseInt(
+  process.env.PLAYWRIGHT_PORT ?? (process.env.CI ? '3000' : '3100'),
+  10,
+);
+const baseURL = `http://127.0.0.1:${port}`;
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
@@ -10,16 +16,18 @@ export default defineConfig({
     timeout: 15000,
   },
   use: {
-    baseURL: 'http://127.0.0.1:3000',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
   webServer: {
     command: process.env.CI
-      ? 'npm run start -- --hostname 127.0.0.1 --port 3000'
-      : 'npm run dev -- --hostname 127.0.0.1 --port 3000',
-    url: 'http://127.0.0.1:3000',
-    reuseExistingServer: !process.env.CI,
+      ? `npm run start -- --hostname 127.0.0.1 --port ${port}`
+      : `npm run build && npm run start -- --hostname 127.0.0.1 --port ${port}`,
+    url: baseURL,
+    // Never let a stale developer server satisfy the e2e precondition. The
+    // harness must own the server so its env and source match the test run.
+    reuseExistingServer: false,
     timeout: 120000,
     env: {
       // Disable the SSR featured-demos fetch entirely during e2e — the
