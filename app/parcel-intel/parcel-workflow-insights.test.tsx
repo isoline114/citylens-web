@@ -13,6 +13,11 @@ vi.mock('@/lib/api', async (importOriginal) => {
   };
 });
 
+import type {
+  ParcelWorkflowAnalytics,
+  ParcelWorkflowRate,
+} from '@/lib/api';
+
 import { ParcelWorkflowInsights } from './parcel-workflow-insights';
 
 describe('ParcelWorkflowInsights', () => {
@@ -22,7 +27,7 @@ describe('ParcelWorkflowInsights', () => {
 
   it('withholds percentages while prospective denominators are too small', async () => {
     mocks.getAnalytics.mockResolvedValue({
-      schema_version: 'citylens/parcel-workflow-analytics@v2',
+      schema_version: 'citylens/parcel-workflow-analytics@v3',
       generated_at: '2026-07-23T23:00:00Z',
       measurement_status: 'collecting',
       measurement_label: 'Collecting observation time',
@@ -53,30 +58,43 @@ describe('ParcelWorkflowInsights', () => {
           numerator: 1,
           denominator: 3,
           rate: 0.3333,
+          confidence_interval: {
+            confidence_level: 0.95,
+            lower: 0.0615,
+            upper: 0.7923,
+          },
           sufficient_denominator: false,
         },
         qualified_per_contacted: {
           numerator: 0,
           denominator: 1,
           rate: 0,
+          confidence_interval: {
+            confidence_level: 0.95,
+            lower: 0,
+            upper: 0.7935,
+          },
           sufficient_denominator: false,
         },
         offer_per_qualified: {
           numerator: 0,
           denominator: 0,
           rate: null,
+          confidence_interval: null,
           sufficient_denominator: false,
         },
         contract_per_offer: {
           numerator: 0,
           denominator: 0,
           rate: null,
+          confidence_interval: null,
           sufficient_denominator: false,
         },
         close_per_contract: {
           numerator: 0,
           denominator: 0,
           rate: null,
+          confidence_interval: null,
           sufficient_denominator: false,
         },
       },
@@ -89,6 +107,7 @@ describe('ParcelWorkflowInsights', () => {
           reached_within_horizon: 0,
           pending_records: 3,
           rate: null,
+          confidence_interval: null,
           sufficient_denominator: false,
         },
       ],
@@ -108,8 +127,11 @@ describe('ParcelWorkflowInsights', () => {
           qualified_rate_denominator: 0,
           close_rate_denominator: 0,
           contacted_rate: 0.3333,
+          contacted_confidence_interval: null,
           qualified_rate: 0,
+          qualified_confidence_interval: null,
           close_rate: 0,
+          close_confidence_interval: null,
         },
       ],
       warnings: [],
@@ -127,5 +149,63 @@ describe('ParcelWorkflowInsights', () => {
     expect(screen.getByRole('cell', { name: '1-100' })).toBeInTheDocument();
     expect(screen.getByText(/Archived leads remain in denominators/i))
       .toBeInTheDocument();
+  });
+
+  it('shows an activation path instead of empty rate cards without a cohort', async () => {
+    const emptyRate = {
+      numerator: 0,
+      denominator: 0,
+      rate: null,
+      confidence_interval: null,
+      sufficient_denominator: false,
+    } satisfies ParcelWorkflowRate;
+    mocks.getAnalytics.mockResolvedValue({
+      schema_version: 'citylens/parcel-workflow-analytics@v3',
+      generated_at: '2026-07-24T12:00:00Z',
+      measurement_status: 'collecting',
+      measurement_label: 'Collecting observation time',
+      total_records: 0,
+      active_records: 0,
+      archived_records: 0,
+      event_history_records: 0,
+      rank_snapshot_records: 0,
+      valid_saved_at_records: 0,
+      oldest_followup_days: null,
+      median_followup_days: null,
+      minimum_cohort_size: 30,
+      minimum_rate_denominator: 10,
+      stage_counts: {},
+      outcome_counts: {},
+      decision_reason_counts: {},
+      funnel: {
+        saved: 0,
+        contacted: 0,
+        meeting_scheduled: 0,
+        qualified: 0,
+        offer_submitted: 0,
+        under_contract: 0,
+        closed: 0,
+        rejected: 0,
+        lost: 0,
+        contacted_per_saved: emptyRate,
+        qualified_per_contacted: emptyRate,
+        offer_per_qualified: emptyRate,
+        contract_per_offer: emptyRate,
+        close_per_contract: emptyRate,
+      },
+      maturity_windows: [],
+      cohorts: [],
+      warnings: [],
+    } satisfies ParcelWorkflowAnalytics);
+
+    render(<ParcelWorkflowInsights onClose={vi.fn()} />);
+
+    const emptyState = await screen.findByTestId('workflow-evidence-empty');
+    expect(emptyState).toHaveTextContent('No outcome cohort yet');
+    expect(emptyState).toHaveTextContent('Save ranked leads');
+    expect(emptyState).toHaveTextContent('Work the queue');
+    expect(emptyState).toHaveTextContent('Record outcomes');
+    expect(emptyState).toHaveTextContent('at least 30 leads are saved');
+    expect(screen.queryByText('Contacted within 30 days')).not.toBeInTheDocument();
   });
 });

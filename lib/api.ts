@@ -777,7 +777,14 @@ export type ParcelWorkflowRate = {
   numerator: number;
   denominator: number;
   rate: number | null;
+  confidence_interval: ParcelWorkflowConfidenceInterval | null;
   sufficient_denominator: boolean;
+};
+
+export type ParcelWorkflowConfidenceInterval = {
+  confidence_level: 0.95;
+  lower: number;
+  upper: number;
 };
 
 export type ParcelWorkflowCohort = {
@@ -795,8 +802,11 @@ export type ParcelWorkflowCohort = {
   qualified_rate_denominator: number;
   close_rate_denominator: number;
   contacted_rate: number | null;
+  contacted_confidence_interval: ParcelWorkflowConfidenceInterval | null;
   qualified_rate: number | null;
+  qualified_confidence_interval: ParcelWorkflowConfidenceInterval | null;
   close_rate: number | null;
+  close_confidence_interval: ParcelWorkflowConfidenceInterval | null;
 };
 
 export type ParcelWorkflowMaturityWindow = {
@@ -812,11 +822,12 @@ export type ParcelWorkflowMaturityWindow = {
   reached_within_horizon: number;
   pending_records: number;
   rate: number | null;
+  confidence_interval: ParcelWorkflowConfidenceInterval | null;
   sufficient_denominator: boolean;
 };
 
 export type ParcelWorkflowAnalytics = {
-  schema_version: 'citylens/parcel-workflow-analytics@v2';
+  schema_version: 'citylens/parcel-workflow-analytics@v3';
   generated_at: string;
   measurement_status: 'collecting' | 'directional' | 'usable';
   measurement_label: string;

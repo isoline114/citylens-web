@@ -6,6 +6,7 @@ import { LoaderCircle, RefreshCw, TrendingUp, TriangleAlert, X } from 'lucide-re
 import {
   getParcelWorkflowAnalytics,
   type ParcelWorkflowAnalytics,
+  type ParcelWorkflowConfidenceInterval,
   type ParcelWorkflowMaturityWindow,
 } from '@/lib/api';
 
@@ -21,6 +22,15 @@ function formatCohortRate(
 ): string {
   if (rate === null || denominator < minimum) return 'Collecting';
   return `${Math.round(rate * 100)}%`;
+}
+
+function formatConfidenceInterval(
+  interval: ParcelWorkflowConfidenceInterval | null,
+): string | null {
+  if (!interval) return null;
+  return `95% interval ${Math.round(interval.lower * 100)}–${Math.round(
+    interval.upper * 100,
+  )}%`;
 }
 
 export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
@@ -130,42 +140,102 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
             )}
           </div>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <div className="text-[11px] uppercase tracking-wide text-slate-400">
-                Saved leads
-              </div>
-              <div className="mt-1 text-xl font-semibold">
-                {data.funnel.saved.toLocaleString()}
-              </div>
-              <div className="mt-1 text-xs text-slate-400">
-                {data.active_records} active · {data.archived_records} archived
-              </div>
+          {data.total_records === 0 ? (
+            <div
+              className="mt-4 rounded-2xl border border-sky-300/20 bg-sky-300/10 p-5"
+              data-testid="workflow-evidence-empty"
+            >
+              <h4 className="text-base font-semibold text-white">
+                No outcome cohort yet
+              </h4>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-300">
+                CityLens has not observed any saved leads in this workspace, so it
+                cannot estimate your acquisition funnel yet. Build the evidence from
+                real decisions—never from demo or synthetic outcomes.
+              </p>
+              <ol className="mt-4 grid gap-3 md:grid-cols-3">
+                {[
+                  [
+                    '1',
+                    'Save ranked leads',
+                    'Add parcels to the pipeline from the citywide explorer.',
+                  ],
+                  [
+                    '2',
+                    'Work the queue',
+                    'Assign an owner and a dated next action for each live lead.',
+                  ],
+                  [
+                    '3',
+                    'Record outcomes',
+                    'Update milestones as outreach, qualification, and deals progress.',
+                  ],
+                ].map(([number, title, description]) => (
+                  <li
+                    key={number}
+                    className="rounded-xl border border-white/10 bg-slate-950/40 p-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-300 text-xs font-bold text-slate-950">
+                        {number}
+                      </span>
+                      <span className="text-sm font-semibold text-white">{title}</span>
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-slate-400">
+                      {description}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-4 text-xs leading-5 text-sky-100">
+                The first maturity-qualified rate appears after 10 leads complete its
+                observation window. Overall evidence remains “Collecting” until at
+                least {data.minimum_cohort_size} leads are saved.
+              </p>
             </div>
-            {data.maturity_windows.map((window) => (
-              <div
-                key={window.milestone}
-                className="rounded-xl border border-white/10 bg-white/5 p-3"
-                data-testid={`maturity-window-${window.milestone}`}
-              >
+          ) : (
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">
-                  {window.label}
+                  Saved leads
                 </div>
                 <div className="mt-1 text-xl font-semibold">
-                  {formatWindowRate(window)}
+                  {data.funnel.saved.toLocaleString()}
                 </div>
                 <div className="mt-1 text-xs text-slate-400">
-                  {window.reached_within_horizon.toLocaleString()} of{' '}
-                  {window.eligible_records.toLocaleString()} mature
-                  {window.pending_records > 0
-                    ? ` · ${window.pending_records.toLocaleString()} pending`
-                    : ''}
+                  {data.active_records} active · {data.archived_records} archived
                 </div>
               </div>
-            ))}
-          </div>
+              {data.maturity_windows.map((window) => (
+                <div
+                  key={window.milestone}
+                  className="rounded-xl border border-white/10 bg-white/5 p-3"
+                  data-testid={`maturity-window-${window.milestone}`}
+                >
+                  <div className="text-[11px] uppercase tracking-wide text-slate-400">
+                    {window.label}
+                  </div>
+                  <div className="mt-1 text-xl font-semibold">
+                    {formatWindowRate(window)}
+                  </div>
+                  {window.sufficient_denominator && window.confidence_interval && (
+                    <div className="mt-0.5 text-[11px] text-sky-200">
+                      {formatConfidenceInterval(window.confidence_interval)}
+                    </div>
+                  )}
+                  <div className="mt-1 text-xs text-slate-400">
+                    {window.reached_within_horizon.toLocaleString()} of{' '}
+                    {window.eligible_records.toLocaleString()} mature
+                    {window.pending_records > 0
+                      ? ` · ${window.pending_records.toLocaleString()} pending`
+                      : ''}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
-          {rankCohorts.length > 0 && (
+          {data.total_records > 0 && rankCohorts.length > 0 && (
             <div className="mt-4">
               <div className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">
                 Fixed-horizon outcomes by saved rank
@@ -195,6 +265,15 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
                         <span className="ml-1 text-slate-500">
                           n={cohort.contacted_rate_denominator}
                         </span>
+                        {cohort.contacted_rate_denominator >=
+                          data.minimum_rate_denominator &&
+                          cohort.contacted_confidence_interval && (
+                            <div className="mt-0.5 text-[10px] text-slate-500">
+                              {formatConfidenceInterval(
+                                cohort.contacted_confidence_interval,
+                              )}
+                            </div>
+                          )}
                       </td>
                       <td className="px-3 py-2.5 text-slate-300">
                         {formatCohortRate(
@@ -205,6 +284,15 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
                         <span className="ml-1 text-slate-500">
                           n={cohort.qualified_rate_denominator}
                         </span>
+                        {cohort.qualified_rate_denominator >=
+                          data.minimum_rate_denominator &&
+                          cohort.qualified_confidence_interval && (
+                            <div className="mt-0.5 text-[10px] text-slate-500">
+                              {formatConfidenceInterval(
+                                cohort.qualified_confidence_interval,
+                              )}
+                            </div>
+                          )}
                       </td>
                       <td className="px-3 py-2.5 text-slate-300">
                         {formatCohortRate(
@@ -215,6 +303,15 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
                         <span className="ml-1 text-slate-500">
                           n={cohort.close_rate_denominator}
                         </span>
+                        {cohort.close_rate_denominator >=
+                          data.minimum_rate_denominator &&
+                          cohort.close_confidence_interval && (
+                            <div className="mt-0.5 text-[10px] text-slate-500">
+                              {formatConfidenceInterval(
+                                cohort.close_confidence_interval,
+                              )}
+                            </div>
+                          )}
                       </td>
                     </tr>
                   ))}
@@ -231,6 +328,8 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
             their first recorded timestamp; late backfills do not count as on-time
             outcomes. Archived leads remain in denominators so unfavorable outcomes
             cannot disappear.
+            When a rate is shown, its 95% Wilson interval communicates the uncertainty
+            around that estimate.
           </p>
         </>
       )}
