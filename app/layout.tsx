@@ -2,12 +2,12 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Analytics } from '@vercel/analytics/next';
 import '../styles/globals.css';
 
 import { AuthHeaderControls } from '@/components/AuthHeaderControls';
 import { DemoModeBanner } from '@/components/DemoModeBanner';
 import { PlanQuotaBadge } from '@/components/PlanQuotaBadge';
+import { SafeAnalytics } from '@/components/SafeAnalytics';
 import { Toasts } from '@/components/Toasts';
 import { AuthProvider } from '@/lib/auth';
 import { AuthTokenBridge } from '@/lib/auth/AuthTokenBridge';
@@ -102,7 +102,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <SiteFooter />
           <Toasts />
         </AuthProvider>
-        <Analytics />
+        <SafeAnalytics />
       </body>
     </html>
   );

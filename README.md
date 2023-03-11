@@ -141,6 +141,20 @@ Standard artifact filenames the UI renders:
 - `mesh.ply` (react-three-fiber 3D viewer + download)
 - `run_summary.json` (QA + performance panel)
 
+## Privacy-preserving adoption measurement
+
+Authenticated Parcel Intelligence interactions send only the strict
+`citylens/parcel-product-event@v1` event/source pair to the engine. The client
+never includes a BBL, address, owner, URL, notes, tags, assignee, contact, or
+free text. Delivery is best-effort and cannot block parcel diligence or
+workflow saves.
+
+Vercel pageview analytics use `SafeAnalytics` to strip query parameters and
+fragments before collection, so parcel-selection state such as `?bbl=...` is
+not included in pageview URLs. Vercel custom events are not the canonical
+adoption source because they are plan-dependent; the engine's bounded,
+90-day aggregate counters are.
+
 ## Environment variables
 
 | Var | Notes |

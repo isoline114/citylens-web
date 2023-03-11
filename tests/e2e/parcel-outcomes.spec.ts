@@ -4,6 +4,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   page,
 }) => {
   let reminderSnoozed = false;
+  const productEvents: unknown[] = [];
 
   await page.addInitScript(() => {
     sessionStorage.setItem(
@@ -195,6 +196,14 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
           },
         }),
       });
+    },
+  );
+
+  await page.route(
+    '**/v1/parcel-intel/product-events',
+    async (route) => {
+      productEvents.push(route.request().postDataJSON());
+      await route.fulfill({ status: 204, body: '' });
     },
   );
 
@@ -582,6 +591,25 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(page.getByText('Saved to your pipeline')).toBeVisible();
   await expect(page.getByTestId('workflow-quick-save')).toContainText(
     'In pipeline · Open',
+  );
+  await expect
+    .poll(() => productEvents)
+    .toEqual(
+      expect.arrayContaining([
+        {
+          schema_version: 'citylens/parcel-product-event@v1',
+          event: 'parcel_opened',
+          source: 'ranking',
+        },
+        {
+          schema_version: 'citylens/parcel-product-event@v1',
+          event: 'workflow_created',
+          source: 'header',
+        },
+      ]),
+    );
+  expect(JSON.stringify(productEvents)).not.toMatch(
+    /3020960069|100 E 21|owner|notes|tags/i,
   );
   await page.getByRole('button', { name: 'Overview' }).click();
   await expect(page.getByTestId('mih-diligence')).toContainText(

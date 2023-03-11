@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   authStatus: 'unauthenticated' as 'unauthenticated' | 'authenticated',
   getParcelWorkflow: vi.fn(),
   listParcelWorkflowEvents: vi.fn(),
+  recordParcelProductEvent: vi.fn(),
   saveParcelWorkflow: vi.fn(),
   removeParcelWorkflow: vi.fn(),
 }));
@@ -23,6 +24,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
     ...actual,
     getParcelWorkflow: mocks.getParcelWorkflow,
     listParcelWorkflowEvents: mocks.listParcelWorkflowEvents,
+    recordParcelProductEvent: mocks.recordParcelProductEvent,
     saveParcelWorkflow: mocks.saveParcelWorkflow,
     removeParcelWorkflow: mocks.removeParcelWorkflow,
   };
@@ -76,6 +78,8 @@ beforeEach(() => {
   mocks.getParcelWorkflow.mockResolvedValue(null);
   mocks.listParcelWorkflowEvents.mockReset();
   mocks.listParcelWorkflowEvents.mockResolvedValue([]);
+  mocks.recordParcelProductEvent.mockReset();
+  mocks.recordParcelProductEvent.mockResolvedValue(undefined);
   mocks.saveParcelWorkflow.mockReset();
   mocks.removeParcelWorkflow.mockReset();
 });
@@ -459,6 +463,13 @@ describe('ParcelIntelPropertyPanel', () => {
     expect(screen.getByTestId('workflow-quick-save')).toHaveTextContent(
       'In pipeline · Open',
     );
+    expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+      'workflow_created',
+      'header',
+    );
+    expect(
+      JSON.stringify(mocks.recordParcelProductEvent.mock.calls),
+    ).not.toMatch(/3050660023|224 Clarkson|Example Owner/i);
   });
 
   it('does not apply a completed save to a different parcel', async () => {

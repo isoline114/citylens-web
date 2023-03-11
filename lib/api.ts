@@ -55,6 +55,21 @@ export type MeResponse = {
   };
 };
 
+export type ParcelProductEventName =
+  | 'parcel_opened'
+  | 'workflow_created'
+  | 'workflow_updated'
+  | 'workflow_archived';
+
+export type ParcelProductEventSource =
+  | 'direct'
+  | 'map'
+  | 'ranking'
+  | 'action_queue'
+  | 'watchlist'
+  | 'header'
+  | 'workflow';
+
 export class ApiConfigError extends Error {
   constructor(message: string) {
     super(message);
@@ -1051,6 +1066,24 @@ export async function getParcelWorkflow(
   return requestJson<ParcelWorkflowItem | null>(
     `/v1/parcel-intel/workflow/${encodeURIComponent(bbl)}`,
     { cache: 'no-store' },
+  );
+}
+
+export async function recordParcelProductEvent(
+  event: ParcelProductEventName,
+  source: ParcelProductEventSource,
+): Promise<void> {
+  await requestJson<unknown>(
+    '/v1/parcel-intel/product-events',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        schema_version: 'citylens/parcel-product-event@v1',
+        event,
+        source,
+      }),
+      cache: 'no-store',
+    },
   );
 }
 

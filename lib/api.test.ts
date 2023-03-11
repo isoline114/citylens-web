@@ -15,6 +15,7 @@ import {
   getRuns,
   joinApiUrl,
   listApiKeys,
+  recordParcelProductEvent,
   resolveApiUrl,
   revokeApiKey,
   setAuthTokenGetter,
@@ -121,6 +122,32 @@ describe('api client', () => {
     expect(url).toContain('/v1/parcel-intel/workflow/3020960069');
     expect(url).not.toContain('/events');
     expect(init.cache).toBe('no-store');
+    expect(new Headers(init.headers).get('Authorization')).toBe(
+      'Bearer tok-abc',
+    );
+  });
+
+  it('records only the strict coarse product-event contract', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 204,
+      headers: new Headers(),
+      text: async () => '',
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await recordParcelProductEvent('parcel_opened', 'ranking');
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/v1/parcel-intel/product-events');
+    expect(init.method).toBe('POST');
+    expect(init.cache).toBe('no-store');
+    expect(JSON.parse(String(init.body))).toEqual({
+      schema_version: 'citylens/parcel-product-event@v1',
+      event: 'parcel_opened',
+      source: 'ranking',
+    });
+    expect(String(init.body)).not.toMatch(/bbl|address|owner|notes|tags/i);
     expect(new Headers(init.headers).get('Authorization')).toBe(
       'Bearer tok-abc',
     );

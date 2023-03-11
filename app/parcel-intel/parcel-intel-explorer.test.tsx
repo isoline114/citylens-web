@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   getParcelIntelParcel: vi.fn(),
   getParcelIntelSweep: vi.fn(),
   getParcelWorkflowActions: vi.fn(),
+  recordParcelProductEvent: vi.fn(),
   routerReplace: vi.fn(),
 }));
 
@@ -36,6 +37,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
     getParcelIntelParcel: mocks.getParcelIntelParcel,
     getParcelIntelSweep: mocks.getParcelIntelSweep,
     getParcelWorkflowActions: mocks.getParcelWorkflowActions,
+    recordParcelProductEvent: mocks.recordParcelProductEvent,
   };
 });
 
@@ -109,6 +111,8 @@ beforeEach(() => {
   mocks.getParcelIntelParcel.mockReset();
   mocks.getParcelIntelSweep.mockReset();
   mocks.getParcelWorkflowActions.mockReset();
+  mocks.recordParcelProductEvent.mockReset();
+  mocks.recordParcelProductEvent.mockResolvedValue(undefined);
   mocks.routerReplace.mockReset();
   mocks.getParcelIntelMap.mockImplementation(
     async () => ({
@@ -307,5 +311,32 @@ describe('ParcelIntelExplorer', () => {
     expect(mocks.routerReplace).toHaveBeenLastCalledWith('/parcel-intel', {
       scroll: false,
     });
+  });
+
+  it('records one coarse authenticated parcel open without parcel identifiers', async () => {
+    mocks.authStatus = 'authenticated';
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    const brooklynLead = await screen.findByRole('button', {
+      name: /brooklyn test site/i,
+    });
+    fireEvent.click(brooklynLead);
+
+    await waitFor(() =>
+      expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+        'parcel_opened',
+        'ranking',
+      ),
+    );
+    expect(mocks.recordParcelProductEvent).toHaveBeenCalledTimes(1);
+    expect(
+      JSON.stringify(mocks.recordParcelProductEvent.mock.calls),
+    ).not.toMatch(/3000010001|brooklyn test site/i);
+
+    fireEvent.click(brooklynLead);
+    await waitFor(() =>
+      expect(mocks.getParcelIntelParcel).toHaveBeenCalled(),
+    );
+    expect(mocks.recordParcelProductEvent).toHaveBeenCalledTimes(1);
   });
 });

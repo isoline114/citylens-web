@@ -26,9 +26,11 @@ import {
   getParcelIntelParcel,
   getParcelIntelSweep,
   getParcelWorkflowActions,
+  recordParcelProductEvent,
   type ParcelIntelBorough,
   type ParcelIntelMapRow,
   type ParcelIntelRow,
+  type ParcelProductEventSource,
   type ParcelWorkflowActions,
 } from '@/lib/api';
 import {
@@ -129,6 +131,8 @@ export function ParcelIntelExplorer({
   const [actionsOpen, setActionsOpen] = useState(false);
   const [workflowActions, setWorkflowActions] =
     useState<ParcelWorkflowActions | null>(null);
+  const parcelOpenSourceRef = useRef<ParcelProductEventSource>('direct');
+  const trackedParcelOpensRef = useRef(new Set<string>());
 
   const isAuthenticated = auth.status === 'authenticated';
   const totalAvailable = boroughs.reduce((sum, borough) => sum + borough.count, 0);
@@ -285,6 +289,18 @@ export function ParcelIntelExplorer({
         if (cancelled) return;
         setSelectedDetail({ ...detail, borough: selectedSummary.borough });
         setDetailState('ready');
+        if (
+          isAuthenticated &&
+          !trackedParcelOpensRef.current.has(selectedBbl)
+        ) {
+          trackedParcelOpensRef.current.add(selectedBbl);
+          void recordParcelProductEvent(
+            'parcel_opened',
+            parcelOpenSourceRef.current,
+          ).catch(() => {
+            // Adoption telemetry is best-effort and never blocks diligence.
+          });
+        }
       })
       .catch(() => {
         if (cancelled) return;
@@ -365,7 +381,11 @@ export function ParcelIntelExplorer({
     if (key === 'borough' || selectedBbl) syncExplorerUrl(nextBorough, null);
   };
 
-  const selectParcel = (bbl: string) => {
+  const selectParcel = (
+    bbl: string,
+    source: ParcelProductEventSource = 'ranking',
+  ) => {
+    parcelOpenSourceRef.current = source;
     setSelectedBbl(bbl);
     syncExplorerUrl(filters.borough, bbl);
   };
@@ -577,7 +597,7 @@ export function ParcelIntelExplorer({
           onDataChange={setWorkflowActions}
           onSelectParcel={(bbl) => {
             setActionsOpen(false);
-            selectParcel(bbl);
+            selectParcel(bbl, 'action_queue');
           }}
         />
       )}
@@ -586,7 +606,7 @@ export function ParcelIntelExplorer({
           onClose={() => setAlertsOpen(false)}
           onSelectParcel={(bbl) => {
             setAlertsOpen(false);
-            selectParcel(bbl);
+            selectParcel(bbl, 'watchlist');
           }}
         />
       )}
@@ -749,7 +769,7 @@ export function ParcelIntelExplorer({
               selectedBbl={selectedBbl}
               selectedRow={selectedDetail}
               overlay={overlay}
-              onSelect={selectParcel}
+              onSelect={(bbl) => selectParcel(bbl, 'map')}
             />
           )}
         </div>
@@ -1043,7 +1063,7 @@ export function ParcelIntelExplorer({
                 <button
                   key={row.bbl}
                   type="button"
-                  onClick={() => selectParcel(row.bbl)}
+                  onClick={() => selectParcel(row.bbl, 'ranking')}
                   className={`mb-1 w-full rounded-xl border px-3 py-3 text-left transition-colors ${
                     !mobileRankingExpanded && index >= MOBILE_COMPACT_LEAD_LIMIT
                       ? 'hidden sm:block'
