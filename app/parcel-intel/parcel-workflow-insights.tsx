@@ -1,10 +1,18 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { LoaderCircle, RefreshCw, TrendingUp, TriangleAlert, X } from 'lucide-react';
+import {
+  Download,
+  LoaderCircle,
+  RefreshCw,
+  TrendingUp,
+  TriangleAlert,
+  X,
+} from 'lucide-react';
 
 import {
   getParcelWorkflowAnalytics,
+  getParcelWorkflowOutcomeExport,
   type ParcelWorkflowAnalytics,
   type ParcelWorkflowConfidenceInterval,
   type ParcelWorkflowMaturityWindow,
@@ -38,6 +46,8 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +73,35 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
     [data],
   );
 
+  const exportEvidence = async () => {
+    if (exporting) return;
+    setExporting(true);
+    setExportMessage(null);
+    try {
+      const evidence = await getParcelWorkflowOutcomeExport();
+      const blob = new Blob([JSON.stringify(evidence, null, 2)], {
+        type: 'application/json;charset=utf-8',
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `citylens-outcome-evidence-${evidence.generated_at.slice(0, 10)}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setExportMessage(
+        `Exported ${evidence.exported_record_count.toLocaleString()} privacy-safe outcome record${
+          evidence.exported_record_count === 1 ? '' : 's'
+        }.`,
+      );
+    } catch {
+      setExportMessage('Outcome evidence export failed. Please retry.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <section
       className="border-b border-slate-200 bg-slate-950 px-5 py-5 text-white md:px-7"
@@ -82,15 +121,43 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
             pipeline. These rates are not the historical model&apos;s validation accuracy.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close outcome insights"
-          className="rounded-lg border border-white/10 p-2 text-slate-300 hover:bg-white/10 hover:text-white"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {data && (
+            <button
+              type="button"
+              onClick={() => void exportEvidence()}
+              disabled={exporting}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
+            >
+              {exporting ? (
+                <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              {exporting ? 'Preparing…' : 'Export evidence'}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close outcome insights"
+            className="rounded-lg border border-white/10 p-2 text-slate-300 hover:bg-white/10 hover:text-white"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
+
+      {exportMessage && (
+        <p
+          className={`mt-3 text-xs ${
+            exportMessage.includes('failed') ? 'text-rose-200' : 'text-emerald-200'
+          }`}
+          role="status"
+        >
+          {exportMessage}
+        </p>
+      )}
 
       {loading ? (
         <div className="mt-5 flex items-center gap-2 text-sm text-slate-300" role="status">

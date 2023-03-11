@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   getAnalytics: vi.fn(),
+  getExport: vi.fn(),
 }));
 
 vi.mock('@/lib/api', async (importOriginal) => {
@@ -10,6 +11,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
   return {
     ...actual,
     getParcelWorkflowAnalytics: mocks.getAnalytics,
+    getParcelWorkflowOutcomeExport: mocks.getExport,
   };
 });
 
@@ -23,6 +25,7 @@ import { ParcelWorkflowInsights } from './parcel-workflow-insights';
 describe('ParcelWorkflowInsights', () => {
   beforeEach(() => {
     mocks.getAnalytics.mockReset();
+    mocks.getExport.mockReset();
   });
 
   it('withholds percentages while prospective denominators are too small', async () => {
@@ -207,5 +210,98 @@ describe('ParcelWorkflowInsights', () => {
     expect(emptyState).toHaveTextContent('Record outcomes');
     expect(emptyState).toHaveTextContent('at least 30 leads are saved');
     expect(screen.queryByText('Contacted within 30 days')).not.toBeInTheDocument();
+  });
+
+  it('downloads a privacy-safe, maturity-qualified evidence artifact', async () => {
+    const emptyRate = {
+      numerator: 0,
+      denominator: 0,
+      rate: null,
+      confidence_interval: null,
+      sufficient_denominator: false,
+    } satisfies ParcelWorkflowRate;
+    mocks.getAnalytics.mockResolvedValue({
+      schema_version: 'citylens/parcel-workflow-analytics@v3',
+      generated_at: '2026-07-24T12:00:00Z',
+      measurement_status: 'collecting',
+      measurement_label: 'Collecting observation time',
+      total_records: 1,
+      active_records: 1,
+      archived_records: 0,
+      event_history_records: 1,
+      rank_snapshot_records: 1,
+      valid_saved_at_records: 1,
+      oldest_followup_days: 40,
+      median_followup_days: 40,
+      minimum_cohort_size: 30,
+      minimum_rate_denominator: 10,
+      stage_counts: { reviewing: 1 },
+      outcome_counts: { owner_contacted: 1 },
+      decision_reason_counts: { pursuing: 1 },
+      funnel: {
+        saved: 1,
+        contacted: 1,
+        meeting_scheduled: 0,
+        qualified: 0,
+        offer_submitted: 0,
+        under_contract: 0,
+        closed: 0,
+        rejected: 0,
+        lost: 0,
+        contacted_per_saved: emptyRate,
+        qualified_per_contacted: emptyRate,
+        offer_per_qualified: emptyRate,
+        contract_per_offer: emptyRate,
+        close_per_contract: emptyRate,
+      },
+      maturity_windows: [],
+      cohorts: [],
+      warnings: [],
+    } satisfies ParcelWorkflowAnalytics);
+    mocks.getExport.mockResolvedValue({
+      schema_version: 'citylens/parcel-workflow-outcome-export@v1',
+      methodology_schema_version:
+        'citylens/parcel-workflow-analytics-methodology@v2',
+      generated_at: '2026-07-24T12:00:00Z',
+      input_record_count: 1,
+      exported_record_count: 1,
+      excluded_invalid_saved_at_count: 0,
+      event_history_observed_count: 1,
+      rank_snapshot_count: 1,
+      rows_sha256: 'a'.repeat(64),
+      label_semantics: 'Mature labels only.',
+      score_semantics: 'Not acquisition probability.',
+      privacy_contract: 'Private fields excluded.',
+      excluded_private_fields: ['notes'],
+      rows: [],
+    });
+    const createObjectURL = vi.fn(() => 'blob:outcome-evidence');
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: createObjectURL,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: revokeObjectURL,
+    });
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined);
+
+    render(<ParcelWorkflowInsights onClose={vi.fn()} />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Export evidence' }),
+    );
+
+    await waitFor(() => expect(mocks.getExport).toHaveBeenCalledTimes(1));
+    expect(
+      await screen.findByText('Exported 1 privacy-safe outcome record.'),
+    ).toBeInTheDocument();
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:outcome-evidence');
+    expect(click).toHaveBeenCalledTimes(1);
+    click.mockRestore();
   });
 });

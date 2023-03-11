@@ -53,8 +53,14 @@ when the full observation window has elapsed; late-recorded milestones do not
 inflate on-time rates, archived leads remain included, and small cohorts stay
 labeled “Collecting.” Each parcel workflow also exposes its value-minimized
 decision history. Those user-entered, selected-lead outcomes are kept separate
-from historical model accuracy. The same citywide explorer includes a private
-Action Queue that prioritizes overdue and near-term follow-ups, exposes open
+from historical model accuracy. Outcome Insights also provides a private,
+one-click evidence export. The versioned JSON contains
+immutable saved-rank context, maturity-safe fixed-horizon labels, and an
+integrity digest while excluding notes, tags, assignees, contacts, addresses,
+owner names, reminders, and custom free text. Pending or legacy
+uninstrumented observations stay null and cannot become training negatives.
+The same citywide explorer includes a private Action Queue that prioritizes
+overdue and near-term follow-ups, exposes open
 leads without a complete action/date plan, identifies missing assignees, and
 asks for outcome updates after 30 days. The explorer button shows the private
 server-derived attention count before the queue opens. The queue reports plan,

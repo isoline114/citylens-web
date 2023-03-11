@@ -880,6 +880,60 @@ export type ParcelWorkflowAnalytics = {
   warnings: string[];
 };
 
+export type ParcelWorkflowOutcomeLabel = {
+  milestone:
+    | 'owner_contacted'
+    | 'qualified'
+    | 'offer_submitted'
+    | 'under_contract'
+    | 'closed';
+  horizon_days: number;
+  state: 'pending' | 'positive' | 'negative' | 'unavailable_history';
+  eligible: boolean;
+  value: boolean | null;
+  reached_at: string | null;
+  days_to_milestone: number | null;
+};
+
+export type ParcelWorkflowOutcomeExportRow = {
+  bbl: string;
+  borough: string;
+  saved_at: string;
+  archived_at: string | null;
+  followup_days: number;
+  stage: ParcelWorkflowStage;
+  outcome: ParcelWorkflowItem['outcome'];
+  decision_reason_category: string | null;
+  event_history_observed: boolean;
+  event_count: number;
+  feed_generated_at: string | null;
+  property_facts_as_of: string | null;
+  citywide_rank: number | null;
+  acquisition_rank: number | null;
+  priority_tier: ParcelWorkflowSnapshot['priority_tier'];
+  opportunity_category: ParcelWorkflowSnapshot['opportunity_category'];
+  saved_model_score: number | null;
+  labels: ParcelWorkflowOutcomeLabel[];
+};
+
+export type ParcelWorkflowOutcomeExport = {
+  schema_version: 'citylens/parcel-workflow-outcome-export@v1';
+  methodology_schema_version:
+    'citylens/parcel-workflow-analytics-methodology@v2';
+  generated_at: string;
+  input_record_count: number;
+  exported_record_count: number;
+  excluded_invalid_saved_at_count: number;
+  event_history_observed_count: number;
+  rank_snapshot_count: number;
+  rows_sha256: string;
+  label_semantics: string;
+  score_semantics: string;
+  privacy_contract: string;
+  excluded_private_fields: string[];
+  rows: ParcelWorkflowOutcomeExportRow[];
+};
+
 export type ParcelWorkflowActionState =
   | 'overdue'
   | 'due_today'
@@ -1090,6 +1144,12 @@ export async function recordParcelProductEvent(
 export async function getParcelWorkflowAnalytics(): Promise<ParcelWorkflowAnalytics> {
   return requestJson<ParcelWorkflowAnalytics>(
     '/v1/parcel-intel/workflow/analytics',
+  );
+}
+
+export async function getParcelWorkflowOutcomeExport(): Promise<ParcelWorkflowOutcomeExport> {
+  return requestJson<ParcelWorkflowOutcomeExport>(
+    '/v1/parcel-intel/workflow/outcomes/export',
   );
 }
 

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 test('authenticated parcel explorer shows maturity-qualified outcome evidence', async ({
   page,
@@ -360,6 +361,43 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   );
 
   await page.route(
+    '**/v1/parcel-intel/workflow/outcomes/export',
+    async (route) => {
+      await route.fulfill({
+        contentType: 'application/json',
+        headers: {
+          'Cache-Control': 'private, no-store',
+          'Content-Disposition':
+            'attachment; filename="citylens-outcome-evidence.json"',
+        },
+        body: JSON.stringify({
+          schema_version: 'citylens/parcel-workflow-outcome-export@v1',
+          methodology_schema_version:
+            'citylens/parcel-workflow-analytics-methodology@v2',
+          generated_at: '2026-07-24T03:16:26Z',
+          input_record_count: 12,
+          exported_record_count: 12,
+          excluded_invalid_saved_at_count: 0,
+          event_history_observed_count: 12,
+          rank_snapshot_count: 12,
+          rows_sha256: 'a'.repeat(64),
+          label_semantics: 'Mature instrumented labels only.',
+          score_semantics: 'Historical filing score, not acquisition probability.',
+          privacy_contract: 'Private operational fields excluded.',
+          excluded_private_fields: [
+            'address',
+            'owner_name',
+            'assignee',
+            'notes',
+            'tags',
+          ],
+          rows: [],
+        }),
+      });
+    },
+  );
+
+  await page.route(
     '**/v1/parcel-intel/workflow/analytics',
     async (route) => {
       await route.fulfill({
@@ -702,5 +740,25 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(page.getByRole('cell', { name: /40%.*n=10/ })).toBeVisible();
   await expect(
     page.getByText(/not the historical model's validation accuracy/i),
+  ).toBeVisible();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export evidence' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe(
+    'citylens-outcome-evidence-2026-07-24.json',
+  );
+  const downloadPath = await download.path();
+  expect(downloadPath).not.toBeNull();
+  const evidence = JSON.parse(
+    await readFile(downloadPath as string, 'utf8'),
+  ) as Record<string, unknown>;
+  expect(evidence.schema_version).toBe(
+    'citylens/parcel-workflow-outcome-export@v1',
+  );
+  expect(evidence.exported_record_count).toBe(12);
+  expect(evidence.rows_sha256).toBe('a'.repeat(64));
+  await expect(
+    page.getByText('Exported 12 privacy-safe outcome records.'),
   ).toBeVisible();
 });
