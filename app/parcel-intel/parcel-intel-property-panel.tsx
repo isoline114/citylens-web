@@ -209,6 +209,10 @@ function workflowSnapshot(
     latest_nb_status: row.latest_nb_status ?? null,
     redev_status: row.redev_status,
     observed_imagery_year: row.observed_imagery_year ?? null,
+    tax_lien_sale_year: row.tax_lien_sale_year ?? null,
+    critical_violation_count: row.critical_violation_count ?? null,
+    floodplain_1pct: row.floodplain_1pct ?? null,
+    recent_change: row.recent_change ?? null,
   };
 }
 

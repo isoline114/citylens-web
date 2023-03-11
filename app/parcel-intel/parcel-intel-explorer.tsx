@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUpRight,
+  BellRing,
   Building2,
   Download,
   Layers3,
@@ -43,6 +44,7 @@ import {
 import { downloadCsv } from './[borough]/parcel-intel-csv';
 import { ParcelIntelPropertyPanel } from './parcel-intel-property-panel';
 import { ParcelWorkflowInsights } from './parcel-workflow-insights';
+import { ParcelWorkflowAlertsPanel } from './parcel-workflow-alerts';
 
 const ParcelIntelExplorerMap = dynamic(
   () =>
@@ -115,6 +117,7 @@ export function ParcelIntelExplorer({
   const [selectedBbl, setSelectedBbl] = useState<string | null>(initialBbl);
   const [leadLimit, setLeadLimit] = useState(30);
   const [insightsOpen, setInsightsOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
 
   const isAuthenticated = auth.status === 'authenticated';
   const totalAvailable = boroughs.reduce((sum, borough) => sum + borough.count, 0);
@@ -446,7 +449,7 @@ export function ParcelIntelExplorer({
               ),
             )}
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-300">
+          <div className="flex flex-wrap items-center justify-end gap-2 text-xs text-slate-300">
             {auth.status === 'loading' ? (
               <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
             ) : isAuthenticated ? (
@@ -454,15 +457,34 @@ export function ParcelIntelExplorer({
             ) : (
               <LockKeyhole className="h-3.5 w-3.5 text-amber-300" />
             )}
-            {isAuthenticated
-              ? `Full workspace coverage · ${totalAvailable.toLocaleString()} available`
-              : `Preview coverage · sign in to load all ${totalAvailable.toLocaleString()}`}
+            <span>
+              {isAuthenticated
+                ? `Full workspace coverage · ${totalAvailable.toLocaleString()} available`
+                : `Preview coverage · sign in to load all ${totalAvailable.toLocaleString()}`}
+            </span>
             {isAuthenticated && (
               <button
                 type="button"
-                onClick={() => setInsightsOpen((value) => !value)}
+                onClick={() => {
+                  setAlertsOpen((value) => !value);
+                  setInsightsOpen(false);
+                }}
+                aria-expanded={alertsOpen}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
+              >
+                <BellRing className="h-3.5 w-3.5 text-sky-300" />
+                Watchlist changes
+              </button>
+            )}
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => {
+                  setInsightsOpen((value) => !value);
+                  setAlertsOpen(false);
+                }}
                 aria-expanded={insightsOpen}
-                className="ml-2 inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
               >
                 <TrendingUp className="h-3.5 w-3.5 text-emerald-300" />
                 Outcome insights
@@ -474,6 +496,15 @@ export function ParcelIntelExplorer({
 
       {isAuthenticated && insightsOpen && (
         <ParcelWorkflowInsights onClose={() => setInsightsOpen(false)} />
+      )}
+      {isAuthenticated && alertsOpen && (
+        <ParcelWorkflowAlertsPanel
+          onClose={() => setAlertsOpen(false)}
+          onSelectParcel={(bbl) => {
+            setAlertsOpen(false);
+            selectParcel(bbl);
+          }}
+        />
       )}
 
       {!isAuthenticated && auth.status !== 'loading' && (

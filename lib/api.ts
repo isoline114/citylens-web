@@ -598,6 +598,10 @@ export type ParcelWorkflowSnapshot = {
   latest_nb_status: string | null;
   redev_status: 'still_vacant' | 'active' | 'already_built' | null;
   observed_imagery_year: number | null;
+  tax_lien_sale_year: number | null;
+  critical_violation_count: number | null;
+  floodplain_1pct: boolean | null;
+  recent_change: boolean | null;
 };
 
 export type ParcelWorkflowItem = {
@@ -697,6 +701,43 @@ export type ParcelWorkflowAnalytics = {
   warnings: string[];
 };
 
+export type ParcelWorkflowAlert = {
+  bbl: string;
+  borough: string;
+  code:
+    | 'removed_from_current_feed'
+    | 'owner_changed'
+    | 'newer_sale_record'
+    | 'zoning_changed'
+    | 'opportunity_changed'
+    | 'priority_tier_changed'
+    | 'material_rank_move'
+    | 'tax_lien_history_changed'
+    | 'critical_violations_changed'
+    | 'flood_overlay_changed'
+    | 'imagery_change_signal_changed'
+    | 'owner_portfolio_size_changed';
+  severity: 'urgent' | 'high' | 'medium' | 'low';
+  title: string;
+  detail: string;
+  field: string;
+  before: unknown;
+  after: unknown;
+};
+
+export type ParcelWorkflowAlerts = {
+  schema_version: 'citylens/parcel-workflow-alerts@v1';
+  generated_at: string;
+  feed_generated_at: string | null;
+  watched_count: number;
+  changed_lead_count: number;
+  alert_count: number;
+  removed_from_feed_count: number;
+  severity_counts: Record<'urgent' | 'high' | 'medium' | 'low', number>;
+  alerts: ParcelWorkflowAlert[];
+  warnings: string[];
+};
+
 export type ParcelSavedSearchFilters = {
   landUseFilter: 'all' | 'residential' | 'commercial' | 'industrial' | 'vacant';
   priorityFilter: 'all' | 'highest' | 'high_or_better' | 'medium_or_better';
@@ -785,6 +826,12 @@ export async function listParcelWorkflow(): Promise<ParcelWorkflowItem[]> {
 export async function getParcelWorkflowAnalytics(): Promise<ParcelWorkflowAnalytics> {
   return requestJson<ParcelWorkflowAnalytics>(
     '/v1/parcel-intel/workflow/analytics',
+  );
+}
+
+export async function getParcelWorkflowAlerts(): Promise<ParcelWorkflowAlerts> {
+  return requestJson<ParcelWorkflowAlerts>(
+    '/v1/parcel-intel/workflow/alerts',
   );
 }
 

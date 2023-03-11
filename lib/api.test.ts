@@ -8,6 +8,7 @@ import {
   getFeaturedDemos,
   getParcelIntelMap,
   getParcelIntelParcel,
+  getParcelWorkflowAlerts,
   getRun,
   getRuns,
   joinApiUrl,
@@ -69,6 +70,37 @@ describe('api client', () => {
     expect(page.items).toHaveLength(1);
     expect(page.items[0]?.run_id).toBe('run-1');
     expect(page.nextCursor).toBe('cursor-2');
+  });
+
+  it('requests authenticated workflow alerts', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({
+        schema_version: 'citylens/parcel-workflow-alerts@v1',
+        generated_at: '2026-07-24T01:00:00Z',
+        feed_generated_at: '2026-07-24T00:00:00Z',
+        watched_count: 1,
+        changed_lead_count: 0,
+        alert_count: 0,
+        removed_from_feed_count: 0,
+        severity_counts: { urgent: 0, high: 0, medium: 0, low: 0 },
+        alerts: [],
+        warnings: [],
+      }),
+      text: async () => '',
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await getParcelWorkflowAlerts();
+
+    expect(result.schema_version).toBe('citylens/parcel-workflow-alerts@v1');
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/v1/parcel-intel/workflow/alerts');
+    expect(new Headers(init.headers).get('Authorization')).toBe(
+      'Bearer tok-abc',
+    );
   });
 
   it('rebases API-relative URLs against NEXT_PUBLIC_CITYLENS_API_BASE', () => {
