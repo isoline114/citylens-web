@@ -25,9 +25,11 @@ import {
   getParcelIntelMap,
   getParcelIntelParcel,
   getParcelIntelSweep,
+  getParcelWorkflowActions,
   type ParcelIntelBorough,
   type ParcelIntelMapRow,
   type ParcelIntelRow,
+  type ParcelWorkflowActions,
 } from '@/lib/api';
 import {
   BOROUGH_LABELS,
@@ -120,6 +122,8 @@ export function ParcelIntelExplorer({
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [workflowActions, setWorkflowActions] =
+    useState<ParcelWorkflowActions | null>(null);
 
   const isAuthenticated = auth.status === 'authenticated';
   const totalAvailable = boroughs.reduce((sum, borough) => sum + borough.count, 0);
@@ -221,6 +225,30 @@ export function ParcelIntelExplorer({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.status, boroughs]);
+
+  useEffect(() => {
+    if (auth.status !== 'authenticated') {
+      setWorkflowActions(null);
+      return;
+    }
+    let cancelled = false;
+    const refresh = () => {
+      void getParcelWorkflowActions()
+        .then((next) => {
+          if (!cancelled) setWorkflowActions(next);
+        })
+        .catch(() => {
+          // The queue panel owns the visible retry state. A failed background
+          // badge refresh must not block the map or sign the user out.
+        });
+    };
+    refresh();
+    window.addEventListener('citylens:workflow-updated', refresh);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('citylens:workflow-updated', refresh);
+    };
+  }, [auth.status]);
 
   const filtered = useMemo(
     () => filterExplorerRows(rows, filters),
@@ -478,6 +506,14 @@ export function ParcelIntelExplorer({
               >
                 <CalendarClock className="h-3.5 w-3.5 text-violet-300" />
                 Action queue
+                {workflowActions && workflowActions.attention_count > 0 && (
+                  <span
+                    className="rounded-full bg-violet-300 px-1.5 py-0.5 text-[10px] font-semibold text-slate-950"
+                    aria-label={`${workflowActions.attention_count} workflow items need attention`}
+                  >
+                    {workflowActions.attention_count}
+                  </span>
+                )}
               </button>
             )}
             {isAuthenticated && (
@@ -520,6 +556,7 @@ export function ParcelIntelExplorer({
       {isAuthenticated && actionsOpen && (
         <ParcelWorkflowActionsPanel
           onClose={() => setActionsOpen(false)}
+          onDataChange={setWorkflowActions}
           onSelectParcel={(bbl) => {
             setActionsOpen(false);
             selectParcel(bbl);

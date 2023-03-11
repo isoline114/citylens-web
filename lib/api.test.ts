@@ -17,6 +17,7 @@ import {
   resolveApiUrl,
   revokeApiKey,
   setAuthTokenGetter,
+  snoozeParcelWorkflowReminder,
 } from '@/lib/api';
 
 afterEach(() => {
@@ -121,6 +122,14 @@ describe('api client', () => {
         unscheduled_count: 0,
         unassigned_count: 0,
         outcome_update_due_count: 0,
+        attention_count: 0,
+        snoozed_count: 0,
+        complete_plan_count: 0,
+        plan_coverage_rate: null,
+        assigned_count: 0,
+        assignee_coverage_rate: null,
+        outcome_current_count: 0,
+        outcome_current_rate: null,
         items: [],
       }),
       text: async () => '',
@@ -132,6 +141,31 @@ describe('api client', () => {
     expect(result.schema_version).toBe('citylens/parcel-workflow-actions@v1');
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain('/v1/parcel-intel/workflow/actions');
+    expect(new Headers(init.headers).get('Authorization')).toBe(
+      'Bearer tok-abc',
+    );
+  });
+
+  it('snoozes a workflow reminder through the authenticated API', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({
+        bbl: '3020960069',
+        reminder_snoozed_until: '2026-07-25T14:00:00Z',
+        is_snoozed: true,
+      }),
+      text: async () => '',
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await snoozeParcelWorkflowReminder('3020960069', 1);
+
+    expect(result.is_snoozed).toBe(true);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/v1/parcel-intel/workflow/3020960069/reminder');
+    expect(init.method).toBe('POST');
+    expect(init.body).toBe(JSON.stringify({ days: 1 }));
     expect(new Headers(init.headers).get('Authorization')).toBe(
       'Bearer tok-abc',
     );

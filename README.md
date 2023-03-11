@@ -35,8 +35,15 @@ decision history. Those user-entered, selected-lead outcomes are kept separate
 from historical model accuracy. The same citywide explorer includes a private
 Action Queue that prioritizes overdue and near-term follow-ups, exposes open
 leads without a complete action/date plan, identifies missing assignees, and
-asks for outcome updates after 30 days. Each parcel workflow owns its concrete
-next action and due date; terminal records leave the queue automatically. The
+asks for outcome updates after 30 days. The explorer button shows the private
+server-derived attention count before the queue opens. The queue reports plan,
+assignee, and outcome-review coverage and lets a user snooze the current
+commitment for one or seven days. Snoozes are bound by the API to the current
+action identity, so editing the action, date, assignee, stage, or outcome
+resurfaces it instead of hiding changed work. Each parcel workflow owns its
+concrete next action and due date; terminal records leave the queue
+automatically. These are in-product reminders, not email or webhook delivery.
+The
 portfolio card explicitly does not
 infer beneficial ownership or related LLCs. Parcel detail separates DOB Safety,
 OATH/ECB, and HPD counts and keeps the adopted 2007 FIRM separate from the 2015

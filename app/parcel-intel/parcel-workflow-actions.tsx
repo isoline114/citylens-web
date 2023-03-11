@@ -13,11 +13,18 @@ import {
 
 import {
   getParcelWorkflowActions,
+  snoozeParcelWorkflowReminder,
   type ParcelWorkflowActionItem,
   type ParcelWorkflowActions,
 } from '@/lib/api';
 
-type ActionFilter = 'all' | 'urgent' | 'unplanned' | 'outcomes';
+type ActionFilter =
+  | 'attention'
+  | 'all'
+  | 'urgent'
+  | 'unplanned'
+  | 'outcomes'
+  | 'snoozed';
 
 const STATE_STYLES: Record<ParcelWorkflowActionItem['action_state'], string> = {
   overdue: 'border-rose-400/35 bg-rose-400/10 text-rose-100',
@@ -45,17 +52,35 @@ function addressLabel(item: ParcelWorkflowActionItem): string {
   return item.address || `BBL ${item.bbl}`;
 }
 
+function coverageLabel(rate: number | null): string {
+  return rate === null ? '—' : `${Math.round(rate * 100)}%`;
+}
+
+function snoozeLabel(item: ParcelWorkflowActionItem): string | null {
+  if (!item.is_snoozed || !item.reminder_snoozed_until) return null;
+  return `Snoozed until ${new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(item.reminder_snoozed_until))}`;
+}
+
 export function ParcelWorkflowActionsPanel({
   onClose,
   onSelectParcel,
+  onDataChange,
 }: {
   onClose: () => void;
   onSelectParcel: (bbl: string) => void;
+  onDataChange?: (data: ParcelWorkflowActions) => void;
 }) {
   const [data, setData] = useState<ParcelWorkflowActions | null>(null);
-  const [filter, setFilter] = useState<ActionFilter>('all');
+  const [filter, setFilter] = useState<ActionFilter>('attention');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [mutationError, setMutationError] = useState(false);
+  const [busyBbl, setBusyBbl] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -64,7 +89,10 @@ export function ParcelWorkflowActionsPanel({
     setError(false);
     void getParcelWorkflowActions()
       .then((next) => {
-        if (!cancelled) setData(next);
+        if (!cancelled) {
+          setData(next);
+          onDataChange?.(next);
+        }
       })
       .catch(() => {
         if (!cancelled) setError(true);
@@ -75,25 +103,56 @@ export function ParcelWorkflowActionsPanel({
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+  }, [onDataChange, reloadKey]);
 
   const visibleItems = useMemo(() => {
     const items = data?.items ?? [];
+    if (filter === 'attention') {
+      return items.filter((item) => item.requires_attention && !item.is_snoozed);
+    }
     if (filter === 'urgent') {
-      return items.filter((item) =>
-        ['overdue', 'due_today', 'due_soon'].includes(item.action_state),
+      return items.filter(
+        (item) =>
+          !item.is_snoozed &&
+          ['overdue', 'due_today', 'due_soon'].includes(item.action_state),
       );
     }
     if (filter === 'unplanned') {
       return items.filter(
-        (item) => item.action_state === 'unscheduled' || item.needs_assignee,
+        (item) =>
+          !item.is_snoozed &&
+          (item.action_state === 'unscheduled' || item.needs_assignee),
       );
     }
     if (filter === 'outcomes') {
-      return items.filter((item) => item.needs_outcome_update);
+      return items.filter(
+        (item) => !item.is_snoozed && item.needs_outcome_update,
+      );
+    }
+    if (filter === 'snoozed') {
+      return items.filter((item) => item.is_snoozed);
     }
     return items;
   }, [data, filter]);
+
+  const updateSnooze = async (
+    item: ParcelWorkflowActionItem,
+    days: 0 | 1 | 7,
+  ) => {
+    if (busyBbl) return;
+    setBusyBbl(item.bbl);
+    setMutationError(false);
+    try {
+      await snoozeParcelWorkflowReminder(item.bbl, days);
+      const next = await getParcelWorkflowActions();
+      setData(next);
+      onDataChange?.(next);
+    } catch {
+      setMutationError(true);
+    } finally {
+      setBusyBbl(null);
+    }
+  };
 
   return (
     <section
@@ -146,14 +205,39 @@ export function ParcelWorkflowActionsPanel({
         </div>
       ) : (
         <>
+          {mutationError && (
+            <div className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-3 text-sm text-rose-100" role="alert">
+              The reminder could not be updated. Retry, or open the parcel workflow.
+            </div>
+          )}
           <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
             {[
-              ['Open leads', data.open_records],
-              ['Overdue', data.overdue_count],
-              ['Due ≤7 days', data.due_today_count + data.due_soon_count],
-              ['No complete plan', data.unscheduled_count],
-              ['Outcome update due', data.outcome_update_due_count],
-            ].map(([label, value]) => (
+              {
+                label: 'Needs attention',
+                value: data.attention_count.toLocaleString(),
+                detail: `${data.snoozed_count} snoozed`,
+              },
+              {
+                label: 'Plan coverage',
+                value: coverageLabel(data.plan_coverage_rate),
+                detail: `${data.complete_plan_count} of ${data.open_records} open`,
+              },
+              {
+                label: 'Assignee coverage',
+                value: coverageLabel(data.assignee_coverage_rate),
+                detail: `${data.assigned_count} of ${data.open_records} open`,
+              },
+              {
+                label: 'Outcome current',
+                value: coverageLabel(data.outcome_current_rate),
+                detail: `${data.outcome_current_count} of ${data.open_records} open`,
+              },
+              {
+                label: 'Overdue',
+                value: data.overdue_count.toLocaleString(),
+                detail: `${data.due_today_count + data.due_soon_count} due within 7 days`,
+              },
+            ].map(({ label, value, detail }) => (
               <div
                 key={label}
                 className="rounded-xl border border-white/10 bg-white/5 p-3"
@@ -161,8 +245,9 @@ export function ParcelWorkflowActionsPanel({
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">
                   {label}
                 </div>
-                <div className="mt-1 text-xl font-semibold">
-                  {Number(value).toLocaleString()}
+                <div className="mt-1 text-xl font-semibold">{value}</div>
+                <div className="mt-1 text-[11px] text-slate-400">
+                  {detail}
                 </div>
               </div>
             ))}
@@ -170,6 +255,7 @@ export function ParcelWorkflowActionsPanel({
 
           <div className="mt-4 flex flex-wrap gap-2" aria-label="Action queue filters">
             {([
+              ['attention', `Attention ${data.attention_count}`],
               ['all', `All ${data.open_records}`],
               [
                 'urgent',
@@ -177,6 +263,7 @@ export function ParcelWorkflowActionsPanel({
               ],
               ['unplanned', `Needs plan ${data.unscheduled_count}`],
               ['outcomes', `Needs outcome ${data.outcome_update_due_count}`],
+              ['snoozed', `Snoozed ${data.snoozed_count}`],
             ] as Array<[ActionFilter, string]>).map(([value, label]) => (
               <button
                 key={value}
@@ -205,7 +292,9 @@ export function ParcelWorkflowActionsPanel({
               {visibleItems.map((item) => (
                 <article
                   key={item.bbl}
-                  className={`rounded-xl border p-4 ${STATE_STYLES[item.action_state]}`}
+                  className={`rounded-xl border p-4 ${STATE_STYLES[item.action_state]} ${
+                    item.is_snoozed ? 'opacity-70' : ''
+                  }`}
                   data-testid={`workflow-action-${item.bbl}`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -213,6 +302,11 @@ export function ParcelWorkflowActionsPanel({
                       <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-75">
                         {dueLabel(item)} · {item.borough.replaceAll('_', ' ')}
                       </div>
+                      {snoozeLabel(item) && (
+                        <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-violet-200">
+                          {snoozeLabel(item)}
+                        </div>
+                      )}
                       <h4 className="mt-1 truncate text-sm font-semibold text-white">
                         {addressLabel(item)}
                       </h4>
@@ -220,13 +314,49 @@ export function ParcelWorkflowActionsPanel({
                         {item.next_action || 'Set a concrete next action and due date.'}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => onSelectParcel(item.bbl)}
-                      className="shrink-0 rounded-md border border-white/20 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-white/10"
-                    >
-                      Open workflow
-                    </button>
+                    <div className="flex shrink-0 flex-col gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onSelectParcel(item.bbl)}
+                        className="rounded-md border border-white/20 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-white/10"
+                      >
+                        Open workflow
+                      </button>
+                      {item.requires_attention &&
+                        (item.is_snoozed ? (
+                          <button
+                            type="button"
+                            disabled={busyBbl !== null}
+                            onClick={() => void updateSnooze(item, 0)}
+                            className="rounded-md border border-white/15 px-2.5 py-1.5 text-[11px] text-slate-200 hover:bg-white/10 disabled:opacity-50"
+                          >
+                            {busyBbl === item.bbl
+                              ? 'Updating…'
+                              : 'Restore reminder'}
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              disabled={busyBbl !== null}
+                              onClick={() => void updateSnooze(item, 1)}
+                              className="rounded-md border border-white/15 px-2.5 py-1.5 text-[11px] text-slate-200 hover:bg-white/10 disabled:opacity-50"
+                            >
+                              {busyBbl === item.bbl
+                                ? 'Updating…'
+                                : 'Snooze 1 day'}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busyBbl !== null}
+                              onClick={() => void updateSnooze(item, 7)}
+                              className="rounded-md border border-white/15 px-2.5 py-1.5 text-[11px] text-slate-200 hover:bg-white/10 disabled:opacity-50"
+                            >
+                              Snooze 7 days
+                            </button>
+                          </>
+                        ))}
+                    </div>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
                     <span className="rounded bg-black/15 px-2 py-1 capitalize">

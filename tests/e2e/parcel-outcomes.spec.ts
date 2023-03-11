@@ -3,6 +3,8 @@ import { expect, test } from '@playwright/test';
 test('authenticated parcel explorer shows maturity-qualified outcome evidence', async ({
   page,
 }) => {
+  let reminderSnoozed = false;
+
   await page.addInitScript(() => {
     sessionStorage.setItem(
       'citylens_mock_auth_user',
@@ -59,6 +61,14 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
           unscheduled_count: 1,
           unassigned_count: 1,
           outcome_update_due_count: 1,
+          attention_count: reminderSnoozed ? 1 : 2,
+          snoozed_count: reminderSnoozed ? 1 : 0,
+          complete_plan_count: 1,
+          plan_coverage_rate: 0.5,
+          assigned_count: 1,
+          assignee_coverage_rate: 0.5,
+          outcome_current_count: 1,
+          outcome_current_rate: 0.5,
           items: [
             {
               bbl: '3020960069',
@@ -74,6 +84,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
               days_since_update: 10,
               needs_assignee: false,
               needs_outcome_update: true,
+              requires_attention: true,
+              reminder_snoozed_until: reminderSnoozed
+                ? '2026-07-25T14:00:00Z'
+                : null,
+              is_snoozed: reminderSnoozed,
               citywide_rank: 82,
               priority_tier: 'highest',
               opportunity_category: 'ground_up_candidate',
@@ -94,6 +109,9 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
               days_since_update: 3,
               needs_assignee: true,
               needs_outcome_update: false,
+              requires_attention: true,
+              reminder_snoozed_until: null,
+              is_snoozed: false,
               citywide_rank: 145,
               priority_tier: 'high',
               opportunity_category: 'vacant_site',
@@ -101,6 +119,24 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
               updated_at: '2026-07-21T14:00:00Z',
             },
           ],
+        }),
+      });
+    },
+  );
+
+  await page.route(
+    '**/v1/parcel-intel/workflow/3020960069/reminder',
+    async (route) => {
+      const body = route.request().postDataJSON() as { days: number };
+      reminderSnoozed = body.days > 0;
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          bbl: '3020960069',
+          reminder_snoozed_until: reminderSnoozed
+            ? '2026-07-25T14:00:00Z'
+            : null,
+          is_snoozed: reminderSnoozed,
         }),
       });
     },
@@ -261,6 +297,23 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(page.getByTestId('workflow-action-3020960069')).toContainText(
     'Outcome update due',
   );
+  await expect(
+    page.getByText('Plan coverage').locator('..'),
+  ).toContainText('50%');
+  await page
+    .getByTestId('workflow-action-3020960069')
+    .getByRole('button', { name: 'Snooze 1 day' })
+    .click();
+  await expect(page.getByRole('button', { name: 'Snoozed 1' })).toBeVisible();
+  await expect(
+    page.getByLabel('1 workflow items need attention'),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Snoozed 1' }).click();
+  await page.getByRole('button', { name: 'Restore reminder' }).click();
+  await expect(page.getByRole('button', { name: 'Snoozed 0' })).toBeVisible();
+  await expect(
+    page.getByLabel('2 workflow items need attention'),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Close action queue' }).click();
 
   await page.getByRole('button', { name: 'Outcome insights' }).click();

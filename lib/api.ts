@@ -767,6 +767,9 @@ export type ParcelWorkflowActionItem = {
   days_since_update: number;
   needs_assignee: boolean;
   needs_outcome_update: boolean;
+  requires_attention: boolean;
+  reminder_snoozed_until: string | null;
+  is_snoozed: boolean;
   citywide_rank: number | null;
   priority_tier: ParcelIntelRow['priority_tier'] | null;
   opportunity_category: ParcelIntelRow['opportunity_category'] | null;
@@ -787,6 +790,14 @@ export type ParcelWorkflowActions = {
   unscheduled_count: number;
   unassigned_count: number;
   outcome_update_due_count: number;
+  attention_count: number;
+  snoozed_count: number;
+  complete_plan_count: number;
+  plan_coverage_rate: number | null;
+  assigned_count: number;
+  assignee_coverage_rate: number | null;
+  outcome_current_count: number;
+  outcome_current_rate: number | null;
   items: ParcelWorkflowActionItem[];
 };
 
@@ -922,6 +933,20 @@ export async function getParcelWorkflowAnalytics(): Promise<ParcelWorkflowAnalyt
 export async function getParcelWorkflowActions(): Promise<ParcelWorkflowActions> {
   return requestJson<ParcelWorkflowActions>(
     '/v1/parcel-intel/workflow/actions',
+  );
+}
+
+export async function snoozeParcelWorkflowReminder(
+  bbl: string,
+  days: 0 | 1 | 3 | 7 | 14,
+): Promise<{
+  bbl: string;
+  reminder_snoozed_until: string | null;
+  is_snoozed: boolean;
+}> {
+  return requestJson(
+    `/v1/parcel-intel/workflow/${encodeURIComponent(bbl)}/reminder`,
+    { method: 'POST', body: JSON.stringify({ days }) },
   );
 }
 

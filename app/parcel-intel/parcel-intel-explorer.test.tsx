@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   getParcelIntelMap: vi.fn(),
   getParcelIntelParcel: vi.fn(),
   getParcelIntelSweep: vi.fn(),
+  getParcelWorkflowActions: vi.fn(),
   routerReplace: vi.fn(),
 }));
 
@@ -34,6 +35,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
     getParcelIntelMap: mocks.getParcelIntelMap,
     getParcelIntelParcel: mocks.getParcelIntelParcel,
     getParcelIntelSweep: mocks.getParcelIntelSweep,
+    getParcelWorkflowActions: mocks.getParcelWorkflowActions,
   };
 });
 
@@ -106,6 +108,7 @@ beforeEach(() => {
   mocks.getParcelIntelMap.mockReset();
   mocks.getParcelIntelParcel.mockReset();
   mocks.getParcelIntelSweep.mockReset();
+  mocks.getParcelWorkflowActions.mockReset();
   mocks.routerReplace.mockReset();
   mocks.getParcelIntelMap.mockImplementation(
     async () => ({
@@ -130,6 +133,27 @@ beforeEach(() => {
     generated_at: '2026-07-19T00:00:00Z',
     model_metadata: {},
   }));
+  mocks.getParcelWorkflowActions.mockResolvedValue({
+    schema_version: 'parcel-workflow-actions.v1',
+    generated_at: '2026-07-23T14:00:00Z',
+    total_records: 2,
+    open_records: 2,
+    overdue_count: 1,
+    due_today_count: 1,
+    due_soon_count: 0,
+    unscheduled_count: 0,
+    missing_assignee_count: 0,
+    missing_outcome_count: 0,
+    attention_count: 2,
+    snoozed_count: 0,
+    complete_plan_count: 1,
+    plan_coverage_rate: 0.5,
+    assigned_count: 2,
+    assignee_coverage_rate: 1,
+    outcome_current_count: 1,
+    outcome_current_rate: 0.5,
+    items: [],
+  });
 });
 
 describe('ParcelIntelExplorer', () => {
@@ -153,6 +177,7 @@ describe('ParcelIntelExplorer', () => {
       includeAuth: false,
     });
     expect(mocks.getParcelIntelSweep).not.toHaveBeenCalled();
+    expect(mocks.getParcelWorkflowActions).not.toHaveBeenCalled();
   });
 
   it('does not hold the public map behind auth initialization', async () => {
@@ -186,6 +211,12 @@ describe('ParcelIntelExplorer', () => {
       includeAuth: true,
     });
     expect(mocks.getParcelIntelSweep).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(mocks.getParcelWorkflowActions).toHaveBeenCalledTimes(1),
+    );
+    expect(
+      screen.getByLabelText('2 workflow items need attention'),
+    ).toBeInTheDocument();
   });
 
   it('loads full parcel detail only after opening a map summary', async () => {

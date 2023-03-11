@@ -1,8 +1,16 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ParcelWorkflowActions } from '@/lib/api';
 
 const mocks = vi.hoisted(() => ({
   getActions: vi.fn(),
+  snooze: vi.fn(),
 }));
 
 vi.mock('@/lib/api', async (importOriginal) => {
@@ -10,12 +18,13 @@ vi.mock('@/lib/api', async (importOriginal) => {
   return {
     ...actual,
     getParcelWorkflowActions: mocks.getActions,
+    snoozeParcelWorkflowReminder: mocks.snooze,
   };
 });
 
 import { ParcelWorkflowActionsPanel } from './parcel-workflow-actions';
 
-function actionResponse() {
+function actionResponse(): ParcelWorkflowActions {
   return {
     schema_version: 'citylens/parcel-workflow-actions@v1',
     generated_at: '2026-07-24T14:00:00Z',
@@ -29,6 +38,14 @@ function actionResponse() {
     unscheduled_count: 1,
     unassigned_count: 1,
     outcome_update_due_count: 1,
+    attention_count: 2,
+    snoozed_count: 0,
+    complete_plan_count: 1,
+    plan_coverage_rate: 0.5,
+    assigned_count: 1,
+    assignee_coverage_rate: 0.5,
+    outcome_current_count: 1,
+    outcome_current_rate: 0.5,
     items: [
       {
         bbl: '3020960069',
@@ -44,6 +61,9 @@ function actionResponse() {
         days_since_update: 10,
         needs_assignee: false,
         needs_outcome_update: true,
+        requires_attention: true,
+        reminder_snoozed_until: null,
+        is_snoozed: false,
         citywide_rank: 82,
         priority_tier: 'highest',
         opportunity_category: 'ground_up_candidate',
@@ -64,6 +84,9 @@ function actionResponse() {
         days_since_update: 3,
         needs_assignee: true,
         needs_outcome_update: false,
+        requires_attention: true,
+        reminder_snoozed_until: null,
+        is_snoozed: false,
         citywide_rank: 145,
         priority_tier: 'high',
         opportunity_category: 'vacant_site',
@@ -78,6 +101,12 @@ describe('ParcelWorkflowActionsPanel', () => {
   beforeEach(() => {
     mocks.getActions.mockReset();
     mocks.getActions.mockResolvedValue(actionResponse());
+    mocks.snooze.mockReset();
+    mocks.snooze.mockResolvedValue({
+      bbl: '3020960069',
+      reminder_snoozed_until: '2026-07-25T14:00:00Z',
+      is_snoozed: true,
+    });
   });
 
   it('prioritizes overdue work and opens the parcel workflow', async () => {
@@ -124,5 +153,38 @@ describe('ParcelWorkflowActionsPanel', () => {
       screen.getByText('Set a concrete next action and due date.'),
     ).toBeInTheDocument();
     expect(screen.getByText('No assignee')).toBeInTheDocument();
+  });
+
+  it('snoozes the current reminder identity and refreshes the queue', async () => {
+    const next = actionResponse();
+    next.attention_count = 1;
+    next.snoozed_count = 1;
+    next.items[0] = {
+      ...next.items[0],
+      reminder_snoozed_until: '2026-07-25T14:00:00Z',
+      is_snoozed: true,
+    };
+    mocks.getActions
+      .mockResolvedValueOnce(actionResponse())
+      .mockResolvedValueOnce(next);
+
+    render(
+      <ParcelWorkflowActionsPanel
+        onClose={vi.fn()}
+        onSelectParcel={vi.fn()}
+      />,
+    );
+
+    const card = await screen.findByTestId('workflow-action-3020960069');
+    fireEvent.click(within(card).getByRole('button', { name: 'Snooze 1 day' }));
+
+    await waitFor(() =>
+      expect(mocks.snooze).toHaveBeenCalledWith('3020960069', 1),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Snoozed 1' }));
+    expect(
+      await screen.findByRole('button', { name: 'Restore reminder' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Snoozed until Jul 25/i)).toBeInTheDocument();
   });
 });

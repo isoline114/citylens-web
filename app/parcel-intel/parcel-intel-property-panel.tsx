@@ -267,6 +267,7 @@ export function ParcelIntelPropertyPanel({
         ...draft,
       });
       setWorkflowItem(saved);
+      window.dispatchEvent(new Event('citylens:workflow-updated'));
     } catch {
       setWorkflowError('Could not save this parcel. Please retry.');
     } finally {
@@ -280,6 +281,7 @@ export function ParcelIntelPropertyPanel({
     try {
       await removeParcelWorkflow(row.bbl);
       setWorkflowItem(null);
+      window.dispatchEvent(new Event('citylens:workflow-updated'));
     } catch {
       setWorkflowError('Could not remove this parcel. Please retry.');
     } finally {
