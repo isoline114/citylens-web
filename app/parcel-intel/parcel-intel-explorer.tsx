@@ -304,6 +304,9 @@ export function ParcelIntelExplorer({
   const environmentalReviewParcelCount = opportunityScope.filter(
     (row) => row.environmental_review_required === true,
   ).length;
+  const mihParcelCount = opportunityScope.filter(
+    (row) => row.mandatory_inclusionary_housing === true,
+  ).length;
   const ownerPortfolioParcelCount = opportunityScope.filter(
     (row) => (row.owner_portfolio_lot_count ?? 0) >= 2,
   ).length;
@@ -659,6 +662,9 @@ export function ParcelIntelExplorer({
                 </option>
               )}
               {isAuthenticated && (
+                <option value="mih">MIH mapped-area overlap</option>
+              )}
+              {isAuthenticated && (
                 <option value="portfolio">Multi-lot legal owners</option>
               )}
               <option value="assemblage">Assemblage opportunities</option>
@@ -934,6 +940,25 @@ export function ParcelIntelExplorer({
                 </div>
                 <div className="text-lg font-semibold text-orange-950">
                   {environmentalReviewParcelCount.toLocaleString()}
+                </div>
+              </button>
+            )}
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => updateFilter('opportunity', 'mih')}
+                aria-pressed={filters.opportunity === 'mih'}
+                className={`rounded-xl px-3 py-2 text-left transition-colors ${
+                  filters.opportunity === 'mih'
+                    ? 'bg-fuchsia-100 ring-2 ring-inset ring-fuchsia-400'
+                    : 'bg-fuchsia-50 hover:bg-fuchsia-100'
+                }`}
+              >
+                <div className="text-[11px] uppercase tracking-wide text-fuchsia-700">
+                  MIH mapped areas
+                </div>
+                <div className="text-lg font-semibold text-fuchsia-950">
+                  {mihParcelCount.toLocaleString()}
                 </div>
               </button>
             )}

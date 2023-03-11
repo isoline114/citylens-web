@@ -302,6 +302,19 @@ export function LandBasisCalculator({
       </button>
       {open && (
         <div className="border-t border-slate-200 p-3">
+          {row.mandatory_inclusionary_housing === true && (
+            <div
+              className="mb-3 rounded-lg border border-fuchsia-300 bg-fuchsia-50 p-3 text-xs leading-5 text-fuchsia-950"
+              role="alert"
+              data-testid="mih-underwriting-warning"
+            >
+              <strong>MIH scenario required.</strong> This parcel overlaps a
+              current adopted MIH mapped area. The quick estimate below does not
+              model affordable-housing set-asides, option-specific economics, or
+              any payment alternative. Do not rely on the land-basis result until
+              those requirements are verified and modeled.
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2">
             {[
               ['Value / sellable SF', valuePerSqft, setValuePerSqft],

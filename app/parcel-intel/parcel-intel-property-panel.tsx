@@ -1189,6 +1189,114 @@ export function ParcelIntelPropertyPanel({
               </section>
             )}
 
+            {typeof row.mandatory_inclusionary_housing === 'boolean' && (
+              <section
+                className={`mt-3 rounded-xl border p-3 ${
+                  row.mandatory_inclusionary_housing
+                    ? 'border-fuchsia-300 bg-fuchsia-50'
+                    : 'border-slate-200 bg-slate-50'
+                }`}
+                data-testid="mih-diligence"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4
+                      className={`text-xs font-semibold uppercase tracking-wide ${
+                        row.mandatory_inclusionary_housing
+                          ? 'text-fuchsia-950'
+                          : 'text-slate-800'
+                      }`}
+                    >
+                      Mandatory Inclusionary Housing screen
+                    </h4>
+                    <p
+                      className={`mt-1 text-xs leading-5 ${
+                        row.mandatory_inclusionary_housing
+                          ? 'text-fuchsia-900'
+                          : 'text-slate-600'
+                      }`}
+                    >
+                      {row.mandatory_inclusionary_housing
+                        ? 'This tax lot has positive-area overlap with a current adopted NYC Planning MIH mapped-area polygon.'
+                        : 'The current NYC Planning MIH mapped-area layer does not overlap this tax lot.'}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${
+                      row.mandatory_inclusionary_housing
+                        ? 'bg-fuchsia-700 text-white'
+                        : 'bg-white text-slate-700 ring-1 ring-inset ring-slate-300'
+                    }`}
+                  >
+                    {row.mandatory_inclusionary_housing
+                      ? 'Mapped overlap'
+                      : 'Not mapped'}
+                  </span>
+                </div>
+
+                {row.mandatory_inclusionary_housing &&
+                  (row.mih_options?.length ?? 0) > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {row.mih_options?.map((option) => (
+                        <span
+                          key={option}
+                          className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-fuchsia-900 ring-1 ring-inset ring-fuchsia-200"
+                        >
+                          {option}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                <p
+                  className={`mt-3 text-[11px] leading-4 ${
+                    row.mandatory_inclusionary_housing
+                      ? 'text-fuchsia-900'
+                      : 'text-slate-600'
+                  }`}
+                >
+                  This is a dated spatial reference screen, not a tax-lot legal
+                  determination. Applicability and the controlling option depend
+                  on the current Zoning Resolution, proposed use, and floor area.
+                  Verify Appendix F and project-specific requirements with NYC
+                  Planning/HPD and zoning counsel
+                  {row.mih_data_as_of
+                    ? ` · official layer retrieved ${row.mih_data_as_of}`
+                    : ''}
+                  .
+                </p>
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                  <a
+                    href="https://data.cityofnewyork.us/Housing-Development/Mandatory-Inclusionary-Housing-MIH-/bw8v-wzdr/about"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-fuchsia-950 underline decoration-fuchsia-300 underline-offset-2"
+                  >
+                    Official MIH map
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                  <a
+                    href="https://zr.planning.nyc.gov/index.php/node/21424"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-fuchsia-950 underline decoration-fuchsia-300 underline-offset-2"
+                  >
+                    Zoning Resolution Appendix F
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                  <a
+                    href="https://www.nyc.gov/site/hpd/services-and-information/inclusionary-housing.page"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-fuchsia-950 underline decoration-fuchsia-300 underline-offset-2"
+                  >
+                    HPD guidance
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              </section>
+            )}
+
             {(row.assemblage_lot_count ?? 0) >= 2 && (
               <section className="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3">
                 <h4 className="text-xs font-semibold uppercase tracking-wide text-violet-900">

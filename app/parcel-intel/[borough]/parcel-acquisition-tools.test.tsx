@@ -1,7 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { WorkflowEditor } from './parcel-acquisition-tools';
+import type { ParcelIntelRow } from '@/lib/api';
+import {
+  LandBasisCalculator,
+  WorkflowEditor,
+} from './parcel-acquisition-tools';
 
 describe('WorkflowEditor', () => {
   it('prefills a server-recommended diligence action without saving it automatically', () => {
@@ -53,6 +57,27 @@ describe('WorkflowEditor', () => {
           next_action_due_date: '2026-07-30',
         }),
       ),
+    );
+  });
+});
+
+describe('LandBasisCalculator', () => {
+  it('warns that a mapped MIH parcel needs an affordability scenario', () => {
+    render(
+      <LandBasisCalculator
+        row={
+          {
+            max_floor_area_sqft: 20_000,
+            mandatory_inclusionary_housing: true,
+          } as ParcelIntelRow
+        }
+        defaultOpen
+      />,
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent('MIH scenario required');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'does not model affordable-housing set-asides',
     );
   });
 });

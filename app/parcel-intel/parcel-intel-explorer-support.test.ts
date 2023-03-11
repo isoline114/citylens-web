@@ -202,6 +202,21 @@ describe('parcel citywide explorer support', () => {
     ).toEqual(['review']);
   });
 
+  it('filters current NYC Planning MIH mapped-area overlaps', () => {
+    const rows = [
+      row({ bbl: 'outside', mandatory_inclusionary_housing: false }),
+      row({ bbl: 'overlap', mandatory_inclusionary_housing: true }),
+      row({ bbl: 'not-loaded', mandatory_inclusionary_housing: null }),
+    ];
+
+    expect(
+      filterExplorerRows(rows, {
+        ...filters,
+        opportunity: 'mih',
+      }).map((item) => item.bbl),
+    ).toEqual(['overlap']);
+  });
+
   it('filters multi-lot legal-owner portfolios without changing rank order', () => {
     const rows = [
       row({ bbl: 'single', owner_portfolio_lot_count: 1 }),

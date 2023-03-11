@@ -37,6 +37,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
             score_calibrated: 0.42,
             lot_area_sqft: 5_000,
             land_use: '01',
+            mandatory_inclusionary_housing: true,
           },
         ],
       }),
@@ -91,6 +92,10 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
           project_activity_as_of: '2026-07-22',
           land_use_activity_as_of: '2026-07-24',
           data_warnings: [],
+          mandatory_inclusionary_housing: true,
+          mih_options: ['Option 1'],
+          mih_area_count: 1,
+          mih_data_as_of: '2026-07-24',
           decision_audit: {
             schema_version: 'citylens/parcel-decision-audit@v1',
             overall_status: 'screened_with_flags',
@@ -103,6 +108,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
               blockers: [],
               review_items: [
                 'Review floodplain exposure and site-specific mitigation requirements.',
+                'Verify MIH applicability, mapped options, and affordable-housing requirements against current Appendix F before relying on residual land value.',
               ],
               cleared_items: [
                 'Current project and acquisition eligibility gates passed.',
@@ -148,8 +154,9 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
                 layer: 'current_diligence',
                 label: 'Current diligence overlays',
                 status: 'review',
-                summary: 'Review before underwriting: 1% floodplain overlap.',
-                source: 'NYC PLUTO/FEMA',
+                summary:
+                  'Review before underwriting: 1% floodplain overlap; mandatory inclusionary housing mapped-area overlap.',
+                source: 'NYC PLUTO/FEMA and NYC Planning MIH',
                 as_of: '2026-07-24',
                 affects_model_rank: false,
                 affects_acquisition_eligibility: false,
@@ -438,6 +445,16 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await page.getByRole('button', { name: 'Close action queue' }).click();
 
   await page.getByRole('button', { name: /100 E 21 STREET/i }).click();
+  await expect(page.getByTestId('mih-diligence')).toContainText(
+    'Mandatory Inclusionary Housing screen',
+  );
+  await expect(page.getByTestId('mih-diligence')).toContainText(
+    'Mapped overlap',
+  );
+  await page.getByRole('button', { name: 'Underwrite' }).click();
+  await expect(page.getByTestId('mih-underwriting-warning')).toContainText(
+    'MIH scenario required',
+  );
   await page.getByRole('button', { name: 'Audit' }).click();
   await expect(page.getByTestId('parcel-decision-audit')).toContainText(
     'Eligible lead with diligence flags',
@@ -459,6 +476,9 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   );
   await expect(page.getByTestId('parcel-decision-readiness')).toContainText(
     'Review floodplain exposure',
+  );
+  await expect(page.getByTestId('parcel-decision-readiness')).toContainText(
+    'Verify MIH applicability',
   );
   await expect(page.getByTestId('parcel-decision-readiness')).toContainText(
     'not a purchase recommendation',

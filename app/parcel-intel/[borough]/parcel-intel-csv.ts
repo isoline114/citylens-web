@@ -157,6 +157,28 @@ const COLUMNS: Column[] = [
     header: 'Environmental designation data retrieved',
     value: (r) => r.environmental_designation_data_as_of,
   },
+  {
+    header: 'MIH mapped-area tax-lot overlap',
+    value: (r) =>
+      r.mandatory_inclusionary_housing === null ||
+      r.mandatory_inclusionary_housing === undefined
+        ? null
+        : r.mandatory_inclusionary_housing
+          ? 'yes'
+          : 'no',
+  },
+  {
+    header: 'MIH mapped options',
+    value: (r) => r.mih_options?.join(' | ') ?? null,
+  },
+  {
+    header: 'MIH area record count',
+    value: (r) => r.mih_area_count,
+  },
+  {
+    header: 'MIH data retrieved',
+    value: (r) => r.mih_data_as_of,
+  },
   { header: 'Owner', value: (r) => r.owner_name },
   { header: 'Owner source', value: (r) => r.owner_name_source },
   { header: 'PLUTO owner type', value: (r) => r.owner_type },

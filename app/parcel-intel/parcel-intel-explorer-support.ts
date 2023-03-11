@@ -49,6 +49,7 @@ export type ExplorerOpportunity =
   | 'violations'
   | 'floodplain'
   | 'environmental_review'
+  | 'mih'
   | 'portfolio'
   | 'vacant_site'
   | 'ground_up_candidate'
@@ -120,6 +121,10 @@ export function filterExplorerRows<T extends ParcelExplorerRow>(
       }
     } else if (filters.opportunity === 'environmental_review') {
       if (row.environmental_review_required !== true) {
+        return false;
+      }
+    } else if (filters.opportunity === 'mih') {
+      if (row.mandatory_inclusionary_housing !== true) {
         return false;
       }
     } else if (filters.opportunity === 'portfolio') {

@@ -486,6 +486,14 @@ export type ParcelIntelRow = {
     | 'other'
     | null;
   environmental_designation_data_as_of?: string | null;
+  /**
+   * Positive-area overlap with a current adopted NYC Planning MIH mapped
+   * area. Authenticated current diligence only; not a zoning determination.
+   */
+  mandatory_inclusionary_housing?: boolean | null;
+  mih_options?: string[] | null;
+  mih_area_count?: number | null;
+  mih_data_as_of?: string | null;
   is_landmark: boolean;
   is_historic_district: boolean;
   block_id: string | null;
@@ -623,6 +631,7 @@ export type ParcelIntelMapRow = Pick<
   | 'critical_violation_count'
   | 'floodplain_1pct'
   | 'environmental_review_required'
+  | 'mandatory_inclusionary_housing'
   | 'owner_name'
   | 'owner_entity_type'
   | 'owner_portfolio_id'
@@ -684,6 +693,7 @@ export type ParcelWorkflowSnapshot = {
     | 'restrictive_declaration'
     | 'other'
     | null;
+  mandatory_inclusionary_housing: boolean | null;
   recent_change: boolean | null;
 };
 
@@ -879,6 +889,7 @@ export type ParcelWorkflowAlert = {
     | 'critical_violations_changed'
     | 'flood_overlay_changed'
     | 'environmental_review_changed'
+    | 'mih_overlay_changed'
     | 'imagery_change_signal_changed'
     | 'owner_portfolio_size_changed';
   severity: 'urgent' | 'high' | 'medium' | 'low';

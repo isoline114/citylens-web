@@ -249,6 +249,36 @@ describe('ParcelIntelPropertyPanel', () => {
     );
   });
 
+  it('shows MIH overlap as a dated diligence screen with official references', () => {
+    render(
+      <ParcelIntelPropertyPanel
+        row={{
+          ...parcel,
+          mandatory_inclusionary_housing: true,
+          mih_options: ['Option 1', 'Deep Affordability Option'],
+          mih_area_count: 2,
+          mih_data_as_of: '2026-07-24',
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('mih-diligence')).toHaveTextContent(
+      'Mandatory Inclusionary Housing screen',
+    );
+    expect(screen.getByText('Mapped overlap')).toBeInTheDocument();
+    expect(screen.getByText('Option 1')).toBeInTheDocument();
+    expect(screen.getByText('Deep Affordability Option')).toBeInTheDocument();
+    expect(screen.getByText(/not a tax-lot legal determination/i)).toBeInTheDocument();
+    expect(screen.getByText(/official layer retrieved 2026-07-24/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Zoning Resolution Appendix F/i }),
+    ).toHaveAttribute(
+      'href',
+      'https://zr.planning.nyc.gov/index.php/node/21424',
+    );
+  });
+
   it('shows conservative current-owner portfolio context and can focus it', () => {
     const onViewOwnerPortfolio = vi.fn();
     render(

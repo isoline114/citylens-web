@@ -57,7 +57,9 @@ const EXPECTED_HEADER =
   'FEMA 2015 PFIRM 1% tax-lot overlap,Any 1% floodplain tax-lot overlap,' +
   'Floodplain data retrieved,Environmental designation present,' +
   'Environmental designation type,Environmental designation number,' +
-  'Environmental designation data retrieved,Owner,Owner source,PLUTO owner type,' +
+  'Environmental designation data retrieved,MIH mapped-area tax-lot overlap,' +
+  'MIH mapped options,MIH area record count,MIH data retrieved,' +
+  'Owner,Owner source,PLUTO owner type,' +
   'Owner entity type,Owner portfolio ID,Owner portfolio tax lots,' +
   'Owner portfolio boroughs,Owner portfolio lot area (sqft),' +
   'Owner portfolio current leads,Owner portfolio match method,' +
@@ -176,6 +178,28 @@ describe('buildCsv', () => {
     expect(
       cells[headers.indexOf('Environmental designation data retrieved')],
     ).toBe('2026-07-24');
+    expect(cells[headers.indexOf('NYC acquisition rank')]).toBe('1');
+  });
+
+  it('exports the current MIH mapped-area screen without changing rank', () => {
+    const csv = buildCsv([
+      row({
+        mandatory_inclusionary_housing: true,
+        mih_options: ['Option 1', 'Deep Affordability Option'],
+        mih_area_count: 2,
+        mih_data_as_of: '2026-07-24',
+      }),
+    ]);
+    const headers = EXPECTED_HEADER.split(',');
+    const cells = csv.split('\n')[1].split(',');
+    expect(cells[headers.indexOf('MIH mapped-area tax-lot overlap')]).toBe(
+      'yes',
+    );
+    expect(cells[headers.indexOf('MIH mapped options')]).toBe(
+      'Option 1 | Deep Affordability Option',
+    );
+    expect(cells[headers.indexOf('MIH area record count')]).toBe('2');
+    expect(cells[headers.indexOf('MIH data retrieved')]).toBe('2026-07-24');
     expect(cells[headers.indexOf('NYC acquisition rank')]).toBe('1');
   });
 

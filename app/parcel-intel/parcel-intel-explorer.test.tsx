@@ -168,6 +168,9 @@ describe('ParcelIntelExplorer', () => {
     expect(
       screen.queryByRole('option', { name: /1% floodplain exposure/i }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('option', { name: /MIH mapped-area overlap/i }),
+    ).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('citywide-map-stub')).toHaveTextContent('2 mapped rows'));
     expect(screen.getByTestId('citywide-map-stub')).toHaveAttribute(
       'data-overlay',
@@ -205,6 +208,9 @@ describe('ParcelIntelExplorer', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('option', { name: /1% floodplain exposure/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('option', { name: /MIH mapped-area overlap/i }),
     ).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('citywide-map-stub')).toHaveTextContent('2 mapped rows'));
     expect(mocks.getParcelIntelMap).toHaveBeenCalledWith(1000, {

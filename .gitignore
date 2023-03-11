@@ -9,6 +9,8 @@ out/
 .vercel
 .env*.local
 tsconfig.tsbuildinfo
+playwright-report/
+test-results/
 
 # Local agent context — kept per-developer, not committed.
 CLAUDE.md
