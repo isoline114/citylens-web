@@ -8,6 +8,9 @@ const mocks = vi.hoisted(() => ({
   getParcelIntelParcel: vi.fn(),
   getParcelIntelSweep: vi.fn(),
   getParcelWorkflowActions: vi.fn(),
+  listParcelSavedSearches: vi.fn(),
+  saveParcelSearch: vi.fn(),
+  removeParcelSavedSearch: vi.fn(),
   recordParcelProductEvent: vi.fn(),
   routerReplace: vi.fn(),
 }));
@@ -37,6 +40,9 @@ vi.mock('@/lib/api', async (importOriginal) => {
     getParcelIntelParcel: mocks.getParcelIntelParcel,
     getParcelIntelSweep: mocks.getParcelIntelSweep,
     getParcelWorkflowActions: mocks.getParcelWorkflowActions,
+    listParcelSavedSearches: mocks.listParcelSavedSearches,
+    saveParcelSearch: mocks.saveParcelSearch,
+    removeParcelSavedSearch: mocks.removeParcelSavedSearch,
     recordParcelProductEvent: mocks.recordParcelProductEvent,
   };
 });
@@ -111,6 +117,9 @@ beforeEach(() => {
   mocks.getParcelIntelParcel.mockReset();
   mocks.getParcelIntelSweep.mockReset();
   mocks.getParcelWorkflowActions.mockReset();
+  mocks.listParcelSavedSearches.mockReset();
+  mocks.saveParcelSearch.mockReset();
+  mocks.removeParcelSavedSearch.mockReset();
   mocks.recordParcelProductEvent.mockReset();
   mocks.recordParcelProductEvent.mockResolvedValue(undefined);
   mocks.routerReplace.mockReset();
@@ -160,6 +169,15 @@ beforeEach(() => {
     outcome_current_rate: 0.5,
     items: [],
   });
+  mocks.listParcelSavedSearches.mockResolvedValue([]);
+  mocks.saveParcelSearch.mockImplementation(async (searchId, item) => ({
+    schema_version: 'citylens/parcel-saved-view@v2',
+    search_id: searchId,
+    ...item,
+    created_at: '2026-07-24T12:00:00Z',
+    updated_at: '2026-07-24T12:00:00Z',
+  }));
+  mocks.removeParcelSavedSearch.mockResolvedValue(undefined);
 });
 
 describe('ParcelIntelExplorer', () => {
@@ -325,6 +343,50 @@ describe('ParcelIntelExplorer', () => {
       '/parcel-intel?bbl=1000010001',
       { scroll: false },
     );
+  });
+
+  it('restores the full explorer state from a private saved view', async () => {
+    mocks.authStatus = 'authenticated';
+    mocks.listParcelSavedSearches.mockResolvedValue([
+      {
+        schema_version: 'citylens/parcel-saved-view@v2',
+        search_id: 'view-brooklyn',
+        name: 'Brooklyn priority',
+        borough: 'brooklyn',
+        filters: {
+          query: 'test site',
+          priority: 'highest',
+          opportunity: 'vacant_site',
+          owner_portfolio_id: null,
+          overlay: 'opportunity',
+        },
+        alert_frequency: 'off',
+        created_at: '2026-07-24T12:00:00Z',
+        updated_at: '2026-07-24T12:00:00Z',
+      },
+    ]);
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Saved views' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Apply view' }),
+    );
+
+    expect(screen.getByLabelText('Filter by borough')).toHaveValue('brooklyn');
+    expect(screen.getByLabelText('Filter by priority')).toHaveValue('highest');
+    expect(screen.getByLabelText('Filter by opportunity')).toHaveValue(
+      'vacant_site',
+    );
+    expect(screen.getByLabelText('Search parcels')).toHaveValue('test site');
+    expect(
+      screen.getByRole('button', { name: 'opportunity' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(mocks.routerReplace).toHaveBeenLastCalledWith(
+      '/parcel-intel?borough=brooklyn',
+      { scroll: false },
+    );
+    expect(screen.queryByTestId('saved-views-panel')).not.toBeInTheDocument();
   });
 
   it('resumes an attention queue without making users rediscover the workflow menu', async () => {

@@ -1024,38 +1024,40 @@ export type ParcelWorkflowAlerts = {
 };
 
 export type ParcelSavedSearchFilters = {
-  landUseFilter: 'all' | 'residential' | 'commercial' | 'industrial' | 'vacant';
-  priorityFilter: 'all' | 'highest' | 'high_or_better' | 'medium_or_better';
-  opportunityFilter:
+  query: string;
+  priority: 'all' | 'highest' | 'high_or_better';
+  opportunity:
     | 'all'
-    | 'ground_up'
+    | 'uncommitted'
+    | 'assemblage'
+    | 'tax_lien'
+    | 'violations'
+    | 'floodplain'
+    | 'environmental_review'
+    | 'mih'
+    | 'transit_800m'
+    | 'portfolio'
     | 'vacant_site'
     | 'ground_up_candidate'
     | 'conversion_or_overbuilt'
     | 'active_project';
-  hideLandmarked: boolean;
-  recentSaleOnly: boolean;
-  recentChangeOnly: boolean;
-  pipelineOnly: boolean;
-  zoningFamilies: Array<'R' | 'C' | 'M' | 'Other'>;
-  sortKey:
-    | 'score_calibrated'
-    | 'lot_area_sqft'
-    | 'last_sale_price'
-    | 'years_held'
-    | 'year_built'
-    | 'num_floors'
-    | 'allowed_far'
-    | 'far_utilization_pct';
-  direction: 'asc' | 'desc';
+  owner_portfolio_id: string | null;
+  overlay: 'priority' | 'opportunity' | 'borough';
 };
 
 export type ParcelSavedSearch = {
+  schema_version: 'citylens/parcel-saved-view@v2';
   search_id: string;
   name: string;
-  borough: string;
+  borough:
+    | 'all'
+    | 'manhattan'
+    | 'brooklyn'
+    | 'queens'
+    | 'bronx'
+    | 'staten_island';
   filters: ParcelSavedSearchFilters;
-  alert_frequency: 'off' | 'daily' | 'weekly';
+  alert_frequency: 'off';
   created_at: string;
   updated_at: string;
 };

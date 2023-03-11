@@ -15,9 +15,12 @@ import {
   getRuns,
   joinApiUrl,
   listApiKeys,
+  listParcelSavedSearches,
   recordParcelProductEvent,
+  removeParcelSavedSearch,
   resolveApiUrl,
   revokeApiKey,
+  saveParcelSearch,
   setAuthTokenGetter,
   snoozeParcelWorkflowReminder,
 } from '@/lib/api';
@@ -105,6 +108,74 @@ describe('api client', () => {
     expect(new Headers(init.headers).get('Authorization')).toBe(
       'Bearer tok-abc',
     );
+  });
+
+  it('persists and deletes a citywide saved view with bearer auth', async () => {
+    const savedView = {
+      schema_version: 'citylens/parcel-saved-view@v2',
+      search_id: 'view-one',
+      name: 'Citywide leads',
+      borough: 'all',
+      filters: {
+        query: '',
+        priority: 'highest',
+        opportunity: 'uncommitted',
+        owner_portfolio_id: null,
+        overlay: 'priority',
+      },
+      alert_frequency: 'off',
+      created_at: '2026-07-24T12:00:00Z',
+      updated_at: '2026-07-24T12:00:00Z',
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => [savedView],
+        text: async () => '',
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => savedView,
+        text: async () => '',
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+        headers: new Headers(),
+        json: async () => null,
+        text: async () => '',
+      } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await listParcelSavedSearches()).toHaveLength(1);
+    await saveParcelSearch('view-one', {
+      name: 'Citywide leads',
+      borough: 'all',
+      filters: {
+        query: '',
+        priority: 'highest',
+        opportunity: 'uncommitted',
+        owner_portfolio_id: null,
+        overlay: 'priority',
+      },
+      alert_frequency: 'off',
+    });
+    await removeParcelSavedSearch('view-one');
+
+    const [, putInit] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(putInit.method).toBe('PUT');
+    expect(
+      new Headers(putInit.headers).get('Authorization'),
+    ).toBe('Bearer tok-abc');
+    const [deleteUrl, deleteInit] = fetchMock.mock.calls[2] as [
+      string,
+      RequestInit,
+    ];
+    expect(deleteUrl).toContain('/saved-searches/view-one');
+    expect(deleteInit.method).toBe('DELETE');
   });
 
   it('loads one authenticated workflow record without listing the pipeline', async () => {

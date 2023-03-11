@@ -6,6 +6,24 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
 }) => {
   let reminderSnoozed = false;
   const productEvents: unknown[] = [];
+  let savedViews = [
+    {
+      schema_version: 'citylens/parcel-saved-view@v2',
+      search_id: 'view-brooklyn',
+      name: 'Brooklyn priority',
+      borough: 'brooklyn',
+      filters: {
+        query: '',
+        priority: 'highest',
+        opportunity: 'uncommitted',
+        owner_portfolio_id: null,
+        overlay: 'priority',
+      },
+      alert_frequency: 'off',
+      created_at: '2026-07-24T12:00:00Z',
+      updated_at: '2026-07-24T12:00:00Z',
+    },
+  ];
 
   await page.addInitScript(() => {
     sessionStorage.setItem(
@@ -342,6 +360,41 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     },
   );
 
+  await page.route('**/v1/parcel-intel/saved-searches**', async (route) => {
+    const method = route.request().method();
+    const url = new URL(route.request().url());
+    const searchId = url.pathname.split('/').at(-1);
+    if (method === 'GET') {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify(savedViews),
+      });
+      return;
+    }
+    if (method === 'PUT' && searchId) {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      const created = {
+        schema_version: 'citylens/parcel-saved-view@v2',
+        search_id: searchId,
+        ...body,
+        created_at: '2026-07-24T13:00:00Z',
+        updated_at: '2026-07-24T13:00:00Z',
+      };
+      savedViews = [created as (typeof savedViews)[number], ...savedViews];
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify(created),
+      });
+      return;
+    }
+    if (method === 'DELETE' && searchId) {
+      savedViews = savedViews.filter((view) => view.search_id !== searchId);
+      await route.fulfill({ status: 204, body: '' });
+      return;
+    }
+    await route.fallback();
+  });
+
   await page.route(
     '**/v1/parcel-intel/workflow/3020960069/reminder',
     async (route) => {
@@ -591,6 +644,26 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   );
 
   await page.goto('/parcel-intel');
+
+  await page.getByRole('button', { name: 'Saved views' }).click();
+  await expect(page.getByTestId('saved-views-panel')).toBeVisible();
+  await page.getByRole('button', { name: 'Apply view' }).click();
+  await expect(page.getByLabel('Filter by borough')).toHaveValue('brooklyn');
+  await expect(page.getByLabel('Filter by priority')).toHaveValue('highest');
+  await expect(
+    page.getByRole('button', { name: 'priority' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+
+  await page.getByRole('button', { name: 'Saved views' }).click();
+  await page.getByLabel('View name').fill('Priority follow-up');
+  await page.getByRole('button', { name: 'Save current view' }).click();
+  await expect(page.getByTestId('saved-view-save')).toHaveText('Saved');
+  await expect(page.getByText('Priority follow-up')).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Delete saved view Priority follow-up' })
+    .click();
+  await expect(page.getByText('Priority follow-up')).not.toBeVisible();
+  await page.getByRole('button', { name: 'Close saved views' }).click();
   await expect(
     page.getByRole('button', { name: /Subway\/SIR ≤800 m/i }),
   ).toContainText('1');

@@ -5,6 +5,11 @@ not five separate borough workspaces. Borough and eligibility filters update the
 same map/list, and selecting a lot opens its overview, underwriting, workflow,
 official-source links, provenance, and model explanation in an in-place parcel
 panel. Legacy `/parcel-intel/<borough>` links redirect into the citywide route.
+Signed-in users can save and restore private explorer views containing the
+borough scope, query, opportunity/priority filters, owner-portfolio focus, and
+map overlay. Saved views intentionally do not expose alert-frequency controls:
+watchlist change monitoring remains the implemented change-review workflow,
+while scheduled saved-search delivery is not yet available.
 
 Signed-in users also have a private watchlist change center. It compares the
 baseline captured when a parcel entered the acquisition workflow with the

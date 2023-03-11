@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUpRight,
   BellRing,
+  Bookmark,
   Building2,
   CalendarClock,
   Download,
@@ -31,6 +32,7 @@ import {
   type ParcelIntelMapRow,
   type ParcelIntelRow,
   type ParcelProductEventSource,
+  type ParcelSavedSearch,
   type ParcelWorkflowActions,
 } from '@/lib/api';
 import {
@@ -51,6 +53,7 @@ import { ParcelIntelPropertyPanel } from './parcel-intel-property-panel';
 import { ParcelWorkflowInsights } from './parcel-workflow-insights';
 import { ParcelWorkflowAlertsPanel } from './parcel-workflow-alerts';
 import { ParcelWorkflowActionsPanel } from './parcel-workflow-actions';
+import { ParcelSavedViewsPanel } from './parcel-saved-views';
 
 const ParcelIntelExplorerMap = dynamic(
   () =>
@@ -129,6 +132,7 @@ export function ParcelIntelExplorer({
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [savedViewsOpen, setSavedViewsOpen] = useState(false);
   const [workflowActions, setWorkflowActions] =
     useState<ParcelWorkflowActions | null>(null);
   const parcelOpenSourceRef = useRef<ParcelProductEventSource>('direct');
@@ -457,6 +461,23 @@ export function ParcelIntelExplorer({
     setActionsOpen(true);
     setAlertsOpen(false);
     setInsightsOpen(false);
+    setSavedViewsOpen(false);
+  };
+
+  const applySavedView = (view: ParcelSavedSearch) => {
+    setFilters({
+      borough: view.borough,
+      priority: view.filters.priority,
+      opportunity: view.filters.opportunity,
+      query: view.filters.query,
+      ownerPortfolioId: view.filters.owner_portfolio_id,
+    });
+    setOverlay(view.filters.overlay);
+    setLeadLimit(INITIAL_LEAD_LIMIT);
+    setMobileRankingExpanded(false);
+    setSelectedBbl(null);
+    setSavedViewsOpen(false);
+    syncExplorerUrl(view.borough, null);
   };
 
   return (
@@ -541,6 +562,22 @@ export function ParcelIntelExplorer({
               <button
                 type="button"
                 onClick={() => {
+                  setSavedViewsOpen((value) => !value);
+                  setActionsOpen(false);
+                  setAlertsOpen(false);
+                  setInsightsOpen(false);
+                }}
+                aria-expanded={savedViewsOpen}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
+              >
+                <Bookmark className="h-3.5 w-3.5 text-amber-300" />
+                Saved views
+              </button>
+            )}
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => {
                   if (actionsOpen) {
                     setActionsOpen(false);
                   } else {
@@ -569,6 +606,7 @@ export function ParcelIntelExplorer({
                   setAlertsOpen((value) => !value);
                   setInsightsOpen(false);
                   setActionsOpen(false);
+                  setSavedViewsOpen(false);
                 }}
                 aria-expanded={alertsOpen}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
@@ -584,6 +622,7 @@ export function ParcelIntelExplorer({
                   setInsightsOpen((value) => !value);
                   setAlertsOpen(false);
                   setActionsOpen(false);
+                  setSavedViewsOpen(false);
                 }}
                 aria-expanded={insightsOpen}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
@@ -598,6 +637,17 @@ export function ParcelIntelExplorer({
 
       {isAuthenticated && insightsOpen && (
         <ParcelWorkflowInsights onClose={() => setInsightsOpen(false)} />
+      )}
+      {isAuthenticated && savedViewsOpen && (
+        <ParcelSavedViewsPanel
+          currentView={{
+            borough: filters.borough,
+            filters,
+            overlay,
+          }}
+          onApply={applySavedView}
+          onClose={() => setSavedViewsOpen(false)}
+        />
       )}
       {isAuthenticated && actionsOpen && (
         <ParcelWorkflowActionsPanel
@@ -624,6 +674,7 @@ export function ParcelIntelExplorer({
         !actionsOpen &&
         !alertsOpen &&
         !insightsOpen &&
+        !savedViewsOpen &&
         (workflowActions.open_records === 0 ||
           workflowActions.attention_count > 0) && (
           <section
