@@ -7,6 +7,33 @@ function normalizeSiteBasePath(value) {
 
 const basePath = normalizeSiteBasePath(process.env.NEXT_PUBLIC_SITE_BASE_PATH);
 const apiBase = String(process.env.NEXT_PUBLIC_CITYLENS_API_BASE ?? '').trim();
+const securityHeaders = [
+  {
+    key: 'Content-Security-Policy',
+    value:
+      "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'",
+  },
+  {
+    key: 'Permissions-Policy',
+    value: 'browsing-topics=(), camera=(), geolocation=(), microphone=(), payment=()',
+  },
+  {
+    key: 'Referrer-Policy',
+    value: 'strict-origin-when-cross-origin',
+  },
+  {
+    key: 'X-Content-Type-Options',
+    value: 'nosniff',
+  },
+  {
+    key: 'X-Frame-Options',
+    value: 'DENY',
+  },
+  {
+    key: 'X-XSS-Protection',
+    value: '0',
+  },
+];
 
 if (process.env.NODE_ENV === 'production' && !apiBase) {
   console.warn(
@@ -18,7 +45,16 @@ if (process.env.NODE_ENV === 'production' && !apiBase) {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  poweredByHeader: false,
   basePath,
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: securityHeaders,
+      },
+    ];
+  },
   async rewrites() {
     if (!apiBase) return [];
     return [

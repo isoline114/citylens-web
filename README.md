@@ -195,6 +195,13 @@ production server on port `3000`.
 CI runs lint + build + vitest + Playwright on every PR. See
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
+The production Next.js config disables `X-Powered-By` and applies the
+clickjacking, MIME-sniffing, referrer, browser-capability, and narrow CSP
+baseline to every route. The CSP deliberately restricts base/object/frame/form
+behavior without constraining scripts, Firebase authentication, map tiles,
+analytics, or API artifact resources. The engine's secret-free production
+verifier checks these headers on `https://www.citylens.dev/parcel-intel`.
+
 ## Deployment (Vercel)
 
 `vercel link` against the existing project, then push to `main`. Vercel
