@@ -463,13 +463,7 @@ describe('ParcelIntelPropertyPanel', () => {
     expect(screen.getByTestId('workflow-quick-save')).toHaveTextContent(
       'In pipeline · Open',
     );
-    expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
-      'workflow_created',
-      'header',
-    );
-    expect(
-      JSON.stringify(mocks.recordParcelProductEvent.mock.calls),
-    ).not.toMatch(/3050660023|224 Clarkson|Example Owner/i);
+    expect(mocks.recordParcelProductEvent).not.toHaveBeenCalled();
   });
 
   it('does not apply a completed save to a different parcel', async () => {

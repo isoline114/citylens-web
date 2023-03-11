@@ -28,7 +28,6 @@ import { useAuth } from '@/lib/auth';
 import {
   getParcelWorkflow,
   listParcelWorkflowEvents,
-  recordParcelProductEvent,
   removeParcelWorkflow,
   saveParcelWorkflow,
   type ParcelIntelRow,
@@ -37,7 +36,6 @@ import {
   type ParcelWorkflowItem,
   type ParcelWorkflowEvent,
   type TopFeature,
-  type ParcelProductEventSource,
 } from '@/lib/api';
 import {
   LandBasisCalculator,
@@ -606,12 +604,10 @@ export function ParcelIntelPropertyPanel({
     draft: WorkflowDraft,
     options?: {
       openAfterSave?: boolean;
-      source?: Extract<ParcelProductEventSource, 'header' | 'workflow'>;
     },
   ) => {
     if (effectiveWorkflowLoadState !== 'ready') return;
     const bbl = row.bbl;
-    const wasExisting = workflowItem !== null;
     const mutationId = workflowMutationIdRef.current + 1;
     workflowMutationIdRef.current = mutationId;
     setWorkflowBusy(true);
@@ -630,12 +626,6 @@ export function ParcelIntelPropertyPanel({
       setWorkflowItem(saved);
       if (options?.openAfterSave) setTab('workflow');
       window.dispatchEvent(new Event('citylens:workflow-updated'));
-      void recordParcelProductEvent(
-        wasExisting ? 'workflow_updated' : 'workflow_created',
-        wasExisting ? 'workflow' : (options?.source ?? 'workflow'),
-      ).catch(() => {
-        // Adoption telemetry is best-effort and never blocks workflow saves.
-      });
     } catch {
       if (
         workflowMutationIdRef.current === mutationId &&
@@ -666,7 +656,7 @@ export function ParcelIntelPropertyPanel({
         next_action_due_date: null,
         outcome: 'unknown',
       },
-      { openAfterSave: true, source: 'header' },
+      { openAfterSave: true },
     );
 
   const removeWorkflow = async () => {
@@ -685,12 +675,6 @@ export function ParcelIntelPropertyPanel({
       }
       setWorkflowItem(null);
       window.dispatchEvent(new Event('citylens:workflow-updated'));
-      void recordParcelProductEvent(
-        'workflow_archived',
-        'workflow',
-      ).catch(() => {
-        // Adoption telemetry is best-effort and never blocks workflow removal.
-      });
     } catch {
       if (
         workflowMutationIdRef.current === mutationId &&
@@ -1713,9 +1697,7 @@ export function ParcelIntelPropertyPanel({
                     row.decision_audit?.readiness?.recommended_action
                   }
                   busy={workflowBusy}
-                  onSave={(draft) =>
-                    saveWorkflow(draft, { source: 'workflow' })
-                  }
+                  onSave={(draft) => saveWorkflow(draft)}
                   onRemove={removeWorkflow}
                 />
                 {workflowEvents.length > 0 && (

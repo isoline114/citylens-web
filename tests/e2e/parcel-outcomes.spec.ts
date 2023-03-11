@@ -632,20 +632,13 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   );
   await expect
     .poll(() => productEvents)
-    .toEqual(
-      expect.arrayContaining([
-        {
-          schema_version: 'citylens/parcel-product-event@v1',
-          event: 'parcel_opened',
-          source: 'ranking',
-        },
-        {
-          schema_version: 'citylens/parcel-product-event@v1',
-          event: 'workflow_created',
-          source: 'header',
-        },
-      ]),
-    );
+    .toEqual([
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'parcel_opened',
+        source: 'ranking',
+      },
+    ]);
   expect(JSON.stringify(productEvents)).not.toMatch(
     /3020960069|100 E 21|owner|notes|tags/i,
   );

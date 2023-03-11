@@ -59,6 +59,11 @@ immutable saved-rank context, maturity-safe fixed-horizon labels, and an
 integrity digest while excluding notes, tags, assignees, contacts, addresses,
 owner names, reminders, and custom free text. Pending or legacy
 uninstrumented observations stay null and cannot become training negatives.
+Workflow creates, updates, restores, and archives are measured by the engine
+inside the canonical workflow transaction rather than through a second browser
+telemetry request. The web reports only value-minimized parcel-open events, so
+a successfully saved lead cannot disappear from activation reporting merely
+because a best-effort analytics request was dropped.
 The same citywide explorer includes a private Action Queue that prioritizes
 overdue and near-term follow-ups, exposes open
 leads without a complete action/date plan, identifies missing assignees, and
