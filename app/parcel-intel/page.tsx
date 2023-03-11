@@ -214,7 +214,7 @@ function MethodologyDisclosure({
         <MethodCard
           icon={Database}
           title="Source records"
-          body="Current parcel facts combine NYC PLUTO, ACRIS ownership, DOB project activity, LPC constraints, and available CityLens aerial-change observations. Source dates remain visible on every parcel."
+          body="Current parcel facts combine NYC PLUTO (including E-designations and restrictive declarations), ACRIS ownership, DOB project activity, LPC constraints, and available CityLens aerial-change observations. Source dates remain visible on every parcel."
         />
         <MethodCard
           icon={ShieldCheck}
@@ -232,7 +232,7 @@ function MethodologyDisclosure({
         <MethodCard
           icon={TriangleAlert}
           title="Required diligence"
-          body="Administrative lots, active projects, stale ownership, zoning overlays, tenancy, and site conditions can invalidate a lead. Verify official records and professional advice before outreach or underwriting."
+          body="Administrative lots, active projects, stale ownership, zoning overlays, environmental-designation requirements, tenancy, and site conditions can invalidate a lead. Verify official records and professional advice before outreach or underwriting."
         />
       </div>
     </details>

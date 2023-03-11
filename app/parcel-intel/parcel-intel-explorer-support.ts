@@ -48,6 +48,7 @@ export type ExplorerOpportunity =
   | 'tax_lien'
   | 'violations'
   | 'floodplain'
+  | 'environmental_review'
   | 'portfolio'
   | 'vacant_site'
   | 'ground_up_candidate'
@@ -115,6 +116,10 @@ export function filterExplorerRows<T extends ParcelExplorerRow>(
       }
     } else if (filters.opportunity === 'floodplain') {
       if (row.floodplain_1pct !== true) {
+        return false;
+      }
+    } else if (filters.opportunity === 'environmental_review') {
+      if (row.environmental_review_required !== true) {
         return false;
       }
     } else if (filters.opportunity === 'portfolio') {

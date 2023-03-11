@@ -10,7 +10,7 @@ Signed-in users also have a private watchlist change center. It compares the
 baseline captured when a parcel entered the acquisition workflow with the
 current atomic feed and surfaces owner, sale-year, zoning, priority,
 opportunity, lien, violation, flood, imagery, portfolio-size, and
-feed-removal changes. A feed-removal alert asks the user to verify current
+environmental-designation changes, plus feed-removal changes. A feed-removal alert asks the user to verify current
 official records; it never invents a disposition or seller-intent claim.
 The explorer renders its public preview immediately, upgrades authenticated
 users with one compact 5,000-row citywide request, and fetches polygon,
@@ -20,7 +20,10 @@ also exposes multi-lot assemblage candidates, a signed-in filter for official
 NYC DOF final tax-lien sale history, a filter for parcels with current Class 1
 ECB or Class C HPD immediately hazardous records, a signed-in 1% annual-chance
 floodplain screen, a signed-in exact-name current-PLUTO legal-owner portfolio
-filter, and the accepted model's clearly labeled forward-test hit rate. A user
+filter, a signed-in PLUTO E-designation/restrictive-declaration screen, and the
+accepted model's clearly labeled forward-test hit rate. These instruments are
+presented only as current air/noise/hazardous-materials diligence requirements;
+neither is described as proof of contamination or as an automatic prohibition. A user
 can open a parcel and focus the citywide map on other current candidates with
 the same exact normalized legal name. Signed-in users can open Outcome Insights
 to see prospective saved/contacted/qualified/offered/contracted/closed cohorts

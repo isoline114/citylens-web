@@ -212,6 +212,12 @@ function workflowSnapshot(
     tax_lien_sale_year: row.tax_lien_sale_year ?? null,
     critical_violation_count: row.critical_violation_count ?? null,
     floodplain_1pct: row.floodplain_1pct ?? null,
+    environmental_review_required:
+      row.environmental_review_required ?? null,
+    environmental_designation_number:
+      row.environmental_designation_number ?? null,
+    environmental_designation_kind:
+      row.environmental_designation_kind ?? null,
     recent_change: row.recent_change ?? null,
   };
 }
@@ -238,6 +244,12 @@ export function ParcelIntelPropertyPanel({
   const hasFloodplainScreen =
     typeof row.firm07_floodplain === 'boolean' &&
     typeof row.pfirm15_floodplain === 'boolean';
+  const environmentalDesignationLabel =
+    row.environmental_designation_kind === 'restrictive_declaration'
+      ? 'restrictive declaration'
+      : row.environmental_designation_kind === 'e_designation'
+        ? 'E-designation'
+        : 'environmental designation';
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -814,6 +826,92 @@ export function ParcelIntelPropertyPanel({
                     className="inline-flex items-center gap-1 text-xs font-semibold text-sky-950 underline decoration-sky-300 underline-offset-2"
                   >
                     NYC flood-map guidance
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              </section>
+            )}
+
+            {typeof row.environmental_review_required === 'boolean' && (
+              <section
+                className={`mt-3 rounded-xl border p-3 ${
+                  row.environmental_review_required
+                    ? 'border-orange-300 bg-orange-50'
+                    : 'border-slate-200 bg-slate-50'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4
+                      className={`text-xs font-semibold uppercase tracking-wide ${
+                        row.environmental_review_required
+                          ? 'text-orange-950'
+                          : 'text-slate-800'
+                      }`}
+                    >
+                      Environmental designation
+                    </h4>
+                    <p
+                      className={`mt-1 text-xs leading-5 ${
+                        row.environmental_review_required
+                          ? 'text-orange-900'
+                          : 'text-slate-600'
+                      }`}
+                    >
+                      {row.environmental_review_required
+                        ? `PLUTO lists ${environmentalDesignationLabel} ${
+                            row.environmental_designation_number ??
+                            'number unavailable'
+                          } for this tax lot.`
+                        : 'PLUTO does not list an E-designation or restrictive declaration for this tax lot.'}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${
+                      row.environmental_review_required
+                        ? 'bg-orange-700 text-white'
+                        : 'bg-white text-slate-700 ring-1 ring-inset ring-slate-300'
+                    }`}
+                  >
+                    {row.environmental_review_required
+                      ? row.environmental_designation_number ?? 'Review required'
+                      : 'No PLUTO flag'}
+                  </span>
+                </div>
+                <p
+                  className={`mt-3 text-[11px] leading-4 ${
+                    row.environmental_review_required
+                      ? 'text-orange-900'
+                      : 'text-slate-600'
+                  }`}
+                >
+                  E-designations and restrictive declarations can concern
+                  hazardous materials, air emissions, or noise. Neither is
+                  proof of contamination or an automatic development
+                  prohibition. Confirm the instrument, proposed-work trigger,
+                  and required OER notices with an environmental professional
+                  {row.environmental_designation_data_as_of
+                    ? ` · PLUTO retrieved ${row.environmental_designation_data_as_of}`
+                    : ''}
+                  .
+                </p>
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                  <a
+                    href="https://www.nyc.gov/site/oer/remediation/e-designation.page"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-orange-950 underline decoration-orange-300 underline-offset-2"
+                  >
+                    NYC OER guidance
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                  <a
+                    href="https://data.cityofnewyork.us/d/64uk-42ks"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-orange-950 underline decoration-orange-300 underline-offset-2"
+                  >
+                    Official PLUTO source
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>

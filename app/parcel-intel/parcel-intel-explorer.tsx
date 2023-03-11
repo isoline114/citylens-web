@@ -273,6 +273,9 @@ export function ParcelIntelExplorer({
   const floodplainParcelCount = opportunityScope.filter(
     (row) => row.floodplain_1pct === true,
   ).length;
+  const environmentalReviewParcelCount = opportunityScope.filter(
+    (row) => row.environmental_review_required === true,
+  ).length;
   const ownerPortfolioParcelCount = opportunityScope.filter(
     (row) => (row.owner_portfolio_lot_count ?? 0) >= 2,
   ).length;
@@ -588,6 +591,11 @@ export function ParcelIntelExplorer({
                 <option value="floodplain">1% floodplain exposure</option>
               )}
               {isAuthenticated && (
+                <option value="environmental_review">
+                  E/R-designated lots
+                </option>
+              )}
+              {isAuthenticated && (
                 <option value="portfolio">Multi-lot legal owners</option>
               )}
               <option value="assemblage">Assemblage opportunities</option>
@@ -841,6 +849,29 @@ export function ParcelIntelExplorer({
                 </div>
                 <div className="text-lg font-semibold text-sky-950">
                   {floodplainParcelCount.toLocaleString()}
+                </div>
+              </button>
+            )}
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() =>
+                  updateFilter('opportunity', 'environmental_review')
+                }
+                aria-pressed={
+                  filters.opportunity === 'environmental_review'
+                }
+                className={`rounded-xl px-3 py-2 text-left transition-colors ${
+                  filters.opportunity === 'environmental_review'
+                    ? 'bg-orange-100 ring-2 ring-inset ring-orange-400'
+                    : 'bg-orange-50 hover:bg-orange-100'
+                }`}
+              >
+                <div className="text-[11px] uppercase tracking-wide text-orange-700">
+                  E/R-designated lots
+                </div>
+                <div className="text-lg font-semibold text-orange-950">
+                  {environmentalReviewParcelCount.toLocaleString()}
                 </div>
               </button>
             )}
