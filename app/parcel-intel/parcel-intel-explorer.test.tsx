@@ -138,16 +138,18 @@ beforeEach(() => {
     model_metadata: {},
   }));
   mocks.getParcelWorkflowActions.mockResolvedValue({
-    schema_version: 'parcel-workflow-actions.v1',
+    schema_version: 'citylens/parcel-workflow-actions@v1',
     generated_at: '2026-07-23T14:00:00Z',
     total_records: 2,
     open_records: 2,
+    completed_records: 0,
     overdue_count: 1,
     due_today_count: 1,
     due_soon_count: 0,
+    scheduled_count: 0,
     unscheduled_count: 0,
-    missing_assignee_count: 0,
-    missing_outcome_count: 0,
+    unassigned_count: 0,
+    outcome_update_due_count: 0,
     attention_count: 2,
     snoozed_count: 0,
     complete_plan_count: 1,
@@ -272,6 +274,115 @@ describe('ParcelIntelExplorer', () => {
     expect(
       screen.getByLabelText('2 workflow items need attention'),
     ).toBeInTheDocument();
+    expect(screen.getByTestId('activation-guide-attention')).toHaveTextContent(
+      '2 saved leads',
+    );
+  });
+
+  it('guides a first-time signed-in user directly into the highest-ranked lead', async () => {
+    mocks.authStatus = 'authenticated';
+    mocks.getParcelWorkflowActions.mockResolvedValue({
+      schema_version: 'citylens/parcel-workflow-actions@v1',
+      generated_at: '2026-07-24T14:00:00Z',
+      total_records: 0,
+      open_records: 0,
+      completed_records: 0,
+      overdue_count: 0,
+      due_today_count: 0,
+      due_soon_count: 0,
+      scheduled_count: 0,
+      unscheduled_count: 0,
+      unassigned_count: 0,
+      outcome_update_due_count: 0,
+      attention_count: 0,
+      snoozed_count: 0,
+      complete_plan_count: 0,
+      plan_coverage_rate: null,
+      assigned_count: 0,
+      assignee_coverage_rate: null,
+      outcome_current_count: 0,
+      outcome_current_rate: null,
+      items: [],
+    });
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    const guide = await screen.findByTestId('activation-guide-empty');
+    expect(guide).toHaveTextContent('Review the parcel evidence');
+    expect(guide).toHaveTextContent('Save the lead');
+    expect(guide).toHaveTextContent('Assign a teammate and dated next action');
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open highest-ranked lead' }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('property-panel-stub')).toHaveTextContent(
+        'manhattan:1000010001',
+      ),
+    );
+    expect(mocks.routerReplace).toHaveBeenLastCalledWith(
+      '/parcel-intel?bbl=1000010001',
+      { scroll: false },
+    );
+  });
+
+  it('resumes an attention queue without making users rediscover the workflow menu', async () => {
+    mocks.authStatus = 'authenticated';
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    await screen.findByTestId('activation-guide-attention');
+    fireEvent.click(screen.getByRole('button', { name: 'Review 2 actions' }));
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'What needs attention next?',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId('activation-guide-attention'),
+    ).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: 'Attention 2' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('does not show activation coaching when the open pipeline is current', async () => {
+    mocks.authStatus = 'authenticated';
+    mocks.getParcelWorkflowActions.mockResolvedValue({
+      schema_version: 'citylens/parcel-workflow-actions@v1',
+      generated_at: '2026-07-24T14:00:00Z',
+      total_records: 2,
+      open_records: 2,
+      completed_records: 0,
+      overdue_count: 0,
+      due_today_count: 0,
+      due_soon_count: 0,
+      scheduled_count: 2,
+      unscheduled_count: 0,
+      unassigned_count: 0,
+      outcome_update_due_count: 0,
+      attention_count: 0,
+      snoozed_count: 0,
+      complete_plan_count: 2,
+      plan_coverage_rate: 1,
+      assigned_count: 2,
+      assignee_coverage_rate: 1,
+      outcome_current_count: 2,
+      outcome_current_rate: 1,
+      items: [],
+    });
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    await waitFor(() =>
+      expect(mocks.getParcelWorkflowActions).toHaveBeenCalled(),
+    );
+    expect(screen.queryByTestId('activation-guide-empty')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('activation-guide-attention'),
+    ).not.toBeInTheDocument();
   });
 
   it('loads full parcel detail only after opening a map summary', async () => {

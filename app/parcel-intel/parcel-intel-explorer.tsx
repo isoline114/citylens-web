@@ -453,6 +453,12 @@ export function ParcelIntelExplorer({
     syncExplorerUrl('all', null);
   };
 
+  const openActionQueue = () => {
+    setActionsOpen(true);
+    setAlertsOpen(false);
+    setInsightsOpen(false);
+  };
+
   return (
     <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_28px_90px_-42px_rgba(15,23,42,0.42)]">
       <div className="relative overflow-hidden bg-slate-950 px-5 py-6 text-white md:px-8 md:py-7">
@@ -535,9 +541,11 @@ export function ParcelIntelExplorer({
               <button
                 type="button"
                 onClick={() => {
-                  setActionsOpen((value) => !value);
-                  setAlertsOpen(false);
-                  setInsightsOpen(false);
+                  if (actionsOpen) {
+                    setActionsOpen(false);
+                  } else {
+                    openActionQueue();
+                  }
                 }}
                 aria-expanded={actionsOpen}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
@@ -610,6 +618,89 @@ export function ParcelIntelExplorer({
           }}
         />
       )}
+
+      {isAuthenticated &&
+        workflowActions &&
+        !actionsOpen &&
+        !alertsOpen &&
+        !insightsOpen &&
+        (workflowActions.open_records === 0 ||
+          workflowActions.attention_count > 0) && (
+          <section
+            className="border-b border-sky-200 bg-gradient-to-r from-sky-50 via-white to-emerald-50 px-5 py-4 md:px-7"
+            aria-label="Acquisition workflow next step"
+            data-testid={
+              workflowActions.open_records === 0
+                ? 'activation-guide-empty'
+                : 'activation-guide-attention'
+            }
+          >
+            {workflowActions.open_records === 0 ? (
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-sky-800">
+                    <Sparkles className="h-4 w-4" />
+                    Start your acquisition pipeline
+                  </div>
+                  <h3 className="mt-1 text-base font-semibold text-slate-950">
+                    Turn one ranked parcel into a worked lead.
+                  </h3>
+                  <ol className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-600">
+                    {[
+                      'Review the parcel evidence',
+                      'Save the lead',
+                      'Assign a teammate and dated next action',
+                    ].map((step, index) => (
+                      <li key={step} className="flex items-center gap-2">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-100 text-[10px] font-bold text-sky-800">
+                          {index + 1}
+                        </span>
+                        {step}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+                <button
+                  type="button"
+                  disabled={ranked.length === 0}
+                  onClick={() => {
+                    const topLead = ranked[0];
+                    if (topLead) selectParcel(topLead.bbl, 'ranking');
+                  }}
+                  className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-4 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Open highest-ranked lead
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-violet-800">
+                    <CalendarClock className="h-4 w-4" />
+                    Resume your acquisition work
+                  </div>
+                  <p className="mt-1 text-sm text-slate-700">
+                    <span className="font-semibold text-slate-950">
+                      {workflowActions.attention_count} saved lead
+                      {workflowActions.attention_count === 1 ? '' : 's'}
+                    </span>{' '}
+                    need a plan, assignee, due date, or outcome update.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={openActionQueue}
+                  className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-violet-700 px-4 text-xs font-semibold text-white shadow-sm hover:bg-violet-800"
+                >
+                  Review {workflowActions.attention_count}{' '}
+                  {workflowActions.attention_count === 1 ? 'action' : 'actions'}
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+          </section>
+        )}
 
       {!isAuthenticated && auth.status !== 'loading' && (
         <div className="flex flex-col gap-3 border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between md:px-7">

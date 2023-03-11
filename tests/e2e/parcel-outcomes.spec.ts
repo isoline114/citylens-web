@@ -594,7 +594,10 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(
     page.getByRole('button', { name: /Subway\/SIR ≤800 m/i }),
   ).toContainText('1');
-  await page.getByRole('button', { name: 'Action queue' }).click();
+  await expect(page.getByTestId('activation-guide-attention')).toContainText(
+    '2 saved leads',
+  );
+  await page.getByRole('button', { name: 'Review 2 actions' }).click();
   await expect(
     page.getByRole('heading', { name: 'What needs attention next?' }),
   ).toBeVisible();

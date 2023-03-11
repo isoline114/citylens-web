@@ -216,6 +216,13 @@ Playwright on every PR. See
 packages to the reviewed patched `1.6.25` release. Do not remove those
 overrides until the upstream Neon package carries a non-vulnerable line and
 the complete auth route, unit, build, browser, and `npm audit` gates pass.
+The development-tooling graph also overrides legacy `minimatch` and
+`brace-expansion` copies to the audited `10.2.5` and `5.0.8` releases. This
+closes the unbounded-expansion advisory without forcing ESLint 10 ahead of the
+Next lint plugins' declared peer support. Keep this override only while a
+clean `npm ci`, lint, build, Vitest, Playwright, and `npm audit` all pass;
+remove it once the upstream ESLint plugin graph resolves the patched matcher
+natively.
 
 The production Next.js config disables `X-Powered-By` and applies the
 clickjacking, MIME-sniffing, referrer, browser-capability, and narrow CSP
