@@ -162,8 +162,11 @@ Standard artifact filenames the UI renders:
 Authenticated Parcel Intelligence interactions send only the strict
 `citylens/parcel-product-event@v1` event/source pair to the engine. The client
 never includes a BBL, address, owner, URL, notes, tags, assignee, contact, or
-free text. Delivery is best-effort and cannot block parcel diligence or
-workflow saves.
+free text. Parcel opens and saved-view applies are coarse directional events;
+the event does not include which parcel or view was used. Delivery is
+best-effort and cannot block parcel diligence, saved-view restoration, or
+workflow saves. Canonical saved-view create/update/delete counts are recorded
+transactionally by the engine rather than inferred from browser telemetry.
 
 Vercel pageview analytics use `SafeAnalytics` to strip query parameters and
 fragments before collection, so parcel-selection state such as `?bbl=...` is

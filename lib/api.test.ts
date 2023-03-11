@@ -108,6 +108,23 @@ describe('api client', () => {
     expect(new Headers(init.headers).get('Authorization')).toBe(
       'Bearer tok-abc',
     );
+
+    fetchMock.mockClear();
+    await recordParcelProductEvent('saved_view_applied', 'saved_views');
+
+    const [applyUrl, applyInit] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(applyUrl).toContain('/v1/parcel-intel/product-events');
+    expect(JSON.parse(String(applyInit.body))).toEqual({
+      schema_version: 'citylens/parcel-product-event@v1',
+      event: 'saved_view_applied',
+      source: 'saved_views',
+    });
+    expect(String(applyInit.body)).not.toMatch(
+      /search_id|view-brooklyn|query|filter|owner/i,
+    );
   });
 
   it('persists and deletes a citywide saved view with bearer auth', async () => {

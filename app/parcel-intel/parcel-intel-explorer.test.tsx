@@ -347,6 +347,9 @@ describe('ParcelIntelExplorer', () => {
 
   it('restores the full explorer state from a private saved view', async () => {
     mocks.authStatus = 'authenticated';
+    mocks.recordParcelProductEvent.mockRejectedValueOnce(
+      new Error('telemetry unavailable'),
+    );
     mocks.listParcelSavedSearches.mockResolvedValue([
       {
         schema_version: 'citylens/parcel-saved-view@v2',
@@ -378,6 +381,15 @@ describe('ParcelIntelExplorer', () => {
     expect(screen.getByLabelText('Filter by opportunity')).toHaveValue(
       'vacant_site',
     );
+    await waitFor(() =>
+      expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+        'saved_view_applied',
+        'saved_views',
+      ),
+    );
+    expect(
+      JSON.stringify(mocks.recordParcelProductEvent.mock.calls),
+    ).not.toMatch(/view-brooklyn|Brooklyn priority|test site|vacant_site/i);
     expect(screen.getByLabelText('Search parcels')).toHaveValue('test site');
     expect(
       screen.getByRole('button', { name: 'opportunity' }),

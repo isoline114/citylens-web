@@ -478,6 +478,13 @@ export function ParcelIntelExplorer({
     setSelectedBbl(null);
     setSavedViewsOpen(false);
     syncExplorerUrl(view.borough, null);
+    void recordParcelProductEvent(
+      'saved_view_applied',
+      'saved_views',
+    ).catch(() => {
+      // Applying a private saved view must remain usable when coarse,
+      // value-minimized adoption telemetry is unavailable.
+    });
   };
 
   return (

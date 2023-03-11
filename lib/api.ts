@@ -55,14 +55,15 @@ export type MeResponse = {
   };
 };
 
-export type ParcelProductEventName = 'parcel_opened';
+export type ParcelProductEventName = 'parcel_opened' | 'saved_view_applied';
 
 export type ParcelProductEventSource =
   | 'direct'
   | 'map'
   | 'ranking'
   | 'action_queue'
-  | 'watchlist';
+  | 'watchlist'
+  | 'saved_views';
 
 export class ApiConfigError extends Error {
   constructor(message: string) {

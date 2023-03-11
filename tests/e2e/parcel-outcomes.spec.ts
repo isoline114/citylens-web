@@ -711,6 +711,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     .toEqual([
       {
         schema_version: 'citylens/parcel-product-event@v1',
+        event: 'saved_view_applied',
+        source: 'saved_views',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
         event: 'parcel_opened',
         source: 'ranking',
       },
