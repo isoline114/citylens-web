@@ -8,6 +8,7 @@ import {
   getFeaturedDemos,
   getParcelIntelMap,
   getParcelIntelParcel,
+  getParcelWorkflowActions,
   getParcelWorkflowAlerts,
   getRun,
   getRuns,
@@ -98,6 +99,39 @@ describe('api client', () => {
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain('/v1/parcel-intel/workflow/alerts');
+    expect(new Headers(init.headers).get('Authorization')).toBe(
+      'Bearer tok-abc',
+    );
+  });
+
+  it('requests the authenticated workflow action queue', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({
+        schema_version: 'citylens/parcel-workflow-actions@v1',
+        generated_at: '2026-07-24T14:00:00Z',
+        total_records: 0,
+        open_records: 0,
+        completed_records: 0,
+        overdue_count: 0,
+        due_today_count: 0,
+        due_soon_count: 0,
+        scheduled_count: 0,
+        unscheduled_count: 0,
+        unassigned_count: 0,
+        outcome_update_due_count: 0,
+        items: [],
+      }),
+      text: async () => '',
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await getParcelWorkflowActions();
+
+    expect(result.schema_version).toBe('citylens/parcel-workflow-actions@v1');
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/v1/parcel-intel/workflow/actions');
     expect(new Headers(init.headers).get('Authorization')).toBe(
       'Bearer tok-abc',
     );

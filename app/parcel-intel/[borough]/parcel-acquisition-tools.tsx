@@ -29,6 +29,8 @@ export type WorkflowDraft = Pick<
   | 'assignee'
   | 'watching'
   | 'decision_reason'
+  | 'next_action'
+  | 'next_action_due_date'
   | 'outcome'
 >;
 
@@ -74,6 +76,10 @@ export function WorkflowEditor({
   const [assignee, setAssignee] = useState(item?.assignee ?? '');
   const [watching, setWatching] = useState(item?.watching ?? true);
   const [decisionReason, setDecisionReason] = useState(item?.decision_reason ?? '');
+  const [nextAction, setNextAction] = useState(item?.next_action ?? '');
+  const [nextActionDueDate, setNextActionDueDate] = useState(
+    item?.next_action_due_date ?? '',
+  );
   const [outcome, setOutcome] = useState<ParcelWorkflowItem['outcome']>(
     item?.outcome ?? 'unknown',
   );
@@ -85,6 +91,8 @@ export function WorkflowEditor({
     setAssignee(item?.assignee ?? '');
     setWatching(item?.watching ?? true);
     setDecisionReason(item?.decision_reason ?? '');
+    setNextAction(item?.next_action ?? '');
+    setNextActionDueDate(item?.next_action_due_date ?? '');
     setOutcome(item?.outcome ?? 'unknown');
   }, [item]);
 
@@ -147,6 +155,32 @@ export function WorkflowEditor({
           className={`mt-1 w-full resize-y rounded-md border border-slate-300 bg-white p-2 text-sm ${FOCUS_RING}`}
         />
       </label>
+      <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_150px]">
+        <label className="text-xs font-medium text-slate-700">
+          Next action
+          <input
+            value={nextAction}
+            onChange={(event) => setNextAction(event.target.value)}
+            placeholder="Call owner, review title, prepare offer…"
+            maxLength={240}
+            className={`mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2 text-sm ${FOCUS_RING}`}
+          />
+        </label>
+        <label className="text-xs font-medium text-slate-700">
+          Due date
+          <input
+            type="date"
+            value={nextActionDueDate}
+            onChange={(event) => setNextActionDueDate(event.target.value)}
+            className={`mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2 text-sm ${FOCUS_RING}`}
+          />
+        </label>
+      </div>
+      {nextActionDueDate && !nextAction.trim() && (
+        <p className="mt-1 text-xs text-rose-700" role="alert">
+          Add a concrete next action before setting its due date.
+        </p>
+      )}
       <label className="mt-2 block text-xs font-medium text-slate-700">
         Tags
         <input
@@ -193,7 +227,7 @@ export function WorkflowEditor({
         </label>
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || Boolean(nextActionDueDate && !nextAction.trim())}
           onClick={() =>
             void onSave({
               stage,
@@ -202,6 +236,8 @@ export function WorkflowEditor({
               assignee: assignee.trim() || null,
               watching,
               decision_reason: decisionReason || null,
+              next_action: nextAction.trim() || null,
+              next_action_due_date: nextActionDueDate || null,
               outcome,
             })
           }

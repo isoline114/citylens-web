@@ -32,7 +32,12 @@ when the full observation window has elapsed; late-recorded milestones do not
 inflate on-time rates, archived leads remain included, and small cohorts stay
 labeled “Collecting.” Each parcel workflow also exposes its value-minimized
 decision history. Those user-entered, selected-lead outcomes are kept separate
-from historical model accuracy. The portfolio card explicitly does not
+from historical model accuracy. The same citywide explorer includes a private
+Action Queue that prioritizes overdue and near-term follow-ups, exposes open
+leads without a complete action/date plan, identifies missing assignees, and
+asks for outcome updates after 30 days. Each parcel workflow owns its concrete
+next action and due date; terminal records leave the queue automatically. The
+portfolio card explicitly does not
 infer beneficial ownership or related LLCs. Parcel detail separates DOB Safety,
 OATH/ECB, and HPD counts and keeps the adopted 2007 FIRM separate from the 2015
 preliminary FIRM. It links each official source and warns that tax-lot overlap

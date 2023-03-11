@@ -633,6 +633,8 @@ export type ParcelWorkflowItem = {
   assignee: string | null;
   watching: boolean;
   decision_reason: string | null;
+  next_action: string | null;
+  next_action_due_date: string | null;
   outcome:
     | 'unknown'
     | 'owner_contacted'
@@ -742,6 +744,50 @@ export type ParcelWorkflowAnalytics = {
   maturity_windows: ParcelWorkflowMaturityWindow[];
   cohorts: ParcelWorkflowCohort[];
   warnings: string[];
+};
+
+export type ParcelWorkflowActionState =
+  | 'overdue'
+  | 'due_today'
+  | 'due_soon'
+  | 'scheduled'
+  | 'unscheduled';
+
+export type ParcelWorkflowActionItem = {
+  bbl: string;
+  borough: string;
+  address: string | null;
+  stage: ParcelWorkflowStage;
+  outcome: ParcelWorkflowItem['outcome'];
+  assignee: string | null;
+  next_action: string | null;
+  next_action_due_date: string | null;
+  action_state: ParcelWorkflowActionState;
+  days_overdue: number;
+  days_since_update: number;
+  needs_assignee: boolean;
+  needs_outcome_update: boolean;
+  citywide_rank: number | null;
+  priority_tier: ParcelIntelRow['priority_tier'] | null;
+  opportunity_category: ParcelIntelRow['opportunity_category'] | null;
+  saved_at: string;
+  updated_at: string;
+};
+
+export type ParcelWorkflowActions = {
+  schema_version: 'citylens/parcel-workflow-actions@v1';
+  generated_at: string;
+  total_records: number;
+  open_records: number;
+  completed_records: number;
+  overdue_count: number;
+  due_today_count: number;
+  due_soon_count: number;
+  scheduled_count: number;
+  unscheduled_count: number;
+  unassigned_count: number;
+  outcome_update_due_count: number;
+  items: ParcelWorkflowActionItem[];
 };
 
 export type ParcelWorkflowAlert = {
@@ -870,6 +916,12 @@ export async function listParcelWorkflow(): Promise<ParcelWorkflowItem[]> {
 export async function getParcelWorkflowAnalytics(): Promise<ParcelWorkflowAnalytics> {
   return requestJson<ParcelWorkflowAnalytics>(
     '/v1/parcel-intel/workflow/analytics',
+  );
+}
+
+export async function getParcelWorkflowActions(): Promise<ParcelWorkflowActions> {
+  return requestJson<ParcelWorkflowActions>(
+    '/v1/parcel-intel/workflow/actions',
   );
 }
 

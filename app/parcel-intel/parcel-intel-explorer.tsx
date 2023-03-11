@@ -8,6 +8,7 @@ import {
   ArrowUpRight,
   BellRing,
   Building2,
+  CalendarClock,
   Download,
   Layers3,
   LoaderCircle,
@@ -45,6 +46,7 @@ import { downloadCsv } from './[borough]/parcel-intel-csv';
 import { ParcelIntelPropertyPanel } from './parcel-intel-property-panel';
 import { ParcelWorkflowInsights } from './parcel-workflow-insights';
 import { ParcelWorkflowAlertsPanel } from './parcel-workflow-alerts';
+import { ParcelWorkflowActionsPanel } from './parcel-workflow-actions';
 
 const ParcelIntelExplorerMap = dynamic(
   () =>
@@ -117,6 +119,7 @@ export function ParcelIntelExplorer({
   const [leadLimit, setLeadLimit] = useState(30);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
 
   const isAuthenticated = auth.status === 'authenticated';
   const totalAvailable = boroughs.reduce((sum, borough) => sum + borough.count, 0);
@@ -466,8 +469,24 @@ export function ParcelIntelExplorer({
               <button
                 type="button"
                 onClick={() => {
+                  setActionsOpen((value) => !value);
+                  setAlertsOpen(false);
+                  setInsightsOpen(false);
+                }}
+                aria-expanded={actionsOpen}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
+              >
+                <CalendarClock className="h-3.5 w-3.5 text-violet-300" />
+                Action queue
+              </button>
+            )}
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => {
                   setAlertsOpen((value) => !value);
                   setInsightsOpen(false);
+                  setActionsOpen(false);
                 }}
                 aria-expanded={alertsOpen}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
@@ -482,6 +501,7 @@ export function ParcelIntelExplorer({
                 onClick={() => {
                   setInsightsOpen((value) => !value);
                   setAlertsOpen(false);
+                  setActionsOpen(false);
                 }}
                 aria-expanded={insightsOpen}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
@@ -496,6 +516,15 @@ export function ParcelIntelExplorer({
 
       {isAuthenticated && insightsOpen && (
         <ParcelWorkflowInsights onClose={() => setInsightsOpen(false)} />
+      )}
+      {isAuthenticated && actionsOpen && (
+        <ParcelWorkflowActionsPanel
+          onClose={() => setActionsOpen(false)}
+          onSelectParcel={(bbl) => {
+            setActionsOpen(false);
+            selectParcel(bbl);
+          }}
+        />
       )}
       {isAuthenticated && alertsOpen && (
         <ParcelWorkflowAlertsPanel
