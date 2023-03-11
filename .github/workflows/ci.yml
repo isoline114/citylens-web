@@ -21,9 +21,9 @@ jobs:
     env:
       CITYLENS_DISABLE_SSR_DEMOS: '1'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20.11.1
           cache: npm
