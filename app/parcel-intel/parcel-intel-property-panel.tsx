@@ -7,7 +7,9 @@ import {
   BadgeCheck,
   BriefcaseBusiness,
   Building2,
+  CheckCircle2,
   CircleAlert,
+  ClipboardCheck,
   Clock3,
   Database,
   ExternalLink,
@@ -235,10 +237,12 @@ function ParcelDecisionAuditPanel({
   audit,
   workflowItem,
   signedIn,
+  onOpenWorkflow,
 }: {
   audit: ParcelDecisionAudit | undefined;
   workflowItem: ParcelWorkflowItem | null;
   signedIn: boolean;
+  onOpenWorkflow: () => void;
 }) {
   if (!audit) {
     return (
@@ -261,6 +265,16 @@ function ParcelDecisionAuditPanel({
     excluded: 'border-rose-200 bg-rose-50 text-rose-950',
     incomplete: 'border-slate-300 bg-slate-100 text-slate-950',
   }[audit.overall_status];
+  const readiness = audit.readiness;
+  const readinessStyle = readiness
+    ? {
+        blocked: 'border-rose-200 bg-rose-50 text-rose-950',
+        incomplete: 'border-amber-200 bg-amber-50 text-amber-950',
+        review_required: 'border-amber-200 bg-amber-50 text-amber-950',
+        initial_review_ready: 'border-emerald-200 bg-emerald-50 text-emerald-950',
+        limited_preview: 'border-sky-200 bg-sky-50 text-sky-950',
+      }[readiness.status]
+    : '';
 
   return (
     <div data-testid="parcel-decision-audit">
@@ -279,6 +293,65 @@ function ParcelDecisionAuditPanel({
           </div>
         </div>
       </section>
+
+      {readiness && (
+        <section
+          className={`mt-3 rounded-xl border p-4 ${readinessStyle}`}
+          data-testid="parcel-decision-readiness"
+        >
+          <div className="flex items-start gap-2">
+            <ClipboardCheck className="mt-0.5 h-5 w-5 shrink-0" />
+            <div className="min-w-0">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">
+                Next diligence decision
+              </div>
+              <h4 className="mt-1 text-sm font-semibold">{readiness.label}</h4>
+              <p className="mt-1 text-xs leading-5 opacity-85">
+                {readiness.recommended_action}
+              </p>
+            </div>
+          </div>
+
+          {(readiness.blockers.length > 0 ||
+            readiness.review_items.length > 0 ||
+            readiness.cleared_items.length > 0) && (
+            <div className="mt-3 space-y-2 border-t border-current/10 pt-3 text-xs leading-5">
+              {readiness.blockers.map((item) => (
+                <div key={`blocked-${item}`} className="flex items-start gap-2">
+                  <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>{item}</span>
+                </div>
+              ))}
+              {readiness.review_items.map((item) => (
+                <div key={`review-${item}`} className="flex items-start gap-2">
+                  <CircleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>{item}</span>
+                </div>
+              ))}
+              {readiness.cleared_items.map((item) => (
+                <div key={`cleared-${item}`} className="flex items-start gap-2 opacity-80">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {signedIn && (
+            <button
+              type="button"
+              onClick={onOpenWorkflow}
+              className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-medium text-white hover:bg-slate-800"
+            >
+              <BriefcaseBusiness className="h-3.5 w-3.5" />
+              {workflowItem ? 'Review workflow' : 'Use this as the first action'}
+            </button>
+          )}
+          <p className="mt-3 text-[10px] leading-4 opacity-70">
+            {readiness.disclaimer}
+          </p>
+        </section>
+      )}
 
       <section className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
         <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-700">
@@ -1254,6 +1327,7 @@ export function ParcelIntelPropertyPanel({
             audit={row.decision_audit}
             workflowItem={workflowItem}
             signedIn={auth.status === 'authenticated'}
+            onOpenWorkflow={() => setTab('workflow')}
           />
         )}
 
@@ -1272,6 +1346,9 @@ export function ParcelIntelPropertyPanel({
             <>
               <WorkflowEditor
                 item={workflowItem}
+                suggestedNextAction={
+                  row.decision_audit?.readiness?.recommended_action
+                }
                 busy={workflowBusy}
                 onSave={saveWorkflow}
                 onRemove={removeWorkflow}

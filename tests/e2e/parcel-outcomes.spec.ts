@@ -95,6 +95,21 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
             schema_version: 'citylens/parcel-decision-audit@v1',
             overall_status: 'screened_with_flags',
             overall_label: 'Eligible lead with diligence flags',
+            readiness: {
+              status: 'review_required',
+              label: 'Diligence review required before advancing',
+              recommended_action:
+                'Resolve the listed diligence items in the cited source records before advancing to owner outreach or detailed underwriting.',
+              blockers: [],
+              review_items: [
+                'Review floodplain exposure and site-specific mitigation requirements.',
+              ],
+              cleared_items: [
+                'Current project and acquisition eligibility gates passed.',
+              ],
+              disclaimer:
+                'Decision readiness is not a purchase recommendation, appraisal, title opinion, seller-intent score, or substitute for professional diligence.',
+            },
             validation: {
               target: 'dob_nb_job_filing',
               evaluation_scope: '2024 PLUTO to 2025 DOB NB filings',
@@ -439,6 +454,21 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(page.getByTestId('decision-audit-current_diligence')).toContainText(
     'Diligence only · no rank effect',
   );
+  await expect(page.getByTestId('parcel-decision-readiness')).toContainText(
+    'Diligence review required before advancing',
+  );
+  await expect(page.getByTestId('parcel-decision-readiness')).toContainText(
+    'Review floodplain exposure',
+  );
+  await expect(page.getByTestId('parcel-decision-readiness')).toContainText(
+    'not a purchase recommendation',
+  );
+  await page
+    .getByRole('button', { name: 'Use this as the first action' })
+    .click();
+  await expect(
+    page.getByRole('textbox', { name: 'Next action', exact: true }),
+  ).toHaveValue(/Resolve the listed diligence items/);
   await page
     .getByRole('button', {
       name: 'Close parcel panel and return to ranked parcels',

@@ -61,11 +61,13 @@ const OUTCOMES: Array<[ParcelWorkflowItem['outcome'], string]> = [
 
 export function WorkflowEditor({
   item,
+  suggestedNextAction,
   busy,
   onSave,
   onRemove,
 }: {
   item: ParcelWorkflowItem | null;
+  suggestedNextAction?: string | null;
   busy: boolean;
   onSave: (draft: WorkflowDraft) => Promise<void>;
   onRemove: () => Promise<void>;
@@ -76,7 +78,9 @@ export function WorkflowEditor({
   const [assignee, setAssignee] = useState(item?.assignee ?? '');
   const [watching, setWatching] = useState(item?.watching ?? true);
   const [decisionReason, setDecisionReason] = useState(item?.decision_reason ?? '');
-  const [nextAction, setNextAction] = useState(item?.next_action ?? '');
+  const [nextAction, setNextAction] = useState(
+    item?.next_action ?? suggestedNextAction ?? '',
+  );
   const [nextActionDueDate, setNextActionDueDate] = useState(
     item?.next_action_due_date ?? '',
   );
@@ -91,10 +95,10 @@ export function WorkflowEditor({
     setAssignee(item?.assignee ?? '');
     setWatching(item?.watching ?? true);
     setDecisionReason(item?.decision_reason ?? '');
-    setNextAction(item?.next_action ?? '');
+    setNextAction(item?.next_action ?? suggestedNextAction ?? '');
     setNextActionDueDate(item?.next_action_due_date ?? '');
     setOutcome(item?.outcome ?? 'unknown');
-  }, [item]);
+  }, [item, suggestedNextAction]);
 
   return (
     <section className="mt-4 rounded-lg border border-sky-200 bg-sky-50/60 p-3">

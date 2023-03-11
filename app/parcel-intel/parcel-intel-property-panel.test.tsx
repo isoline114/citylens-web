@@ -330,6 +330,21 @@ describe('ParcelIntelPropertyPanel', () => {
             schema_version: 'citylens/parcel-decision-audit@v1',
             overall_status: 'screened_with_flags',
             overall_label: 'Eligible lead with diligence flags',
+            readiness: {
+              status: 'review_required',
+              label: 'Diligence review required before advancing',
+              recommended_action:
+                'Resolve the listed diligence items before advancing to owner outreach or detailed underwriting.',
+              blockers: [],
+              review_items: [
+                'Review floodplain exposure and site-specific mitigation requirements.',
+              ],
+              cleared_items: [
+                'Current project and acquisition eligibility gates passed.',
+              ],
+              disclaimer:
+                'Decision readiness is not a purchase recommendation or seller-intent score.',
+            },
             validation: {
               target: 'dob_nb_job_filing',
               evaluation_scope: '2024 PLUTO to 2025 DOB NB filings',
@@ -395,6 +410,15 @@ describe('ParcelIntelPropertyPanel', () => {
     expect(screen.getByText('Diligence only · no rank effect')).toBeInTheDocument();
     expect(screen.getByText(/not seller intent/i)).toBeInTheDocument();
     expect(screen.getByText(/Sign in to add private notes/i)).toBeInTheDocument();
+    expect(
+      screen.getByTestId('parcel-decision-readiness'),
+    ).toHaveTextContent('Diligence review required before advancing');
+    expect(screen.getByTestId('parcel-decision-readiness')).toHaveTextContent(
+      'Review floodplain exposure',
+    );
+    expect(screen.getByTestId('parcel-decision-readiness')).toHaveTextContent(
+      'not a purchase recommendation',
+    );
   });
 
   it('does not emit city-system links for malformed BBLs', () => {

@@ -20,7 +20,11 @@ historical next-year DOB filing signal from current acquisition gates,
 post-score diligence overlays, source dates, and user-entered workflow
 evidence. Historical top-100/top-1,000 precision is shown as cohort-level
 forward-test performance, never as seller intent or a parcel transaction
-probability.
+probability. The audit also renders the API-owned decision-readiness state:
+current blockers, items requiring review, evidence already cleared, and one
+conservative next diligence action. Signed-in users can carry that action into
+the private workflow as an editable draft; it is never saved automatically and
+does not alter model rank.
 Full borough payloads are deferred until the user requests a CSV. The explorer
 also exposes multi-lot assemblage candidates, a signed-in filter for official
 NYC DOF final tax-lien sale history, a filter for parcels with current Class 1

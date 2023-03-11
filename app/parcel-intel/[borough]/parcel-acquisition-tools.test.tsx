@@ -4,6 +4,24 @@ import { describe, expect, it, vi } from 'vitest';
 import { WorkflowEditor } from './parcel-acquisition-tools';
 
 describe('WorkflowEditor', () => {
+  it('prefills a server-recommended diligence action without saving it automatically', () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <WorkflowEditor
+        item={null}
+        suggestedNextAction="Verify the official project record before outreach."
+        busy={false}
+        onSave={onSave}
+        onRemove={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText('Next action')).toHaveValue(
+      'Verify the official project record before outreach.',
+    );
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
   it('requires a concrete action before saving a due date', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(

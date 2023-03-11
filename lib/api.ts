@@ -371,6 +371,21 @@ export type ParcelDecisionAuditCheck = {
   affects_acquisition_eligibility: boolean;
 };
 
+export type ParcelDecisionReadiness = {
+  status:
+    | 'blocked'
+    | 'incomplete'
+    | 'review_required'
+    | 'initial_review_ready'
+    | 'limited_preview';
+  label: string;
+  recommended_action: string;
+  blockers: string[];
+  review_items: string[];
+  cleared_items: string[];
+  disclaimer: string;
+};
+
 export type ParcelDecisionAudit = {
   schema_version: 'citylens/parcel-decision-audit@v1';
   overall_status:
@@ -379,6 +394,8 @@ export type ParcelDecisionAudit = {
     | 'excluded'
     | 'incomplete';
   overall_label: string;
+  /** Added server-side in July 2026; optional for older cached parcel responses. */
+  readiness?: ParcelDecisionReadiness;
   validation: {
     target: string;
     evaluation_scope: string;
