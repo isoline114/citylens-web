@@ -95,7 +95,6 @@ export function ParcelIntelExplorer({
   const auth = useAuth();
   const router = useRouter();
   const [rows, setRows] = useState<ParcelIntelMapRow[]>([]);
-  const [feedGeneratedAt, setFeedGeneratedAt] = useState<string | null>(null);
   const [loadState, setLoadState] = useState<LoadState>('idle');
   const [failedBoroughs, setFailedBoroughs] = useState<string[]>([]);
   const [selectedDetail, setSelectedDetail] = useState<ParcelIntelRow | null>(
@@ -188,7 +187,6 @@ export function ParcelIntelExplorer({
       if (cancelled || fullInventoryLoaded.current) return;
       const unique = new Map(result.rows.map((row) => [row.bbl, row]));
       setRows([...unique.values()]);
-      setFeedGeneratedAt(result.generatedAt);
       setFailedBoroughs(result.failures);
       setLoadState(unique.size > 0 ? 'ready' : 'error');
     });
@@ -212,7 +210,6 @@ export function ParcelIntelExplorer({
       fullInventoryLoaded.current = includeAuth;
       const unique = new Map(result.rows.map((row) => [row.bbl, row]));
       setRows([...unique.values()]);
-      setFeedGeneratedAt(result.generatedAt);
       setFailedBoroughs(result.failures);
       setLoadState(unique.size > 0 ? 'ready' : 'error');
     });
@@ -672,7 +669,6 @@ export function ParcelIntelExplorer({
             <ParcelIntelPropertyPanel
               key={selectedDetail.bbl}
               row={selectedDetail}
-              feedGeneratedAt={feedGeneratedAt}
               onClose={closeParcel}
               onViewOwnerPortfolio={focusOwnerPortfolio}
             />

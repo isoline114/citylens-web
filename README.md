@@ -26,10 +26,13 @@ presented only as current air/noise/hazardous-materials diligence requirements;
 neither is described as proof of contamination or as an automatic prohibition. A user
 can open a parcel and focus the citywide map on other current candidates with
 the same exact normalized legal name. Signed-in users can open Outcome Insights
-to see prospective saved/contacted/qualified/offered/contracted/closed cohorts
-with explicit denominators and minimum-sample warnings. Each parcel workflow
-also exposes its value-minimized decision history. Those user-entered outcomes
-are kept separate from historical model accuracy. The portfolio card explicitly does not
+to see fixed-horizon 30-day contact, 90-day qualification, 180-day offer,
+270-day contract, and 365-day close rates. A lead enters a denominator only
+when the full observation window has elapsed; late-recorded milestones do not
+inflate on-time rates, archived leads remain included, and small cohorts stay
+labeled “Collecting.” Each parcel workflow also exposes its value-minimized
+decision history. Those user-entered, selected-lead outcomes are kept separate
+from historical model accuracy. The portfolio card explicitly does not
 infer beneficial ownership or related LLCs. Parcel detail separates DOB Safety,
 OATH/ECB, and HPD counts and keeps the adopted 2007 FIRM separate from the 2015
 preliminary FIRM. It links each official source and warns that tax-lot overlap

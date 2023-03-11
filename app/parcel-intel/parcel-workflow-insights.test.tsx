@@ -22,15 +22,18 @@ describe('ParcelWorkflowInsights', () => {
 
   it('withholds percentages while prospective denominators are too small', async () => {
     mocks.getAnalytics.mockResolvedValue({
-      schema_version: 'citylens/parcel-workflow-analytics@v1',
+      schema_version: 'citylens/parcel-workflow-analytics@v2',
       generated_at: '2026-07-23T23:00:00Z',
       measurement_status: 'collecting',
-      measurement_label: 'Collecting prospective outcomes',
+      measurement_label: 'Collecting observation time',
       total_records: 3,
       active_records: 2,
       archived_records: 1,
       event_history_records: 3,
       rank_snapshot_records: 3,
+      valid_saved_at_records: 3,
+      oldest_followup_days: 12,
+      median_followup_days: 8,
       minimum_cohort_size: 30,
       minimum_rate_denominator: 10,
       stage_counts: { reviewing: 3 },
@@ -77,6 +80,18 @@ describe('ParcelWorkflowInsights', () => {
           sufficient_denominator: false,
         },
       },
+      maturity_windows: [
+        {
+          milestone: 'owner_contacted',
+          label: 'Contacted within 30 days',
+          horizon_days: 30,
+          eligible_records: 0,
+          reached_within_horizon: 0,
+          pending_records: 3,
+          rate: null,
+          sufficient_denominator: false,
+        },
+      ],
       cohorts: [
         {
           dimension: 'rank_band',
@@ -89,6 +104,9 @@ describe('ParcelWorkflowInsights', () => {
           closed: 0,
           rejected: 0,
           lost: 0,
+          contacted_rate_denominator: 0,
+          qualified_rate_denominator: 0,
+          close_rate_denominator: 0,
           contacted_rate: 0.3333,
           qualified_rate: 0,
           close_rate: 0,
@@ -100,13 +118,14 @@ describe('ParcelWorkflowInsights', () => {
     render(<ParcelWorkflowInsights onClose={vi.fn()} />);
 
     expect(
-      await screen.findByText('Collecting prospective outcomes'),
+      await screen.findByText('Collecting observation time'),
     ).toBeInTheDocument();
     expect(screen.getAllByText('Collecting').length).toBeGreaterThan(0);
+    expect(screen.getByText(/0 of 0 mature · 3 pending/i)).toBeInTheDocument();
     expect(screen.getByText(/not the historical model's validation accuracy/i))
       .toBeInTheDocument();
     expect(screen.getByRole('cell', { name: '1-100' })).toBeInTheDocument();
-    expect(screen.getByText(/Archived leads remain in the denominator/i))
+    expect(screen.getByText(/Archived leads remain in denominators/i))
       .toBeInTheDocument();
   });
 });

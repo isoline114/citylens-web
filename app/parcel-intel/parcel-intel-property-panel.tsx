@@ -42,7 +42,6 @@ type PanelTab = 'overview' | 'underwrite' | 'workflow';
 
 type Props = {
   row: ParcelIntelRow;
-  feedGeneratedAt?: string | null;
   onClose: () => void;
   onViewOwnerPortfolio?: (ownerPortfolioId: string) => void;
 };
@@ -184,47 +183,8 @@ export function externalParcelLinks(row: ParcelIntelRow): ExternalParcelLink[] {
   return links;
 }
 
-function workflowSnapshot(
-  row: ParcelIntelRow,
-  feedGeneratedAt?: string | null,
-): ParcelWorkflowItem['snapshot'] {
-  return {
-    feed_generated_at: feedGeneratedAt ?? null,
-    property_facts_as_of: row.property_facts_as_of ?? null,
-    citywide_rank: row.citywide_rank ?? null,
-    acquisition_rank: row.acquisition_rank ?? null,
-    priority_tier: row.priority_tier ?? null,
-    opportunity_category: row.opportunity_category ?? null,
-    score_calibrated: row.score_calibrated ?? null,
-    zoning_district_1: row.zoning_district_1,
-    land_use: row.land_use,
-    year_built: row.year_built,
-    allowed_far: row.allowed_far,
-    unused_floor_area_sqft: row.unused_floor_area_sqft,
-    owner_name: row.owner_name ?? null,
-    owner_entity_type: row.owner_entity_type ?? null,
-    owner_portfolio_lot_count: row.owner_portfolio_lot_count ?? null,
-    last_sale_year: row.last_sale_year,
-    latest_nb_filing_year: row.latest_nb_filing_year ?? null,
-    latest_nb_status: row.latest_nb_status ?? null,
-    redev_status: row.redev_status,
-    observed_imagery_year: row.observed_imagery_year ?? null,
-    tax_lien_sale_year: row.tax_lien_sale_year ?? null,
-    critical_violation_count: row.critical_violation_count ?? null,
-    floodplain_1pct: row.floodplain_1pct ?? null,
-    environmental_review_required:
-      row.environmental_review_required ?? null,
-    environmental_designation_number:
-      row.environmental_designation_number ?? null,
-    environmental_designation_kind:
-      row.environmental_designation_kind ?? null,
-    recent_change: row.recent_change ?? null,
-  };
-}
-
 export function ParcelIntelPropertyPanel({
   row,
-  feedGeneratedAt,
   onClose,
   onViewOwnerPortfolio,
 }: Props) {
@@ -305,7 +265,6 @@ export function ParcelIntelPropertyPanel({
       const saved = await saveParcelWorkflow(row.bbl, {
         borough: row.borough ?? 'unknown',
         ...draft,
-        snapshot: workflowSnapshot(row, feedGeneratedAt),
       });
       setWorkflowItem(saved);
     } catch {

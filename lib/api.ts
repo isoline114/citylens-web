@@ -681,13 +681,32 @@ export type ParcelWorkflowCohort = {
   closed: number;
   rejected: number;
   lost: number;
+  contacted_rate_denominator: number;
+  qualified_rate_denominator: number;
+  close_rate_denominator: number;
   contacted_rate: number | null;
   qualified_rate: number | null;
   close_rate: number | null;
 };
 
+export type ParcelWorkflowMaturityWindow = {
+  milestone:
+    | 'owner_contacted'
+    | 'qualified'
+    | 'offer_submitted'
+    | 'under_contract'
+    | 'closed';
+  label: string;
+  horizon_days: number;
+  eligible_records: number;
+  reached_within_horizon: number;
+  pending_records: number;
+  rate: number | null;
+  sufficient_denominator: boolean;
+};
+
 export type ParcelWorkflowAnalytics = {
-  schema_version: 'citylens/parcel-workflow-analytics@v1';
+  schema_version: 'citylens/parcel-workflow-analytics@v2';
   generated_at: string;
   measurement_status: 'collecting' | 'directional' | 'usable';
   measurement_label: string;
@@ -696,6 +715,9 @@ export type ParcelWorkflowAnalytics = {
   archived_records: number;
   event_history_records: number;
   rank_snapshot_records: number;
+  valid_saved_at_records: number;
+  oldest_followup_days: number | null;
+  median_followup_days: number | null;
   minimum_cohort_size: number;
   minimum_rate_denominator: number;
   stage_counts: Record<string, number>;
@@ -717,6 +739,7 @@ export type ParcelWorkflowAnalytics = {
     contract_per_offer: ParcelWorkflowRate;
     close_per_contract: ParcelWorkflowRate;
   };
+  maturity_windows: ParcelWorkflowMaturityWindow[];
   cohorts: ParcelWorkflowCohort[];
   warnings: string[];
 };
@@ -866,7 +889,10 @@ export async function listParcelWorkflowEvents(
 
 export async function saveParcelWorkflow(
   bbl: string,
-  item: Omit<ParcelWorkflowItem, 'bbl' | 'saved_at' | 'updated_at'>,
+  item: Omit<
+    ParcelWorkflowItem,
+    'bbl' | 'saved_at' | 'updated_at' | 'snapshot'
+  >,
 ): Promise<ParcelWorkflowItem> {
   return requestJson<ParcelWorkflowItem>(
     `/v1/parcel-intel/workflow/${encodeURIComponent(bbl)}`,
