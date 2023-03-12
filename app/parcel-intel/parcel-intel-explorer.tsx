@@ -489,25 +489,41 @@ export function ParcelIntelExplorer({
 
   return (
     <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_28px_90px_-42px_rgba(15,23,42,0.42)]">
-      <div className="relative overflow-hidden bg-slate-950 px-5 py-6 text-white md:px-8 md:py-7">
+      <div className="relative overflow-hidden bg-slate-950 px-4 py-4 text-white md:px-6 md:py-5">
         <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-sky-500/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-emerald-500/15 blur-3xl" />
-        <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+        <div className="relative flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-sky-300">
               <MapPinned className="h-4 w-4" />
               Citywide opportunity explorer
             </div>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.025em] md:text-4xl">
-              See the whole market, then open the parcel.
-            </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 md:text-base md:leading-7">
-              Compare ranked redevelopment signals across all five boroughs. Separate
-              uncommitted candidates from active projects, narrow the opportunity set,
-              and open a parcel&apos;s full screening workspace.
+            <p className="mt-1 hidden max-w-2xl text-xs leading-5 text-slate-300 sm:block md:text-sm">
+              Filter the five-borough market, compare signals, and open a parcel&apos;s
+              evidence workspace.
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-2 sm:min-w-[470px]">
+          <div className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] text-slate-300 sm:hidden">
+            <span>
+              <strong className="text-sm text-white">{boroughs.length}</strong>{' '}
+              boroughs
+            </span>
+            <span>
+              <strong className="text-sm text-white">
+                {loadState === 'ready'
+                  ? filtered.length.toLocaleString()
+                  : '…'}
+              </strong>{' '}
+              {isAuthenticated ? 'visible' : 'preview'}
+            </span>
+            <span>
+              <strong className="text-sm text-white">
+                {totalAvailable.toLocaleString()}
+              </strong>{' '}
+              {isAuthenticated ? 'available' : 'with account'}
+            </span>
+          </div>
+          <div className="hidden grid-cols-3 gap-2 sm:grid lg:min-w-[430px]">
             {[
               ['Boroughs', boroughs.length.toString()],
               [
@@ -520,10 +536,10 @@ export function ParcelIntelExplorer({
                 key={label}
                 className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 backdrop-blur"
               >
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">
+                <div className="text-[10px] uppercase tracking-wide text-slate-400">
                   {label}
                 </div>
-                <div className="mt-1 text-sm font-semibold text-white sm:text-base md:text-lg">
+                <div className="mt-0.5 text-sm font-semibold text-white md:text-base">
                   {value}
                 </div>
               </div>
@@ -531,7 +547,7 @@ export function ParcelIntelExplorer({
           </div>
         </div>
 
-        <div className="relative mt-5 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="relative mt-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div className="grid w-full grid-cols-3 self-start rounded-xl border border-white/10 bg-white/5 p-1 sm:inline-flex sm:w-auto">
             {(['priority', 'opportunity', 'borough'] as ExplorerOverlay[]).map(
               (value) => (
@@ -553,17 +569,19 @@ export function ParcelIntelExplorer({
             )}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2 text-xs text-slate-300">
-            {auth.status === 'loading' ? (
-              <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-            ) : isAuthenticated ? (
-              <Sparkles className="h-3.5 w-3.5 text-emerald-300" />
-            ) : (
-              <LockKeyhole className="h-3.5 w-3.5 text-amber-300" />
-            )}
-            <span>
-              {isAuthenticated
-                ? `Full workspace coverage · ${totalAvailable.toLocaleString()} available`
-                : `Preview coverage · sign in to load all ${totalAvailable.toLocaleString()}`}
+            <span className="hidden items-center gap-2 sm:inline-flex">
+              {auth.status === 'loading' ? (
+                <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+              ) : isAuthenticated ? (
+                <Sparkles className="h-3.5 w-3.5 text-emerald-300" />
+              ) : (
+                <LockKeyhole className="h-3.5 w-3.5 text-amber-300" />
+              )}
+              <span>
+                {isAuthenticated
+                  ? `Full workspace coverage · ${totalAvailable.toLocaleString()} available`
+                  : `Preview coverage · sign in to load all ${totalAvailable.toLocaleString()}`}
+              </span>
             </span>
             {isAuthenticated && (
               <button
@@ -761,7 +779,7 @@ export function ParcelIntelExplorer({
         )}
 
       {!isAuthenticated && auth.status !== 'loading' && (
-        <div className="flex flex-col gap-3 border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between md:px-7">
+        <div className="hidden items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-950 sm:flex md:px-7">
           <span>
             You&apos;re viewing the top public slice from each borough. A free account
             unlocks the broader five-borough candidate set and parcel workspaces.
@@ -777,8 +795,8 @@ export function ParcelIntelExplorer({
       )}
 
       <div className="border-b border-slate-200 bg-slate-50 px-4 py-3.5 md:px-6">
-        <div className="grid gap-2 md:grid-cols-[minmax(220px,1.4fr)_repeat(3,minmax(150px,0.7fr))_auto]">
-          <label className="relative">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-[minmax(220px,1.4fr)_repeat(3,minmax(150px,0.7fr))_auto]">
+          <label className="relative col-span-2 md:col-span-1">
             <span className="sr-only">Search parcels</span>
             <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <input

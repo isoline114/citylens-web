@@ -51,6 +51,11 @@ export default async function ParcelIntelIndexPage({
     typeof index.model_metadata?.performance_scope === 'string'
       ? (index.model_metadata.performance_scope as string)
       : null;
+  const latestEvaluationSummary =
+    performanceScope?.match(/latest untouched test:\s*(.+)$/i)?.[1] ??
+    (featureYear !== undefined && featureYear !== null && labelWindow
+      ? `${String(featureYear)} features · ${labelWindow} outcomes`
+      : 'Latest untouched evaluation');
   const precisionAt100 =
     typeof index.model_metadata?.precision_at_100 === 'number'
       ? (index.model_metadata.precision_at_100 as number)
@@ -76,49 +81,103 @@ export default async function ParcelIntelIndexPage({
     Object.keys(index.quality_gate ?? {}).length > 0 && !qualityGatePassed;
 
   return (
-    <main className="mx-auto max-w-[1480px] px-4 py-7 sm:px-6 md:py-10 xl:px-8">
-      <header className="mb-7 max-w-3xl md:mb-8">
-        <div className="inline-flex items-center gap-2 self-start rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-800 ring-1 ring-inset ring-sky-200">
-          <Building2 className="h-3.5 w-3.5" />
-          NYC parcel intelligence · v1
-        </div>
-        <h1 className="mt-4 text-balance text-3xl font-semibold tracking-[-0.03em] text-slate-950 md:text-5xl">
-          Find the sites worth pursuing this week.
-        </h1>
-        <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600 md:text-lg md:leading-8">
-          CityLens ranks all NYC tax lots, refreshes the displayed parcel facts from
-          current city records, and gives your team a place to qualify, watch, underwrite,
-          and advance the best development-site leads. Priority is ordinal—not a promise
-          that a parcel will transact or receive a permit.
-        </p>
-        {(modelType || featureYear || labelWindow || generatedLabel) && (
-          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-600">
-            {generatedLabel && (
-              <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                Refreshed {generatedLabel}
-              </span>
-            )}
-            {modelType && (
-              <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                {modelType} ranking model
-              </span>
-            )}
-            {performanceScope ? (
-              <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                {performanceScope}
-              </span>
-            ) : featureYear !== undefined && featureYear !== null && labelWindow ? (
-              <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                {String(featureYear)} features · {labelWindow} outcomes
-              </span>
-            ) : null}
-            {qualityGatePassed && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-800 ring-1 ring-inset ring-emerald-200">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Top 100 per borough eligibility-checked
-              </span>
-            )}
+    <main className="mx-auto max-w-[1480px] px-4 py-5 sm:px-6 md:py-6 xl:px-8">
+      <header className="mb-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.82fr)] lg:items-end">
+        <div>
+          <div className="inline-flex items-center gap-2 self-start rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-800 ring-1 ring-inset ring-sky-200">
+            <Building2 className="h-3.5 w-3.5" />
+            NYC parcel intelligence · v1
           </div>
+          <h1 className="mt-3 max-w-2xl text-balance text-3xl font-semibold tracking-[-0.03em] text-slate-950 md:text-4xl">
+            Find the sites worth pursuing this week.
+          </h1>
+          <p className="mt-2 max-w-3xl text-[13px] leading-5 text-slate-600 sm:text-sm sm:leading-6 md:text-base md:leading-7">
+            <span className="sm:hidden">
+              Rank NYC development-site leads from current city records. Open a
+              parcel to verify evidence and underwrite. Rank is a screening
+              order—not a transaction promise.
+            </span>
+            <span className="hidden sm:inline">
+              Rank and qualify NYC development-site leads from current city records,
+              then open the parcel to verify evidence, underwrite, and plan the next
+              action. Priority is ordinal—not a promise that a site will transact or
+              receive a permit.
+            </span>
+          </p>
+        </div>
+        {(modelType || featureYear || labelWindow || generatedLabel) && (
+          <>
+            <details
+              className="group rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-sm sm:hidden"
+              aria-label="Published model evidence"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[10px] font-medium text-slate-600 marker:hidden">
+                <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>
+                    {`${
+                      generatedLabel
+                        ? `Refreshed ${generatedLabel}`
+                        : 'Published evidence'
+                    } · ${latestEvaluationSummary}${
+                      qualityGatePassed ? ' · eligibility checked' : ''
+                    }`}
+                  </span>
+                </span>
+                <span className="shrink-0 text-sky-700 group-open:hidden">
+                  Details
+                </span>
+                <span className="hidden shrink-0 text-sky-700 group-open:inline">
+                  Hide
+                </span>
+              </summary>
+              <p className="mt-2 border-t border-slate-200 pt-2 text-[10px] leading-4 text-slate-600">
+                {performanceScope ??
+                  (featureYear !== undefined &&
+                  featureYear !== null &&
+                  labelWindow
+                    ? `${String(featureYear)} features · ${labelWindow} outcomes`
+                    : 'Historical model lineage is available in the methodology.')}
+                {modelType ? ` · ${modelType} ranking.` : ''}
+              </p>
+            </details>
+            <div
+              className="hidden rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-sm sm:block"
+              aria-label="Published model evidence"
+            >
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                Published evidence
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] leading-4 text-slate-600">
+                {generatedLabel && (
+                  <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-inset ring-slate-200">
+                    Refreshed {generatedLabel}
+                  </span>
+                )}
+                {modelType && (
+                  <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-inset ring-slate-200">
+                    {modelType} ranking
+                  </span>
+                )}
+                {performanceScope ? (
+                  <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-inset ring-slate-200">
+                    {performanceScope}
+                  </span>
+                ) : featureYear !== undefined && featureYear !== null && labelWindow ? (
+                  <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-inset ring-slate-200">
+                    {String(featureYear)} features · {labelWindow} outcomes
+                  </span>
+                ) : null}
+                {qualityGatePassed && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-800 ring-1 ring-inset ring-emerald-200">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Top 100 / borough eligibility-checked
+                  </span>
+                )}
+              </div>
+            </div>
+          </>
         )}
       </header>
 

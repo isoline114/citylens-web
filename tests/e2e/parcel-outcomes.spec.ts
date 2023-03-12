@@ -645,6 +645,14 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
 
   await page.goto('/parcel-intel');
 
+  const initialMapBounds = await page
+    .getByTestId('parcel-citywide-map')
+    .boundingBox();
+  expect(initialMapBounds).not.toBeNull();
+  expect(initialMapBounds?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(
+    page.viewportSize()?.height ?? 0,
+  );
+
   await page.getByRole('button', { name: 'Saved views' }).click();
   await expect(page.getByTestId('saved-views-panel')).toBeVisible();
   await page.getByRole('button', { name: 'Apply view' }).click();
