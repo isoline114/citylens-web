@@ -158,7 +158,10 @@ This frontend aligns to the CityLens API contract served by `citylens-engine`:
 - `GET  /v1/health` — public
 - `GET  /v1/run-options` — public
 - `GET  /v1/parcel-intel/index` — public citywide metadata plus a
-  generation-bound, parcel-free prospective validation status
+  generation-bound, parcel-free prospective validation status and
+  API-derived weekly-monitor freshness state. The UI withholds stale live
+  metrics behind an overdue warning instead of presenting them as current
+  accuracy.
 - `GET  /v1/demo/featured`, `GET /v1/demo/runs/{run_id}` — public demo endpoints
 - `POST /v1/runs` — Bearer auth required (the engine narrowly validates the public
   request shape; sam2/aoi defaults are server-injected)

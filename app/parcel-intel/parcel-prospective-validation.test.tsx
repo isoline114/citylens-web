@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { ParcelProspectiveValidationStatus } from '@/lib/api';
+import type { ParcelProspectiveValidationHealth } from '@/lib/api';
 import { ParcelProspectiveValidation } from './parcel-prospective-validation';
 
 function status(
@@ -72,11 +73,33 @@ function status(
   };
 }
 
+function health(
+  state: ParcelProspectiveValidationHealth['status'] = 'current',
+): ParcelProspectiveValidationHealth {
+  return {
+    status: state,
+    reason:
+      state === 'stale'
+        ? 'observation_lag_exceeded'
+        : state === 'unavailable'
+          ? 'status_missing_or_invalid'
+          : 'current',
+    observation_lag_days:
+      state === 'unavailable' ? null : state === 'stale' ? 10 : 1,
+    max_observation_lag_days: 8,
+    next_monitor_due_on:
+      state === 'unavailable' ? null : '2026-08-02',
+    oldest_official_source_updated_at:
+      state === 'unavailable' ? null : '2026-07-24T19:00:00Z',
+  };
+}
+
 describe('ParcelProspectiveValidation', () => {
   it('does not turn pre-observation nulls into zero accuracy', () => {
     render(
       <ParcelProspectiveValidation
         status={status('awaiting_post_issue_data')}
+        health={health()}
       />,
     );
 
@@ -85,6 +108,7 @@ describe('ParcelProspectiveValidation', () => {
       'awaiting_post_issue_data',
     );
     expect(screen.getByText(/intentionally unavailable—not 0%/i)).toBeVisible();
+    expect(screen.getByText(/weekly evidence monitor current/i)).toBeVisible();
   });
 
   it('labels immature observations as lower bounds', () => {
@@ -106,11 +130,34 @@ describe('ParcelProspectiveValidation', () => {
   });
 
   it('fails visibly when live status is unavailable', () => {
-    render(<ParcelProspectiveValidation status={null} />);
+    render(
+      <ParcelProspectiveValidation
+        status={null}
+        health={health('unavailable')}
+      />,
+    );
 
     expect(screen.getByText('Live cohort status unavailable')).toBeVisible();
     expect(
       screen.getByText(/do not infer current accuracy/i),
     ).toBeVisible();
+  });
+
+  it('blocks stale live metrics behind an overdue warning', () => {
+    render(
+      <ParcelProspectiveValidation
+        status={status('collecting')}
+        health={health('stale')}
+      />,
+    );
+
+    expect(screen.getByTestId('prospective-validation-status')).toHaveAttribute(
+      'data-status',
+      'stale',
+    );
+    expect(screen.getByText('Live cohort monitor overdue')).toBeVisible();
+    expect(screen.getByText(/has not advanced for 10 days/i)).toBeVisible();
+    expect(screen.getByText(/must not be treated as current accuracy/i)).toBeVisible();
+    expect(screen.queryByText(/3 filings/i)).not.toBeInTheDocument();
   });
 });

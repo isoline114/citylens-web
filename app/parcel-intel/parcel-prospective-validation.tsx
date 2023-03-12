@@ -1,5 +1,6 @@
 import { Activity, Clock3, ShieldCheck } from 'lucide-react';
 import type {
+  ParcelProspectiveValidationHealth,
   ParcelProspectiveValidationMetric,
   ParcelProspectiveValidationStatus,
 } from '@/lib/api';
@@ -48,12 +49,42 @@ function matureMetric(
   )}–${formatPercent(metric.final_precision_95ci[1])})`;
 }
 
+function FreshnessNote({
+  health,
+  className,
+}: {
+  health: ParcelProspectiveValidationHealth | null | undefined;
+  className: string;
+}) {
+  if (
+    health?.status !== 'current' ||
+    health.observation_lag_days === null ||
+    health.next_monitor_due_on === null ||
+    health.oldest_official_source_updated_at === null
+  ) {
+    return null;
+  }
+  return (
+    <p className={`mt-2 text-[11px] leading-4 ${className}`}>
+      Weekly evidence monitor current · {health.observation_lag_days}-day
+      observation lag · freshness deadline{' '}
+      {formatDate(health.next_monitor_due_on)}. Oldest official source update{' '}
+      {formatDate(health.oldest_official_source_updated_at)}.
+    </p>
+  );
+}
+
 export function ParcelProspectiveValidation({
   status,
+  health,
 }: {
   status: ParcelProspectiveValidationStatus | null;
+  health?: ParcelProspectiveValidationHealth | null;
 }) {
-  if (!status) {
+  if (
+    !status ||
+    health?.status === 'unavailable'
+  ) {
     return (
       <section
         className="rounded-xl border border-amber-200 bg-amber-50 p-4"
@@ -68,6 +99,33 @@ export function ParcelProspectiveValidation({
           The historical forward test remains available, but the live
           production cohort could not be matched to this feed. Do not infer
           current accuracy from the historical percentages.
+        </p>
+      </section>
+    );
+  }
+
+  if (health?.status === 'stale') {
+    return (
+      <section
+        className="rounded-xl border border-amber-300 bg-amber-50 p-4"
+        data-testid="prospective-validation-status"
+        data-status="stale"
+      >
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-950">
+          <Clock3 className="h-4 w-4" />
+          Live cohort monitor overdue
+        </h3>
+        <p className="mt-2 text-xs leading-5 text-amber-900">
+          Evidence has not advanced for{' '}
+          {health.observation_lag_days?.toLocaleString() ?? 'an unknown number of'}{' '}
+          days; the weekly freshness limit is{' '}
+          {health.max_observation_lag_days} days. The last accepted observation
+          date is {formatDate(status.observed_through)}.
+        </p>
+        <p className="mt-2 text-[11px] leading-4 text-amber-800">
+          Historical validation remains available, but live cohort metrics are
+          stale and must not be treated as current accuracy. Investigate the
+          monitor or official DOB source before relying on them.
         </p>
       </section>
     );
@@ -93,6 +151,7 @@ export function ParcelProspectiveValidation({
         <p className="mt-2 text-[11px] leading-4 text-sky-800">
           Final 365-day results become eligible after {formatDate(status.matures_at)}.
         </p>
+        <FreshnessNote health={health} className="text-sky-800" />
       </section>
     );
   }
@@ -125,6 +184,7 @@ export function ParcelProspectiveValidation({
           lower bounds, not final accuracy; unobserved parcels are not counted
           as negatives before {formatDate(status.matures_at)}.
         </p>
+        <FreshnessNote health={health} className="text-sky-800" />
       </section>
     );
   }
@@ -155,6 +215,7 @@ export function ParcelProspectiveValidation({
         Complete 365-day DOB New Building filing outcome window. This is not
         seller intent, acquisition, or closing probability.
       </p>
+      <FreshnessNote health={health} className="text-emerald-800" />
     </section>
   );
 }

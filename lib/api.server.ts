@@ -90,6 +90,7 @@ export async function fetchParcelIntelIndexOnServer(): Promise<ParcelIntelIndex>
     data_sources: {},
     quality_gate: {},
     prospective_validation: null,
+    prospective_validation_health: null,
   };
   if (process.env.CITYLENS_DISABLE_SSR_PARCEL_INTEL === '1') return empty;
 

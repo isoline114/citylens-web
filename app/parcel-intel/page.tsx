@@ -1,6 +1,9 @@
 import { BookOpen, Building2, Database, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { fetchParcelIntelIndexOnServer } from '@/lib/api.server';
-import type { ParcelProspectiveValidationStatus } from '@/lib/api';
+import type {
+  ParcelProspectiveValidationHealth,
+  ParcelProspectiveValidationStatus,
+} from '@/lib/api';
 import { ParcelIntelExplorer } from './parcel-intel-explorer';
 import { ParcelProspectiveValidation } from './parcel-prospective-validation';
 
@@ -160,6 +163,9 @@ export default async function ParcelIntelIndexPage({
             precisionAt1000={precisionAt1000}
             evaluationBaseRate={evaluationBaseRate}
             prospectiveValidation={index.prospective_validation ?? null}
+            prospectiveValidationHealth={
+              index.prospective_validation_health ?? null
+            }
           />
         </>
       )}
@@ -176,6 +182,7 @@ function MethodologyDisclosure({
   precisionAt1000,
   evaluationBaseRate,
   prospectiveValidation,
+  prospectiveValidationHealth,
 }: {
   modelType: string | null;
   featureYear: string | number | undefined;
@@ -185,6 +192,7 @@ function MethodologyDisclosure({
   precisionAt1000: number | null;
   evaluationBaseRate: number | null;
   prospectiveValidation: ParcelProspectiveValidationStatus | null;
+  prospectiveValidationHealth: ParcelProspectiveValidationHealth | null;
 }) {
   const forwardTestBody =
     precisionAt100 !== null && precisionAt1000 !== null
@@ -234,7 +242,10 @@ function MethodologyDisclosure({
           title="Forward-test hit rate"
           body={forwardTestBody}
         />
-        <ParcelProspectiveValidation status={prospectiveValidation} />
+        <ParcelProspectiveValidation
+          status={prospectiveValidation}
+          health={prospectiveValidationHealth}
+        />
         <MethodCard
           icon={TriangleAlert}
           title="Required diligence"

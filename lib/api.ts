@@ -707,6 +707,18 @@ export type ParcelProspectiveValidationStatus = {
   interpretation: string;
 };
 
+export type ParcelProspectiveValidationHealth = {
+  status: 'current' | 'stale' | 'unavailable';
+  reason:
+    | 'current'
+    | 'observation_lag_exceeded'
+    | 'status_missing_or_invalid';
+  observation_lag_days: number | null;
+  max_observation_lag_days: 8;
+  next_monitor_due_on: string | null;
+  oldest_official_source_updated_at: string | null;
+};
+
 export type ParcelIntelIndex = {
   boroughs: ParcelIntelBorough[];
   generated_at: string | null;
@@ -715,6 +727,7 @@ export type ParcelIntelIndex = {
   data_sources?: Record<string, unknown>;
   quality_gate?: Record<string, unknown>;
   prospective_validation?: ParcelProspectiveValidationStatus | null;
+  prospective_validation_health?: ParcelProspectiveValidationHealth | null;
   age_days?: number | null;
   stale?: boolean;
 };
