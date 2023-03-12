@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
+  ArrowRight,
   BadgeCheck,
   BookmarkPlus,
   BriefcaseBusiness,
@@ -188,6 +189,17 @@ const AUDIT_LAYER_LABELS: Record<ParcelDecisionAuditCheck['layer'], string> = {
   source_freshness: 'Source provenance',
 };
 
+const READINESS_STYLES: Record<
+  NonNullable<ParcelDecisionAudit['readiness']>['status'],
+  string
+> = {
+  blocked: 'border-rose-200 bg-rose-50 text-rose-950',
+  incomplete: 'border-amber-200 bg-amber-50 text-amber-950',
+  review_required: 'border-amber-200 bg-amber-50 text-amber-950',
+  initial_review_ready: 'border-emerald-200 bg-emerald-50 text-emerald-950',
+  limited_preview: 'border-sky-200 bg-sky-50 text-sky-950',
+};
+
 function parseBbl(
   bbl: string,
 ): { borough: string; block: string; lot: string } | null {
@@ -268,15 +280,7 @@ function ParcelDecisionAuditPanel({
     incomplete: 'border-slate-300 bg-slate-100 text-slate-950',
   }[audit.overall_status];
   const readiness = audit.readiness;
-  const readinessStyle = readiness
-    ? {
-        blocked: 'border-rose-200 bg-rose-50 text-rose-950',
-        incomplete: 'border-amber-200 bg-amber-50 text-amber-950',
-        review_required: 'border-amber-200 bg-amber-50 text-amber-950',
-        initial_review_ready: 'border-emerald-200 bg-emerald-50 text-emerald-950',
-        limited_preview: 'border-sky-200 bg-sky-50 text-sky-950',
-      }[readiness.status]
-    : '';
+  const readinessStyle = readiness ? READINESS_STYLES[readiness.status] : '';
 
   return (
     <div data-testid="parcel-decision-audit">
@@ -491,6 +495,62 @@ function ParcelDecisionAuditPanel({
         </ul>
       </details>
     </div>
+  );
+}
+
+function ParcelDecisionPosture({
+  readiness,
+  onOpenAudit,
+}: {
+  readiness: NonNullable<ParcelDecisionAudit['readiness']>;
+  onOpenAudit: () => void;
+}) {
+  const counts = [
+    ['Blocked', readiness.blockers.length],
+    ['Review', readiness.review_items.length],
+    ['Cleared', readiness.cleared_items.length],
+  ] as const;
+
+  return (
+    <section
+      className={`mb-3 rounded-xl border p-3 ${READINESS_STYLES[readiness.status]}`}
+      data-testid="parcel-decision-posture"
+    >
+      <div className="flex items-start gap-2">
+        <ClipboardCheck className="mt-0.5 h-4 w-4 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">
+            Decision posture
+          </div>
+          <h4 className="mt-0.5 text-sm font-semibold">{readiness.label}</h4>
+          <p className="mt-1 text-xs leading-5 opacity-85">
+            {readiness.recommended_action}
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-current/10 pt-3">
+        {counts.map(([label, count]) => (
+          <span
+            key={label}
+            className="rounded-full bg-white/70 px-2 py-1 text-[10px] font-semibold ring-1 ring-inset ring-current/10"
+          >
+            {label} {count}
+          </span>
+        ))}
+        <button
+          type="button"
+          onClick={onOpenAudit}
+          className="ml-auto inline-flex h-7 items-center gap-1 rounded-lg bg-slate-950 px-2.5 text-[10px] font-semibold text-white hover:bg-slate-800"
+        >
+          Open evidence audit
+          <ArrowRight className="h-3 w-3" />
+        </button>
+      </div>
+      <p className="mt-2 text-[10px] leading-4 opacity-70">
+        Source-bound screening guidance—not a buy/pass recommendation or completed
+        diligence.
+      </p>
+    </section>
   );
 }
 
@@ -829,6 +889,12 @@ export function ParcelIntelPropertyPanel({
 
         {tab === 'overview' && (
           <div>
+            {row.decision_audit?.readiness && (
+              <ParcelDecisionPosture
+                readiness={row.decision_audit.readiness}
+                onOpenAudit={() => setTab('audit')}
+              />
+            )}
             {row.acquisition_status === 'active_project' && (
               <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
                 <div className="flex items-start gap-2">

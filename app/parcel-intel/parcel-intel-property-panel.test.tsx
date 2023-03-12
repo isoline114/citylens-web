@@ -658,7 +658,15 @@ describe('ParcelIntelPropertyPanel', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Audit' }));
+    const posture = screen.getByTestId('parcel-decision-posture');
+    expect(posture).toHaveTextContent('Diligence review required before advancing');
+    expect(posture).toHaveTextContent('Review 1');
+    expect(posture).toHaveTextContent('Cleared 1');
+    expect(posture).toHaveTextContent('not a buy/pass recommendation');
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /Open evidence audit/i }),
+    );
 
     expect(screen.getByText('Eligible lead with diligence flags')).toBeInTheDocument();
     expect(screen.getByText('34.0%')).toBeInTheDocument();
