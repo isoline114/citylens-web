@@ -104,7 +104,9 @@ describe('ParcelIntelPropertyPanel', () => {
     render(<ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Underwrite' }));
-    expect(screen.getByText('Indicative maximum land basis')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Indicative maximum land basis/),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Workflow' }));
     expect(screen.getByText('Sign in to manage this opportunity')).toBeInTheDocument();

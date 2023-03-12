@@ -32,6 +32,15 @@ current blockers, items requiring review, evidence already cleared, and one
 conservative next diligence action. Signed-in users can carry that action into
 the private workflow as an editable draft; it is never saved automatically and
 does not alter model rank.
+The Underwrite tab replaces a single-point residual with an editable
+downside/base/upside development sensitivity. Every case exposes value, hard
+cost, efficiency, soft-cost, and target-margin assumptions; outputs include
+total residual land basis plus per-lot-SF and per-gross-SF comparisons. The
+range is explicitly illustrative, stays in the browser session, preserves the
+current parcel capacity input across cases, floors negative residuals at zero,
+and lists financing, tax, carrying, affordable-housing, demolition, tenancy,
+environmental, assemblage, and entitlement omissions. It is a screening
+comparison, not an appraisal or valuation.
 The methodology disclosure separately renders the exact live production
 cohort's awaiting, collecting, or mature state from the public-safe engine
 contract. Pre-observation nulls are described as unavailable—not `0%`;

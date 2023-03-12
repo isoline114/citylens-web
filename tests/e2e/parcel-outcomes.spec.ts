@@ -743,6 +743,12 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(page.getByTestId('mih-underwriting-warning')).toContainText(
     'MIH scenario required',
   );
+  await expect(page.getByTestId('land-basis-range')).toContainText(
+    'A sensitivity range, not a valuation',
+  );
+  await expect(page.getByTestId('land-basis-scenario-downside')).toBeVisible();
+  await expect(page.getByTestId('land-basis-scenario-base')).toBeVisible();
+  await expect(page.getByTestId('land-basis-scenario-upside')).toBeVisible();
   await page.getByRole('button', { name: 'Audit' }).click();
   await expect
     .poll(() => productEvents)
