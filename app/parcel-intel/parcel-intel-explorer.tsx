@@ -509,7 +509,7 @@ export function ParcelIntelExplorer({
           </div>
           <div className="grid grid-cols-3 gap-2 sm:min-w-[470px]">
             {[
-              ['Coverage', `${boroughs.length} boroughs`],
+              ['Boroughs', boroughs.length.toString()],
               [
                 'Visible now',
                 loadState === 'ready' ? filtered.length.toLocaleString() : 'Loading…',
@@ -523,7 +523,7 @@ export function ParcelIntelExplorer({
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">
                   {label}
                 </div>
-                <div className="mt-1 text-base font-semibold text-white md:text-lg">
+                <div className="mt-1 text-sm font-semibold text-white sm:text-base md:text-lg">
                   {value}
                 </div>
               </div>
@@ -532,7 +532,7 @@ export function ParcelIntelExplorer({
         </div>
 
         <div className="relative mt-5 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="inline-flex self-start rounded-xl border border-white/10 bg-white/5 p-1">
+          <div className="grid w-full grid-cols-3 self-start rounded-xl border border-white/10 bg-white/5 p-1 sm:inline-flex sm:w-auto">
             {(['priority', 'opportunity', 'borough'] as ExplorerOverlay[]).map(
               (value) => (
                 <button
@@ -540,7 +540,7 @@ export function ParcelIntelExplorer({
                   type="button"
                   onClick={() => setOverlay(value)}
                   aria-pressed={overlay === value}
-                  className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-xs font-medium capitalize transition-colors ${
+                  className={`inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg px-1.5 text-[11px] font-medium capitalize transition-colors sm:gap-1.5 sm:px-3.5 sm:text-xs ${
                     overlay === value
                       ? 'bg-white text-slate-950 shadow-sm'
                       : 'text-slate-300 hover:bg-white/10 hover:text-white'
