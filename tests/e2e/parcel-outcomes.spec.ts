@@ -740,6 +740,25 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     'not a walking route',
   );
   await page.getByRole('button', { name: 'Underwrite' }).click();
+  await expect
+    .poll(() => productEvents)
+    .toEqual([
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'saved_view_applied',
+        source: 'saved_views',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'parcel_opened',
+        source: 'ranking',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'underwriting_opened',
+        source: 'underwrite_tab',
+      },
+    ]);
   await expect(page.getByTestId('mih-underwriting-warning')).toContainText(
     'MIH scenario required',
   );
@@ -749,6 +768,36 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(page.getByTestId('land-basis-scenario-downside')).toBeVisible();
   await expect(page.getByTestId('land-basis-scenario-base')).toBeVisible();
   await expect(page.getByTestId('land-basis-scenario-upside')).toBeVisible();
+  await page
+    .getByLabel('Value / sellable SF', { exact: true })
+    .fill('1000');
+  await page
+    .getByLabel('Hard cost / gross SF', { exact: true })
+    .fill('425');
+  await expect
+    .poll(() => productEvents)
+    .toEqual([
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'saved_view_applied',
+        source: 'saved_views',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'parcel_opened',
+        source: 'ranking',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'underwriting_opened',
+        source: 'underwrite_tab',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'underwriting_assumptions_changed',
+        source: 'base_assumptions',
+      },
+    ]);
   await page.getByRole('button', { name: 'Audit' }).click();
   await expect
     .poll(() => productEvents)
@@ -765,10 +814,23 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
       },
       {
         schema_version: 'citylens/parcel-product-event@v1',
+        event: 'underwriting_opened',
+        source: 'underwrite_tab',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'underwriting_assumptions_changed',
+        source: 'base_assumptions',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
         event: 'decision_audit_opened',
         source: 'audit_tab',
       },
     ]);
+  expect(JSON.stringify(productEvents)).not.toMatch(
+    /3020960069|100 E 21|owner|notes|tags|1000|425/i,
+  );
   await expect(page.getByTestId('parcel-decision-audit')).toContainText(
     'Eligible lead with diligence flags',
   );

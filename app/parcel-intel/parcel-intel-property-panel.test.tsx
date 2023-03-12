@@ -107,10 +107,65 @@ describe('ParcelIntelPropertyPanel', () => {
     expect(
       screen.getByText(/Indicative maximum land basis/),
     ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Value / sellable SF'), {
+      target: { value: '1000' },
+    });
+    expect(mocks.recordParcelProductEvent).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Workflow' }));
     expect(screen.getByText('Sign in to manage this opportunity')).toBeInTheDocument();
     expect(mocks.getParcelWorkflow).not.toHaveBeenCalled();
+  });
+
+  it('records only the first underwriting open and adjustment per parcel', async () => {
+    mocks.authStatus = 'authenticated';
+    const { rerender } = render(
+      <ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Underwrite' }));
+    await waitFor(() =>
+      expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+        'underwriting_opened',
+        'underwrite_tab',
+      ),
+    );
+
+    fireEvent.change(screen.getByLabelText('Value / sellable SF'), {
+      target: { value: '1000' },
+    });
+    fireEvent.change(screen.getByLabelText('Hard cost / gross SF'), {
+      target: { value: '425' },
+    });
+    await waitFor(() =>
+      expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+        'underwriting_assumptions_changed',
+        'base_assumptions',
+      ),
+    );
+    expect(mocks.recordParcelProductEvent).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Overview' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Underwrite' }));
+    expect(mocks.recordParcelProductEvent).toHaveBeenCalledTimes(2);
+
+    rerender(
+      <ParcelIntelPropertyPanel
+        row={{ ...parcel, bbl: '3050660026', address: 'Other parcel' }}
+        onClose={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Underwrite' }));
+    await waitFor(() =>
+      expect(mocks.recordParcelProductEvent).toHaveBeenLastCalledWith(
+        'underwriting_opened',
+        'underwrite_tab',
+      ),
+    );
+    expect(mocks.recordParcelProductEvent).toHaveBeenCalledTimes(3);
+    expect(JSON.stringify(mocks.recordParcelProductEvent.mock.calls)).not.toMatch(
+      /3050660023|3050660026|address|owner|value|cost|margin|1000|425/i,
+    );
   });
 
   it('explains and links acquisition-blocking ZAP entitlement activity', () => {

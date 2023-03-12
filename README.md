@@ -189,11 +189,14 @@ Standard artifact filenames the UI renders:
 
 Authenticated Parcel Intelligence interactions send only the strict
 `citylens/parcel-product-event@v1` event/source pair to the engine. The client
-never includes a BBL, address, owner, URL, notes, tags, assignee, contact, or
-free text. Parcel opens, decision-audit opens, and saved-view applies are
-coarse directional events; decision-audit opens identify only whether the
-posture card or Audit tab was used. The event does not include which parcel or
-view was used. Delivery is best-effort and cannot block parcel diligence,
+never includes a BBL, address, owner, URL, notes, tags, assignee, contact,
+underwriting value, cost, margin, efficiency, or free text. Parcel opens,
+decision-audit opens, Underwrite-tab opens, first assumption adjustments, and
+saved-view applies are coarse directional events. Decision-audit opens identify
+only whether the posture card or Audit tab was used; underwriting events identify
+only whether the Underwrite tab opened or any base assumption was changed. The
+event does not include which parcel or view was used or what assumption changed.
+Delivery is best-effort and cannot block parcel diligence, scenario editing,
 saved-view restoration, or workflow saves. Canonical saved-view
 create/update/delete counts are recorded
 transactionally by the engine rather than inferred from browser telemetry.

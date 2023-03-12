@@ -119,6 +119,7 @@ describe('LandBasisCalculator', () => {
   });
 
   it('shows an editable, transparent scenario comparison', () => {
+    const onAssumptionsChange = vi.fn();
     render(
       <LandBasisCalculator
         row={
@@ -129,6 +130,7 @@ describe('LandBasisCalculator', () => {
           } as ParcelIntelRow
         }
         defaultOpen
+        onAssumptionsChange={onAssumptionsChange}
       />,
     );
 
@@ -158,6 +160,7 @@ describe('LandBasisCalculator', () => {
     expect(screen.getByTestId('land-basis-scenario-base')).toHaveTextContent(
       '$2,000,000',
     );
+    expect(onAssumptionsChange).toHaveBeenCalledOnce();
   });
 
   it('warns that a mapped MIH parcel needs an affordability scenario', () => {

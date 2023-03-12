@@ -244,6 +244,10 @@ describe('api client', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await recordParcelProductEvent('parcel_opened', 'ranking');
+    await recordParcelProductEvent(
+      'underwriting_assumptions_changed',
+      'base_assumptions',
+    );
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain('/v1/parcel-intel/product-events');
@@ -257,6 +261,19 @@ describe('api client', () => {
     expect(String(init.body)).not.toMatch(/bbl|address|owner|notes|tags/i);
     expect(new Headers(init.headers).get('Authorization')).toBe(
       'Bearer tok-abc',
+    );
+
+    const [, underwritingInit] = fetchMock.mock.calls[1] as [
+      string,
+      RequestInit,
+    ];
+    expect(JSON.parse(String(underwritingInit.body))).toEqual({
+      schema_version: 'citylens/parcel-product-event@v1',
+      event: 'underwriting_assumptions_changed',
+      source: 'base_assumptions',
+    });
+    expect(String(underwritingInit.body)).not.toMatch(
+      /bbl|address|owner|notes|tags|value|cost|margin|efficiency/i,
     );
   });
 

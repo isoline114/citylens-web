@@ -437,9 +437,11 @@ export function buildLandBasisScenarios({
 export function LandBasisCalculator({
   row,
   defaultOpen = false,
+  onAssumptionsChange,
 }: {
   row: ParcelIntelRow;
   defaultOpen?: boolean;
+  onAssumptionsChange?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [valuePerSqft, setValuePerSqft] = useState(900);
@@ -672,7 +674,12 @@ export function LandBasisCalculator({
                     maximum === undefined ? undefined : Number(maximum)
                   }
                   value={Number(value)}
-                  onChange={(event) => (setter as (next: number) => void)(Number(event.target.value))}
+                  onChange={(event) => {
+                    (setter as (next: number) => void)(
+                      Number(event.target.value),
+                    );
+                    onAssumptionsChange?.();
+                  }}
                   className={`mt-1 h-8 w-full rounded border border-slate-300 bg-white px-2 text-sm ${FOCUS_RING}`}
                 />
               </label>

@@ -576,6 +576,8 @@ export function ParcelIntelPropertyPanel({
   const activeBblRef = useRef(row.bbl);
   const workflowMutationIdRef = useRef(0);
   const trackedDecisionAuditOpensRef = useRef(new Set<string>());
+  const trackedUnderwritingOpensRef = useRef(new Set<string>());
+  const trackedUnderwritingAdjustmentsRef = useRef(new Set<string>());
   const effectiveWorkflowLoadState =
     workflowContextBbl === row.bbl
       ? workflowLoadState
@@ -617,6 +619,39 @@ export function ParcelIntelPropertyPanel({
       source,
     ).catch(() => {
       // Aggregate adoption telemetry is best-effort and never blocks diligence.
+    });
+  };
+
+  const openUnderwriting = () => {
+    setTab('underwrite');
+    if (
+      auth.status !== 'authenticated' ||
+      trackedUnderwritingOpensRef.current.has(row.bbl)
+    ) {
+      return;
+    }
+    trackedUnderwritingOpensRef.current.add(row.bbl);
+    void recordParcelProductEvent(
+      'underwriting_opened',
+      'underwrite_tab',
+    ).catch(() => {
+      // Aggregate adoption telemetry is best-effort and never blocks underwriting.
+    });
+  };
+
+  const trackFirstUnderwritingAdjustment = () => {
+    if (
+      auth.status !== 'authenticated' ||
+      trackedUnderwritingAdjustmentsRef.current.has(row.bbl)
+    ) {
+      return;
+    }
+    trackedUnderwritingAdjustmentsRef.current.add(row.bbl);
+    void recordParcelProductEvent(
+      'underwriting_assumptions_changed',
+      'base_assumptions',
+    ).catch(() => {
+      // Values stay local; aggregate telemetry never blocks scenario editing.
     });
   };
 
@@ -881,6 +916,10 @@ export function ParcelIntelPropertyPanel({
             onClick={() => {
               if (value === 'audit') {
                 openDecisionAudit('audit_tab');
+                return;
+              }
+              if (value === 'underwrite') {
+                openUnderwriting();
                 return;
               }
               setTab(value);
@@ -1763,7 +1802,11 @@ export function ParcelIntelPropertyPanel({
               This is a fast residual-land-value screen, not an appraisal. Verify zoning,
               affordable-housing requirements, construction costs, and tenancy.
             </div>
-            <LandBasisCalculator row={row} defaultOpen />
+            <LandBasisCalculator
+              row={row}
+              defaultOpen
+              onAssumptionsChange={trackFirstUnderwritingAdjustment}
+            />
           </div>
         )}
 
