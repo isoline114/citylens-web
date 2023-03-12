@@ -55,6 +55,35 @@ export type MeResponse = {
   };
 };
 
+export type PilotPlan = 'acquisitions' | 'concierge';
+export type PilotBorough =
+  | 'manhattan'
+  | 'brooklyn'
+  | 'queens'
+  | 'bronx'
+  | 'staten_island';
+
+export type PilotRequestPayload = {
+  schema_version: 'citylens/pilot-request@v1';
+  plan: PilotPlan;
+  name: string;
+  work_email: string;
+  company: string;
+  role: string;
+  team_size: '1' | '2-5' | '6-20' | '21+';
+  target_boroughs: PilotBorough[];
+  workflow_summary: string;
+  consent: true;
+  website: string;
+};
+
+export type PilotRequestReceipt = {
+  schema_version: 'citylens/pilot-request-receipt@v1';
+  request_id: string;
+  status: 'received';
+  created_at: string;
+};
+
 export type ParcelProductEventName = 'parcel_opened' | 'saved_view_applied';
 
 export type ParcelProductEventSource =
@@ -255,6 +284,24 @@ export async function getRuns(query?: RunsQuery): Promise<RunsPage> {
 
 export async function getMe(): Promise<MeResponse> {
   return requestJson<MeResponse>('/v1/me');
+}
+
+export async function submitPilotRequest(
+  payload: PilotRequestPayload,
+  idempotencyKey: string,
+): Promise<PilotRequestReceipt> {
+  return requestJson<PilotRequestReceipt>(
+    '/v1/pilot-requests',
+    {
+      method: 'POST',
+      headers: {
+        'Idempotency-Key': idempotencyKey,
+      },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    },
+    { includeAuth: false },
+  );
 }
 
 export async function getRunOptions(): Promise<RunOptions> {

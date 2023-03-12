@@ -117,6 +117,11 @@ Next.js app for CityLens. It pairs with:
 - **Auth**: email + password via Neon Auth. The browser obtains a
   short-lived JWT and includes it as `Authorization: Bearer <token>` on
   authenticated API calls. Normal users do not configure API keys.
+- **Pilot intake**: `/contact` submits a bounded, retry-safe request to the
+  engine rather than relying on a mail client. The browser sends no IP,
+  referrer, page URL, campaign identifier, or user-agent field. A durable
+  receipt is shown after acceptance, validation/rate-limit failures preserve
+  the entered form, and `hello@citylens.dev` remains the manual fallback.
 
 ## Architecture (this repo)
 
@@ -150,6 +155,8 @@ This frontend aligns to the CityLens API contract served by `citylens-engine`:
   request shape; sam2/aoi defaults are server-injected)
 - `GET  /v1/runs`, `GET /v1/runs/{run_id}` — Bearer auth required
 - `GET  /v1/me` — Bearer auth required; returns user + monthly quota state
+- `POST /v1/pilot-requests` — public, rate-limited design-partner intake with
+  an opaque `Idempotency-Key`; returns a durable receipt and is never cached
 
 Standard artifact filenames the UI renders:
 - `preview.png` (inline image)

@@ -23,6 +23,7 @@ import {
   saveParcelSearch,
   setAuthTokenGetter,
   snoozeParcelWorkflowReminder,
+  submitPilotRequest,
 } from '@/lib/api';
 
 afterEach(() => {
@@ -238,6 +239,56 @@ describe('api client', () => {
     expect(String(init.body)).not.toMatch(/bbl|address|owner|notes|tags/i);
     expect(new Headers(init.headers).get('Authorization')).toBe(
       'Bearer tok-abc',
+    );
+  });
+
+  it('submits pilot intake without authentication or hidden metadata', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 202,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({
+        schema_version: 'citylens/pilot-request-receipt@v1',
+        request_id: 'pr_0123456789abcdef0123456789abcdef',
+        status: 'received',
+        created_at: '2026-07-24T20:00:00Z',
+      }),
+      text: async () => '',
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const payload = {
+      schema_version: 'citylens/pilot-request@v1' as const,
+      plan: 'acquisitions' as const,
+      name: 'Jordan Lee',
+      work_email: 'jordan@example.com',
+      company: 'Example Development',
+      role: 'Acquisitions director',
+      team_size: '2-5' as const,
+      target_boroughs: ['brooklyn', 'queens'] as const,
+      workflow_summary:
+        'We need a shared development-site review and outreach workflow.',
+      consent: true as const,
+      website: '',
+    };
+    const result = await submitPilotRequest(
+      { ...payload, target_boroughs: [...payload.target_boroughs] },
+      'pilot-browser-request-123456',
+    );
+
+    expect(result.status).toBe('received');
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/v1/pilot-requests');
+    expect(init.method).toBe('POST');
+    expect(init.cache).toBe('no-store');
+    const headers = new Headers(init.headers);
+    expect(headers.get('Idempotency-Key')).toBe(
+      'pilot-browser-request-123456',
+    );
+    expect(headers.get('Authorization')).toBeNull();
+    expect(JSON.parse(String(init.body))).toEqual(payload);
+    expect(String(init.body)).not.toMatch(
+      /client_ip|user_agent|referrer|page_url|utm_/i,
     );
   });
 
