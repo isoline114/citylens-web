@@ -667,6 +667,7 @@ describe('ParcelIntelPropertyPanel', () => {
     fireEvent.click(
       screen.getByRole('button', { name: /Open evidence audit/i }),
     );
+    expect(mocks.recordParcelProductEvent).not.toHaveBeenCalled();
 
     expect(screen.getByText('Eligible lead with diligence flags')).toBeInTheDocument();
     expect(screen.getByText('34.0%')).toBeInTheDocument();
@@ -685,6 +686,74 @@ describe('ParcelIntelPropertyPanel', () => {
     );
     expect(screen.getByTestId('parcel-decision-readiness')).toHaveTextContent(
       'not a purchase recommendation',
+    );
+  });
+
+  it('records one value-minimized decision-audit entry per parcel', async () => {
+    mocks.authStatus = 'authenticated';
+    const row = {
+      ...parcel,
+      bbl: '3050660024',
+      decision_audit: {
+        schema_version: 'citylens/parcel-decision-audit@v1' as const,
+        overall_status: 'screened' as const,
+        overall_label: 'Initial review ready',
+        readiness: {
+          status: 'initial_review_ready' as const,
+          label: 'Initial review ready',
+          recommended_action: 'Review the source records before advancing.',
+          blockers: [],
+          review_items: [],
+          cleared_items: ['Current acquisition gate passed.'],
+          disclaimer: 'Not a purchase recommendation.',
+        },
+        validation: {
+          target: 'dob_nb_job_filing',
+          evaluation_scope: '2024 PLUTO to 2025 DOB NB filings',
+          precision_at_100: 0.34,
+          precision_at_1000: 0.104,
+          base_rate: 0.0012439591,
+          prospective_validated: false,
+          disclaimer: 'Historical performance only.',
+        },
+        checks: [],
+        limitations: [],
+      },
+    };
+    const { rerender } = render(
+      <ParcelIntelPropertyPanel row={row} onClose={vi.fn()} />,
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /Open evidence audit/i }),
+    );
+    await waitFor(() =>
+      expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+        'decision_audit_opened',
+        'decision_posture',
+      ),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Overview' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Audit' }));
+    expect(mocks.recordParcelProductEvent).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <ParcelIntelPropertyPanel
+        row={{ ...row, bbl: '3050660025', decision_audit: undefined }}
+        onClose={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Audit' }));
+    await waitFor(() =>
+      expect(mocks.recordParcelProductEvent).toHaveBeenLastCalledWith(
+        'decision_audit_opened',
+        'audit_tab',
+      ),
+    );
+    expect(mocks.recordParcelProductEvent).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(mocks.recordParcelProductEvent.mock.calls)).not.toMatch(
+      /3050660024|3050660025|address|owner|notes/i,
     );
   });
 

@@ -29,6 +29,7 @@ import { useAuth } from '@/lib/auth';
 import {
   getParcelWorkflow,
   listParcelWorkflowEvents,
+  recordParcelProductEvent,
   removeParcelWorkflow,
   saveParcelWorkflow,
   type ParcelIntelRow,
@@ -574,6 +575,7 @@ export function ParcelIntelPropertyPanel({
   const [workflowReloadKey, setWorkflowReloadKey] = useState(0);
   const activeBblRef = useRef(row.bbl);
   const workflowMutationIdRef = useRef(0);
+  const trackedDecisionAuditOpensRef = useRef(new Set<string>());
   const effectiveWorkflowLoadState =
     workflowContextBbl === row.bbl
       ? workflowLoadState
@@ -598,6 +600,25 @@ export function ParcelIntelPropertyPanel({
       : row.environmental_designation_kind === 'e_designation'
         ? 'E-designation'
         : 'environmental designation';
+
+  const openDecisionAudit = (
+    source: 'decision_posture' | 'audit_tab',
+  ) => {
+    setTab('audit');
+    if (
+      auth.status !== 'authenticated' ||
+      trackedDecisionAuditOpensRef.current.has(row.bbl)
+    ) {
+      return;
+    }
+    trackedDecisionAuditOpensRef.current.add(row.bbl);
+    void recordParcelProductEvent(
+      'decision_audit_opened',
+      source,
+    ).catch(() => {
+      // Aggregate adoption telemetry is best-effort and never blocks diligence.
+    });
+  };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -857,7 +878,13 @@ export function ParcelIntelPropertyPanel({
           <button
             key={value}
             type="button"
-            onClick={() => setTab(value)}
+            onClick={() => {
+              if (value === 'audit') {
+                openDecisionAudit('audit_tab');
+                return;
+              }
+              setTab(value);
+            }}
             aria-pressed={tab === value}
             className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-colors ${
               tab === value
@@ -892,7 +919,7 @@ export function ParcelIntelPropertyPanel({
             {row.decision_audit?.readiness && (
               <ParcelDecisionPosture
                 readiness={row.decision_audit.readiness}
-                onOpenAudit={() => setTab('audit')}
+                onOpenAudit={() => openDecisionAudit('decision_posture')}
               />
             )}
             {row.acquisition_status === 'active_project' && (

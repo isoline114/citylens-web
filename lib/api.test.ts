@@ -126,6 +126,24 @@ describe('api client', () => {
     expect(String(applyInit.body)).not.toMatch(
       /search_id|view-brooklyn|query|filter|owner/i,
     );
+
+    fetchMock.mockClear();
+    await recordParcelProductEvent(
+      'decision_audit_opened',
+      'decision_posture',
+    );
+    const [, auditInit] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(JSON.parse(String(auditInit.body))).toEqual({
+      schema_version: 'citylens/parcel-product-event@v1',
+      event: 'decision_audit_opened',
+      source: 'decision_posture',
+    });
+    expect(String(auditInit.body)).not.toMatch(
+      /bbl|address|owner|url|notes|tags|assignee/i,
+    );
   });
 
   it('persists and deletes a citywide saved view with bearer auth', async () => {

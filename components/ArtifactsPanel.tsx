@@ -225,7 +225,7 @@ export function ArtifactsPanel({ run }: { run?: RunResponse }) {
                 <Download className="h-4 w-4" /> mesh.ply
                 <span
                   className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-700"
-                  data-testid="mesh-status"
+                  data-testid="artifact-mesh-summary-status"
                 >
                   Ready
                 </span>

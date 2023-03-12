@@ -744,6 +744,25 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     'MIH scenario required',
   );
   await page.getByRole('button', { name: 'Audit' }).click();
+  await expect
+    .poll(() => productEvents)
+    .toEqual([
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'saved_view_applied',
+        source: 'saved_views',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'parcel_opened',
+        source: 'ranking',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'decision_audit_opened',
+        source: 'audit_tab',
+      },
+    ]);
   await expect(page.getByTestId('parcel-decision-audit')).toContainText(
     'Eligible lead with diligence flags',
   );

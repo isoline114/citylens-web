@@ -84,7 +84,10 @@ export type PilotRequestReceipt = {
   created_at: string;
 };
 
-export type ParcelProductEventName = 'parcel_opened' | 'saved_view_applied';
+export type ParcelProductEventName =
+  | 'parcel_opened'
+  | 'saved_view_applied'
+  | 'decision_audit_opened';
 
 export type ParcelProductEventSource =
   | 'direct'
@@ -92,7 +95,9 @@ export type ParcelProductEventSource =
   | 'ranking'
   | 'action_queue'
   | 'watchlist'
-  | 'saved_views';
+  | 'saved_views'
+  | 'decision_posture'
+  | 'audit_tab';
 
 export class ApiConfigError extends Error {
   constructor(message: string) {

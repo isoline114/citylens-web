@@ -4,8 +4,11 @@ import { expect, test } from '@playwright/test';
 async function expectMeshState(page: Page) {
   await expect(page.getByTestId('artifact-mesh')).toBeVisible();
   await expect(page.getByTestId('artifact-mesh-download')).toBeVisible();
-  await expect(page.getByTestId('mesh-status')).toBeVisible({ timeout: 15000 });
-  await expect(page.getByTestId('mesh-status')).toHaveText(/Loading|Ready|Error|Unavailable/);
+  const meshStatus = page
+    .getByTestId('mesh-viewer')
+    .getByTestId('mesh-status');
+  await expect(meshStatus).toBeVisible({ timeout: 15000 });
+  await expect(meshStatus).toHaveText(/Loading|Ready|Error|Unavailable/);
 }
 
 test('demo mode renders a precomputed run and its artifacts', async ({ page }) => {
