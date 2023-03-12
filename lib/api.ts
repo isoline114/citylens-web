@@ -662,12 +662,59 @@ export type ParcelIntelBorough = {
   top_score: number | null;
 };
 
+export type ParcelProspectiveValidationMetric = {
+  eligible_parcels: number;
+  observed_nb_filing_hits: number | null;
+  observed_precision_lower_bound: number | null;
+  final_precision: number | null;
+  final_precision_95ci: [number, number] | null;
+};
+
+export type ParcelProspectiveValidationStatus = {
+  schema: 'citylens-parcel-intel/prospective-validation-status@v1';
+  cohort_id: string;
+  source_generation: string;
+  label_definition: 'dob_nb_job_filing';
+  measurement_status:
+    | 'awaiting_post_issue_data'
+    | 'collecting'
+    | 'mature';
+  issued_at: string;
+  observation_starts_on: string;
+  observed_through: string;
+  matures_at: string;
+  elapsed_days: number;
+  maturity_fraction: number;
+  metrics: {
+    top_100: ParcelProspectiveValidationMetric;
+    top_1000: ParcelProspectiveValidationMetric;
+  };
+  historical_benchmark: {
+    scope: string | null;
+    evaluation_window: string | null;
+    precision_at_100: number | null;
+    precision_at_1000: number | null;
+    not_current_cohort_accuracy: true;
+  };
+  official_sources: Array<{
+    dataset_id: 'ic3t-wcy2' | 'w9ak-ipjd';
+    rows_updated_at: string;
+  }>;
+  report_reference: {
+    observation_id: string;
+    sha256: string;
+  };
+  interpretation: string;
+};
+
 export type ParcelIntelIndex = {
   boroughs: ParcelIntelBorough[];
   generated_at: string | null;
+  feed_generation?: string | null;
   model_metadata: Record<string, unknown>;
   data_sources?: Record<string, unknown>;
   quality_gate?: Record<string, unknown>;
+  prospective_validation?: ParcelProspectiveValidationStatus | null;
   age_days?: number | null;
   stale?: boolean;
 };

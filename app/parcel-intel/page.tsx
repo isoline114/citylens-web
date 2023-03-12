@@ -1,6 +1,8 @@
 import { BookOpen, Building2, Database, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { fetchParcelIntelIndexOnServer } from '@/lib/api.server';
+import type { ParcelProspectiveValidationStatus } from '@/lib/api';
 import { ParcelIntelExplorer } from './parcel-intel-explorer';
+import { ParcelProspectiveValidation } from './parcel-prospective-validation';
 
 export const metadata = {
   title: 'Parcel Intelligence — CityLens',
@@ -157,6 +159,7 @@ export default async function ParcelIntelIndexPage({
             precisionAt100={precisionAt100}
             precisionAt1000={precisionAt1000}
             evaluationBaseRate={evaluationBaseRate}
+            prospectiveValidation={index.prospective_validation ?? null}
           />
         </>
       )}
@@ -172,6 +175,7 @@ function MethodologyDisclosure({
   precisionAt100,
   precisionAt1000,
   evaluationBaseRate,
+  prospectiveValidation,
 }: {
   modelType: string | null;
   featureYear: string | number | undefined;
@@ -180,6 +184,7 @@ function MethodologyDisclosure({
   precisionAt100: number | null;
   precisionAt1000: number | null;
   evaluationBaseRate: number | null;
+  prospectiveValidation: ParcelProspectiveValidationStatus | null;
 }) {
   const forwardTestBody =
     precisionAt100 !== null && precisionAt1000 !== null
@@ -210,7 +215,7 @@ function MethodologyDisclosure({
           Hide methodology
         </span>
       </summary>
-      <div className="grid gap-3 border-t border-slate-200 bg-slate-50 p-4 md:grid-cols-2 md:p-5 xl:grid-cols-4">
+      <div className="grid gap-3 border-t border-slate-200 bg-slate-50 p-4 md:grid-cols-2 md:p-5 lg:grid-cols-3 xl:grid-cols-5">
         <MethodCard
           icon={Database}
           title="Source records"
@@ -229,6 +234,7 @@ function MethodologyDisclosure({
           title="Forward-test hit rate"
           body={forwardTestBody}
         />
+        <ParcelProspectiveValidation status={prospectiveValidation} />
         <MethodCard
           icon={TriangleAlert}
           title="Required diligence"

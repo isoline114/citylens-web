@@ -32,6 +32,13 @@ current blockers, items requiring review, evidence already cleared, and one
 conservative next diligence action. Signed-in users can carry that action into
 the private workflow as an editable draft; it is never saved automatically and
 does not alter model rank.
+The methodology disclosure separately renders the exact live production
+cohort's awaiting, collecting, or mature state from the public-safe engine
+contract. Pre-observation nulls are described as unavailable—not `0%`;
+in-progress hit rates are labeled lower bounds; final precision and confidence
+intervals appear only after the complete 365-day horizon. If the engine cannot
+match the status to the active feed generation, the UI shows an explicit
+unavailable warning rather than falling back to historical metrics.
 Full borough payloads are deferred until the user requests a CSV. The explorer
 also exposes multi-lot assemblage candidates, a signed-in filter for official
 NYC DOF final tax-lien sale history, a filter for parcels with current Class 1
@@ -150,6 +157,8 @@ This frontend aligns to the CityLens API contract served by `citylens-engine`:
 
 - `GET  /v1/health` — public
 - `GET  /v1/run-options` — public
+- `GET  /v1/parcel-intel/index` — public citywide metadata plus a
+  generation-bound, parcel-free prospective validation status
 - `GET  /v1/demo/featured`, `GET /v1/demo/runs/{run_id}` — public demo endpoints
 - `POST /v1/runs` — Bearer auth required (the engine narrowly validates the public
   request shape; sam2/aoi defaults are server-injected)
