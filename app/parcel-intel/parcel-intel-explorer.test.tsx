@@ -272,7 +272,14 @@ describe('ParcelIntelExplorer', () => {
     expect(
       screen.getByRole('link', { name: /Sign in for the full workspace/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Try the public decision flow/i)).toBeInTheDocument();
+    expect(
+      screen.getByTestId('parcel-public-inventory-notice'),
+    ).toHaveTextContent('Signed out on this browser');
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('parcel-public-inventory-notice'),
+      ).toHaveTextContent('2 of 2 parcels'),
+    );
     expect(
       screen.queryByRole('option', { name: /Immediate-hazard violations/i }),
     ).not.toBeInTheDocument();

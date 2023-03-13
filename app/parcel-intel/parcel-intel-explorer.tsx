@@ -1316,11 +1316,16 @@ export function ParcelIntelExplorer({
         )}
 
       {!isAuthenticated && auth.status !== 'loading' && (
-        <div className="hidden items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-950 sm:flex md:px-7">
+        <div
+          data-testid="parcel-public-inventory-notice"
+          className="hidden items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-950 sm:flex md:px-7"
+        >
           <span className="leading-5">
-            <strong>Try the public decision flow:</strong> open a parcel, add it
-            to Compare, then choose a second. A free account unlocks the
-            broader inventory and private workflow.
+            <strong>Signed out on this browser:</strong>{' '}
+            {loadState === 'ready'
+              ? `this public preview shows ${rows.length.toLocaleString()} of ${totalAvailable.toLocaleString()} parcels.`
+              : 'loading the public parcel preview…'}{' '}
+            Sign in here to load the full inventory and private workflow.
           </span>
           <Link
             href="/sign-in?next=%2Fparcel-intel"

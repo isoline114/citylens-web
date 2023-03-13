@@ -4,10 +4,15 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { useAuth } from '@/lib/auth';
+import { selectAuthProvider, useAuth } from '@/lib/auth';
 
-const PROVIDER = (process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'mock').toLowerCase();
-const IS_NEON = PROVIDER === 'neon';
+// Keep the sign-in form aligned with the provider selected by AuthProvider.
+// This matters in local development: when localhost points at the deployed
+// API, selectAuthProvider intentionally chooses Neon even if the provider env
+// var is omitted. A separate env-only check here used to render a mock form
+// backed by a Neon context, making local sign-in appear to succeed while the
+// Parcel Intelligence request remained on the public inventory.
+const IS_NEON = selectAuthProvider() === 'neon';
 
 function requestedDestination(): string {
   if (typeof window === 'undefined') return '/';
