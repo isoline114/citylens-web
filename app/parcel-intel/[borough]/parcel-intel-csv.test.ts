@@ -71,7 +71,9 @@ const EXPECTED_HEADER =
   'Owner portfolio data retrieved,' +
   'Landmark,Historic district,' +
   'Status,Latest project type,Latest project filing year,Latest project status,' +
-  'Latest project job number,PLUTO facts as of,ACRIS ownership as of,DOB activity as of,' +
+  'Latest project job number,Latest official project URL,Decision evidence status,' +
+  'Decision evidence label,Decision readiness,Recommended next diligence action,' +
+  'PLUTO facts as of,ACRIS ownership as of,DOB activity as of,' +
   'Imagery observed through,Top model factors';
 
 describe('buildCsv', () => {
@@ -122,6 +124,22 @@ describe('buildCsv', () => {
     const body = csv.slice(csv.indexOf('\n') + 1);
     expect(body.startsWith('"100 MAIN ST, UNIT ""A""",')).toBe(true);
     expect(body).toContain('"R7\nA"');
+  });
+
+  it('neutralizes spreadsheet formulas in source text without changing numbers', () => {
+    const csv = buildCsv([
+      row({
+        address: '=1+1',
+        owner_name: '@SUM(A1:A2)',
+        last_sale_price: -125000,
+      }),
+    ]);
+    const headers = EXPECTED_HEADER.split(',');
+    const body = csv.split('\n')[1];
+    expect(body.startsWith("'=1+1,")).toBe(true);
+    const cells = body.split(',');
+    expect(cells[headers.indexOf('Owner')]).toBe("'@SUM(A1:A2)");
+    expect(cells[headers.indexOf('Last sale price')]).toBe('-125000');
   });
 
   it('renders null/undefined fields as empty cells', () => {
@@ -259,6 +277,65 @@ describe('buildCsv', () => {
     expect(cells[7]).toBe('no');
     expect(cells[8]).toBe('active_project');
     expect(cells[9]).toBe('active_project');
+  });
+
+  it('exports only HTTPS project evidence and the server-owned decision posture', () => {
+    const csv = buildCsv([
+      row({
+        latest_project_job_number: '2023K0205',
+        latest_project_status: 'Completed — approved',
+        latest_project_url:
+          'https://zap.planning.nyc.gov/projects/2023K0205',
+        decision_audit: {
+          schema_version: 'citylens/parcel-decision-audit@v1',
+          overall_status: 'screened_with_flags',
+          overall_label: 'Eligible lead with diligence flags',
+          readiness: {
+            status: 'review_required',
+            label: 'Review project activity',
+            recommended_action: 'Open the cited project record.',
+            blockers: [],
+            review_items: ['Project activity'],
+            cleared_items: [],
+            disclaimer: 'Screening only.',
+          },
+          validation: {
+            target: 'dob_nb_job_filing',
+            evaluation_scope: 'Historical forward test',
+            precision_at_100: 0.34,
+            precision_at_1000: 0.104,
+            base_rate: 0.0012,
+            prospective_validated: false,
+            disclaimer: 'Not seller intent.',
+          },
+          checks: [],
+          limitations: [],
+        },
+      }),
+    ]);
+    const headers = EXPECTED_HEADER.split(',');
+    const cells = csv.split('\n')[1].split(',');
+    expect(cells[headers.indexOf('Latest official project URL')]).toBe(
+      'https://zap.planning.nyc.gov/projects/2023K0205',
+    );
+    expect(cells[headers.indexOf('Decision evidence status')]).toBe(
+      'screened_with_flags',
+    );
+    expect(cells[headers.indexOf('Decision readiness')]).toBe(
+      'Review project activity',
+    );
+    expect(cells[headers.indexOf('Recommended next diligence action')]).toBe(
+      'Open the cited project record.',
+    );
+
+    const unsafeCsv = buildCsv([
+      row({ latest_project_url: 'javascript:alert(1)' }),
+      row({ bbl: '3050290002', latest_project_url: 'https://' }),
+    ]);
+    const unsafeCells = unsafeCsv.split('\n')[1].split(',');
+    const malformedCells = unsafeCsv.split('\n')[2].split(',');
+    expect(unsafeCells[headers.indexOf('Latest official project URL')]).toBe('');
+    expect(malformedCells[headers.indexOf('Latest official project URL')]).toBe('');
   });
 });
 

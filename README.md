@@ -12,7 +12,11 @@ flags, and source-specific dates side by side. It does not collapse those
 different evidence layers into a new score or claim to be an appraisal, site
 plan, zoning opinion, or buy/pass recommendation. Authenticated comparison
 opens are measured only as a coarse event without parcel IDs or compared
-values.
+values. Users can explicitly export the compared rows through the existing
+whitelisted CSV contract or copy a Markdown evidence brief for team review.
+Both exports include current official-project links, server-owned decision
+posture, recommended diligence, and source dates; neither includes workflow
+notes, assignees, contacts, or hidden API fields.
 Signed-in users can save and restore private explorer views containing the
 borough scope, query, opportunity/priority filters, owner-portfolio focus, and
 map overlay. Saved views intentionally do not expose alert-frequency controls:

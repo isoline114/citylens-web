@@ -3,14 +3,19 @@
 import {
   ArrowUpRight,
   Building2,
+  Check,
   Columns3,
+  Copy,
+  Download,
   ExternalLink,
   ShieldCheck,
   X,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import type { ParcelIntelRow } from '@/lib/api';
+import { downloadCsv } from './[borough]/parcel-intel-csv';
+import { buildComparisonBrief } from './parcel-comparison-export';
 import {
   BOROUGH_LABELS,
   opportunityLabel,
@@ -78,6 +83,16 @@ function recommendedAction(row: ParcelIntelRow): string {
   );
 }
 
+function safeHttpsUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 function currentProject(row: ParcelIntelRow): ReactNode {
   if (!row.latest_project_job_number && !row.latest_project_status) return 'None surfaced';
   const label = [
@@ -86,13 +101,11 @@ function currentProject(row: ParcelIntelRow): ReactNode {
   ]
     .filter(Boolean)
     .join(' · ');
-  if (
-    row.latest_project_url?.startsWith('https://') &&
-    row.latest_project_job_number
-  ) {
+  const projectUrl = safeHttpsUrl(row.latest_project_url);
+  if (projectUrl && row.latest_project_job_number) {
     return (
       <a
-        href={row.latest_project_url}
+        href={projectUrl}
         target="_blank"
         rel="noreferrer"
         className="inline-flex items-center gap-1 font-medium text-sky-700 hover:text-sky-900"
@@ -299,6 +312,24 @@ export function ParcelComparisonDesk({
   onRemove: (bbl: string) => void;
   onSelectParcel: (bbl: string) => void;
 }) {
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>(
+    'idle',
+  );
+
+  const copyEvidenceBrief = async () => {
+    if (!navigator.clipboard?.writeText) {
+      setCopyState('error');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(buildComparisonBrief(rows));
+      setCopyState('copied');
+      window.setTimeout(() => setCopyState('idle'), 1800);
+    } catch {
+      setCopyState('error');
+    }
+  };
+
   return (
     <section
       className="border-b border-slate-200 bg-slate-50"
@@ -320,16 +351,42 @@ export function ParcelComparisonDesk({
             zoning opinion, or buy/pass recommendation.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          autoFocus
-          aria-label="Close parcel comparison"
-          className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 self-start rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-        >
-          <X className="h-3.5 w-3.5" />
-          Close
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => downloadCsv(rows, 'comparison')}
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Evidence CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => void copyEvidenceBrief()}
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+          >
+            {copyState === 'copied' ? (
+              <Check className="h-3.5 w-3.5 text-emerald-600" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
+            {copyState === 'copied'
+              ? 'Brief copied'
+              : copyState === 'error'
+                ? 'Copy unavailable'
+                : 'Copy evidence brief'}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            autoFocus
+            aria-label="Close parcel comparison"
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+          >
+            <X className="h-3.5 w-3.5" />
+            Close
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto px-3 py-4 md:px-5">

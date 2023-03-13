@@ -16,6 +16,16 @@ type Column = {
   value: (row: ParcelIntelRow) => CellValue;
 };
 
+function safeHttpsUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Flatten SHAP attributions to `"lot_area (+32%); zoning (-18%)"`. */
 export function flattenTopFeatures(features: TopFeature[] | null | undefined): string {
   if (!Array.isArray(features) || features.length === 0) return '';
@@ -251,6 +261,26 @@ const COLUMNS: Column[] = [
   { header: 'Latest project filing year', value: (r) => r.latest_project_filing_year },
   { header: 'Latest project status', value: (r) => r.latest_project_status },
   { header: 'Latest project job number', value: (r) => r.latest_project_job_number },
+  {
+    header: 'Latest official project URL',
+    value: (r) => safeHttpsUrl(r.latest_project_url),
+  },
+  {
+    header: 'Decision evidence status',
+    value: (r) => r.decision_audit?.overall_status,
+  },
+  {
+    header: 'Decision evidence label',
+    value: (r) => r.decision_audit?.overall_label,
+  },
+  {
+    header: 'Decision readiness',
+    value: (r) => r.decision_audit?.readiness?.label,
+  },
+  {
+    header: 'Recommended next diligence action',
+    value: (r) => r.decision_audit?.readiness?.recommended_action,
+  },
   { header: 'PLUTO facts as of', value: (r) => r.property_facts_as_of },
   { header: 'ACRIS ownership as of', value: (r) => r.ownership_as_of },
   { header: 'DOB activity as of', value: (r) => r.project_activity_as_of },
@@ -261,7 +291,12 @@ const COLUMNS: Column[] = [
 /** RFC 4180-style escaping: quote when the field contains , " or a newline. */
 function csvEscape(value: CellValue): string {
   if (value === null || value === undefined) return '';
-  const s = String(value);
+  let s = String(value);
+  // Source text can be opened in Excel or Sheets. Neutralize formula-like
+  // strings while preserving actual numeric cells as numbers.
+  if (typeof value === 'string' && /^[\t\r ]*[=+\-@]/.test(s)) {
+    s = `'${s}`;
+  }
   if (/[",\r\n]/.test(s)) {
     return `"${s.replace(/"/g, '""')}"`;
   }
