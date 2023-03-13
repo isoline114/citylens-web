@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import {
+  advanceParcelWorkflow,
   getParcelIntelMap,
   getParcelIntelParcel,
   getParcelIntelSweep,
@@ -77,6 +78,14 @@ const INITIAL_LEAD_LIMIT = 30;
 const MOBILE_COMPACT_LEAD_LIMIT = 10;
 const LEAD_PAGE_SIZE = 30;
 const MAX_COMPARISON_PARCELS = 3;
+const WORKFLOW_BOROUGHS = [
+  'manhattan',
+  'brooklyn',
+  'queens',
+  'bronx',
+  'staten_island',
+] as const;
+type WorkflowBorough = (typeof WORKFLOW_BOROUGHS)[number];
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error';
 type DetailState = 'idle' | 'loading' | 'ready' | 'error';
@@ -86,6 +95,10 @@ type Props = {
   initialBorough?: string | null;
   initialBbl?: string | null;
 };
+
+function isWorkflowBorough(value: string | null | undefined): value is WorkflowBorough {
+  return WORKFLOW_BOROUGHS.some((borough) => borough === value);
+}
 
 function ExplorerMapSkeleton() {
   return (
@@ -498,6 +511,22 @@ export function ParcelIntelExplorer({
   const clearComparison = () => {
     setComparisonRows([]);
     setComparisonOpen(false);
+  };
+
+  const advanceComparisonParcel = async (
+    row: ParcelIntelRow,
+    input: { nextAction: string; dueDate: string | null },
+  ) => {
+    if (auth.status !== 'authenticated' || !isWorkflowBorough(row.borough)) {
+      throw new Error('Authenticated workflow context is unavailable');
+    }
+    const result = await advanceParcelWorkflow(row.bbl, {
+      borough: row.borough,
+      next_action: input.nextAction,
+      next_action_due_date: input.dueDate,
+    });
+    window.dispatchEvent(new Event('citylens:workflow-updated'));
+    return result.status;
   };
 
   const focusOwnerPortfolio = (ownerPortfolioId: string) => {
@@ -1477,7 +1506,7 @@ export function ParcelIntelExplorer({
 
       {comparisonRows.length > 0 && !comparisonOpen && (
         <section
-          className="fixed bottom-4 left-1/2 z-50 flex w-[min(94vw,920px)] -translate-x-1/2 flex-col gap-3 rounded-2xl border border-white/15 bg-slate-950 px-4 py-3 text-white shadow-2xl shadow-slate-950/35 sm:flex-row sm:items-center sm:justify-between"
+          className="fixed bottom-4 left-1/2 z-[1100] flex w-[min(94vw,920px)] -translate-x-1/2 flex-col gap-3 rounded-2xl border border-white/15 bg-slate-950 px-4 py-3 text-white shadow-2xl shadow-slate-950/35 sm:flex-row sm:items-center sm:justify-between"
           aria-label="Parcel comparison tray"
           data-testid="parcel-comparison-tray"
         >
@@ -1525,7 +1554,7 @@ export function ParcelIntelExplorer({
 
       {comparisonOpen && comparisonRows.length >= 2 && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-2 backdrop-blur-sm sm:p-5"
+          className="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-950/70 p-2 backdrop-blur-sm sm:p-5"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
@@ -1568,8 +1597,10 @@ export function ParcelIntelExplorer({
           >
             <ParcelComparisonDesk
               rows={comparisonRows}
+              signedIn={isAuthenticated}
               onClose={closeComparison}
               onRemove={removeComparison}
+              onAdvance={advanceComparisonParcel}
               onSelectParcel={(bbl) => {
                 setComparisonOpen(false);
                 selectParcel(bbl, 'comparison');

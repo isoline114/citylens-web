@@ -1,19 +1,26 @@
 'use client';
 
+import Link from 'next/link';
 import {
   ArrowUpRight,
+  BookmarkPlus,
+  BriefcaseBusiness,
   Building2,
   Check,
   Columns3,
   Copy,
   Download,
   ExternalLink,
+  LoaderCircle,
   ShieldCheck,
   X,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
-import type { ParcelIntelRow } from '@/lib/api';
+import type {
+  ParcelIntelRow,
+  ParcelWorkflowAdvanceResponse,
+} from '@/lib/api';
 import { downloadCsv } from './[borough]/parcel-intel-csv';
 import { buildComparisonBrief } from './parcel-comparison-export';
 import {
@@ -303,18 +310,39 @@ const COMPARISON_ROWS: ComparisonRow[] = [
 
 export function ParcelComparisonDesk({
   rows,
+  signedIn,
   onClose,
   onRemove,
   onSelectParcel,
+  onAdvance,
 }: {
   rows: ParcelIntelRow[];
+  signedIn: boolean;
   onClose: () => void;
   onRemove: (bbl: string) => void;
   onSelectParcel: (bbl: string) => void;
+  onAdvance: (
+    row: ParcelIntelRow,
+    input: { nextAction: string; dueDate: string | null },
+  ) => Promise<ParcelWorkflowAdvanceResponse['status']>;
 }) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>(
     'idle',
   );
+  const [selectedBbl, setSelectedBbl] = useState<string | null>(null);
+  const [nextAction, setNextAction] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [advanceState, setAdvanceState] = useState<
+    | { status: 'idle' }
+    | { status: 'saving' }
+    | {
+        status: 'saved';
+        result: ParcelWorkflowAdvanceResponse['status'];
+      }
+    | { status: 'error' }
+  >({ status: 'idle' });
+  const selectedRow =
+    rows.find((candidate) => candidate.bbl === selectedBbl) ?? null;
 
   const copyEvidenceBrief = async () => {
     if (!navigator.clipboard?.writeText) {
@@ -330,13 +358,49 @@ export function ParcelComparisonDesk({
     }
   };
 
+  const chooseForAdvance = (row: ParcelIntelRow, trigger: HTMLElement) => {
+    const dialog = trigger.closest<HTMLElement>('[role="dialog"]');
+    if (dialog) {
+      dialog.scrollTop = 0;
+    }
+    setSelectedBbl(row.bbl);
+    setNextAction(recommendedAction(row));
+    setDueDate('');
+    setAdvanceState({ status: 'idle' });
+  };
+
+  const removeRow = (bbl: string) => {
+    if (selectedBbl === bbl) {
+      setSelectedBbl(null);
+      setNextAction('');
+      setDueDate('');
+      setAdvanceState({ status: 'idle' });
+    }
+    onRemove(bbl);
+  };
+
+  const advanceSelected = async () => {
+    const action = nextAction.trim();
+    if (!selectedRow || !action || advanceState.status === 'saving') return;
+    setAdvanceState({ status: 'saving' });
+    try {
+      const result = await onAdvance(selectedRow, {
+        nextAction: action,
+        dueDate: dueDate || null,
+      });
+      setAdvanceState({ status: 'saved', result });
+    } catch {
+      setAdvanceState({ status: 'error' });
+    }
+  };
+
   return (
     <section
-      className="border-b border-slate-200 bg-slate-50"
+      className="flex flex-col border-b border-slate-200 bg-slate-50"
       aria-label="Parcel comparison desk"
       data-testid="parcel-comparison-desk"
     >
-      <div className="flex flex-col gap-3 border-b border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-start sm:justify-between md:px-6">
+      <div className="order-1 flex flex-col gap-3 border-b border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-start sm:justify-between md:px-6">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">
             <Columns3 className="h-4 w-4" />
@@ -389,7 +453,7 @@ export function ParcelComparisonDesk({
         </div>
       </div>
 
-      <div className="overflow-x-auto px-3 py-4 md:px-5">
+      <div className="order-3 overflow-x-auto px-3 py-4 md:px-5">
         <table
           className="w-full table-fixed overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
           style={{ minWidth: `${190 + rows.length * 270}px` }}
@@ -419,7 +483,7 @@ export function ParcelComparisonDesk({
                     </div>
                     <button
                       type="button"
-                      onClick={() => onRemove(row.bbl)}
+                      onClick={() => removeRow(row.bbl)}
                       aria-label={`Remove ${row.address ?? row.bbl} from comparison`}
                       className="rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-white"
                     >
@@ -434,6 +498,24 @@ export function ParcelComparisonDesk({
                     Open parcel
                     <ArrowUpRight className="h-3 w-3" />
                   </button>
+                  {signedIn && (
+                    <button
+                      type="button"
+                      onClick={(event) =>
+                        chooseForAdvance(row, event.currentTarget)
+                      }
+                      aria-pressed={selectedBbl === row.bbl}
+                      aria-label={`Advance ${row.address ?? row.bbl} from comparison`}
+                      className={`mt-3 inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors ${
+                        selectedBbl === row.bbl
+                          ? 'bg-emerald-300 text-emerald-950'
+                          : 'bg-white/10 text-white hover:bg-white/15'
+                      }`}
+                    >
+                      <BookmarkPlus className="h-3.5 w-3.5" />
+                      {selectedBbl === row.bbl ? 'Selected to advance' : 'Advance'}
+                    </button>
+                  )}
                 </th>
               ))}
             </tr>
@@ -476,6 +558,169 @@ export function ParcelComparisonDesk({
           </tbody>
         </table>
       </div>
+
+      <section
+        className="order-2 border-b border-slate-200 bg-white px-4 py-4 md:px-6"
+        aria-label="Comparison decision handoff"
+        data-testid="comparison-decision-handoff"
+      >
+        {!signedIn ? (
+          <div className="flex flex-col gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.13em] text-sky-800">
+                <BriefcaseBusiness className="h-4 w-4" />
+                Turn evidence into a decision
+              </div>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-sky-950">
+                Sign in to advance one parcel with a fixed evidence snapshot
+                and a concrete next diligence action.
+              </p>
+            </div>
+            <Link
+              href="/sign-in?next=%2Fparcel-intel"
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+            >
+              Sign in to advance
+            </Link>
+          </div>
+        ) : selectedRow ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.13em] text-emerald-800">
+                  <BriefcaseBusiness className="h-4 w-4" />
+                  Decision handoff
+                </div>
+                <h4 className="mt-1 text-base font-semibold text-slate-950">
+                  Advance {selectedRow.address ?? `BBL ${selectedRow.bbl}`}
+                </h4>
+                <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">
+                  CityLens records your choice as pursuing and preserves the
+                  current evidence snapshot. It will never replace an active
+                  workflow record.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedBbl(null);
+                  setNextAction('');
+                  setDueDate('');
+                  setAdvanceState({ status: 'idle' });
+                }}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-900"
+              >
+                Choose another
+              </button>
+            </div>
+
+            {advanceState.status === 'saved' ? (
+              <div
+                className="mt-4 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
+                role="status"
+              >
+                <div>
+                  <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
+                    <Check className="h-4 w-4" />
+                    {advanceState.result === 'existing'
+                      ? 'Active workflow preserved'
+                      : advanceState.result === 'restored'
+                        ? 'Lead restored to reviewing'
+                        : 'Lead advanced to reviewing'}
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">
+                    {advanceState.result === 'existing'
+                      ? 'No existing stage, action, assignee, or note was changed.'
+                      : 'The save-time evidence is fixed; future workflow edits cannot rewrite the original rank.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onSelectParcel(selectedRow.bbl)}
+                  className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800"
+                >
+                  Open parcel workspace
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
+                  <label className="text-xs font-semibold text-slate-700">
+                    Next diligence action
+                    <input
+                      value={nextAction}
+                      onChange={(event) => {
+                        setNextAction(event.target.value);
+                        if (advanceState.status === 'error') {
+                          setAdvanceState({ status: 'idle' });
+                        }
+                      }}
+                      maxLength={240}
+                      className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                    />
+                  </label>
+                  <label className="text-xs font-semibold text-slate-700">
+                    Due date <span className="font-normal text-slate-500">(optional)</span>
+                    <input
+                      type="date"
+                      value={dueDate}
+                      onChange={(event) => setDueDate(event.target.value)}
+                      className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                    />
+                  </label>
+                </div>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p
+                    className={`text-xs ${
+                      advanceState.status === 'error'
+                        ? 'text-rose-700'
+                        : 'text-slate-500'
+                    }`}
+                    role={advanceState.status === 'error' ? 'alert' : undefined}
+                  >
+                    {advanceState.status === 'error'
+                      ? 'This parcel could not be advanced. Your comparison is unchanged; retry when ready.'
+                      : 'Watching is enabled so current-source changes can resurface this decision.'}
+                  </p>
+                  <button
+                    type="button"
+                    data-testid="advance-comparison-parcel"
+                    disabled={
+                      !nextAction.trim() || advanceState.status === 'saving'
+                    }
+                    onClick={() => void advanceSelected()}
+                    className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {advanceState.status === 'saving' ? (
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <BookmarkPlus className="h-4 w-4" />
+                    )}
+                    {advanceState.status === 'saving'
+                      ? 'Advancing…'
+                      : 'Advance to pipeline'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <BriefcaseBusiness className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" />
+            <div>
+              <h4 className="text-sm font-semibold text-slate-950">
+                Choose the parcel that earns next diligence.
+              </h4>
+              <p className="mt-1 text-xs leading-5 text-slate-600">
+                Use “Advance” above to make the decision yourself. CityLens
+                shows the evidence and records the handoff; it does not choose
+                a winner or imply seller intent.
+              </p>
+            </div>
+          </div>
+        )}
+      </section>
     </section>
   );
 }

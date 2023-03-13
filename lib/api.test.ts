@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  advanceParcelWorkflow,
   ApiError,
   createApiKey,
   createRun,
@@ -229,6 +230,49 @@ describe('api client', () => {
     expect(url).toContain('/v1/parcel-intel/workflow/3020960069');
     expect(url).not.toContain('/events');
     expect(init.cache).toBe('no-store');
+    expect(new Headers(init.headers).get('Authorization')).toBe(
+      'Bearer tok-abc',
+    );
+  });
+
+  it('advances one compared parcel through the bounded workflow contract', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({
+        status: 'created',
+        item: {
+          bbl: '3020960069',
+          borough: 'brooklyn',
+          stage: 'reviewing',
+          next_action: 'Verify current title.',
+        },
+      }),
+      text: async () => '',
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await advanceParcelWorkflow('3020960069', {
+      borough: 'brooklyn',
+      next_action: 'Verify current title.',
+      next_action_due_date: '2026-08-01',
+    });
+
+    expect(result.status).toBe('created');
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain(
+      '/v1/parcel-intel/workflow/3020960069/advance',
+    );
+    expect(init.method).toBe('POST');
+    expect(init.cache).toBe('no-store');
+    expect(JSON.parse(String(init.body))).toEqual({
+      borough: 'brooklyn',
+      next_action: 'Verify current title.',
+      next_action_due_date: '2026-08-01',
+    });
+    expect(String(init.body)).not.toMatch(
+      /address|owner|notes|assignee|tags|score|price/i,
+    );
     expect(new Headers(init.headers).get('Authorization')).toBe(
       'Bearer tok-abc',
     );

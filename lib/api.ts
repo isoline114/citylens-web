@@ -886,6 +886,11 @@ export type ParcelWorkflowItem = {
   updated_at: string;
 };
 
+export type ParcelWorkflowAdvanceResponse = {
+  status: 'created' | 'restored' | 'existing';
+  item: ParcelWorkflowItem;
+};
+
 export type ParcelWorkflowEvent = {
   event_id: string;
   schema_version: 'citylens/parcel-workflow-event@v1';
@@ -1335,6 +1340,24 @@ export async function saveParcelWorkflow(
   return requestJson<ParcelWorkflowItem>(
     `/v1/parcel-intel/workflow/${encodeURIComponent(bbl)}`,
     { method: 'PUT', body: JSON.stringify(item) },
+  );
+}
+
+export async function advanceParcelWorkflow(
+  bbl: string,
+  input: {
+    borough: 'manhattan' | 'brooklyn' | 'queens' | 'bronx' | 'staten_island';
+    next_action: string;
+    next_action_due_date: string | null;
+  },
+): Promise<ParcelWorkflowAdvanceResponse> {
+  return requestJson<ParcelWorkflowAdvanceResponse>(
+    `/v1/parcel-intel/workflow/${encodeURIComponent(bbl)}/advance`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+      cache: 'no-store',
+    },
   );
 }
 

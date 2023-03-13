@@ -25,7 +25,15 @@ values. Users can explicitly export the compared rows through the existing
 whitelisted CSV contract or copy a Markdown evidence brief for team review.
 Both exports include current official-project links, server-owned decision
 posture, recommended diligence, and source dates; neither includes workflow
-notes, assignees, contacts, or hidden API fields.
+notes, assignees, contacts, or hidden API fields. A signed-in user can
+deliberately select one compared parcel, confirm a concrete next diligence
+action and optional due date, and advance it directly into the private
+pipeline. The API creates or restores the canonical save-time snapshot but
+returns an existing active workflow unchanged. CityLens never chooses the
+winner, silently saves the shortlist, or overwrites an existing stage, action,
+assignee, or note. The aggregate adoption ledger can count only that a
+canonical workflow originated from comparison; it receives no parcel
+identifier, action, due date, or compared value.
 Signed-in users can save and restore private explorer views containing the
 borough scope, query, opportunity/priority filters, owner-portfolio focus, and
 map overlay. Saved views intentionally do not expose alert-frequency controls:

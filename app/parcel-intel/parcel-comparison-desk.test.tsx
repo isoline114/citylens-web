@@ -78,9 +78,11 @@ describe('ParcelComparisonDesk', () => {
     render(
       <ParcelComparisonDesk
         rows={rows}
+        signedIn={false}
         onClose={vi.fn()}
         onRemove={vi.fn()}
         onSelectParcel={vi.fn()}
+        onAdvance={vi.fn()}
       />,
     );
 
@@ -108,9 +110,11 @@ describe('ParcelComparisonDesk', () => {
           row('3020960069', '100 E 21 STREET'),
           row('3050660023', '224 CLARKSON AVENUE'),
         ]}
+        signedIn={false}
         onClose={vi.fn()}
         onRemove={vi.fn()}
         onSelectParcel={vi.fn()}
+        onAdvance={vi.fn()}
       />,
     );
 
@@ -121,5 +125,83 @@ describe('ParcelComparisonDesk', () => {
       await screen.findByRole('button', { name: 'Copy unavailable' }),
     ).toBeVisible();
     expect(screen.getByText('Development capacity')).toBeVisible();
+  });
+
+  it('turns a deliberate comparison choice into a bounded workflow handoff', async () => {
+    const first = row('3020960069', '100 E 21 STREET');
+    const onAdvance = vi.fn().mockResolvedValue('created');
+    const onSelectParcel = vi.fn();
+    render(
+      <ParcelComparisonDesk
+        rows={[first, row('3050660023', '224 CLARKSON AVENUE')]}
+        signedIn
+        onClose={vi.fn()}
+        onRemove={vi.fn()}
+        onSelectParcel={onSelectParcel}
+        onAdvance={onAdvance}
+      />,
+    );
+
+    expect(
+      screen.getByText('Choose the parcel that earns next diligence.'),
+    ).toBeVisible();
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Advance 100 E 21 STREET from comparison',
+      }),
+    );
+    const action = screen.getByLabelText('Next diligence action');
+    expect(action).toHaveValue(
+      'Open the parcel evidence and verify current records before pursuit.',
+    );
+    fireEvent.change(action, {
+      target: { value: 'Verify title and current owner before outreach.' },
+    });
+    fireEvent.change(screen.getByLabelText(/Due date/), {
+      target: { value: '2026-08-01' },
+    });
+    fireEvent.click(screen.getByTestId('advance-comparison-parcel'));
+
+    await waitFor(() =>
+      expect(onAdvance).toHaveBeenCalledWith(first, {
+        nextAction: 'Verify title and current owner before outreach.',
+        dueDate: '2026-08-01',
+      }),
+    );
+    expect(await screen.findByText('Lead advanced to reviewing')).toBeVisible();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open parcel workspace' }),
+    );
+    expect(onSelectParcel).toHaveBeenCalledWith('3020960069');
+  });
+
+  it('explains when an active workflow was preserved', async () => {
+    render(
+      <ParcelComparisonDesk
+        rows={[
+          row('3020960069', '100 E 21 STREET'),
+          row('3050660023', '224 CLARKSON AVENUE'),
+        ]}
+        signedIn
+        onClose={vi.fn()}
+        onRemove={vi.fn()}
+        onSelectParcel={vi.fn()}
+        onAdvance={vi.fn().mockResolvedValue('existing')}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Advance 100 E 21 STREET from comparison',
+      }),
+    );
+    fireEvent.click(screen.getByTestId('advance-comparison-parcel'));
+
+    expect(await screen.findByText('Active workflow preserved')).toBeVisible();
+    expect(
+      screen.getByText(
+        'No existing stage, action, assignee, or note was changed.',
+      ),
+    ).toBeVisible();
   });
 });

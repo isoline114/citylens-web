@@ -104,6 +104,17 @@ function detail(row: (typeof mapRows)[number]) {
 test('compares two parcels and downloads a source-dated evidence packet', async ({
   page,
 }) => {
+  const advanceRequests: unknown[] = [];
+  await page.addInitScript(() => {
+    sessionStorage.setItem(
+      'citylens_mock_auth_user',
+      JSON.stringify({
+        id: 'mock-comparison',
+        email: 'comparison@mock.local',
+        displayName: 'Comparison tester',
+      }),
+    );
+  });
   await page.route('**/v1/parcel-intel/map?**', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -125,6 +136,23 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
       body: JSON.stringify(detail(row)),
     });
   });
+  await page.route(
+    '**/v1/parcel-intel/workflow/*/advance',
+    async (route) => {
+      advanceRequests.push(route.request().postDataJSON());
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          status: 'created',
+          item: {
+            bbl: '3020960069',
+            borough: 'brooklyn',
+            stage: 'reviewing',
+          },
+        }),
+      });
+    },
+  );
 
   await page.goto('/parcel-intel');
   const ranking = page.locator('#parcel-acquisition-ranking');
@@ -153,6 +181,23 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   await expect(desk).toContainText('100 E 21 STREET');
   await expect(desk).toContainText('41-20 QUEENS PLAZA');
   await expect(desk).toContainText('Evidence currency');
+  const overlayOrder = await page.evaluate(() => {
+    const dialog = document.querySelector<HTMLElement>(
+      '[aria-label="Compare shortlisted parcels"]',
+    );
+    const mapControls = document.querySelector<HTMLElement>('.leaflet-top');
+    return {
+      comparison: Number.parseInt(
+        window.getComputedStyle(dialog?.parentElement ?? dialog!).zIndex || '0',
+        10,
+      ),
+      map: Number.parseInt(
+        window.getComputedStyle(mapControls!).zIndex || '0',
+        10,
+      ),
+    };
+  });
+  expect(overlayOrder.comparison).toBeGreaterThan(overlayOrder.map);
 
   const downloadPromise = page.waitForEvent('download');
   await desk.getByRole('button', { name: 'Evidence CSV' }).click();
@@ -169,4 +214,28 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   expect(csv).toContain('41-20 QUEENS PLAZA');
   expect(csv).not.toContain('notes');
   expect(csv).not.toContain('assignee');
+
+  await desk
+    .getByRole('button', {
+      name: 'Advance 100 E 21 STREET from comparison',
+    })
+    .click();
+  await expect(
+    page.getByTestId('comparison-decision-handoff'),
+  ).toBeInViewport();
+  await desk
+    .getByLabel('Next diligence action')
+    .fill('Verify current title and owner before outreach.');
+  await desk.getByTestId('advance-comparison-parcel').click();
+  await expect(desk.getByText('Lead advanced to reviewing')).toBeVisible();
+  expect(advanceRequests).toEqual([
+    {
+      borough: 'brooklyn',
+      next_action: 'Verify current title and owner before outreach.',
+      next_action_due_date: null,
+    },
+  ]);
+  expect(JSON.stringify(advanceRequests)).not.toMatch(
+    /address|owner_name|notes|assignee|tags|score|price/i,
+  );
 });

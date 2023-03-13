@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ParcelIntelRow } from '@/lib/api';
 
@@ -12,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   saveParcelSearch: vi.fn(),
   removeParcelSavedSearch: vi.fn(),
   recordParcelProductEvent: vi.fn(),
+  advanceParcelWorkflow: vi.fn(),
   routerReplace: vi.fn(),
 }));
 
@@ -44,6 +51,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
     saveParcelSearch: mocks.saveParcelSearch,
     removeParcelSavedSearch: mocks.removeParcelSavedSearch,
     recordParcelProductEvent: mocks.recordParcelProductEvent,
+    advanceParcelWorkflow: mocks.advanceParcelWorkflow,
   };
 });
 
@@ -142,6 +150,11 @@ beforeEach(() => {
   mocks.removeParcelSavedSearch.mockReset();
   mocks.recordParcelProductEvent.mockReset();
   mocks.recordParcelProductEvent.mockResolvedValue(undefined);
+  mocks.advanceParcelWorkflow.mockReset();
+  mocks.advanceParcelWorkflow.mockResolvedValue({
+    status: 'created',
+    item: {},
+  });
   mocks.routerReplace.mockReset();
   mocks.getParcelIntelMap.mockImplementation(
     async () => ({
@@ -588,6 +601,34 @@ describe('ParcelIntelExplorer', () => {
     expect(
       JSON.stringify(mocks.recordParcelProductEvent.mock.calls),
     ).not.toMatch(/1000010001|3000010001|MN test site|BK test site/i);
+
+    fireEvent.click(
+      within(desk).getByRole('button', {
+        name: 'Advance MN test site from comparison',
+      }),
+    );
+    fireEvent.change(
+      within(desk).getByLabelText('Next diligence action'),
+      {
+        target: { value: 'Verify current title before outreach.' },
+      },
+    );
+    fireEvent.click(
+      within(desk).getByTestId('advance-comparison-parcel'),
+    );
+    await waitFor(() =>
+      expect(mocks.advanceParcelWorkflow).toHaveBeenCalledWith(
+        '1000010001',
+        {
+          borough: 'manhattan',
+          next_action: 'Verify current title before outreach.',
+          next_action_due_date: null,
+        },
+      ),
+    );
+    expect(
+      JSON.stringify(mocks.advanceParcelWorkflow.mock.calls[0]?.[1]),
+    ).not.toMatch(/address|owner|score|price|notes|assignee|tags/i);
 
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
