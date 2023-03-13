@@ -85,6 +85,51 @@ beforeEach(() => {
 });
 
 describe('ParcelIntelPropertyPanel', () => {
+  it('supports a bounded comparison action independently of authentication', () => {
+    const onToggleCompare = vi.fn();
+    const { rerender } = render(
+      <ParcelIntelPropertyPanel
+        row={parcel}
+        onClose={vi.fn()}
+        onToggleCompare={onToggleCompare}
+      />,
+    );
+
+    const compare = screen.getByTestId('parcel-compare-toggle');
+    expect(compare).toHaveTextContent('Compare');
+    expect(compare).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(compare);
+    expect(onToggleCompare).toHaveBeenCalledOnce();
+
+    rerender(
+      <ParcelIntelPropertyPanel
+        row={parcel}
+        onClose={vi.fn()}
+        compareLimitReached
+        onToggleCompare={onToggleCompare}
+      />,
+    );
+    expect(screen.getByTestId('parcel-compare-toggle')).toBeDisabled();
+    expect(screen.getByTestId('parcel-compare-toggle')).toHaveAttribute(
+      'title',
+      'Remove a parcel before adding another comparison',
+    );
+
+    rerender(
+      <ParcelIntelPropertyPanel
+        row={parcel}
+        onClose={vi.fn()}
+        isCompared
+        compareLimitReached
+        onToggleCompare={onToggleCompare}
+      />,
+    );
+    expect(screen.getByTestId('parcel-compare-toggle')).toHaveTextContent(
+      'Compared',
+    );
+    expect(screen.getByTestId('parcel-compare-toggle')).toBeEnabled();
+  });
+
   it('keeps parcel facts and external records in a compact overview panel', () => {
     const onClose = vi.fn();
     render(<ParcelIntelPropertyPanel row={parcel} onClose={onClose} />);

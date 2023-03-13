@@ -5,6 +5,14 @@ not five separate borough workspaces. Borough and eligibility filters update the
 same map/list, and selecting a lot opens its overview, underwriting, workflow,
 official-source links, provenance, and model explanation in an in-place parcel
 panel. Legacy `/parcel-intel/<borough>` links redirect into the citywide route.
+Users can place up to three fully loaded parcels into an evidence comparison
+desk without leaving the explorer. The desk keeps current acquisition posture,
+capacity, ownership/sale context, official project activity, surfaced diligence
+flags, and source-specific dates side by side. It does not collapse those
+different evidence layers into a new score or claim to be an appraisal, site
+plan, zoning opinion, or buy/pass recommendation. Authenticated comparison
+opens are measured only as a coarse event without parcel IDs or compared
+values.
 Signed-in users can save and restore private explorer views containing the
 borough scope, query, opportunity/priority filters, owner-portfolio focus, and
 map overlay. Saved views intentionally do not expose alert-frequency controls:
@@ -195,11 +203,13 @@ Authenticated Parcel Intelligence interactions send only the strict
 `citylens/parcel-product-event@v1` event/source pair to the engine. The client
 never includes a BBL, address, owner, URL, notes, tags, assignee, contact,
 underwriting value, cost, margin, efficiency, or free text. Parcel opens,
-decision-audit opens, Underwrite-tab opens, first assumption adjustments, and
-saved-view applies are coarse directional events. Decision-audit opens identify
-only whether the posture card or Audit tab was used; underwriting events identify
-only whether the Underwrite tab opened or any base assumption was changed. The
-event does not include which parcel or view was used or what assumption changed.
+comparison-desk opens, decision-audit opens, Underwrite-tab opens, first
+assumption adjustments, and saved-view applies are coarse directional events.
+Comparison events contain no parcel identifiers or compared values.
+Decision-audit opens identify only whether the posture card or Audit tab was
+used; underwriting events identify only whether the Underwrite tab opened or
+any base assumption was changed. The event does not include which parcel or
+view was used or what assumption changed.
 Delivery is best-effort and cannot block parcel diligence, scenario editing,
 saved-view restoration, or workflow saves. Canonical saved-view
 create/update/delete counts are recorded

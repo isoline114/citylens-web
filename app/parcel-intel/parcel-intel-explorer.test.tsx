@@ -62,9 +62,29 @@ vi.mock('./parcel-intel-explorer-map', () => ({
 }));
 
 vi.mock('./parcel-intel-property-panel', () => ({
-  ParcelIntelPropertyPanel: ({ row }: { row: ParcelIntelRow }) => (
+  ParcelIntelPropertyPanel: ({
+    row,
+    onClose,
+    isCompared,
+    onToggleCompare,
+  }: {
+    row: ParcelIntelRow;
+    onClose: () => void;
+    isCompared?: boolean;
+    onToggleCompare?: () => void;
+  }) => (
     <div data-testid="property-panel-stub">
       {row.borough}:{row.bbl}
+      <button type="button" onClick={onClose}>
+        Back to ranking
+      </button>
+      <button
+        type="button"
+        aria-pressed={isCompared}
+        onClick={onToggleCompare}
+      >
+        {isCompared ? 'Compared' : 'Compare'}
+      </button>
     </div>
   ),
 }));
@@ -523,5 +543,49 @@ describe('ParcelIntelExplorer', () => {
       expect(mocks.getParcelIntelParcel).toHaveBeenCalled(),
     );
     expect(mocks.recordParcelProductEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it('compares two parcels without sending their identities in telemetry', async () => {
+    mocks.authStatus = 'authenticated';
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /manhattan test site/i }),
+    );
+    await screen.findByTestId('property-panel-stub');
+    fireEvent.click(screen.getByRole('button', { name: 'Compare' }));
+    expect(screen.getByTestId('parcel-comparison-tray')).toHaveTextContent(
+      '1/3',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to ranking' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: /brooklyn test site/i }),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('property-panel-stub')).toHaveTextContent(
+        'brooklyn:3000010001',
+      ),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Compare' }));
+
+    const desk = await screen.findByTestId('parcel-comparison-desk');
+    expect(desk).toHaveTextContent('MN test site');
+    expect(desk).toHaveTextContent('BK test site');
+    expect(desk).toHaveTextContent('Development capacity');
+    expect(desk).toHaveTextContent('Evidence currency');
+    await waitFor(() =>
+      expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+        'comparison_opened',
+        'comparison',
+      ),
+    );
+    expect(
+      JSON.stringify(mocks.recordParcelProductEvent.mock.calls),
+    ).not.toMatch(/1000010001|3000010001|MN test site|BK test site/i);
+
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByTestId('parcel-comparison-tray')).toBeInTheDocument();
   });
 });

@@ -86,6 +86,7 @@ export type PilotRequestReceipt = {
 
 export type ParcelProductEventName =
   | 'parcel_opened'
+  | 'comparison_opened'
   | 'saved_view_applied'
   | 'decision_audit_opened'
   | 'underwriting_opened'
@@ -97,6 +98,7 @@ export type ParcelProductEventSource =
   | 'ranking'
   | 'action_queue'
   | 'watchlist'
+  | 'comparison'
   | 'saved_views'
   | 'decision_posture'
   | 'audit_tab'

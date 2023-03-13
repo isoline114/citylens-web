@@ -10,6 +10,7 @@ import {
   Bookmark,
   Building2,
   CalendarClock,
+  Columns3,
   Download,
   Layers3,
   LoaderCircle,
@@ -50,6 +51,7 @@ import {
 } from './parcel-intel-explorer-support';
 import { downloadCsv } from './[borough]/parcel-intel-csv';
 import { ParcelIntelPropertyPanel } from './parcel-intel-property-panel';
+import { ParcelComparisonDesk } from './parcel-comparison-desk';
 import { ParcelWorkflowInsights } from './parcel-workflow-insights';
 import { ParcelWorkflowAlertsPanel } from './parcel-workflow-alerts';
 import { ParcelWorkflowActionsPanel } from './parcel-workflow-actions';
@@ -74,6 +76,7 @@ const DEFAULT_FILTERS: ExplorerFilters = {
 const INITIAL_LEAD_LIMIT = 30;
 const MOBILE_COMPACT_LEAD_LIMIT = 10;
 const LEAD_PAGE_SIZE = 30;
+const MAX_COMPARISON_PARCELS = 3;
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error';
 type DetailState = 'idle' | 'loading' | 'ready' | 'error';
@@ -133,10 +136,16 @@ export function ParcelIntelExplorer({
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [savedViewsOpen, setSavedViewsOpen] = useState(false);
+  const [comparisonRows, setComparisonRows] = useState<ParcelIntelRow[]>([]);
+  const [comparisonOpen, setComparisonOpen] = useState(false);
   const [workflowActions, setWorkflowActions] =
     useState<ParcelWorkflowActions | null>(null);
   const parcelOpenSourceRef = useRef<ParcelProductEventSource>('direct');
   const trackedParcelOpensRef = useRef(new Set<string>());
+  const comparisonOpenTrackedRef = useRef(false);
+  const comparisonDialogRef = useRef<HTMLDivElement>(null);
+  const comparisonReturnFocusRef = useRef<HTMLElement | null>(null);
+  const wasAuthenticatedRef = useRef(false);
 
   const isAuthenticated = auth.status === 'authenticated';
   const totalAvailable = boroughs.reduce((sum, borough) => sum + borough.count, 0);
@@ -239,6 +248,21 @@ export function ParcelIntelExplorer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.status, boroughs]);
 
+  // A signed-out browser must not retain authenticated parcel detail in the
+  // comparison workspace. Public-preview comparisons remain available.
+  useEffect(() => {
+    if (auth.status === 'authenticated') {
+      wasAuthenticatedRef.current = true;
+      return;
+    }
+    if (wasAuthenticatedRef.current) {
+      wasAuthenticatedRef.current = false;
+      setComparisonRows([]);
+      setComparisonOpen(false);
+      comparisonOpenTrackedRef.current = false;
+    }
+  }, [auth.status]);
+
   useEffect(() => {
     if (auth.status !== 'authenticated') {
       setWorkflowActions(null);
@@ -262,6 +286,15 @@ export function ParcelIntelExplorer({
       window.removeEventListener('citylens:workflow-updated', refresh);
     };
   }, [auth.status]);
+
+  useEffect(() => {
+    if (!comparisonOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [comparisonOpen]);
 
   const filtered = useMemo(
     () => filterExplorerRows(rows, filters),
@@ -397,6 +430,74 @@ export function ParcelIntelExplorer({
   const closeParcel = () => {
     setSelectedBbl(null);
     syncExplorerUrl(filters.borough, null);
+  };
+
+  const trackComparisonOpen = () => {
+    if (
+      auth.status !== 'authenticated' ||
+      comparisonOpenTrackedRef.current
+    ) {
+      return;
+    }
+    comparisonOpenTrackedRef.current = true;
+    void recordParcelProductEvent(
+      'comparison_opened',
+      'comparison',
+    ).catch(() => {
+      // Comparison remains available if coarse, value-minimized adoption
+      // telemetry is unavailable.
+    });
+  };
+
+  const openComparison = () => {
+    if (comparisonRows.length < 2) return;
+    comparisonReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    setComparisonOpen(true);
+    trackComparisonOpen();
+  };
+
+  const closeComparison = () => {
+    setComparisonOpen(false);
+    window.setTimeout(() => comparisonReturnFocusRef.current?.focus(), 0);
+  };
+
+  const toggleComparison = (row: ParcelIntelRow) => {
+    const alreadyIncluded = comparisonRows.some(
+      (candidate) => candidate.bbl === row.bbl,
+    );
+    if (alreadyIncluded) {
+      const next = comparisonRows.filter(
+        (candidate) => candidate.bbl !== row.bbl,
+      );
+      setComparisonRows(next);
+      if (next.length < 2) setComparisonOpen(false);
+      return;
+    }
+    if (comparisonRows.length >= MAX_COMPARISON_PARCELS) return;
+    const next = [...comparisonRows, row];
+    setComparisonRows(next);
+    if (next.length >= 2) {
+      comparisonReturnFocusRef.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+      setComparisonOpen(true);
+      trackComparisonOpen();
+    }
+  };
+
+  const removeComparison = (bbl: string) => {
+    const next = comparisonRows.filter((row) => row.bbl !== bbl);
+    setComparisonRows(next);
+    if (next.length < 2) closeComparison();
+  };
+
+  const clearComparison = () => {
+    setComparisonRows([]);
+    setComparisonOpen(false);
   };
 
   const focusOwnerPortfolio = (ownerPortfolioId: string) => {
@@ -948,6 +1049,16 @@ export function ParcelIntelExplorer({
               row={selectedDetail}
               onClose={closeParcel}
               onViewOwnerPortfolio={focusOwnerPortfolio}
+              isCompared={comparisonRows.some(
+                (row) => row.bbl === selectedDetail.bbl,
+              )}
+              compareLimitReached={
+                comparisonRows.length >= MAX_COMPARISON_PARCELS &&
+                !comparisonRows.some(
+                  (row) => row.bbl === selectedDetail.bbl,
+                )
+              }
+              onToggleCompare={() => toggleComparison(selectedDetail)}
             />
           ) : selectedSummary && detailState === 'loading' ? (
             <div
@@ -1362,6 +1473,110 @@ export function ParcelIntelExplorer({
           </button>
         ))}
       </div>
+
+      {comparisonRows.length > 0 && !comparisonOpen && (
+        <section
+          className="fixed bottom-4 left-1/2 z-50 flex w-[min(94vw,920px)] -translate-x-1/2 flex-col gap-3 rounded-2xl border border-white/15 bg-slate-950 px-4 py-3 text-white shadow-2xl shadow-slate-950/35 sm:flex-row sm:items-center sm:justify-between"
+          aria-label="Parcel comparison tray"
+          data-testid="parcel-comparison-tray"
+        >
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-xs font-semibold text-sky-300">
+              <Columns3 className="h-4 w-4" />
+              Compare shortlist · {comparisonRows.length}/
+              {MAX_COMPARISON_PARCELS}
+            </div>
+            <div className="mt-2 flex max-w-full gap-1.5 overflow-x-auto pb-0.5">
+              {comparisonRows.map((row) => (
+                <button
+                  key={row.bbl}
+                  type="button"
+                  onClick={() => removeComparison(row.bbl)}
+                  className="inline-flex max-w-56 shrink-0 items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-[11px] text-slate-200 hover:bg-white/15"
+                  aria-label={`Remove ${row.address ?? row.bbl} from comparison`}
+                >
+                  <span className="truncate">{row.address ?? row.bbl}</span>
+                  <X className="h-3 w-3 shrink-0" />
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={clearComparison}
+              className="h-9 rounded-lg px-3 text-xs font-semibold text-slate-300 hover:bg-white/10 hover:text-white"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={openComparison}
+              disabled={comparisonRows.length < 2}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white px-3 text-xs font-semibold text-slate-950 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Columns3 className="h-3.5 w-3.5" />
+              {comparisonRows.length < 2 ? 'Add one more' : 'Compare now'}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {comparisonOpen && comparisonRows.length >= 2 && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-2 backdrop-blur-sm sm:p-5"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeComparison();
+            }
+          }}
+        >
+          <div
+            ref={comparisonDialogRef}
+            className="max-h-[94vh] w-full max-w-6xl overflow-y-auto rounded-3xl bg-white shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Compare shortlisted parcels"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.stopPropagation();
+                closeComparison();
+                return;
+              }
+              if (event.key !== 'Tab') return;
+              const focusable = comparisonDialogRef.current?.querySelectorAll<
+                HTMLElement
+              >(
+                'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+              );
+              if (!focusable?.length) return;
+              const first = focusable[0];
+              const last = focusable[focusable.length - 1];
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+              } else if (
+                !event.shiftKey &&
+                document.activeElement === last
+              ) {
+                event.preventDefault();
+                first.focus();
+              }
+            }}
+          >
+            <ParcelComparisonDesk
+              rows={comparisonRows}
+              onClose={closeComparison}
+              onRemove={removeComparison}
+              onSelectParcel={(bbl) => {
+                setComparisonOpen(false);
+                selectParcel(bbl, 'comparison');
+              }}
+            />
+          </div>
+        </div>
+      )}
     </section>
   );
 }

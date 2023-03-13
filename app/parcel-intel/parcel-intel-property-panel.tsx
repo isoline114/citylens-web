@@ -13,6 +13,7 @@ import {
   CircleAlert,
   ClipboardCheck,
   Clock3,
+  Columns3,
   Database,
   ExternalLink,
   FileSearch,
@@ -59,6 +60,9 @@ type Props = {
   row: ParcelIntelRow;
   onClose: () => void;
   onViewOwnerPortfolio?: (ownerPortfolioId: string) => void;
+  isCompared?: boolean;
+  compareLimitReached?: boolean;
+  onToggleCompare?: () => void;
 };
 
 type ExternalParcelLink = { label: string; href: string };
@@ -559,6 +563,9 @@ export function ParcelIntelPropertyPanel({
   row,
   onClose,
   onViewOwnerPortfolio,
+  isCompared = false,
+  compareLimitReached = false,
+  onToggleCompare,
 }: Props) {
   const auth = useAuth();
   const [tab, setTab] = useState<PanelTab>('overview');
@@ -858,45 +865,76 @@ export function ParcelIntelPropertyPanel({
               : 'Ranked'}
           </span>
         </div>
-        {auth.status === 'authenticated' && (
+        {(onToggleCompare || auth.status === 'authenticated') && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              data-testid="workflow-quick-save"
-              disabled={workflowBusy || effectiveWorkflowLoadState !== 'ready'}
-              onClick={() => {
-                if (workflowItem) {
-                  setTab('workflow');
-                  return;
+            {onToggleCompare && (
+              <button
+                type="button"
+                data-testid="parcel-compare-toggle"
+                aria-pressed={isCompared}
+                aria-label={
+                  isCompared
+                    ? `Remove ${row.address ?? row.bbl} from comparison`
+                    : `Add ${row.address ?? row.bbl} to comparison`
                 }
-                void quickSaveWorkflow();
-              }}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {effectiveWorkflowLoadState === 'idle' ||
-              effectiveWorkflowLoadState === 'loading' ? (
-                <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-              ) : effectiveWorkflowLoadState === 'error' ? (
-                <CircleAlert className="h-3.5 w-3.5" />
-              ) : workflowItem ? (
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
-              ) : (
-                <BookmarkPlus className="h-3.5 w-3.5" />
-              )}
-              {effectiveWorkflowLoadState === 'idle' ||
-              effectiveWorkflowLoadState === 'loading'
-                ? 'Checking pipeline…'
-                : effectiveWorkflowLoadState === 'error'
-                  ? 'Pipeline unavailable'
-                  : workflowItem
-                  ? 'In pipeline · Open'
-                  : 'Save lead'}
-            </button>
-            <span className="text-[11px] leading-4 text-slate-500">
-              {workflowItem
-                ? 'Saved facts stay fixed; workflow updates never rewrite the original rank.'
-                : 'Creates the canonical save-time snapshot, then opens follow-up planning.'}
-            </span>
+                disabled={!isCompared && compareLimitReached}
+                title={
+                  !isCompared && compareLimitReached
+                    ? 'Remove a parcel before adding another comparison'
+                    : undefined
+                }
+                onClick={onToggleCompare}
+                className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  isCompared
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+                    : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
+                }`}
+              >
+                <Columns3 className="h-3.5 w-3.5" />
+                {isCompared ? 'Compared' : 'Compare'}
+              </button>
+            )}
+            {auth.status === 'authenticated' && (
+              <>
+                <button
+                  type="button"
+                  data-testid="workflow-quick-save"
+                  disabled={workflowBusy || effectiveWorkflowLoadState !== 'ready'}
+                  onClick={() => {
+                    if (workflowItem) {
+                      setTab('workflow');
+                      return;
+                    }
+                    void quickSaveWorkflow();
+                  }}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {effectiveWorkflowLoadState === 'idle' ||
+                  effectiveWorkflowLoadState === 'loading' ? (
+                    <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                  ) : effectiveWorkflowLoadState === 'error' ? (
+                    <CircleAlert className="h-3.5 w-3.5" />
+                  ) : workflowItem ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
+                  ) : (
+                    <BookmarkPlus className="h-3.5 w-3.5" />
+                  )}
+                  {effectiveWorkflowLoadState === 'idle' ||
+                  effectiveWorkflowLoadState === 'loading'
+                    ? 'Checking pipeline…'
+                    : effectiveWorkflowLoadState === 'error'
+                      ? 'Pipeline unavailable'
+                      : workflowItem
+                        ? 'In pipeline · Open'
+                        : 'Save lead'}
+                </button>
+                <span className="text-[11px] leading-4 text-slate-500">
+                  {workflowItem
+                    ? 'Saved facts stay fixed; workflow updates never rewrite the original rank.'
+                    : 'Creates the canonical save-time snapshot, then opens follow-up planning.'}
+                </span>
+              </>
+            )}
           </div>
         )}
       </div>
