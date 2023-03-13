@@ -61,10 +61,19 @@ post-score diligence overlays, source dates, and user-entered workflow
 evidence. Historical top-100/top-1,000 precision is shown as cohort-level
 forward-test performance, never as seller intent or a parcel transaction
 probability. The audit also renders the API-owned decision-readiness state:
-current blockers, items requiring review, evidence already cleared, and one
-conservative next diligence action. Signed-in users can carry that action into
-the private workflow as an editable draft; it is never saved automatically and
-does not alter model rank.
+current blockers, items requiring review, checks that passed the current
+screening gates, and one conservative next diligence action. Signed-in users
+can carry that action into the private workflow as an editable draft; it is
+never saved automatically and does not alter model rank.
+Once a parcel is saved, its Workflow tab also exposes a source-bound evidence
+review ledger for the current acquisition gate, project clearance, PLUTO
+facts, ownership provenance, diligence overlays, and transit context. A user
+may mark only the exact status/source/source-date/feed version returned by the
+server. The UI shows current progress, automatically labels prior markers
+stale when any part of that citation identity changes, and permits an explicit
+undo. “Reviewed” means that cited version was considered; it never means risk
+was resolved, a record was cleared, or legal, zoning, title, environmental,
+engineering, financial, or seller-intent diligence was completed.
 The Underwrite tab replaces a single-point residual with an editable
 downside/base/upside development sensitivity. Every case exposes value, hard
 cost, efficiency, soft-cost, and target-margin assumptions; outputs include
@@ -209,6 +218,9 @@ This frontend aligns to the CityLens API contract served by `citylens-engine`:
   request shape; sam2/aoi defaults are server-injected)
 - `GET  /v1/runs`, `GET /v1/runs/{run_id}` — Bearer auth required
 - `GET  /v1/me` — Bearer auth required; returns user + monthly quota state
+- `PUT|DELETE /v1/parcel-intel/workflow/{bbl}/evidence-reviews/{check_key}` —
+  Bearer auth required; writes or removes a source-bound review marker on an
+  active workflow record using optimistic citation-version checks
 - `POST /v1/pilot-requests` — public, rate-limited design-partner intake with
   an opaque `Idempotency-Key`; returns a durable receipt and is never cached
 

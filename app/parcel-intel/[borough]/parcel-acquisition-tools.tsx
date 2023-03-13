@@ -7,15 +7,24 @@ import {
   Bell,
   Bookmark,
   Calculator,
+  CheckCircle2,
+  ChevronDown,
   Equal,
   Printer,
+  RefreshCw,
   Save,
   Share2,
+  ShieldCheck,
   Trash2,
+  Undo2,
 } from 'lucide-react';
 
 import type {
+  ParcelDecisionAudit,
+  ParcelDecisionAuditCheck,
   ParcelIntelRow,
+  ParcelWorkflowEvidenceReview,
+  ParcelWorkflowEvidenceReviewKey,
   ParcelWorkflowItem,
   ParcelWorkflowStage,
 } from '@/lib/api';
@@ -261,6 +270,272 @@ export function WorkflowEditor({
           <Save className="h-3.5 w-3.5" /> {busy ? 'Saving…' : item ? 'Save changes' : 'Add to pipeline'}
         </button>
       </div>
+    </section>
+  );
+}
+
+const REVIEWABLE_EVIDENCE_KEYS: ParcelWorkflowEvidenceReviewKey[] = [
+  'acquisition_eligibility',
+  'current_project_clearance',
+  'property_facts',
+  'ownership',
+  'current_diligence',
+  'transit_access',
+];
+
+function evidenceReviewIsCurrent(
+  review: ParcelWorkflowEvidenceReview | undefined,
+  check: ParcelDecisionAuditCheck,
+  feedGeneratedAt: string | null,
+): boolean {
+  return Boolean(
+    review &&
+      review.check_status === check.status &&
+      review.source === check.source &&
+      review.source_as_of === check.as_of &&
+      review.feed_generated_at === feedGeneratedAt,
+  );
+}
+
+function reviewDateLabel(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'Recorded';
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(parsed);
+}
+
+const EVIDENCE_STATUS_STYLES: Record<
+  ParcelDecisionAuditCheck['status'],
+  string
+> = {
+  verified: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
+  review: 'bg-amber-50 text-amber-900 ring-amber-200',
+  excluded: 'bg-rose-50 text-rose-800 ring-rose-200',
+  unavailable: 'bg-slate-100 text-slate-700 ring-slate-200',
+  informational: 'bg-sky-50 text-sky-800 ring-sky-200',
+};
+
+export function EvidenceReviewChecklist({
+  audit,
+  item,
+  busyKey,
+  onReview,
+  onClear,
+}: {
+  audit?: ParcelDecisionAudit;
+  item: ParcelWorkflowItem;
+  busyKey: ParcelWorkflowEvidenceReviewKey | null;
+  onReview: (
+    checkKey: ParcelWorkflowEvidenceReviewKey,
+    check: ParcelDecisionAuditCheck,
+  ) => Promise<void>;
+  onClear: (checkKey: ParcelWorkflowEvidenceReviewKey) => Promise<void>;
+}) {
+  const feedGeneratedAt = audit?.evidence_generated_at ?? null;
+  const checks = REVIEWABLE_EVIDENCE_KEYS.map((key) => ({
+    key,
+    check: audit?.checks.find((candidate) => candidate.key === key),
+    review: item.evidence_reviews?.[key],
+  })).filter(
+    (
+      value,
+    ): value is {
+      key: ParcelWorkflowEvidenceReviewKey;
+      check: ParcelDecisionAuditCheck;
+      review: ParcelWorkflowEvidenceReview | undefined;
+    } => Boolean(value.check),
+  );
+  const currentCount = checks.filter(({ check, review }) =>
+    evidenceReviewIsCurrent(review, check, feedGeneratedAt),
+  ).length;
+  const staleCount = checks.filter(
+    ({ check, review }) =>
+      Boolean(review) &&
+      !evidenceReviewIsCurrent(review, check, feedGeneratedAt),
+  ).length;
+  const isTerminal =
+    item.stage === 'pass' ||
+    ['closed', 'rejected', 'lost'].includes(item.outcome);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (staleCount > 0) setExpanded(true);
+  }, [staleCount]);
+
+  if (checks.length === 0) return null;
+
+  return (
+    <section
+      className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+      data-testid="evidence-review-checklist"
+    >
+      <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-sky-950 px-3 py-3 text-white">
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          aria-expanded={expanded}
+          aria-controls="evidence-review-items"
+          aria-label={`Evidence review ledger, ${currentCount} of ${checks.length} current${staleCount ? `, ${staleCount} stale` : ''}`}
+          data-testid="evidence-review-toggle"
+          className={`flex w-full items-start justify-between gap-3 rounded-md text-left ${FOCUS_RING}`}
+        >
+          <span>
+            <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em]">
+              <ShieldCheck className="h-3.5 w-3.5 text-sky-300" />
+              Evidence review ledger
+            </span>
+            <span className="mt-1 block max-w-md text-[11px] leading-4 text-slate-300">
+              Mark the exact cited version you considered. CityLens flags the
+              marker when its status, source, source date, or feed version changes.
+            </span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5">
+            <span
+              className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-semibold tabular-nums text-sky-100 ring-1 ring-inset ring-white/15"
+              aria-label={`${currentCount} of ${checks.length} evidence versions reviewed`}
+            >
+              {currentCount}/{checks.length} current
+            </span>
+            <ChevronDown
+              className={`h-4 w-4 text-slate-300 transition-transform ${expanded ? 'rotate-180' : ''}`}
+              aria-hidden="true"
+            />
+          </span>
+        </button>
+        <div
+          className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/15"
+          role="progressbar"
+          aria-label="Current evidence versions reviewed"
+          aria-valuemin={0}
+          aria-valuemax={checks.length}
+          aria-valuenow={currentCount}
+        >
+          <div
+            className="h-full rounded-full bg-sky-300 transition-[width]"
+            style={{
+              width: `${checks.length > 0 ? (currentCount / checks.length) * 100 : 0}%`,
+            }}
+          />
+        </div>
+      </div>
+
+      {expanded && (
+        <div id="evidence-review-items">
+          {isTerminal && (
+            <p
+              className="border-b border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-900"
+              role="status"
+            >
+              Reopen this workflow record before changing evidence-review
+              markers.
+            </p>
+          )}
+          <ul className="divide-y divide-slate-100">
+            {checks.map(({ key, check, review }) => {
+              const isCurrent = evidenceReviewIsCurrent(
+                review,
+                check,
+                feedGeneratedAt,
+              );
+              const isStale = Boolean(review && !isCurrent);
+              const isBusy = busyKey === key;
+              return (
+                <li
+                  key={key}
+                  className="px-3 py-3"
+                  data-testid={`evidence-review-${key}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-xs font-semibold text-slate-950">
+                          {check.label}
+                        </span>
+                        <span
+                          className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ring-1 ring-inset ${EVIDENCE_STATUS_STYLES[check.status]}`}
+                        >
+                          {check.status}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] leading-4 text-slate-600">
+                        {check.source}
+                        {check.as_of
+                          ? ` · as of ${check.as_of}`
+                          : ' · date unavailable'}
+                      </p>
+                      {isCurrent && review ? (
+                        <p className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-emerald-700">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Exact version reviewed{' '}
+                          {reviewDateLabel(review.reviewed_at)}
+                        </p>
+                      ) : isStale && review ? (
+                        <div className="mt-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5">
+                          <p className="flex items-center gap-1 text-[11px] font-semibold text-amber-900">
+                            <RefreshCw className="h-3.5 w-3.5" />
+                            Source changed · review the current version again
+                          </p>
+                          <p className="mt-0.5 text-[10px] leading-4 text-amber-800">
+                            Prior marker: {review.source}
+                            {review.source_as_of
+                              ? ` · as of ${review.source_as_of}`
+                              : ' · date unavailable'}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="mt-1.5 text-[11px] text-slate-500">
+                          Not yet marked reviewed for this cited version.
+                        </p>
+                      )}
+                    </div>
+
+                    {isCurrent ? (
+                      <button
+                        type="button"
+                        disabled={isTerminal || busyKey !== null}
+                        onClick={() => void onClear(key)}
+                        aria-label={`Undo review of ${check.label}`}
+                        className={`inline-flex h-8 shrink-0 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600 hover:border-slate-300 hover:text-slate-950 disabled:opacity-50 ${FOCUS_RING}`}
+                      >
+                        <Undo2 className="h-3 w-3" />
+                        Undo
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={isTerminal || busyKey !== null}
+                        onClick={() => void onReview(key, check)}
+                        aria-label={`Mark ${check.label} version reviewed`}
+                        className={`inline-flex min-h-8 shrink-0 items-center gap-1 rounded-md bg-slate-950 px-2.5 py-1.5 text-[10px] font-semibold text-white hover:bg-slate-800 disabled:opacity-50 ${FOCUS_RING}`}
+                      >
+                        {isBusy ? (
+                          <RefreshCw className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="h-3 w-3" />
+                        )}
+                        {isBusy
+                          ? 'Saving…'
+                          : isStale
+                            ? 'Review current'
+                            : 'Mark reviewed'}
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          <p className="border-t border-slate-100 bg-slate-50 px-3 py-2 text-[10px] leading-4 text-slate-600">
+            “Reviewed” records consideration of a cited version only. It does
+            not resolve risk, clear title or zoning, verify seller intent, or
+            complete legal, engineering, environmental, or financial diligence.
+          </p>
+        </div>
+      )}
     </section>
   );
 }

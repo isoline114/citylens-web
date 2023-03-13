@@ -6,6 +6,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
 }) => {
   let reminderSnoozed = false;
   const productEvents: unknown[] = [];
+  const evidenceReviewRequests: unknown[] = [];
   let savedViews = [
     {
       schema_version: 'citylens/parcel-saved-view@v2',
@@ -133,6 +134,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
           transit_data_as_of: '2026-07-24',
           decision_audit: {
             schema_version: 'citylens/parcel-decision-audit@v1',
+            evidence_generated_at: '2026-07-24T02:43:29Z',
             overall_status: 'screened_with_flags',
             overall_label: 'Eligible lead with diligence flags',
             readiness: {
@@ -264,6 +266,51 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
           },
           saved_at: '2026-07-24T09:40:00Z',
           updated_at: '2026-07-24T09:40:00Z',
+          evidence_reviews: {},
+        }),
+      });
+    },
+  );
+
+  await page.route(
+    '**/v1/parcel-intel/workflow/3020960069/evidence-reviews/current_diligence',
+    async (route) => {
+      evidenceReviewRequests.push(route.request().postDataJSON());
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          bbl: '3020960069',
+          borough: 'brooklyn',
+          stage: 'new',
+          notes: '',
+          tags: [],
+          assignee: null,
+          watching: true,
+          decision_reason: null,
+          next_action: null,
+          next_action_due_date: null,
+          outcome: 'unknown',
+          snapshot: {
+            feed_generated_at: '2026-07-24T09:15:49Z',
+            property_facts_as_of: '2026-07-24',
+            citywide_rank: 82,
+            acquisition_rank: 21,
+            priority_tier: 'highest',
+            opportunity_category: 'ground_up_candidate',
+          },
+          saved_at: '2026-07-24T09:40:00Z',
+          updated_at: '2026-07-25T10:00:00Z',
+          evidence_reviews: {
+            current_diligence: {
+              check_key: 'current_diligence',
+              label: 'Current diligence overlays',
+              check_status: 'review',
+              source: 'NYC PLUTO/FEMA and NYC Planning MIH',
+              source_as_of: '2026-07-24',
+              feed_generated_at: '2026-07-24T02:43:29Z',
+              reviewed_at: '2026-07-25T10:00:00Z',
+            },
+          },
         }),
       });
     },
@@ -950,6 +997,29 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(
     page.getByRole('textbox', { name: 'Next action', exact: true }),
   ).toHaveValue(/Resolve the listed diligence items/);
+  await expect(page.getByTestId('evidence-review-checklist')).toContainText(
+    '0/3 current',
+  );
+  await page.getByTestId('evidence-review-toggle').click();
+  await page
+    .getByRole('button', {
+      name: 'Mark Current diligence overlays version reviewed',
+    })
+    .click();
+  await expect(
+    page.getByTestId('evidence-review-current_diligence'),
+  ).toContainText('Exact version reviewed');
+  expect(evidenceReviewRequests).toEqual([
+    {
+      expected_check_status: 'review',
+      expected_source: 'NYC PLUTO/FEMA and NYC Planning MIH',
+      expected_source_as_of: '2026-07-24',
+      expected_feed_generated_at: '2026-07-24T02:43:29Z',
+    },
+  ]);
+  expect(JSON.stringify(evidenceReviewRequests)).not.toMatch(
+    /3020960069|100 E 21|owner|notes|tags|assignee/i,
+  );
   await page
     .getByRole('button', {
       name: 'Close parcel panel and return to ranked parcels',

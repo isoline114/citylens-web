@@ -28,19 +28,24 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import {
+  ApiError,
+  clearParcelWorkflowEvidenceReview,
   getParcelWorkflow,
   listParcelWorkflowEvents,
   recordParcelProductEvent,
   removeParcelWorkflow,
+  reviewParcelWorkflowEvidence,
   saveParcelWorkflow,
-  type ParcelIntelRow,
   type ParcelDecisionAudit,
   type ParcelDecisionAuditCheck,
-  type ParcelWorkflowItem,
+  type ParcelIntelRow,
+  type ParcelWorkflowEvidenceReviewKey,
   type ParcelWorkflowEvent,
+  type ParcelWorkflowItem,
   type TopFeature,
 } from '@/lib/api';
 import {
+  EvidenceReviewChecklist,
   LandBasisCalculator,
   ParcelBriefActions,
   WorkflowEditor,
@@ -572,6 +577,8 @@ export function ParcelIntelPropertyPanel({
   const [workflowItem, setWorkflowItem] = useState<ParcelWorkflowItem | null>(null);
   const [workflowEvents, setWorkflowEvents] = useState<ParcelWorkflowEvent[]>([]);
   const [workflowBusy, setWorkflowBusy] = useState(false);
+  const [evidenceReviewBusyKey, setEvidenceReviewBusyKey] =
+    useState<ParcelWorkflowEvidenceReviewKey | null>(null);
   const [workflowError, setWorkflowError] = useState<string | null>(null);
   const [workflowLoadState, setWorkflowLoadState] = useState<
     'idle' | 'loading' | 'ready' | 'error'
@@ -677,6 +684,7 @@ export function ParcelIntelPropertyPanel({
     setWorkflowItem(null);
     setWorkflowEvents([]);
     setWorkflowBusy(false);
+    setEvidenceReviewBusyKey(null);
     setWorkflowError(null);
     setWorkflowContextBbl(row.bbl);
     if (auth.status !== 'authenticated') {
@@ -811,6 +819,93 @@ export function ParcelIntelPropertyPanel({
         activeBblRef.current === bbl
       ) {
         setWorkflowBusy(false);
+      }
+    }
+  };
+
+  const reviewEvidence = async (
+    checkKey: ParcelWorkflowEvidenceReviewKey,
+    check: ParcelDecisionAuditCheck,
+  ) => {
+    if (!workflowItem || effectiveWorkflowLoadState !== 'ready') return;
+    const bbl = row.bbl;
+    const mutationId = workflowMutationIdRef.current + 1;
+    workflowMutationIdRef.current = mutationId;
+    setWorkflowBusy(true);
+    setEvidenceReviewBusyKey(checkKey);
+    setWorkflowError(null);
+    try {
+      const updated = await reviewParcelWorkflowEvidence(bbl, checkKey, {
+        expected_check_status: check.status,
+        expected_source: check.source,
+        expected_source_as_of: check.as_of,
+        expected_feed_generated_at:
+          row.decision_audit?.evidence_generated_at ?? null,
+      });
+      if (
+        workflowMutationIdRef.current !== mutationId ||
+        activeBblRef.current !== bbl
+      ) {
+        return;
+      }
+      setWorkflowItem(updated);
+      window.dispatchEvent(new Event('citylens:workflow-updated'));
+    } catch (error) {
+      if (
+        workflowMutationIdRef.current === mutationId &&
+        activeBblRef.current === bbl
+      ) {
+        setWorkflowError(
+          error instanceof ApiError && error.status === 409
+            ? 'The cited evidence changed. Close and reopen this parcel before reviewing the current version.'
+            : 'Could not record this evidence review. Please retry.',
+        );
+      }
+    } finally {
+      if (
+        workflowMutationIdRef.current === mutationId &&
+        activeBblRef.current === bbl
+      ) {
+        setWorkflowBusy(false);
+        setEvidenceReviewBusyKey(null);
+      }
+    }
+  };
+
+  const clearEvidenceReview = async (
+    checkKey: ParcelWorkflowEvidenceReviewKey,
+  ) => {
+    if (!workflowItem || effectiveWorkflowLoadState !== 'ready') return;
+    const bbl = row.bbl;
+    const mutationId = workflowMutationIdRef.current + 1;
+    workflowMutationIdRef.current = mutationId;
+    setWorkflowBusy(true);
+    setEvidenceReviewBusyKey(checkKey);
+    setWorkflowError(null);
+    try {
+      const updated = await clearParcelWorkflowEvidenceReview(bbl, checkKey);
+      if (
+        workflowMutationIdRef.current !== mutationId ||
+        activeBblRef.current !== bbl
+      ) {
+        return;
+      }
+      setWorkflowItem(updated);
+      window.dispatchEvent(new Event('citylens:workflow-updated'));
+    } catch {
+      if (
+        workflowMutationIdRef.current === mutationId &&
+        activeBblRef.current === bbl
+      ) {
+        setWorkflowError('Could not undo this evidence review. Please retry.');
+      }
+    } finally {
+      if (
+        workflowMutationIdRef.current === mutationId &&
+        activeBblRef.current === bbl
+      ) {
+        setWorkflowBusy(false);
+        setEvidenceReviewBusyKey(null);
       }
     }
   };
@@ -1874,6 +1969,15 @@ export function ParcelIntelPropertyPanel({
                   onSave={(draft) => saveWorkflow(draft)}
                   onRemove={removeWorkflow}
                 />
+                {workflowItem && (
+                  <EvidenceReviewChecklist
+                    audit={row.decision_audit}
+                    item={workflowItem}
+                    busyKey={evidenceReviewBusyKey}
+                    onReview={reviewEvidence}
+                    onClear={clearEvidenceReview}
+                  />
+                )}
                 {workflowEvents.length > 0 && (
                 <section className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
                   <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-700">

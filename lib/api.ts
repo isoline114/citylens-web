@@ -456,6 +456,8 @@ export type ParcelDecisionReadiness = {
 
 export type ParcelDecisionAudit = {
   schema_version: 'citylens/parcel-decision-audit@v1';
+  /** Exact published feed version used to assemble the cited audit checks. */
+  evidence_generated_at?: string | null;
   overall_status:
     | 'screened'
     | 'screened_with_flags'
@@ -809,6 +811,24 @@ export type ParcelWorkflowStage =
   | 'pursue'
   | 'pass';
 
+export type ParcelWorkflowEvidenceReviewKey =
+  | 'acquisition_eligibility'
+  | 'current_project_clearance'
+  | 'property_facts'
+  | 'ownership'
+  | 'current_diligence'
+  | 'transit_access';
+
+export type ParcelWorkflowEvidenceReview = {
+  check_key: ParcelWorkflowEvidenceReviewKey;
+  label: string;
+  check_status: ParcelDecisionAuditStatus;
+  source: string;
+  source_as_of: string | null;
+  feed_generated_at: string | null;
+  reviewed_at: string;
+};
+
 export type ParcelWorkflowSnapshot = {
   feed_generated_at: string | null;
   property_facts_as_of: string | null;
@@ -884,6 +904,10 @@ export type ParcelWorkflowItem = {
   snapshot: ParcelWorkflowSnapshot;
   saved_at: string;
   updated_at: string;
+  /** Optional during rolling deploys from the pre-review workflow contract. */
+  evidence_reviews?: Partial<
+    Record<ParcelWorkflowEvidenceReviewKey, ParcelWorkflowEvidenceReview>
+  >;
 };
 
 export type ParcelWorkflowAdvanceResponse = {
@@ -1334,7 +1358,7 @@ export async function saveParcelWorkflow(
   bbl: string,
   item: Omit<
     ParcelWorkflowItem,
-    'bbl' | 'saved_at' | 'updated_at' | 'snapshot'
+    'bbl' | 'saved_at' | 'updated_at' | 'snapshot' | 'evidence_reviews'
   >,
 ): Promise<ParcelWorkflowItem> {
   return requestJson<ParcelWorkflowItem>(
@@ -1356,6 +1380,39 @@ export async function advanceParcelWorkflow(
     {
       method: 'POST',
       body: JSON.stringify(input),
+      cache: 'no-store',
+    },
+  );
+}
+
+export async function reviewParcelWorkflowEvidence(
+  bbl: string,
+  checkKey: ParcelWorkflowEvidenceReviewKey,
+  input: {
+    expected_check_status: ParcelDecisionAuditStatus;
+    expected_source: string;
+    expected_source_as_of: string | null;
+    expected_feed_generated_at: string | null;
+  },
+): Promise<ParcelWorkflowItem> {
+  return requestJson<ParcelWorkflowItem>(
+    `/v1/parcel-intel/workflow/${encodeURIComponent(bbl)}/evidence-reviews/${encodeURIComponent(checkKey)}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(input),
+      cache: 'no-store',
+    },
+  );
+}
+
+export async function clearParcelWorkflowEvidenceReview(
+  bbl: string,
+  checkKey: ParcelWorkflowEvidenceReviewKey,
+): Promise<ParcelWorkflowItem> {
+  return requestJson<ParcelWorkflowItem>(
+    `/v1/parcel-intel/workflow/${encodeURIComponent(bbl)}/evidence-reviews/${encodeURIComponent(checkKey)}`,
+    {
+      method: 'DELETE',
       cache: 'no-store',
     },
   );

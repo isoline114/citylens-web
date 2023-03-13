@@ -1,9 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ParcelIntelRow } from '@/lib/api';
+import type {
+  ParcelDecisionAudit,
+  ParcelIntelRow,
+  ParcelWorkflowItem,
+} from '@/lib/api';
 import {
   buildLandBasisScenarios,
+  EvidenceReviewChecklist,
   LandBasisCalculator,
   WorkflowEditor,
 } from './parcel-acquisition-tools';
@@ -59,6 +64,152 @@ describe('WorkflowEditor', () => {
         }),
       ),
     );
+  });
+});
+
+describe('EvidenceReviewChecklist', () => {
+  const audit: ParcelDecisionAudit = {
+    schema_version: 'citylens/parcel-decision-audit@v1',
+    evidence_generated_at: '2026-07-24T02:43:29Z',
+    overall_status: 'screened',
+    overall_label: 'Eligible lead after current gates',
+    validation: {
+      target: 'dob_nb_job_filing',
+      evaluation_scope: 'Historical rolling-origin evaluation',
+      precision_at_100: 0.34,
+      precision_at_1000: 0.104,
+      base_rate: 0.0012,
+      prospective_validated: false,
+      disclaimer: 'Historical screening order only.',
+    },
+    readiness: {
+      status: 'initial_review_ready',
+      label: 'Ready for an initial acquisition review',
+      recommended_action: 'Verify the cited official records.',
+      blockers: [],
+      review_items: [],
+      cleared_items: [],
+      disclaimer: 'Not a purchase recommendation.',
+    },
+    checks: [
+      {
+        key: 'property_facts',
+        layer: 'source_freshness',
+        label: 'Current property facts',
+        status: 'verified',
+        summary: 'Current PLUTO tax-lot facts matched this BBL.',
+        source: 'NYC PLUTO',
+        as_of: '2026-07-24',
+        affects_model_rank: false,
+        affects_acquisition_eligibility: true,
+      },
+    ],
+    limitations: [],
+  };
+  const baseItem = {
+    bbl: '3020960069',
+    evidence_reviews: {},
+  } as ParcelWorkflowItem;
+
+  it('records exact-version intent and never describes diligence as cleared', () => {
+    const onReview = vi.fn().mockResolvedValue(undefined);
+    const onClear = vi.fn().mockResolvedValue(undefined);
+    render(
+      <EvidenceReviewChecklist
+        audit={audit}
+        item={baseItem}
+        busyKey={null}
+        onReview={onReview}
+        onClear={onClear}
+      />,
+    );
+
+    expect(
+      screen.getByLabelText('0 of 1 evidence versions reviewed'),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('evidence-review-toggle'));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Mark Current property facts version reviewed',
+      }),
+    );
+    expect(onReview).toHaveBeenCalledWith('property_facts', audit.checks[0]);
+    expect(screen.getByText(/does not resolve risk/i)).toBeInTheDocument();
+    expect(screen.queryByText(/diligence cleared/i)).not.toBeInTheDocument();
+  });
+
+  it('distinguishes current markers from stale source versions', () => {
+    const currentItem = {
+      ...baseItem,
+      evidence_reviews: {
+        property_facts: {
+          check_key: 'property_facts',
+          label: 'Current property facts',
+          check_status: 'verified',
+          source: 'NYC PLUTO',
+          source_as_of: '2026-07-24',
+          feed_generated_at: '2026-07-24T02:43:29Z',
+          reviewed_at: '2026-07-25T10:00:00Z',
+        },
+      },
+    } as ParcelWorkflowItem;
+    const { rerender } = render(
+      <EvidenceReviewChecklist
+        audit={audit}
+        item={currentItem}
+        busyKey={null}
+        onReview={vi.fn()}
+        onClear={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('evidence-review-toggle'));
+    expect(screen.getByText(/Exact version reviewed/i)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText('1 of 1 evidence versions reviewed'),
+    ).toBeInTheDocument();
+
+    rerender(
+      <EvidenceReviewChecklist
+        audit={{
+          ...audit,
+          evidence_generated_at: '2026-07-26T02:43:29Z',
+        }}
+        item={currentItem}
+        busyKey={null}
+        onReview={vi.fn()}
+        onClear={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText(/Source changed · review the current version again/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: 'Mark Current property facts version reviewed',
+      }),
+    ).toHaveTextContent('Review current');
+  });
+
+  it('prevents evidence mutations on a terminal workflow record', () => {
+    render(
+      <EvidenceReviewChecklist
+        audit={audit}
+        item={{ ...baseItem, stage: 'pass' }}
+        busyKey={null}
+        onReview={vi.fn()}
+        onClear={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('evidence-review-toggle'));
+
+    expect(
+      screen.getByText(/Reopen this workflow record/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: 'Mark Current property facts version reviewed',
+      }),
+    ).toBeDisabled();
   });
 });
 

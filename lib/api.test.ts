@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   advanceParcelWorkflow,
   ApiError,
+  clearParcelWorkflowEvidenceReview,
   createApiKey,
   createRun,
   getDemoRun,
@@ -18,6 +19,7 @@ import {
   listApiKeys,
   listParcelSavedSearches,
   recordParcelProductEvent,
+  reviewParcelWorkflowEvidence,
   removeParcelSavedSearch,
   resolveApiUrl,
   revokeApiKey,
@@ -276,6 +278,53 @@ describe('api client', () => {
     expect(new Headers(init.headers).get('Authorization')).toBe(
       'Bearer tok-abc',
     );
+  });
+
+  it('writes and clears only a source-bound evidence review marker', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({
+        bbl: '3020960069',
+        evidence_reviews: {},
+      }),
+      text: async () => '',
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await reviewParcelWorkflowEvidence('3020960069', 'property_facts', {
+      expected_check_status: 'verified',
+      expected_source: 'NYC PLUTO',
+      expected_source_as_of: '2026-07-24',
+      expected_feed_generated_at: '2026-07-24T02:43:29Z',
+    });
+    const [reviewUrl, reviewInit] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(reviewUrl).toContain(
+      '/v1/parcel-intel/workflow/3020960069/evidence-reviews/property_facts',
+    );
+    expect(reviewInit.method).toBe('PUT');
+    expect(reviewInit.cache).toBe('no-store');
+    expect(JSON.parse(String(reviewInit.body))).toEqual({
+      expected_check_status: 'verified',
+      expected_source: 'NYC PLUTO',
+      expected_source_as_of: '2026-07-24',
+      expected_feed_generated_at: '2026-07-24T02:43:29Z',
+    });
+    expect(String(reviewInit.body)).not.toMatch(
+      /bbl|address|owner|notes|assignee|tags|score|price/i,
+    );
+
+    await clearParcelWorkflowEvidenceReview('3020960069', 'property_facts');
+    const [clearUrl, clearInit] = fetchMock.mock.calls[1] as [
+      string,
+      RequestInit,
+    ];
+    expect(clearUrl).toBe(reviewUrl);
+    expect(clearInit.method).toBe('DELETE');
+    expect(clearInit.cache).toBe('no-store');
   });
 
   it('records only the strict coarse product-event contract', async () => {

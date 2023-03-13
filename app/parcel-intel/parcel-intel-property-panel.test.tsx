@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   recordParcelProductEvent: vi.fn(),
   saveParcelWorkflow: vi.fn(),
   removeParcelWorkflow: vi.fn(),
+  reviewParcelWorkflowEvidence: vi.fn(),
+  clearParcelWorkflowEvidenceReview: vi.fn(),
 }));
 
 vi.mock('@/lib/auth', () => ({
@@ -27,6 +29,9 @@ vi.mock('@/lib/api', async (importOriginal) => {
     recordParcelProductEvent: mocks.recordParcelProductEvent,
     saveParcelWorkflow: mocks.saveParcelWorkflow,
     removeParcelWorkflow: mocks.removeParcelWorkflow,
+    reviewParcelWorkflowEvidence: mocks.reviewParcelWorkflowEvidence,
+    clearParcelWorkflowEvidenceReview:
+      mocks.clearParcelWorkflowEvidenceReview,
   };
 });
 
@@ -82,6 +87,8 @@ beforeEach(() => {
   mocks.recordParcelProductEvent.mockResolvedValue(undefined);
   mocks.saveParcelWorkflow.mockReset();
   mocks.removeParcelWorkflow.mockReset();
+  mocks.reviewParcelWorkflowEvidence.mockReset();
+  mocks.clearParcelWorkflowEvidenceReview.mockReset();
 });
 
 describe('ParcelIntelPropertyPanel', () => {
@@ -468,6 +475,127 @@ describe('ParcelIntelPropertyPanel', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Workflow' }));
     expect(screen.getByRole('button', { name: /Add to pipeline/i })).toBeInTheDocument();
+  });
+
+  it('binds workflow evidence review to the exact server citation version', async () => {
+    mocks.authStatus = 'authenticated';
+    const item = {
+      bbl: parcel.bbl,
+      borough: 'brooklyn',
+      stage: 'reviewing',
+      notes: '',
+      tags: [],
+      assignee: null,
+      watching: true,
+      decision_reason: 'pursuing',
+      next_action: 'Verify official records.',
+      next_action_due_date: null,
+      outcome: 'unknown',
+      snapshot: {} as ParcelWorkflowItem['snapshot'],
+      saved_at: '2026-07-24T09:40:00Z',
+      updated_at: '2026-07-24T09:40:00Z',
+      evidence_reviews: {},
+    } as ParcelWorkflowItem;
+    const auditedParcel: ParcelIntelRow = {
+      ...parcel,
+      decision_audit: {
+        schema_version: 'citylens/parcel-decision-audit@v1',
+        evidence_generated_at: '2026-07-24T02:43:29Z',
+        overall_status: 'screened',
+        overall_label: 'Eligible lead after current gates',
+        readiness: {
+          status: 'initial_review_ready',
+          label: 'Ready for an initial acquisition review',
+          recommended_action: 'Verify official records.',
+          blockers: [],
+          review_items: [],
+          cleared_items: [],
+          disclaimer: 'Not a purchase recommendation.',
+        },
+        validation: {
+          target: 'dob_nb_job_filing',
+          evaluation_scope: 'Historical rolling-origin evaluation',
+          precision_at_100: 0.34,
+          precision_at_1000: 0.104,
+          base_rate: 0.0012,
+          prospective_validated: false,
+          disclaimer: 'Historical screening order only.',
+        },
+        checks: [
+          {
+            key: 'property_facts',
+            layer: 'source_freshness',
+            label: 'Current property facts',
+            status: 'verified',
+            summary: 'Current PLUTO tax-lot facts matched this BBL.',
+            source: 'NYC PLUTO',
+            as_of: '2026-07-24',
+            affects_model_rank: false,
+            affects_acquisition_eligibility: true,
+          },
+        ],
+        limitations: [],
+      },
+    };
+    const reviewedItem: ParcelWorkflowItem = {
+      ...item,
+      evidence_reviews: {
+        property_facts: {
+          check_key: 'property_facts',
+          label: 'Current property facts',
+          check_status: 'verified',
+          source: 'NYC PLUTO',
+          source_as_of: '2026-07-24',
+          feed_generated_at: '2026-07-24T02:43:29Z',
+          reviewed_at: '2026-07-25T10:00:00Z',
+        },
+      },
+    };
+    mocks.getParcelWorkflow.mockResolvedValue(item);
+    mocks.reviewParcelWorkflowEvidence.mockResolvedValue(reviewedItem);
+    mocks.clearParcelWorkflowEvidenceReview.mockResolvedValue(item);
+
+    render(
+      <ParcelIntelPropertyPanel row={auditedParcel} onClose={vi.fn()} />,
+    );
+    await waitFor(() =>
+      expect(mocks.getParcelWorkflow).toHaveBeenCalledWith(parcel.bbl),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Workflow' }));
+    fireEvent.click(screen.getByTestId('evidence-review-toggle'));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Mark Current property facts version reviewed',
+      }),
+    );
+
+    await waitFor(() =>
+      expect(mocks.reviewParcelWorkflowEvidence).toHaveBeenCalledWith(
+        parcel.bbl,
+        'property_facts',
+        {
+          expected_check_status: 'verified',
+          expected_source: 'NYC PLUTO',
+          expected_source_as_of: '2026-07-24',
+          expected_feed_generated_at: '2026-07-24T02:43:29Z',
+        },
+      ),
+    );
+    expect(
+      await screen.findByText(/Exact version reviewed/i),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Undo review of Current property facts',
+      }),
+    );
+    await waitFor(() =>
+      expect(mocks.clearParcelWorkflowEvidenceReview).toHaveBeenCalledWith(
+        parcel.bbl,
+        'property_facts',
+      ),
+    );
   });
 
   it('guards loading and saves a canonical lead from the parcel header', async () => {
