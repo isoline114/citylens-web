@@ -45,6 +45,13 @@ owner focus are removed immediately when a session ends. Saved views
 intentionally do not expose alert-frequency controls: watchlist change
 monitoring remains the implemented change-review workflow, while scheduled
 saved-search delivery is not yet available.
+Once the complete authenticated inventory is loaded, any saved view can be
+compared with the current working screen against that same inventory. The
+comparison reports shared, current-only, and saved-only membership, the shared
+share of the union, PLUTO field coverage, and bounded descriptive medians.
+Saved views store conditions rather than frozen counts, so both sides refresh
+with the current feed. This is screen sensitivity—not ranking accuracy,
+relative lead quality, feasibility, seller intent, or transaction evidence.
 The Signals workspace also includes bounded evidence recipes for assemblage,
 long-held transit proximity, concentrated exact-name ownership, and recent
 aerial change. Recipes are ordinary visible filters—not generated conclusions
@@ -285,7 +292,9 @@ never includes a BBL, address, owner, URL, notes, tags, assignee, contact,
 underwriting value, cost, margin, efficiency, or free text. Parcel opens,
 comparison-desk opens, decision-audit opens, Underwrite-tab opens, first
 assumption adjustments, and saved-view applies are coarse directional events.
-Comparison events contain no parcel identifiers or compared values.
+Comparison-desk and saved-screen-comparison events contain no parcel
+identifiers, saved-view identity, filters, criteria, thresholds, search text,
+result counts, overlap/union measures, or compared values.
 Decision-audit opens identify only whether the posture card or Audit tab was
 used; underwriting events identify only whether the Underwrite tab opened or
 any base assumption was changed. The event does not include which parcel or

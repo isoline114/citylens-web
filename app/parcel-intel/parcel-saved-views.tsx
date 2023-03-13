@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Bookmark,
   Check,
+  GitCompareArrows,
   LoaderCircle,
   RefreshCw,
   Save,
@@ -20,13 +21,16 @@ import {
 } from '@/lib/api';
 import {
   BOROUGH_LABELS,
+  buildExplorerScreenComparison,
   savedSearchDimensions,
   signalLabel,
   siteTypeLabel,
   type ExplorerFilters,
   type ExplorerOverlay,
+  type ParcelExplorerRow,
   type ExplorerPriority,
 } from './parcel-intel-explorer-support';
+import { ParcelSavedScreenComparison } from './parcel-saved-screen-comparison';
 
 type SavedViewDraft = {
   borough: string;
@@ -73,11 +77,17 @@ function suggestedName(draft: SavedViewDraft): string {
 
 export function ParcelSavedViewsPanel({
   currentView,
+  inventoryRows,
+  inventoryReady,
   onApply,
+  onComparisonOpened,
   onClose,
 }: {
   currentView: SavedViewDraft;
+  inventoryRows: ParcelExplorerRow[];
+  inventoryReady: boolean;
   onApply: (view: ParcelSavedSearch) => void;
+  onComparisonOpened?: () => void;
   onClose: () => void;
 }) {
   const [views, setViews] = useState<ParcelSavedSearch[]>([]);
@@ -88,6 +98,9 @@ export function ParcelSavedViewsPanel({
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [saved, setSaved] = useState(false);
+  const [comparisonViewId, setComparisonViewId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -95,7 +108,14 @@ export function ParcelSavedViewsPanel({
     setError(null);
     void listParcelSavedSearches()
       .then((items) => {
-        if (!cancelled) setViews(items);
+        if (!cancelled) {
+          setViews(items);
+          setComparisonViewId((current) =>
+            current && items.some((item) => item.search_id === current)
+              ? current
+              : null,
+          );
+        }
       })
       .catch(() => {
         if (!cancelled) {
@@ -116,6 +136,24 @@ export function ParcelSavedViewsPanel({
         right.updated_at.localeCompare(left.updated_at),
       ),
     [views],
+  );
+  const comparisonView = useMemo(
+    () =>
+      comparisonViewId
+        ? views.find((view) => view.search_id === comparisonViewId) ?? null
+        : null,
+    [comparisonViewId, views],
+  );
+  const comparison = useMemo(
+    () =>
+      comparisonView && inventoryReady
+        ? buildExplorerScreenComparison(
+            inventoryRows,
+            currentView.filters,
+            comparisonView,
+          )
+        : null,
+    [comparisonView, currentView.filters, inventoryReady, inventoryRows],
   );
 
   const saveCurrentView = async () => {
@@ -159,6 +197,9 @@ export function ParcelSavedViewsPanel({
       await removeParcelSavedSearch(searchId);
       setViews((current) =>
         current.filter((view) => view.search_id !== searchId),
+      );
+      setComparisonViewId((current) =>
+        current === searchId ? null : current,
       );
     } catch {
       setError('This saved view could not be deleted. Try again.');
@@ -269,6 +310,16 @@ export function ParcelSavedViewsPanel({
         </div>
 
         <div>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400">
+            <span className="font-semibold uppercase tracking-[0.12em] text-slate-300">
+              Your saved screens
+            </span>
+            <span>
+              {inventoryReady
+                ? `${inventoryRows.length.toLocaleString()} current leads ready to compare`
+                : 'Loading the current ranked-lead inventory…'}
+            </span>
+          </div>
           {loading ? (
             <div className="flex min-h-36 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 text-sm text-slate-300">
               <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -360,13 +411,44 @@ export function ParcelSavedViewsPanel({
                         )}
                       </div>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => onApply(view)}
-                      className="mt-3 inline-flex h-8 w-full items-center justify-center rounded-md border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
-                    >
-                      Apply view
-                    </button>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onApply(view)}
+                        aria-label="Apply view"
+                        className="inline-flex h-8 items-center justify-center rounded-md border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
+                      >
+                        Apply
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!inventoryReady}
+                        aria-pressed={comparisonViewId === view.search_id}
+                        aria-label={`${
+                          comparisonViewId === view.search_id
+                            ? 'Stop comparing'
+                            : 'Compare current screen with'
+                        } ${view.name}`}
+                        onClick={() => {
+                          const opening =
+                            comparisonViewId !== view.search_id;
+                          setComparisonViewId(
+                            opening ? view.search_id : null,
+                          );
+                          if (opening) onComparisonOpened?.();
+                        }}
+                        className={`inline-flex h-8 items-center justify-center gap-1 rounded-md border px-3 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-45 ${
+                          comparisonViewId === view.search_id
+                            ? 'border-sky-300/40 bg-sky-300/15 text-sky-100'
+                            : 'border-white/15 bg-white/5 text-white hover:bg-white/15'
+                        }`}
+                      >
+                        <GitCompareArrows className="h-3.5 w-3.5" />
+                        {comparisonViewId === view.search_id
+                          ? 'Comparing'
+                          : 'Compare'}
+                      </button>
+                    </div>
                   </article>
                 );
               })}
@@ -377,6 +459,13 @@ export function ParcelSavedViewsPanel({
           )}
         </div>
       </div>
+      {comparison && comparisonView && (
+        <ParcelSavedScreenComparison
+          comparison={comparison}
+          savedViewName={comparisonView.name}
+          onApplySaved={() => onApply(comparisonView)}
+        />
+      )}
     </section>
   );
 }

@@ -575,7 +575,22 @@ describe('ParcelIntelExplorer', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Saved views' }));
     fireEvent.click(
-      await screen.findByRole('button', { name: 'Apply view' }),
+      await screen.findByRole('button', {
+        name: 'Compare current screen with Brooklyn priority',
+      }),
+    );
+    expect(screen.getByTestId('saved-screen-comparison')).toHaveTextContent(
+      /same 2 currently loaded ranked leads/i,
+    );
+    await waitFor(() =>
+      expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+        'saved_view_comparison_opened',
+        'saved_views',
+      ),
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Apply saved screen' }),
     );
 
     expect(screen.getByLabelText('Filter by borough')).toHaveValue('brooklyn');
@@ -598,7 +613,9 @@ describe('ParcelIntelExplorer', () => {
     );
     expect(
       JSON.stringify(mocks.recordParcelProductEvent.mock.calls),
-    ).not.toMatch(/view-brooklyn|Brooklyn priority|test site|vacant_site/i);
+    ).not.toMatch(
+      /view-brooklyn|Brooklyn priority|test site|vacant_site|count|overlap|union/i,
+    );
     expect(screen.getByLabelText('Search parcels')).toHaveValue('test site');
     expect(
       screen.getByRole('button', { name: 'opportunity' }),

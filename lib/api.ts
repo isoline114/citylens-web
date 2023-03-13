@@ -92,7 +92,8 @@ export type ParcelProductEventName =
   | 'underwriting_opened'
   | 'underwriting_assumptions_changed'
   | 'screen_audit_opened'
-  | 'screen_criterion_relaxed';
+  | 'screen_criterion_relaxed'
+  | 'saved_view_comparison_opened';
 
 export type ParcelProductEventSource =
   | 'direct'

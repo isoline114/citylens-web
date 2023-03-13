@@ -18,7 +18,10 @@ vi.mock('@/lib/api', async (importOriginal) => {
 });
 
 import { ParcelSavedViewsPanel } from './parcel-saved-views';
-import type { ExplorerFilters } from './parcel-intel-explorer-support';
+import type {
+  ExplorerFilters,
+  ParcelExplorerRow,
+} from './parcel-intel-explorer-support';
 
 const savedView = {
   schema_version: 'citylens/parcel-saved-view@v2' as const,
@@ -52,6 +55,37 @@ const currentView = {
   overlay: 'borough' as const,
 };
 
+const inventoryRows = [
+  {
+    bbl: '3000010001',
+    address: '100 Brooklyn Avenue',
+    borough: 'brooklyn',
+    priority_tier: 'highest',
+    opportunity_category: 'vacant_site',
+    lot_area_sqft: 8_000,
+    unused_floor_area_sqft: 12_000,
+    owner_name: 'Owner LLC',
+    years_held: 12,
+    nearest_transit_station_distance_m: 400,
+    lat: 40.66,
+    lng: -73.95,
+  },
+  {
+    bbl: '1000010001',
+    address: '200 Manhattan Avenue',
+    borough: 'manhattan',
+    priority_tier: 'high',
+    opportunity_category: 'ground_up_candidate',
+    lot_area_sqft: 6_000,
+    unused_floor_area_sqft: 11_000,
+    owner_name: 'Owner LLC',
+    years_held: 12,
+    nearest_transit_station_distance_m: 500,
+    lat: 40.75,
+    lng: -73.99,
+  },
+] as ParcelExplorerRow[];
+
 beforeEach(() => {
   mocks.listParcelSavedSearches.mockReset();
   mocks.saveParcelSearch.mockReset();
@@ -71,6 +105,8 @@ describe('ParcelSavedViewsPanel', () => {
     render(
       <ParcelSavedViewsPanel
         currentView={currentView}
+        inventoryRows={inventoryRows}
+        inventoryReady
         onApply={onApply}
         onClose={vi.fn()}
       />,
@@ -85,6 +121,8 @@ describe('ParcelSavedViewsPanel', () => {
     render(
       <ParcelSavedViewsPanel
         currentView={currentView}
+        inventoryRows={inventoryRows}
+        inventoryReady
         onApply={vi.fn()}
         onClose={vi.fn()}
       />,
@@ -123,6 +161,8 @@ describe('ParcelSavedViewsPanel', () => {
     const { unmount } = render(
       <ParcelSavedViewsPanel
         currentView={currentView}
+        inventoryRows={inventoryRows}
+        inventoryReady
         onApply={vi.fn()}
         onClose={vi.fn()}
       />,
@@ -143,6 +183,8 @@ describe('ParcelSavedViewsPanel', () => {
     render(
       <ParcelSavedViewsPanel
         currentView={currentView}
+        inventoryRows={inventoryRows}
+        inventoryReady
         onApply={vi.fn()}
         onClose={vi.fn()}
       />,
@@ -151,5 +193,68 @@ describe('ParcelSavedViewsPanel', () => {
       await screen.findByText('Saved views are temporarily unavailable.'),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
+  it('compares one saved screen against the current complete inventory', async () => {
+    const onApply = vi.fn();
+    const onComparisonOpened = vi.fn();
+    render(
+      <ParcelSavedViewsPanel
+        currentView={currentView}
+        inventoryRows={inventoryRows}
+        inventoryReady
+        onApply={onApply}
+        onComparisonOpened={onComparisonOpened}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByText('Brooklyn candidates');
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Compare current screen with Brooklyn candidates',
+      }),
+    );
+
+    const comparison = screen.getByTestId('saved-screen-comparison');
+    expect(comparison).toHaveTextContent(
+      'Both screens are re-evaluated against the same 2 currently loaded ranked leads.',
+    );
+    expect(screen.getByTestId('saved-screen-shared-count')).toHaveTextContent(
+      '1',
+    );
+    expect(comparison).toHaveTextContent('Current only');
+    expect(comparison).toHaveTextContent('Saved only');
+    expect(comparison).toHaveTextContent(
+      /not ranking accuracy, relative quality, feasibility, seller intent/i,
+    );
+    expect(onComparisonOpened).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Apply saved screen' }),
+    );
+    expect(onApply).toHaveBeenCalledWith(savedView);
+  });
+
+  it('keeps comparison disabled until the complete inventory is ready', async () => {
+    render(
+      <ParcelSavedViewsPanel
+        currentView={currentView}
+        inventoryRows={inventoryRows.slice(0, 1)}
+        inventoryReady={false}
+        onApply={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByText('Brooklyn candidates');
+    expect(
+      screen.getByRole('button', {
+        name: 'Compare current screen with Brooklyn candidates',
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText('Loading the current ranked-lead inventory…'),
+    ).toBeInTheDocument();
   });
 });

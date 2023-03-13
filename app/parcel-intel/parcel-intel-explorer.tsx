@@ -181,6 +181,7 @@ export function ParcelIntelExplorer({
   const [detailState, setDetailState] = useState<DetailState>('idle');
   const [exporting, setExporting] = useState(false);
   const fullInventoryLoaded = useRef(false);
+  const [fullInventoryReady, setFullInventoryReady] = useState(false);
   const [filters, setFilters] = useState<ExplorerFilters>(() => ({
     ...DEFAULT_FILTERS,
     borough: boroughs.some((borough) => borough.slug === initialBorough)
@@ -206,6 +207,7 @@ export function ParcelIntelExplorer({
     useState<ParcelWorkflowActions | null>(null);
   const parcelOpenSourceRef = useRef<ParcelProductEventSource>('direct');
   const screenAuditOpenTrackedRef = useRef(false);
+  const savedViewComparisonOpenTrackedRef = useRef(false);
   const trackedParcelOpensRef = useRef(new Set<string>());
   const comparisonOpenTrackedRef = useRef(false);
   const comparisonDialogRef = useRef<HTMLDivElement>(null);
@@ -299,6 +301,7 @@ export function ParcelIntelExplorer({
     const includeAuth = auth.status === 'authenticated';
     if (!includeAuth && !fullInventoryLoaded.current) return;
     let cancelled = false;
+    setFullInventoryReady(false);
     void loadExplorerRows(includeAuth).then((result) => {
       if (cancelled) return;
       fullInventoryLoaded.current = includeAuth;
@@ -306,6 +309,9 @@ export function ParcelIntelExplorer({
       setRows([...unique.values()]);
       setFailedBoroughs(result.failures);
       setLoadState(unique.size > 0 ? 'ready' : 'error');
+      setFullInventoryReady(
+        includeAuth && unique.size > 0 && result.failures.length === 0,
+      );
     });
     return () => {
       cancelled = true;
@@ -325,6 +331,7 @@ export function ParcelIntelExplorer({
       setComparisonRows([]);
       setComparisonOpen(false);
       comparisonOpenTrackedRef.current = false;
+      savedViewComparisonOpenTrackedRef.current = false;
       setFilters((current) => ({
         ...current,
         signals: current.signals.filter(
@@ -793,6 +800,17 @@ export function ParcelIntelExplorer({
     });
   };
 
+  const trackSavedViewComparisonOpen = () => {
+    if (savedViewComparisonOpenTrackedRef.current) return;
+    savedViewComparisonOpenTrackedRef.current = true;
+    void recordParcelProductEvent(
+      'saved_view_comparison_opened',
+      'saved_views',
+    ).catch(() => {
+      // Screen comparison remains local when coarse telemetry is unavailable.
+    });
+  };
+
   return (
     <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_28px_90px_-42px_rgba(15,23,42,0.42)]">
       <div className="relative overflow-hidden bg-slate-950 px-4 py-4 text-white md:px-6 md:py-5">
@@ -976,7 +994,14 @@ export function ParcelIntelExplorer({
             filters,
             overlay,
           }}
+          inventoryRows={rows}
+          inventoryReady={
+            loadState === 'ready' &&
+            fullInventoryReady &&
+            failedBoroughs.length === 0
+          }
           onApply={applySavedView}
+          onComparisonOpened={trackSavedViewComparisonOpen}
           onClose={() => setSavedViewsOpen(false)}
         />
       )}

@@ -872,7 +872,21 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
 
   await page.getByRole('button', { name: 'Saved views' }).click();
   await expect(page.getByTestId('saved-views-panel')).toBeVisible();
-  await page.getByRole('button', { name: 'Apply view' }).click();
+  await page
+    .getByRole('button', {
+      name: 'Compare current screen with Brooklyn priority',
+    })
+    .click();
+  const savedScreenComparison = page.getByTestId('saved-screen-comparison');
+  await expect(savedScreenComparison).toBeVisible();
+  await expect(savedScreenComparison).toContainText(
+    'same 1 currently loaded ranked leads',
+  );
+  await expect(savedScreenComparison).toContainText(
+    'not ranking accuracy, relative quality, feasibility, seller intent',
+  );
+  await expect(page.getByTestId('saved-screen-shared-count')).toHaveText('1');
+  await page.getByRole('button', { name: 'Apply saved screen' }).click();
   await expect(page.getByLabel('Filter by borough')).toHaveValue('brooklyn');
   await expect(page.getByLabel('Filter by priority')).toHaveValue('highest');
   await expect(
@@ -966,6 +980,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     .toEqual([
       {
         schema_version: 'citylens/parcel-product-event@v1',
+        event: 'saved_view_comparison_opened',
+        source: 'saved_views',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
         event: 'saved_view_applied',
         source: 'saved_views',
       },
@@ -976,7 +995,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
       },
     ]);
   expect(JSON.stringify(productEvents)).not.toMatch(
-    /3020960069|100 E 21|owner|notes|tags/i,
+    /3020960069|100 E 21|owner|notes|tags|count|overlap|union/i,
   );
   await page.getByRole('button', { name: 'Overview' }).click();
   await expect(page.getByTestId('mih-diligence')).toContainText(
@@ -998,6 +1017,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect
     .poll(() => productEvents)
     .toEqual([
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'saved_view_comparison_opened',
+        source: 'saved_views',
+      },
       {
         schema_version: 'citylens/parcel-product-event@v1',
         event: 'saved_view_applied',
@@ -1034,6 +1058,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     .toEqual([
       {
         schema_version: 'citylens/parcel-product-event@v1',
+        event: 'saved_view_comparison_opened',
+        source: 'saved_views',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
         event: 'saved_view_applied',
         source: 'saved_views',
       },
@@ -1057,6 +1086,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect
     .poll(() => productEvents)
     .toEqual([
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'saved_view_comparison_opened',
+        source: 'saved_views',
+      },
       {
         schema_version: 'citylens/parcel-product-event@v1',
         event: 'saved_view_applied',

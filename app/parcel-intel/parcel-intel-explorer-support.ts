@@ -1,6 +1,7 @@
 import type {
   ParcelIntelMapRow,
   ParcelIntelRow,
+  ParcelSavedSearch,
   ParcelSavedSearchFilters,
 } from '@/lib/api';
 
@@ -172,6 +173,24 @@ export type ExplorerScreenAudit = {
   criteriaCount: number;
   criteria: ExplorerScreenAuditCriterion[];
   largestMarginalCriterion: ExplorerScreenAuditCriterion | null;
+};
+
+export type ExplorerScreenComparisonProfile = ExplorerScreenSummary & {
+  lotAreaKnownCount: number;
+  unusedFloorAreaKnownCount: number;
+  lotAreaKnownRatePct: number | null;
+  unusedFloorAreaKnownRatePct: number | null;
+};
+
+export type ExplorerScreenComparison = {
+  inventoryCount: number;
+  current: ExplorerScreenComparisonProfile;
+  saved: ExplorerScreenComparisonProfile;
+  sharedCount: number;
+  currentOnlyCount: number;
+  savedOnlyCount: number;
+  unionCount: number;
+  sharedUnionRatePct: number | null;
 };
 
 function medianPositive(values: Array<number | null | undefined>): number | null {
@@ -566,6 +585,78 @@ export function savedSearchDimensions(
       (legacySignals.has(legacy as ExplorerSignal)
         ? [legacy as ExplorerSignal]
         : []),
+  };
+}
+
+export function explorerFiltersFromSavedSearch(
+  view: Pick<ParcelSavedSearch, 'borough' | 'filters'>,
+): ExplorerFilters {
+  const dimensions = savedSearchDimensions(view.filters);
+  return {
+    borough: view.borough,
+    priority: view.filters.priority,
+    siteType: dimensions.siteType,
+    signals: dimensions.signals,
+    minLotAreaSqft: view.filters.min_lot_area_sqft ?? null,
+    minUnusedFloorAreaSqft:
+      view.filters.min_unused_floor_area_sqft ?? null,
+    query: view.filters.query,
+    ownerPortfolioId: view.filters.owner_portfolio_id,
+  };
+}
+
+function screenComparisonProfile(
+  matches: ParcelExplorerRow[],
+  inventory: ParcelExplorerRow[],
+): ExplorerScreenComparisonProfile {
+  const lotAreaKnownCount = matches.filter(
+    (row) =>
+      typeof row.lot_area_sqft === 'number' &&
+      Number.isFinite(row.lot_area_sqft),
+  ).length;
+  const unusedFloorAreaKnownCount = matches.filter(
+    (row) =>
+      typeof row.unused_floor_area_sqft === 'number' &&
+      Number.isFinite(row.unused_floor_area_sqft),
+  ).length;
+  return {
+    ...summarizeExplorerScreen(matches, inventory),
+    lotAreaKnownCount,
+    unusedFloorAreaKnownCount,
+    lotAreaKnownRatePct:
+      matches.length > 0 ? (lotAreaKnownCount / matches.length) * 100 : null,
+    unusedFloorAreaKnownRatePct:
+      matches.length > 0
+        ? (unusedFloorAreaKnownCount / matches.length) * 100
+        : null,
+  };
+}
+
+export function buildExplorerScreenComparison(
+  rows: ParcelExplorerRow[],
+  currentFilters: ExplorerFilters,
+  savedView: Pick<ParcelSavedSearch, 'borough' | 'filters'>,
+): ExplorerScreenComparison {
+  const currentRows = filterExplorerRows(rows, currentFilters);
+  const savedRows = filterExplorerRows(
+    rows,
+    explorerFiltersFromSavedSearch(savedView),
+  );
+  const currentIds = new Set(currentRows.map((row) => row.bbl));
+  const savedIds = new Set(savedRows.map((row) => row.bbl));
+  const sharedCount = [...currentIds].filter((bbl) => savedIds.has(bbl)).length;
+  const unionCount = new Set([...currentIds, ...savedIds]).size;
+
+  return {
+    inventoryCount: rows.length,
+    current: screenComparisonProfile(currentRows, rows),
+    saved: screenComparisonProfile(savedRows, rows),
+    sharedCount,
+    currentOnlyCount: currentIds.size - sharedCount,
+    savedOnlyCount: savedIds.size - sharedCount,
+    unionCount,
+    sharedUnionRatePct:
+      unionCount > 0 ? (sharedCount / unionCount) * 100 : null,
   };
 }
 

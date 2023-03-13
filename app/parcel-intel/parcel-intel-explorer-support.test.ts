@@ -3,6 +3,8 @@ import type { ParcelIntelRow } from '@/lib/api';
 import {
   EXPLORER_SCREEN_RECIPES,
   buildExplorerScreenAudit,
+  buildExplorerScreenComparison,
+  explorerFiltersFromSavedSearch,
   filterExplorerRows,
   explorerRowColor,
   isScreenRecipeActive,
@@ -456,6 +458,90 @@ describe('parcel citywide explorer support', () => {
       missingValueCount: 1,
       knownValueRatePct: 50,
     });
+  });
+
+  it('compares current and saved screens against one shared current inventory', () => {
+    const rows = [
+      row({
+        bbl: 'shared',
+        borough: 'brooklyn',
+        lot_area_sqft: 6_000,
+        unused_floor_area_sqft: 12_000,
+      }),
+      row({
+        bbl: 'current-only',
+        borough: 'queens',
+        lot_area_sqft: 8_000,
+        unused_floor_area_sqft: 5_000,
+      }),
+      row({
+        bbl: 'saved-only',
+        borough: 'brooklyn',
+        lot_area_sqft: 4_000,
+        unused_floor_area_sqft: 15_000,
+      }),
+      row({
+        bbl: 'saved-missing-lot',
+        borough: 'brooklyn',
+        lot_area_sqft: null,
+        unused_floor_area_sqft: 9_000,
+      }),
+      row({
+        bbl: 'neither',
+        borough: 'manhattan',
+        lot_area_sqft: 2_000,
+        unused_floor_area_sqft: 2_000,
+      }),
+    ];
+    const savedView = {
+      borough: 'brooklyn' as const,
+      filters: {
+        query: '',
+        priority: 'all' as const,
+        opportunity: 'all' as const,
+        site_type: 'all' as const,
+        signals: [],
+        owner_portfolio_id: null,
+        overlay: 'borough' as const,
+      },
+    };
+
+    expect(explorerFiltersFromSavedSearch(savedView)).toEqual({
+      ...filters,
+      borough: 'brooklyn',
+    });
+
+    const comparison = buildExplorerScreenComparison(
+      rows,
+      {
+        ...filters,
+        minLotAreaSqft: 5_000,
+      },
+      savedView,
+    );
+
+    expect(comparison).toMatchObject({
+      inventoryCount: 5,
+      sharedCount: 1,
+      currentOnlyCount: 1,
+      savedOnlyCount: 2,
+      unionCount: 4,
+      sharedUnionRatePct: 25,
+      current: {
+        matchCount: 2,
+        medianLotAreaSqft: 7_000,
+        lotAreaKnownCount: 2,
+        lotAreaKnownRatePct: 100,
+      },
+      saved: {
+        matchCount: 3,
+        topBorough: 'brooklyn',
+        topBoroughCount: 3,
+        medianLotAreaSqft: 5_000,
+        lotAreaKnownCount: 2,
+      },
+    });
+    expect(comparison.saved.lotAreaKnownRatePct).toBeCloseTo(200 / 3);
   });
 
   it('recognizes recipes by exact, order-independent filter semantics', () => {
