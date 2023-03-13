@@ -132,7 +132,9 @@ describe('ParcelWorkflowAlertsPanel', () => {
     );
 
     expect(
-      await screen.findByText(/No decision-relevant differences were found/i),
+      await screen.findByText(
+        /No decision-relevant differences or stale reviewed evidence versions/i,
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText(/Current feed: 2026-07-24/i)).toBeInTheDocument();
   });
@@ -180,5 +182,95 @@ describe('ParcelWorkflowAlertsPanel', () => {
     expect(screen.getByText(/Current: Station Name: New Station/i))
       .toHaveTextContent('Distance M: 310');
     expect(screen.queryByText('[object Object]')).not.toBeInTheDocument();
+  });
+
+  it('renders a stale reviewed version as bounded follow-up work', async () => {
+    mocks.getAlerts.mockResolvedValue({
+      schema_version: 'citylens/parcel-workflow-alerts@v3',
+      generated_at: '2026-07-26T05:00:00Z',
+      feed_generated_at: '2026-07-26T02:00:00Z',
+      watched_count: 0,
+      changed_lead_count: 1,
+      alert_count: 1,
+      removed_from_feed_count: 0,
+      resolved_exit_count: 0,
+      unresolved_exit_count: 0,
+      screened_out_count: 0,
+      eligible_below_cutoff_count: 0,
+      reviewed_lead_count: 1,
+      stale_review_count: 1,
+      severity_counts: { urgent: 0, high: 0, medium: 1, low: 0 },
+      alerts: [
+        {
+          bbl: '4012340056',
+          borough: 'queens',
+          code: 'reviewed_evidence_changed',
+          severity: 'medium',
+          title: 'Current property facts review is stale',
+          detail:
+            'The source as-of date changed after this evidence was reviewed.',
+          field: 'evidence_reviews.property_facts',
+          before: {
+            status: 'verified',
+            source: 'NYC PLUTO',
+            as_of: '2026-07-20',
+          },
+          after: {
+            status: 'verified',
+            source: 'NYC PLUTO',
+            as_of: '2026-07-26',
+          },
+          recommended_action:
+            'Open the parcel evidence ledger and consider the current cited version.',
+          source_evidence: [
+            {
+              source: 'NYC PLUTO',
+              as_of: '2026-07-26',
+              url: null,
+              supports: 'current reviewed-evidence version',
+            },
+          ],
+          evidence_changes: [{
+            check_key: 'property_facts',
+            label: 'Current property facts',
+            reviewed_at: '2026-07-21T14:30:00Z',
+            reviewed_status: 'verified',
+            reviewed_source: 'NYC PLUTO',
+            reviewed_source_as_of: '2026-07-20',
+            reviewed_feed_generated_at: '2026-07-20T02:00:00Z',
+            current_status: 'verified',
+            current_source: 'NYC PLUTO',
+            current_source_as_of: '2026-07-26',
+            current_feed_generated_at: '2026-07-26T02:00:00Z',
+            change_reasons: ['source_as_of', 'feed_generation'],
+          }],
+          parcel_available: true,
+        },
+      ],
+      warnings: [],
+    });
+    const onSelectParcel = vi.fn();
+
+    render(
+      <ParcelWorkflowAlertsPanel
+        onClose={vi.fn()}
+        onSelectParcel={onSelectParcel}
+      />,
+    );
+
+    expect(await screen.findByTestId('stale-evidence-review-summary'))
+      .toHaveTextContent('1 reviewed evidence version is no longer current');
+    expect(
+      screen.getByTestId(
+        'stale-evidence-review-4012340056-property_facts',
+      ),
+    ).toHaveTextContent('Reviewed version');
+    expect(screen.getByText('New feed generation')).toBeInTheDocument();
+    expect(screen.getByText('Source As Of')).toBeInTheDocument();
+    expect(screen.getByText(/do not assert cleared diligence/i))
+      .toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review evidence' }));
+    expect(onSelectParcel).toHaveBeenCalledWith('4012340056');
   });
 });

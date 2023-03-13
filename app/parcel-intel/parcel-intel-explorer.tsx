@@ -767,7 +767,7 @@ export function ParcelIntelExplorer({
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
               >
                 <BellRing className="h-3.5 w-3.5 text-sky-300" />
-                Watchlist changes
+                Evidence changes
               </button>
             )}
             {isAuthenticated && (

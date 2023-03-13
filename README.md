@@ -40,18 +40,22 @@ map overlay. Saved views intentionally do not expose alert-frequency controls:
 watchlist change monitoring remains the implemented change-review workflow,
 while scheduled saved-search delivery is not yet available.
 
-Signed-in users also have a private watchlist change center. It compares the
+Signed-in users also have a private Evidence change center. It compares the
 baseline captured when a parcel entered the acquisition workflow with the
-current atomic feed and surfaces owner, sale-year, zoning, priority,
-opportunity, lien, violation, flood, imagery, portfolio-size, and
-environmental-designation, MIH mapped-area, and meaningful transit-complex or
-access-tier changes, plus feed-removal changes. For current-generation feeds,
-the change center distinguishes source-backed project/constraint/data
-exclusions from leads that remain eligible below the published cutoff. It shows
-human-readable reason codes, source dates, exact official-record links, and a
-conservative next action. An absent ledger record remains explicitly
-unresolved; the client never invents a disposition or seller-intent claim.
-Distance-only centroid noise does not create a transit alert.
+current atomic feed and compares exact source-bound review markers with the
+current decision-audit citations. Multiple stale markers are grouped into one
+parcel card with reviewed/current status, source, date, review time, and
+specific change reasons. The center includes active reviewed workflows even
+when ordinary watch alerts are off. It surfaces owner, sale-year, zoning,
+priority, opportunity, lien, violation, flood, imagery, portfolio-size,
+environmental-designation, MIH mapped-area, meaningful transit-complex or
+access-tier, and feed-removal changes. For current-generation feeds, it
+distinguishes source-backed project/constraint/data exclusions from leads that
+remain eligible below the published cutoff. It shows human-readable reason
+codes, source dates, exact official-record links, and a conservative next
+action. An absent ledger record remains explicitly unresolved; the client
+never invents a disposition, seller-intent claim, or completed-diligence
+state. Distance-only centroid noise does not create a transit alert.
 The explorer renders its public preview immediately, upgrades authenticated
 users with one compact 5,000-row citywide request, and fetches polygon,
 explanation, provenance, and underwriting detail only when a parcel is opened.

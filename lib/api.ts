@@ -1151,7 +1151,8 @@ export type ParcelWorkflowAlert = {
     | 'mih_overlay_changed'
     | 'transit_access_changed'
     | 'imagery_change_signal_changed'
-    | 'owner_portfolio_size_changed';
+    | 'owner_portfolio_size_changed'
+    | 'reviewed_evidence_changed';
   severity: 'urgent' | 'high' | 'medium' | 'low';
   title: string;
   detail: string;
@@ -1172,13 +1173,35 @@ export type ParcelWorkflowAlert = {
     url: string | null;
     supports: string;
   }[];
+  evidence_changes?: {
+    check_key: ParcelWorkflowEvidenceReviewKey;
+    label: string;
+    reviewed_at: string;
+    reviewed_status: ParcelDecisionAuditCheck['status'];
+    reviewed_source: string;
+    reviewed_source_as_of: string | null;
+    reviewed_feed_generated_at: string | null;
+    current_status: ParcelDecisionAuditCheck['status'] | null;
+    current_source: string | null;
+    current_source_as_of: string | null;
+    current_feed_generated_at: string | null;
+    change_reasons: (
+      | 'status'
+      | 'source'
+      | 'source_as_of'
+      | 'feed_generation'
+      | 'current_evidence_unavailable'
+    )[];
+  }[];
+  review_recordable?: boolean | null;
   parcel_available?: boolean;
 };
 
 export type ParcelWorkflowAlerts = {
   schema_version:
     | 'citylens/parcel-workflow-alerts@v1'
-    | 'citylens/parcel-workflow-alerts@v2';
+    | 'citylens/parcel-workflow-alerts@v2'
+    | 'citylens/parcel-workflow-alerts@v3';
   generated_at: string;
   feed_generated_at: string | null;
   watched_count: number;
@@ -1189,6 +1212,8 @@ export type ParcelWorkflowAlerts = {
   unresolved_exit_count?: number;
   screened_out_count?: number;
   eligible_below_cutoff_count?: number;
+  reviewed_lead_count?: number;
+  stale_review_count?: number;
   severity_counts: Record<'urgent' | 'high' | 'medium' | 'low', number>;
   alerts: ParcelWorkflowAlert[];
   warnings: string[];

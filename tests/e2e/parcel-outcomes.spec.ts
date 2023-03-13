@@ -413,21 +413,23 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
-          schema_version: 'citylens/parcel-workflow-alerts@v2',
+          schema_version: 'citylens/parcel-workflow-alerts@v3',
           generated_at: '2026-07-24T03:16:26Z',
           feed_generated_at: '2026-07-24T02:43:29Z',
           watched_count: 2,
-          changed_lead_count: 1,
-          alert_count: 1,
+          changed_lead_count: 2,
+          alert_count: 2,
           removed_from_feed_count: 1,
           resolved_exit_count: 1,
           unresolved_exit_count: 0,
           screened_out_count: 1,
           eligible_below_cutoff_count: 0,
+          reviewed_lead_count: 1,
+          stale_review_count: 1,
           severity_counts: {
             urgent: 1,
             high: 0,
-            medium: 0,
+            medium: 1,
             low: 0,
           },
           alerts: [
@@ -455,6 +457,51 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
                 },
               ],
               parcel_available: false,
+            },
+            {
+              bbl: '4012340056',
+              borough: 'queens',
+              code: 'reviewed_evidence_changed',
+              severity: 'medium',
+              title: 'Current property facts review is stale',
+              detail:
+                'The source as-of date changed after this evidence was reviewed.',
+              field: 'evidence_reviews.property_facts',
+              before: {
+                status: 'verified',
+                source: 'NYC PLUTO',
+                as_of: '2026-07-20',
+              },
+              after: {
+                status: 'verified',
+                source: 'NYC PLUTO',
+                as_of: '2026-07-24',
+              },
+              recommended_action:
+                'Open the parcel evidence review ledger and consider the current cited version.',
+              source_evidence: [
+                {
+                  source: 'NYC PLUTO',
+                  as_of: '2026-07-24',
+                  url: null,
+                  supports: 'current reviewed-evidence version',
+                },
+              ],
+              evidence_changes: [{
+                check_key: 'property_facts',
+                label: 'Current property facts',
+                reviewed_at: '2026-07-21T14:30:00Z',
+                reviewed_status: 'verified',
+                reviewed_source: 'NYC PLUTO',
+                reviewed_source_as_of: '2026-07-20',
+                reviewed_feed_generated_at: '2026-07-20T02:43:29Z',
+                current_status: 'verified',
+                current_source: 'NYC PLUTO',
+                current_source_as_of: '2026-07-24',
+                current_feed_generated_at: '2026-07-24T02:43:29Z',
+                change_reasons: ['source_as_of', 'feed_generation'],
+              }],
+              parcel_available: true,
             },
           ],
           warnings: [],
@@ -810,7 +857,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   ).toBeVisible();
   await page.getByRole('button', { name: 'Close action queue' }).click();
 
-  await page.getByRole('button', { name: 'Watchlist changes' }).click();
+  await page.getByRole('button', { name: 'Evidence changes' }).click();
   await expect(page.getByTestId('watchlist-exit-coverage')).toContainText(
     '1 feed exit has a current screening explanation',
   );
@@ -827,7 +874,18 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(
     exitAlert.getByRole('button', { name: 'Open parcel' }),
   ).toHaveCount(0);
-  await page.getByRole('button', { name: 'Close watchlist changes' }).click();
+  await expect(page.getByTestId('stale-evidence-review-summary')).toContainText(
+    '1 reviewed evidence version is no longer current',
+  );
+  const staleReview = page.getByTestId(
+    'stale-evidence-review-4012340056-property_facts',
+  );
+  await expect(staleReview).toContainText('Reviewed version');
+  await expect(staleReview).toContainText('Current version');
+  await expect(
+    page.getByRole('button', { name: 'Review evidence' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Close evidence changes' }).click();
 
   await page.getByRole('button', { name: /100 E 21 STREET/i }).click();
   await expect(page.getByTestId('workflow-quick-save')).toHaveText('Save lead');

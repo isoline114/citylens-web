@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   BellRing,
   ExternalLink,
+  FileClock,
   LoaderCircle,
   RefreshCw,
   ShieldCheck,
@@ -65,6 +66,19 @@ function formatAsOf(value: string | null): string {
   }).format(parsed);
 }
 
+function formatReviewedAt(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.valueOf())) return value;
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  }).format(parsed);
+}
+
 function isSafeOfficialUrl(value: string | null): value is string {
   if (!value) return false;
   try {
@@ -109,27 +123,27 @@ export function ParcelWorkflowAlertsPanel({
   return (
     <section
       className="border-b border-slate-200 bg-slate-950 px-5 py-5 text-white md:px-7"
-      aria-label="Watched parcel changes"
+      aria-label="Evidence and watched parcel changes"
     >
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-sky-300">
             <BellRing className="h-4 w-4" />
-            Watchlist change center
+            Evidence change center
           </div>
           <h3 className="mt-1 text-xl font-semibold">
-            What changed since each lead was saved?
+            What changed since your team last looked?
           </h3>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-300">
-            Private, current-feed comparisons for watched parcels. Alerts point to
-            records that need review; they do not assert seller intent or a completed
-            transaction.
+            Private comparisons for watched baselines and exact reviewed evidence
+            versions. Alerts identify records that need another look; they do not
+            assert cleared diligence, seller intent, or a completed transaction.
           </p>
         </div>
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close watchlist changes"
+          aria-label="Close evidence changes"
           className="rounded-lg border border-white/10 p-2 text-slate-300 hover:bg-white/10 hover:text-white"
         >
           <X className="h-4 w-4" />
@@ -145,7 +159,7 @@ export function ParcelWorkflowAlertsPanel({
         <div className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-100">
           <span className="flex items-center gap-2">
             <TriangleAlert className="h-4 w-4" />
-            Watchlist changes are temporarily unavailable.
+            Evidence changes are temporarily unavailable.
           </span>
           <button
             type="button"
@@ -161,8 +175,8 @@ export function ParcelWorkflowAlertsPanel({
             {[
               ['Watched leads', data.watched_count],
               ['Leads changed', data.changed_lead_count],
+              ['Stale reviews', data.stale_review_count ?? 0],
               ['Explained exits', data.resolved_exit_count ?? 0],
-              ['Needs verification', data.unresolved_exit_count ?? 0],
               ['Urgent review', data.severity_counts.urgent],
               ['Total alerts', data.alert_count],
             ].map(([label, value]) => (
@@ -198,10 +212,29 @@ export function ParcelWorkflowAlertsPanel({
             </div>
           )}
 
+          {(data.stale_review_count ?? 0) > 0 && (
+            <div
+              className="mt-4 flex gap-3 rounded-xl border border-sky-400/25 bg-sky-400/10 p-4 text-sm text-sky-50"
+              data-testid="stale-evidence-review-summary"
+            >
+              <FileClock className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
+              <p>
+                <strong>
+                  {data.stale_review_count?.toLocaleString()} reviewed evidence{' '}
+                  {data.stale_review_count === 1 ? 'version is' : 'versions are'} no
+                  longer current.
+                </strong>{' '}
+                Re-open each parcel to review the new citation. A new marker records
+                consideration of that version; it does not clear the underlying
+                diligence question.
+              </p>
+            </div>
+          )}
+
           {data.alerts.length === 0 ? (
             <div className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-4 text-sm text-emerald-100">
-              No decision-relevant differences were found between saved baselines and
-              the current eligible feed.
+              No decision-relevant differences or stale reviewed evidence versions
+              were found against the current eligible feed.
             </div>
           ) : (
             <div className="mt-4 grid gap-2 xl:grid-cols-2">
@@ -227,13 +260,18 @@ export function ParcelWorkflowAlertsPanel({
                         onClick={() => onSelectParcel(alert.bbl)}
                         className="shrink-0 rounded-md border border-white/20 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-white/10"
                       >
-                        Open parcel
+                        {alert.code === 'reviewed_evidence_changed'
+                          ? alert.review_recordable === false
+                            ? 'Open evidence'
+                            : 'Review evidence'
+                          : 'Open parcel'}
                       </button>
                       )}
                   </div>
                   <p className="mt-2 text-xs leading-5 opacity-90">{alert.detail}</p>
                   {alert.parcel_available !== false &&
-                    alert.code !== 'removed_from_current_feed' && (
+                    alert.code !== 'removed_from_current_feed' &&
+                    alert.code !== 'reviewed_evidence_changed' && (
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
                       <span className="rounded bg-black/15 px-2 py-1">
                         Saved: {formatValue(alert.before)}
@@ -242,6 +280,78 @@ export function ParcelWorkflowAlertsPanel({
                       <span className="rounded bg-black/15 px-2 py-1">
                         Current: {formatValue(alert.after)}
                       </span>
+                    </div>
+                  )}
+
+                  {(alert.evidence_changes?.length ?? 0) > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {alert.evidence_changes?.map((change) => (
+                        <div
+                          key={change.check_key}
+                          className="rounded-lg border border-white/10 bg-black/20 p-3"
+                          data-testid={`stale-evidence-review-${alert.bbl}-${change.check_key}`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-200">
+                                Exact version comparison
+                              </div>
+                              <div className="mt-0.5 text-xs font-semibold text-white">
+                                {change.label}
+                              </div>
+                            </div>
+                            <div className="text-[10px] text-slate-300">
+                              Reviewed {formatReviewedAt(change.reviewed_at)}
+                            </div>
+                          </div>
+                          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                            <div className="rounded-md border border-white/10 bg-white/5 p-2.5">
+                              <div className="text-[10px] uppercase tracking-wide text-slate-400">
+                                Reviewed version
+                              </div>
+                              <div className="mt-1 text-xs font-semibold text-white">
+                                {humanizeCode(change.reviewed_status)}
+                              </div>
+                              <div className="mt-0.5 text-[11px] leading-4 text-slate-300">
+                                {change.reviewed_source} · as of{' '}
+                                {formatAsOf(change.reviewed_source_as_of)}
+                              </div>
+                            </div>
+                            <div className="rounded-md border border-sky-300/20 bg-sky-300/10 p-2.5">
+                              <div className="text-[10px] uppercase tracking-wide text-sky-200">
+                                Current version
+                              </div>
+                              <div className="mt-1 text-xs font-semibold text-white">
+                                {change.current_status
+                                  ? humanizeCode(change.current_status)
+                                  : 'Not currently available'}
+                              </div>
+                              <div className="mt-0.5 text-[11px] leading-4 text-slate-200">
+                                {change.current_source
+                                  ? `${change.current_source} · as of ${formatAsOf(
+                                      change.current_source_as_of,
+                                    )}`
+                                  : 'The current published parcel evidence could not be matched.'}
+                              </div>
+                            </div>
+                          </div>
+                          <div
+                            className="mt-2 flex flex-wrap gap-1.5"
+                            aria-label={`${change.label} version changes`}
+                          >
+                            {change.change_reasons.map((reason) => (
+                              <span
+                                key={reason}
+                                className="rounded-full border border-sky-300/20 bg-sky-300/10 px-2 py-1 text-[10px] font-medium text-sky-100"
+                              >
+                                {reason === 'feed_generation'
+                                  ? 'New feed generation'
+                                  : humanizeCode(reason)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
 
@@ -322,7 +432,8 @@ export function ParcelWorkflowAlertsPanel({
           ))}
           <p className="mt-3 text-xs text-slate-400">
             Current feed: {data.feed_generated_at ?? 'date unavailable'}.
-            Rank alerts require a move of at least 100 citywide places.
+            Rank alerts require a move of at least 100 citywide places. Evidence
+            reviews are exact-version markers, never completed-diligence claims.
           </p>
         </>
       )}
