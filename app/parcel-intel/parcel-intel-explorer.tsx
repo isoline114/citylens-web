@@ -43,6 +43,7 @@ import {
   BOROUGH_LABELS,
   BOROUGH_SHORT_LABELS,
   EXPLORER_SCREEN_RECIPES,
+  buildExplorerScreenAudit,
   explorerRowColor,
   filterExplorerRows,
   isScreenRecipeActive,
@@ -56,6 +57,7 @@ import {
   type ExplorerFilters,
   type ExplorerOverlay,
   type ExplorerPriority,
+  type ExplorerScreenAuditCriterionId,
   type ExplorerScreenRecipe,
   type ExplorerSignal,
   type ExplorerSiteType,
@@ -67,6 +69,7 @@ import { ParcelWorkflowInsights } from './parcel-workflow-insights';
 import { ParcelWorkflowAlertsPanel } from './parcel-workflow-alerts';
 import { ParcelWorkflowActionsPanel } from './parcel-workflow-actions';
 import { ParcelSavedViewsPanel } from './parcel-saved-views';
+import { ParcelScreenAudit } from './parcel-screen-audit';
 
 const ParcelIntelExplorerMap = dynamic(
   () =>
@@ -202,6 +205,7 @@ export function ParcelIntelExplorer({
   const [workflowActions, setWorkflowActions] =
     useState<ParcelWorkflowActions | null>(null);
   const parcelOpenSourceRef = useRef<ParcelProductEventSource>('direct');
+  const screenAuditOpenTrackedRef = useRef(false);
   const trackedParcelOpensRef = useRef(new Set<string>());
   const comparisonOpenTrackedRef = useRef(false);
   const comparisonDialogRef = useRef<HTMLDivElement>(null);
@@ -429,6 +433,10 @@ export function ParcelIntelExplorer({
     () => summarizeExplorerScreen(filtered, signalScope),
     [filtered, signalScope],
   );
+  const screenAudit = useMemo(
+    () => buildExplorerScreenAudit(rows, filters),
+    [rows, filters],
+  );
   const visibleSignals = isAuthenticated
     ? EXPLORER_SIGNALS
     : EXPLORER_SIGNALS.filter((signal) => signal === 'assemblage');
@@ -524,6 +532,59 @@ export function ParcelIntelExplorer({
       ? filters.signals.filter((value) => value !== signal)
       : [...filters.signals, signal];
     updateFilter('signals', nextSignals);
+  };
+
+  const relaxScreenCriterion = (
+    criterionId: ExplorerScreenAuditCriterionId,
+  ) => {
+    if (isAuthenticated) {
+      void recordParcelProductEvent(
+        'screen_criterion_relaxed',
+        'screen_audit',
+      ).catch(() => {
+        // Screen relaxation remains local when coarse telemetry is unavailable.
+      });
+    }
+    if (criterionId.startsWith('signal:')) {
+      toggleSignal(criterionId.slice('signal:'.length) as ExplorerSignal);
+      return;
+    }
+    if (criterionId === 'borough') {
+      updateFilter('borough', 'all');
+      return;
+    }
+    if (criterionId === 'priority') {
+      updateFilter('priority', 'all');
+      return;
+    }
+    if (criterionId === 'site_type') {
+      updateFilter('siteType', 'all');
+      return;
+    }
+    if (criterionId === 'owner_portfolio') {
+      updateFilter('ownerPortfolioId', null);
+      return;
+    }
+    if (criterionId === 'min_lot_area_sqft') {
+      updateFilter('minLotAreaSqft', null);
+      return;
+    }
+    if (criterionId === 'min_unused_floor_area_sqft') {
+      updateFilter('minUnusedFloorAreaSqft', null);
+      return;
+    }
+    updateFilter('query', '');
+  };
+
+  const trackScreenAuditOpen = () => {
+    if (!isAuthenticated || screenAuditOpenTrackedRef.current) return;
+    screenAuditOpenTrackedRef.current = true;
+    void recordParcelProductEvent(
+      'screen_audit_opened',
+      'screen_summary',
+    ).catch(() => {
+      // The explanatory screen remains available if telemetry is unavailable.
+    });
   };
 
   const applyScreenRecipe = (recipe: ExplorerScreenRecipe) => {
@@ -1041,7 +1102,7 @@ export function ParcelIntelExplorer({
       )}
 
       <div className="border-b border-slate-200 bg-slate-50 px-4 py-3.5 md:px-6">
-        <div className="grid grid-cols-2 gap-2 xl:grid-cols-[minmax(220px,1.4fr)_repeat(3,minmax(150px,0.7fr))_auto]">
+        <div className="grid grid-cols-2 gap-2 xl:grid-cols-[minmax(185px,1fr)_minmax(120px,0.65fr)_minmax(120px,0.65fr)_minmax(185px,1fr)_auto]">
           <label className="relative col-span-2 xl:col-span-1">
             <span className="sr-only">Search parcels</span>
             <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
@@ -1081,7 +1142,7 @@ export function ParcelIntelExplorer({
               <option value="high_or_better">High or better</option>
             </select>
           </label>
-          <label>
+          <label className="col-span-2 xl:col-span-1">
             <span className="sr-only">Filter by site type</span>
             <select
               value={filters.siteType}
@@ -1449,7 +1510,10 @@ export function ParcelIntelExplorer({
                     </span>
                   )}
                 </div>
-                <div className="mt-1 text-lg font-semibold">
+                <div
+                  data-testid="screen-match-count"
+                  className="mt-1 text-lg font-semibold"
+                >
                   {screenSummary.matchCount.toLocaleString()}
                   {filters.signals.length > 0 && (
                     <span className="text-sm font-medium text-slate-400">
@@ -1518,6 +1582,13 @@ export function ParcelIntelExplorer({
                 </div>
               </div>
             </div>
+            {screenAudit.criteriaCount > 0 && (
+              <ParcelScreenAudit
+                audit={screenAudit}
+                onRelax={relaxScreenCriterion}
+                onOpened={trackScreenAuditOpen}
+              />
+            )}
           </section>
         )}
       </div>

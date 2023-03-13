@@ -58,6 +58,14 @@ unused-FAR-proxy thresholds. It uses production-informed square-foot presets,
 excludes missing values from a minimum screen, persists the thresholds in
 private saved views, and labels both measures as preliminary PLUTO screens—not
 surveyed area, zoning capacity, or feasible development yield.
+Every active screen also exposes a collapsible audit. It removes one condition
+at a time while holding the others fixed, reports the marginal result lift,
+shows scoped PLUTO coverage for numeric fields, and lets the user relax that
+condition directly. The audit is a sensitivity explanation, not a causal
+attribution, feasibility opinion, or replacement score.
+For signed-in sessions, CityLens records only whether the audit was opened or
+a condition was relaxed. It never records the criterion, threshold, query,
+parcel, owner, result count, or relaxed value.
 
 Signed-in users also have a private Evidence change center. It compares the
 baseline captured when a parcel entered the acquisition workflow with the

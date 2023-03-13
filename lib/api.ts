@@ -90,7 +90,9 @@ export type ParcelProductEventName =
   | 'saved_view_applied'
   | 'decision_audit_opened'
   | 'underwriting_opened'
-  | 'underwriting_assumptions_changed';
+  | 'underwriting_assumptions_changed'
+  | 'screen_audit_opened'
+  | 'screen_criterion_relaxed';
 
 export type ParcelProductEventSource =
   | 'direct'
@@ -103,7 +105,9 @@ export type ParcelProductEventSource =
   | 'decision_posture'
   | 'audit_tab'
   | 'underwrite_tab'
-  | 'base_assumptions';
+  | 'base_assumptions'
+  | 'screen_summary'
+  | 'screen_audit';
 
 export class ApiConfigError extends Error {
   constructor(message: string) {

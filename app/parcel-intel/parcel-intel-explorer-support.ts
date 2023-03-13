@@ -144,6 +144,36 @@ export type ExplorerScreenSummary = {
   topBoroughCount: number;
 };
 
+export type ExplorerScreenAuditCriterionId =
+  | 'borough'
+  | 'priority'
+  | 'site_type'
+  | 'owner_portfolio'
+  | 'query'
+  | 'min_lot_area_sqft'
+  | 'min_unused_floor_area_sqft'
+  | `signal:${ExplorerSignal}`;
+
+export type ExplorerScreenAuditCriterion = {
+  id: ExplorerScreenAuditCriterionId;
+  label: string;
+  valueLabel: string;
+  relaxedMatchCount: number;
+  addedIfRelaxed: number;
+  coverageScopeCount: number | null;
+  knownValueCount: number | null;
+  missingValueCount: number | null;
+  knownValueRatePct: number | null;
+};
+
+export type ExplorerScreenAudit = {
+  loadedCount: number;
+  matchCount: number;
+  criteriaCount: number;
+  criteria: ExplorerScreenAuditCriterion[];
+  largestMarginalCriterion: ExplorerScreenAuditCriterion | null;
+};
+
 function medianPositive(values: Array<number | null | undefined>): number | null {
   const valid = values
     .filter(
@@ -187,6 +217,160 @@ export function summarizeExplorerScreen(
     ),
     topBorough,
     topBoroughCount,
+  };
+}
+
+function compactQueryLabel(value: string): string {
+  const normalized = value.trim().replace(/\s+/g, ' ');
+  const compact =
+    normalized.length > 30 ? `${normalized.slice(0, 27)}…` : normalized;
+  return `Contains “${compact}”`;
+}
+
+function auditCriterionDefinitions(
+  filters: ExplorerFilters,
+): Array<{
+  id: ExplorerScreenAuditCriterionId;
+  label: string;
+  valueLabel: string;
+  relaxedFilters: ExplorerFilters;
+  coverageField?: 'lot_area_sqft' | 'unused_floor_area_sqft';
+}> {
+  const definitions: Array<{
+    id: ExplorerScreenAuditCriterionId;
+    label: string;
+    valueLabel: string;
+    relaxedFilters: ExplorerFilters;
+    coverageField?: 'lot_area_sqft' | 'unused_floor_area_sqft';
+  }> = [];
+
+  if (filters.borough !== 'all') {
+    definitions.push({
+      id: 'borough',
+      label: 'Geography',
+      valueLabel: BOROUGH_LABELS[filters.borough] ?? filters.borough,
+      relaxedFilters: { ...filters, borough: 'all' },
+    });
+  }
+  if (filters.priority !== 'all') {
+    definitions.push({
+      id: 'priority',
+      label: 'Priority',
+      valueLabel:
+        filters.priority === 'highest'
+          ? 'Highest tier'
+          : 'High or highest tier',
+      relaxedFilters: { ...filters, priority: 'all' },
+    });
+  }
+  if (filters.siteType !== 'all') {
+    definitions.push({
+      id: 'site_type',
+      label: 'Site type',
+      valueLabel: siteTypeLabel(filters.siteType),
+      relaxedFilters: { ...filters, siteType: 'all' },
+    });
+  }
+  if (filters.ownerPortfolioId) {
+    definitions.push({
+      id: 'owner_portfolio',
+      label: 'Legal-owner focus',
+      valueLabel: 'Selected exact-name portfolio',
+      relaxedFilters: { ...filters, ownerPortfolioId: null },
+    });
+  }
+  for (const signal of filters.signals) {
+    definitions.push({
+      id: `signal:${signal}`,
+      label: 'Required evidence',
+      valueLabel: signalLabel(signal),
+      relaxedFilters: {
+        ...filters,
+        signals: filters.signals.filter((value) => value !== signal),
+      },
+    });
+  }
+  if (filters.minLotAreaSqft !== null) {
+    definitions.push({
+      id: 'min_lot_area_sqft',
+      label: 'PLUTO lot area',
+      valueLabel: `≥ ${filters.minLotAreaSqft.toLocaleString()} sf`,
+      relaxedFilters: { ...filters, minLotAreaSqft: null },
+      coverageField: 'lot_area_sqft',
+    });
+  }
+  if (filters.minUnusedFloorAreaSqft !== null) {
+    definitions.push({
+      id: 'min_unused_floor_area_sqft',
+      label: 'Unused FAR proxy',
+      valueLabel: `≥ ${filters.minUnusedFloorAreaSqft.toLocaleString()} sf`,
+      relaxedFilters: { ...filters, minUnusedFloorAreaSqft: null },
+      coverageField: 'unused_floor_area_sqft',
+    });
+  }
+  if (filters.query.trim()) {
+    definitions.push({
+      id: 'query',
+      label: 'Text search',
+      valueLabel: compactQueryLabel(filters.query),
+      relaxedFilters: { ...filters, query: '' },
+    });
+  }
+  return definitions;
+}
+
+export function buildExplorerScreenAudit(
+  rows: ParcelExplorerRow[],
+  filters: ExplorerFilters,
+): ExplorerScreenAudit {
+  const matchCount = filterExplorerRows(rows, filters).length;
+  const criteria = auditCriterionDefinitions(filters).map((definition) => {
+    const relaxedRows = filterExplorerRows(rows, definition.relaxedFilters);
+    const coverageScopeCount = definition.coverageField
+      ? relaxedRows.length
+      : null;
+    const knownValueCount = definition.coverageField
+      ? relaxedRows.filter((row) => {
+          const value = row[definition.coverageField!];
+          return typeof value === 'number' && Number.isFinite(value);
+        }).length
+      : null;
+    const missingValueCount =
+      coverageScopeCount !== null && knownValueCount !== null
+        ? coverageScopeCount - knownValueCount
+        : null;
+    return {
+      id: definition.id,
+      label: definition.label,
+      valueLabel: definition.valueLabel,
+      relaxedMatchCount: relaxedRows.length,
+      addedIfRelaxed: Math.max(relaxedRows.length - matchCount, 0),
+      coverageScopeCount,
+      knownValueCount,
+      missingValueCount,
+      knownValueRatePct:
+        coverageScopeCount && knownValueCount !== null
+          ? (knownValueCount / coverageScopeCount) * 100
+          : null,
+    };
+  });
+  const largestMarginalCriterion =
+    [...criteria].sort(
+      (left, right) =>
+        right.addedIfRelaxed - left.addedIfRelaxed ||
+        left.label.localeCompare(right.label) ||
+        left.valueLabel.localeCompare(right.valueLabel),
+    )[0] ?? null;
+
+  return {
+    loadedCount: rows.length,
+    matchCount,
+    criteriaCount: criteria.length,
+    criteria,
+    largestMarginalCriterion:
+      largestMarginalCriterion?.addedIfRelaxed > 0
+        ? largestMarginalCriterion
+        : null,
   };
 }
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ParcelIntelRow } from '@/lib/api';
 import {
   EXPLORER_SCREEN_RECIPES,
+  buildExplorerScreenAudit,
   filterExplorerRows,
   explorerRowColor,
   isScreenRecipeActive,
@@ -380,6 +381,80 @@ describe('parcel citywide explorer support', () => {
       medianLotAreaSqft: 4_000,
       topBorough: 'brooklyn',
       topBoroughCount: 2,
+    });
+  });
+
+  it('audits each active condition independently and exposes numeric source coverage', () => {
+    const rows = [
+      row({
+        bbl: 'all-pass',
+        lot_area_sqft: 6_000,
+        unused_floor_area_sqft: 12_000,
+        years_held: 20,
+      }),
+      row({
+        bbl: 'lot-too-small',
+        lot_area_sqft: 4_000,
+        unused_floor_area_sqft: 15_000,
+        years_held: 20,
+      }),
+      row({
+        bbl: 'capacity-missing',
+        lot_area_sqft: 7_000,
+        unused_floor_area_sqft: null,
+        years_held: 20,
+      }),
+      row({
+        bbl: 'not-long-held',
+        lot_area_sqft: 8_000,
+        unused_floor_area_sqft: 20_000,
+        years_held: 2,
+      }),
+      row({
+        bbl: 'overlapping-failures',
+        lot_area_sqft: 2_000,
+        unused_floor_area_sqft: 20_000,
+        years_held: 2,
+      }),
+    ];
+
+    const audit = buildExplorerScreenAudit(rows, {
+      ...filters,
+      signals: ['long_held'],
+      minLotAreaSqft: 5_000,
+      minUnusedFloorAreaSqft: 10_000,
+    });
+
+    expect(audit.matchCount).toBe(1);
+    expect(audit.loadedCount).toBe(5);
+    expect(audit.criteriaCount).toBe(3);
+    expect(
+      audit.criteria.find((item) => item.id === 'signal:long_held'),
+    ).toMatchObject({
+      relaxedMatchCount: 2,
+      addedIfRelaxed: 1,
+    });
+    expect(
+      audit.criteria.find((item) => item.id === 'min_lot_area_sqft'),
+    ).toMatchObject({
+      relaxedMatchCount: 2,
+      addedIfRelaxed: 1,
+      coverageScopeCount: 2,
+      knownValueCount: 2,
+      missingValueCount: 0,
+      knownValueRatePct: 100,
+    });
+    expect(
+      audit.criteria.find(
+        (item) => item.id === 'min_unused_floor_area_sqft',
+      ),
+    ).toMatchObject({
+      relaxedMatchCount: 2,
+      addedIfRelaxed: 1,
+      coverageScopeCount: 2,
+      knownValueCount: 1,
+      missingValueCount: 1,
+      knownValueRatePct: 50,
     });
   });
 

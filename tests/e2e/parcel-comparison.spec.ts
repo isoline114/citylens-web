@@ -178,6 +178,16 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   await expect(page.getByTestId('screen-intelligence')).toContainText(
     '12k sf',
   );
+  await page.getByRole('button', { name: /Audit this screen/i }).click();
+  await expect(page.getByTestId('screen-audit')).toContainText(
+    'one condition while holding every other condition fixed',
+  );
+  await page
+    .getByRole('button', {
+      name: 'Relax Unused FAR proxy: ≥ 10,000 sf',
+    })
+    .click();
+  await expect(page.getByTestId('screen-match-count')).toHaveText('2');
   await page.getByRole('button', { name: 'Reset' }).click();
 
   const ranking = page.locator('#parcel-acquisition-ranking');

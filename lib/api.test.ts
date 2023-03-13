@@ -149,6 +149,24 @@ describe('api client', () => {
     expect(String(auditInit.body)).not.toMatch(
       /bbl|address|owner|url|notes|tags|assignee/i,
     );
+
+    fetchMock.mockClear();
+    await recordParcelProductEvent(
+      'screen_criterion_relaxed',
+      'screen_audit',
+    );
+    const [, screenAuditInit] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(JSON.parse(String(screenAuditInit.body))).toEqual({
+      schema_version: 'citylens/parcel-product-event@v1',
+      event: 'screen_criterion_relaxed',
+      source: 'screen_audit',
+    });
+    expect(String(screenAuditInit.body)).not.toMatch(
+      /bbl|address|owner|query|min_lot|unused|threshold|result_count|5000|10000/i,
+    );
   });
 
   it('persists and deletes a citywide saved view with bearer auth', async () => {

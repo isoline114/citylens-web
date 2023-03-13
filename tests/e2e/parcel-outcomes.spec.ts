@@ -1053,7 +1053,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
         source: 'base_assumptions',
       },
     ]);
-  await page.getByRole('button', { name: 'Audit' }).click();
+  await page.getByRole('button', { name: 'Audit', exact: true }).click();
   await expect
     .poll(() => productEvents)
     .toEqual([

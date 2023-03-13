@@ -447,16 +447,47 @@ describe('ParcelIntelExplorer', () => {
       /screening proxies, not surveyed area or buildable yield/i,
     )).toBeInTheDocument();
 
+    const auditToggle = screen.getByRole('button', {
+      name: /Audit this screen/i,
+    });
+    expect(auditToggle).toHaveTextContent('3 active conditions');
+    fireEvent.click(auditToggle);
+    expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+      'screen_audit_opened',
+      'screen_summary',
+    );
+    const audit = screen.getByTestId('screen-audit');
+    expect(audit).toHaveTextContent('1 of 2 known');
+    expect(audit).toHaveTextContent('1 missing value fails this minimum');
+    expect(audit).toHaveTextContent(
+      /sensitivity check, not a causal explanation/i,
+    );
+
+    fireEvent.click(
+      within(audit).getByRole('button', {
+        name: 'Relax PLUTO lot area: ≥ 5,000 sf',
+      }),
+    );
+    expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+      'screen_criterion_relaxed',
+      'screen_audit',
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('citywide-map-stub')).toHaveTextContent(
+        '2 mapped rows',
+      ),
+    );
+
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'Site criteria (2 active)',
+        name: 'Site criteria (1 active)',
       }),
     );
     expect(
-      screen.getByRole('button', {
+      screen.queryByRole('button', {
         name: 'Remove minimum lot area criterion',
       }),
-    ).toHaveTextContent('Lot ≥ 5,000 sf');
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole('button', {
         name: 'Remove minimum unused FAR proxy criterion',
