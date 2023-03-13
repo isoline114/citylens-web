@@ -75,6 +75,134 @@ export type ExplorerFilters = {
 
 export type ParcelExplorerRow = ParcelIntelMapRow;
 
+export type ExplorerScreenRecipe = {
+  id:
+    | 'assemblage_scan'
+    | 'transit_infill'
+    | 'controlled_assemblage'
+    | 'change_watch';
+  label: string;
+  description: string;
+  priority: ExplorerPriority;
+  siteType: ExplorerSiteType;
+  signals: ExplorerSignal[];
+  access: 'public' | 'authenticated';
+};
+
+export const EXPLORER_SCREEN_RECIPES: ExplorerScreenRecipe[] = [
+  {
+    id: 'assemblage_scan',
+    label: 'Assemblage scan',
+    description:
+      'Qualified sites with two or more candidate lots on the same block.',
+    priority: 'all',
+    siteType: 'uncommitted',
+    signals: ['assemblage'],
+    access: 'public',
+  },
+  {
+    id: 'transit_infill',
+    label: 'Long-held transit screen',
+    description:
+      'High-priority, long-held sites whose tax-lot centroid is within 800 m of subway or SIR service.',
+    priority: 'high_or_better',
+    siteType: 'uncommitted',
+    signals: ['transit_800m', 'long_held'],
+    access: 'authenticated',
+  },
+  {
+    id: 'controlled_assemblage',
+    label: 'Owner concentration + assemblage',
+    description:
+      "High-priority block assemblage contexts where this parcel's exact PLUTO owner name has multiple candidate holdings.",
+    priority: 'high_or_better',
+    siteType: 'uncommitted',
+    signals: ['assemblage', 'portfolio'],
+    access: 'authenticated',
+  },
+  {
+    id: 'change_watch',
+    label: 'Recent-change watch',
+    description:
+      'High-priority sites with current aerial-change evidence to verify.',
+    priority: 'high_or_better',
+    siteType: 'uncommitted',
+    signals: ['recent_change'],
+    access: 'authenticated',
+  },
+];
+
+export type ExplorerScreenSummary = {
+  matchCount: number;
+  universeCount: number;
+  matchRatePct: number | null;
+  medianUnusedFloorAreaSqft: number | null;
+  medianLotAreaSqft: number | null;
+  topBorough: string | null;
+  topBoroughCount: number;
+};
+
+function medianPositive(values: Array<number | null | undefined>): number | null {
+  const valid = values
+    .filter(
+      (value): value is number =>
+        typeof value === 'number' && Number.isFinite(value) && value > 0,
+    )
+    .sort((left, right) => left - right);
+  if (valid.length === 0) return null;
+  const middle = Math.floor(valid.length / 2);
+  if (valid.length % 2 === 1) return valid[middle];
+  return (valid[middle - 1] + valid[middle]) / 2;
+}
+
+export function summarizeExplorerScreen(
+  matches: ParcelExplorerRow[],
+  universe: ParcelExplorerRow[],
+): ExplorerScreenSummary {
+  const boroughCounts = new Map<string, number>();
+  for (const row of matches) {
+    if (!row.borough) continue;
+    boroughCounts.set(
+      row.borough,
+      (boroughCounts.get(row.borough) ?? 0) + 1,
+    );
+  }
+  const [topBorough, topBoroughCount] = [...boroughCounts.entries()].sort(
+    (left, right) =>
+      right[1] - left[1] || left[0].localeCompare(right[0]),
+  )[0] ?? [null, 0];
+
+  return {
+    matchCount: matches.length,
+    universeCount: universe.length,
+    matchRatePct:
+      universe.length > 0 ? (matches.length / universe.length) * 100 : null,
+    medianUnusedFloorAreaSqft: medianPositive(
+      matches.map((row) => row.unused_floor_area_sqft),
+    ),
+    medianLotAreaSqft: medianPositive(
+      matches.map((row) => row.lot_area_sqft),
+    ),
+    topBorough,
+    topBoroughCount,
+  };
+}
+
+export function isScreenRecipeActive(
+  filters: ExplorerFilters,
+  recipe: ExplorerScreenRecipe,
+): boolean {
+  if (
+    filters.priority !== recipe.priority ||
+    filters.siteType !== recipe.siteType ||
+    filters.ownerPortfolioId !== null ||
+    filters.signals.length !== recipe.signals.length
+  ) {
+    return false;
+  }
+  return recipe.signals.every((signal) => filters.signals.includes(signal));
+}
+
 export function explorerRowColor(
   row: ParcelExplorerRow,
   overlay: ExplorerOverlay,

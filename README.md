@@ -45,6 +45,14 @@ owner focus are removed immediately when a session ends. Saved views
 intentionally do not expose alert-frequency controls: watchlist change
 monitoring remains the implemented change-review workflow, while scheduled
 saved-search delivery is not yet available.
+The Signals workspace also includes bounded evidence recipes for assemblage,
+long-held transit proximity, concentrated exact-name ownership, and recent
+aerial change. Recipes are ordinary visible filters—not generated conclusions
+or a separate model—and show their live count before application. An applied
+screen gets a compact aggregate summary with match share, median unused-FAR
+proxy, and geographic concentration. Those aggregates describe the currently
+loaded inventory and never claim feasibility, owner response, or transaction
+probability.
 
 Signed-in users also have a private Evidence change center. It compares the
 baseline captured when a parcel entered the acquisition workflow with the

@@ -41,17 +41,21 @@ import {
 import {
   BOROUGH_LABELS,
   BOROUGH_SHORT_LABELS,
+  EXPLORER_SCREEN_RECIPES,
   explorerRowColor,
   filterExplorerRows,
+  isScreenRecipeActive,
   opportunityLabel,
   priorityLabel,
   rowMatchesSignal,
   savedSearchDimensions,
   signalLabel,
   sortExplorerRows,
+  summarizeExplorerScreen,
   type ExplorerFilters,
   type ExplorerOverlay,
   type ExplorerPriority,
+  type ExplorerScreenRecipe,
   type ExplorerSignal,
   type ExplorerSiteType,
 } from './parcel-intel-explorer-support';
@@ -117,6 +121,17 @@ type Props = {
 
 function isWorkflowBorough(value: string | null | undefined): value is WorkflowBorough {
   return WORKFLOW_BOROUGHS.some((borough) => borough === value);
+}
+
+function formatCompactSqft(value: number | null): string {
+  if (value === null) return '—';
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(1)}M sf`;
+  }
+  if (value >= 10_000) {
+    return `${Math.round(value / 1_000).toLocaleString()}k sf`;
+  }
+  return `${Math.round(value).toLocaleString()} sf`;
 }
 
 function ExplorerMapSkeleton() {
@@ -397,9 +412,37 @@ export function ParcelIntelExplorer({
       ) as Record<ExplorerSignal, number>,
     [signalScope],
   );
+  const screenSummary = useMemo(
+    () => summarizeExplorerScreen(filtered, signalScope),
+    [filtered, signalScope],
+  );
   const visibleSignals = isAuthenticated
     ? EXPLORER_SIGNALS
     : EXPLORER_SIGNALS.filter((signal) => signal === 'assemblage');
+  const visibleScreenRecipes = EXPLORER_SCREEN_RECIPES.filter(
+    (recipe) => recipe.access === 'public' || isAuthenticated,
+  );
+  const screenRecipeCounts = useMemo(
+    () =>
+      Object.fromEntries(
+        EXPLORER_SCREEN_RECIPES.map((recipe) => [
+          recipe.id,
+          filterExplorerRows(rows, {
+            borough: filters.borough,
+            priority: recipe.priority,
+            siteType: recipe.siteType,
+            signals: recipe.signals,
+            query: filters.query,
+            ownerPortfolioId: null,
+          }).length,
+        ]),
+      ) as Record<ExplorerScreenRecipe['id'], number>,
+    [filters.borough, filters.query, rows],
+  );
+  const activeScreenRecipe =
+    EXPLORER_SCREEN_RECIPES.find((recipe) =>
+      isScreenRecipeActive(filters, recipe),
+    ) ?? null;
   const uncommittedCount = useMemo(
     () =>
       filterExplorerRows(rows, {
@@ -455,6 +498,20 @@ export function ParcelIntelExplorer({
       ? filters.signals.filter((value) => value !== signal)
       : [...filters.signals, signal];
     updateFilter('signals', nextSignals);
+  };
+
+  const applyScreenRecipe = (recipe: ExplorerScreenRecipe) => {
+    setFilters((current) => ({
+      ...current,
+      priority: recipe.priority,
+      siteType: recipe.siteType,
+      signals: [...recipe.signals],
+      ownerPortfolioId: null,
+    }));
+    setLeadLimit(INITIAL_LEAD_LIMIT);
+    setMobileRankingExpanded(false);
+    setSelectedBbl(null);
+    syncExplorerUrl(filters.borough, null);
   };
 
   const selectParcel = (
@@ -1086,6 +1143,58 @@ export function ParcelIntelExplorer({
                 </button>
               )}
             </div>
+            <div className="mt-4 border-t border-slate-200 pt-4">
+              <div className="flex flex-wrap items-end justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-700">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Evidence recipes
+                  </div>
+                  <p className="mt-1 text-[11px] leading-4 text-slate-500">
+                    Apply a transparent acquisition thesis, then refine it.
+                  </p>
+                </div>
+                <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-500">
+                  Live loaded-inventory counts
+                </span>
+              </div>
+              <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                {visibleScreenRecipes.map((recipe) => {
+                  const active = isScreenRecipeActive(filters, recipe);
+                  return (
+                    <button
+                      key={recipe.id}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => applyScreenRecipe(recipe)}
+                      className={`group rounded-xl border p-3 text-left transition ${
+                        active
+                          ? 'border-sky-400 bg-sky-50 ring-2 ring-sky-100'
+                          : 'border-slate-200 bg-slate-50 hover:border-sky-300 hover:bg-white hover:shadow-sm'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-xs font-semibold text-slate-950">
+                          {recipe.label}
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                            active
+                              ? 'bg-sky-700 text-white'
+                              : 'bg-white text-slate-600 ring-1 ring-slate-200'
+                          }`}
+                        >
+                          {screenRecipeCounts[recipe.id].toLocaleString()}
+                        </span>
+                      </div>
+                      <span className="mt-1.5 block text-[10px] leading-4 text-slate-500">
+                        {recipe.description}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <div className="mt-3 flex flex-wrap gap-2">
               {visibleSignals.map(
                 (signal) => {
@@ -1137,6 +1246,95 @@ export function ParcelIntelExplorer({
               </button>
             ))}
           </div>
+        )}
+        {hasFilters && loadState === 'ready' && (
+          <section
+            data-testid="screen-intelligence"
+            aria-label="Current screen intelligence"
+            className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-r from-slate-950 via-slate-900 to-sky-950 text-white shadow-sm"
+          >
+            <div className="grid gap-px bg-white/10 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1.35fr)_repeat(3,minmax(120px,0.65fr))]">
+              <div className="bg-slate-950/85 p-3.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300">
+                    Current screen
+                  </span>
+                  {activeScreenRecipe && (
+                    <span className="rounded-full bg-sky-400/15 px-2 py-0.5 text-[10px] font-semibold text-sky-100">
+                      {activeScreenRecipe.label}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 text-lg font-semibold">
+                  {screenSummary.matchCount.toLocaleString()}
+                  {filters.signals.length > 0 && (
+                    <span className="text-sm font-medium text-slate-400">
+                      {' '}
+                      of {screenSummary.universeCount.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-[10px] leading-4 text-slate-400">
+                  {screenSummary.matchCount === 0
+                    ? 'No loaded parcels meet every condition. Remove one signal or broaden priority.'
+                    : 'Matching loaded parcels; filter evidence does not change rank or predict a transaction.'}
+                </p>
+              </div>
+              <div className="bg-slate-950/70 p-3.5">
+                <div className="text-[10px] uppercase tracking-wide text-slate-400">
+                  {filters.signals.length > 0
+                    ? 'Evidence match'
+                    : 'Scope state'}
+                </div>
+                <div className="mt-1 text-base font-semibold">
+                  {filters.signals.length > 0 &&
+                  screenSummary.matchRatePct !== null
+                    ? `${screenSummary.matchRatePct.toFixed(
+                        screenSummary.matchRatePct < 10 ? 1 : 0,
+                      )}%`
+                    : 'Scoped'}
+                </div>
+                <div className="mt-0.5 text-[10px] text-slate-500">
+                  {filters.signals.length > 0
+                    ? 'of current pre-signal scope'
+                    : 'borough / priority / site type'}
+                </div>
+              </div>
+              <div className="bg-slate-950/70 p-3.5">
+                <div className="text-[10px] uppercase tracking-wide text-slate-400">
+                  Median unused FAR proxy
+                </div>
+                <div className="mt-1 text-base font-semibold">
+                  {formatCompactSqft(
+                    screenSummary.medianUnusedFloorAreaSqft,
+                  )}
+                </div>
+                <div className="mt-0.5 text-[10px] text-slate-500">
+                  current PLUTO screen
+                </div>
+              </div>
+              <div className="bg-slate-950/70 p-3.5">
+                <div className="text-[10px] uppercase tracking-wide text-slate-400">
+                  {filters.borough === 'all' ? 'Largest borough' : 'Median lot'}
+                </div>
+                <div className="mt-1 text-base font-semibold">
+                  {filters.borough === 'all'
+                    ? screenSummary.topBorough
+                      ? BOROUGH_LABELS[screenSummary.topBorough] ??
+                        screenSummary.topBorough
+                      : '—'
+                    : formatCompactSqft(screenSummary.medianLotAreaSqft)}
+                </div>
+                <div className="mt-0.5 text-[10px] text-slate-500">
+                  {filters.borough === 'all' && screenSummary.topBorough
+                    ? `${screenSummary.topBoroughCount.toLocaleString()} matches`
+                    : filters.borough === 'all'
+                      ? 'no current matches'
+                      : 'current PLUTO screen'}
+                </div>
+              </div>
+            </div>
+          </section>
         )}
       </div>
 

@@ -18,6 +18,8 @@ const mapRows = [
     score_calibrated: 0.42,
     lot_area_sqft: 5_000,
     land_use: '01',
+    assemblage_lot_count: 3,
+    owner_portfolio_lot_count: 4,
   },
   {
     bbl: '4012340056',
@@ -155,6 +157,18 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   );
 
   await page.goto('/parcel-intel');
+  await page.getByRole('button', { name: /^Signals$/ }).click();
+  await page
+    .getByRole('button', { name: /Owner concentration \+ assemblage/i })
+    .click();
+  await expect(page.getByTestId('screen-intelligence')).toContainText(
+    '1 of 2',
+  );
+  await expect(
+    page.getByRole('button', { name: /Owner concentration \+ assemblage/i }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Reset' }).click();
+
   const ranking = page.locator('#parcel-acquisition-ranking');
 
   await ranking

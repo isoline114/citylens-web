@@ -99,7 +99,11 @@ vi.mock('./parcel-intel-property-panel', () => ({
 
 import { ParcelIntelExplorer } from './parcel-intel-explorer';
 
-function row(bbl: string, borough: string): ParcelIntelRow {
+function row(
+  bbl: string,
+  borough: string,
+  overrides: Partial<ParcelIntelRow> = {},
+): ParcelIntelRow {
   return {
     bbl,
     address: `${borough} test site`,
@@ -131,6 +135,7 @@ function row(bbl: string, borough: string): ParcelIntelRow {
     top_features: [],
     redev_status: 'still_vacant',
     opportunity_category: 'vacant_site',
+    ...overrides,
   };
 }
 
@@ -339,6 +344,62 @@ describe('ParcelIntelExplorer', () => {
     ).toBeInTheDocument();
     expect(screen.getByTestId('activation-guide-attention')).toHaveTextContent(
       '2 saved leads',
+    );
+  });
+
+  it('applies an evidence recipe and explains the resulting intersection', async () => {
+    mocks.authStatus = 'authenticated';
+    mocks.getParcelIntelMap.mockResolvedValue({
+      rows: [
+        row('3000010001', 'brooklyn', {
+          nearest_transit_station_distance_m: 500,
+          years_held: 18,
+          priority_tier: 'high',
+          unused_floor_area_sqft: 12_000,
+        }),
+        row('3000010002', 'brooklyn', {
+          nearest_transit_station_distance_m: 500,
+          years_held: 4,
+          priority_tier: 'high',
+        }),
+        row('4000010001', 'queens', {
+          nearest_transit_station_distance_m: 900,
+          years_held: 20,
+          priority_tier: 'high',
+        }),
+      ],
+      generated_at: '2026-07-26T00:00:00Z',
+    });
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /^Signals$/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /Long-held transit screen/i }),
+    );
+
+    expect(
+      screen.getByRole('button', { name: /Long-held transit screen/i }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      screen.getByRole('button', { name: /Transit within 800 m/i }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      screen.getByRole('button', { name: /Held 10\+ years/i }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await waitFor(() =>
+      expect(screen.getByTestId('citywide-map-stub')).toHaveTextContent(
+        '1 mapped rows',
+      ),
+    );
+    expect(screen.getByTestId('screen-intelligence')).toHaveTextContent(
+      '1 of 3',
+    );
+    expect(screen.getByTestId('screen-intelligence')).toHaveTextContent(
+      '12k sf',
+    );
+    expect(screen.getByTestId('screen-intelligence')).toHaveTextContent(
+      /does not change rank or predict a transaction/i,
     );
   });
 

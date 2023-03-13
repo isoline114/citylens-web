@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { ParcelIntelRow } from '@/lib/api';
 import {
+  EXPLORER_SCREEN_RECIPES,
   filterExplorerRows,
   explorerRowColor,
+  isScreenRecipeActive,
   sortExplorerRows,
+  summarizeExplorerScreen,
   type ExplorerFilters,
 } from './parcel-intel-explorer-support';
 
@@ -299,5 +302,73 @@ describe('parcel citywide explorer support', () => {
 
     expect(result.map((item) => item.bbl)).toEqual(['all-signals']);
     expect(result[0]?.citywide_rank).toBe(4);
+  });
+
+  it('summarizes the current result set without turning it into a score', () => {
+    const universe = [
+      row({
+        bbl: 'brooklyn-large',
+        borough: 'brooklyn',
+        unused_floor_area_sqft: 12_000,
+        lot_area_sqft: 6_000,
+      }),
+      row({
+        bbl: 'brooklyn-small',
+        borough: 'brooklyn',
+        unused_floor_area_sqft: 4_000,
+        lot_area_sqft: 2_000,
+      }),
+      row({
+        bbl: 'queens-middle',
+        borough: 'queens',
+        unused_floor_area_sqft: 8_000,
+        lot_area_sqft: 4_000,
+      }),
+      row({
+        bbl: 'excluded',
+        borough: 'manhattan',
+        unused_floor_area_sqft: 1_000,
+        lot_area_sqft: 1_000,
+      }),
+    ];
+
+    expect(summarizeExplorerScreen(universe.slice(0, 3), universe)).toEqual({
+      matchCount: 3,
+      universeCount: 4,
+      matchRatePct: 75,
+      medianUnusedFloorAreaSqft: 8_000,
+      medianLotAreaSqft: 4_000,
+      topBorough: 'brooklyn',
+      topBoroughCount: 2,
+    });
+  });
+
+  it('recognizes recipes by exact, order-independent filter semantics', () => {
+    const recipe = EXPLORER_SCREEN_RECIPES.find(
+      (item) => item.id === 'transit_infill',
+    );
+    expect(recipe).toBeDefined();
+    expect(
+      isScreenRecipeActive(
+        {
+          ...filters,
+          priority: 'high_or_better',
+          siteType: 'uncommitted',
+          signals: ['long_held', 'transit_800m'],
+        },
+        recipe!,
+      ),
+    ).toBe(true);
+    expect(
+      isScreenRecipeActive(
+        {
+          ...filters,
+          priority: 'high_or_better',
+          siteType: 'uncommitted',
+          signals: ['transit_800m'],
+        },
+        recipe!,
+      ),
+    ).toBe(false);
   });
 });
