@@ -806,6 +806,11 @@ export type ParcelIntelMapRow = Pick<
 export type ParcelIntelMapResponse = {
   rows: ParcelIntelMapRow[];
   generated_at: string | null;
+  access_scope: 'public_preview' | 'authenticated_full';
+  requested_top_per_borough: number;
+  returned_count: number;
+  available_count: number;
+  inventory_complete: boolean;
 };
 
 export type ParcelWorkflowStage =
@@ -1338,11 +1343,12 @@ export async function getParcelIntelSweep(
   top: number = 1000,
   opts?: { includeAuth?: boolean },
 ): Promise<ParcelIntelSweepResponse> {
+  const includeAuth = opts?.includeAuth ?? false;
   const params = new URLSearchParams({ borough, top: String(top) });
   return requestJson<ParcelIntelSweepResponse>(
     `/v1/parcel-intel/sweep?${params.toString()}`,
-    undefined,
-    { includeAuth: opts?.includeAuth ?? false },
+    includeAuth ? { cache: 'no-store' } : undefined,
+    { includeAuth },
   );
 }
 
@@ -1350,13 +1356,14 @@ export async function getParcelIntelMap(
   topPerBorough: number = 1000,
   opts?: { includeAuth?: boolean },
 ): Promise<ParcelIntelMapResponse> {
+  const includeAuth = opts?.includeAuth ?? false;
   const params = new URLSearchParams({
     top_per_borough: String(topPerBorough),
   });
   return requestJson<ParcelIntelMapResponse>(
     `/v1/parcel-intel/map?${params.toString()}`,
-    undefined,
-    { includeAuth: opts?.includeAuth ?? false },
+    includeAuth ? { cache: 'no-store' } : undefined,
+    { includeAuth },
   );
 }
 

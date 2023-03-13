@@ -140,8 +140,8 @@ function row(
 }
 
 const boroughs = [
-  { slug: 'manhattan', display_name: 'Manhattan', count: 1000, top_score: 1 },
-  { slug: 'brooklyn', display_name: 'Brooklyn', count: 1000, top_score: 1 },
+  { slug: 'manhattan', display_name: 'Manhattan', count: 1, top_score: 1 },
+  { slug: 'brooklyn', display_name: 'Brooklyn', count: 1, top_score: 1 },
 ];
 
 beforeEach(() => {
@@ -162,13 +162,24 @@ beforeEach(() => {
   });
   mocks.routerReplace.mockReset();
   mocks.getParcelIntelMap.mockImplementation(
-    async () => ({
-      rows: [
+    async (_topPerBorough, opts) => {
+      const rows = [
         row('1000010001', 'manhattan'),
         row('3000010001', 'brooklyn'),
-      ],
-      generated_at: '2026-07-19T00:00:00Z',
-    }),
+      ];
+      const includeAuth = opts?.includeAuth ?? false;
+      return {
+        rows,
+        generated_at: '2026-07-19T00:00:00Z',
+        access_scope: includeAuth
+          ? ('authenticated_full' as const)
+          : ('public_preview' as const),
+        requested_top_per_borough: 1000,
+        returned_count: rows.length,
+        available_count: rows.length,
+        inventory_complete: true,
+      };
+    },
   );
   mocks.getParcelIntelParcel.mockImplementation(async (bbl: string) =>
     row(bbl, bbl.startsWith('1') ? 'MN' : 'BK'),
@@ -312,7 +323,11 @@ describe('ParcelIntelExplorer', () => {
     mocks.authStatus = 'authenticated';
     render(<ParcelIntelExplorer boroughs={boroughs} />);
 
-    expect(screen.getByText(/Full workspace coverage/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId('parcel-inventory-status')).toHaveTextContent(
+        'Full inventory verified · 2 loaded',
+      ),
+    );
     fireEvent.click(screen.getByRole('button', { name: /^Signals$/i }));
     const signalPanel = document.getElementById('parcel-signal-filters');
     expect(signalPanel).not.toBeNull();
@@ -344,6 +359,56 @@ describe('ParcelIntelExplorer', () => {
     ).toBeInTheDocument();
     expect(screen.getByTestId('activation-guide-attention')).toHaveTextContent(
       '2 saved leads',
+    );
+  });
+
+  it('never labels a cached public preview as the signed-in inventory', async () => {
+    mocks.authStatus = 'authenticated';
+    const fiveBoroughs = [
+      { slug: 'manhattan', display_name: 'Manhattan', count: 1000, top_score: 1 },
+      { slug: 'brooklyn', display_name: 'Brooklyn', count: 1000, top_score: 1 },
+      { slug: 'queens', display_name: 'Queens', count: 1000, top_score: 1 },
+      { slug: 'bronx', display_name: 'Bronx', count: 1000, top_score: 1 },
+      {
+        slug: 'staten_island',
+        display_name: 'Staten Island',
+        count: 1000,
+        top_score: 1,
+      },
+    ];
+    const previewRows = Array.from({ length: 125 }, (_, index) =>
+      row(`1${String(index + 1).padStart(9, '0')}`, 'manhattan'),
+    );
+    mocks.getParcelIntelMap.mockResolvedValue({
+      rows: previewRows,
+      generated_at: '2026-07-26T00:00:00Z',
+      access_scope: 'public_preview',
+      requested_top_per_borough: 1000,
+      returned_count: 125,
+      available_count: 5000,
+      inventory_complete: false,
+    });
+
+    render(<ParcelIntelExplorer boroughs={fiveBoroughs} />);
+
+    const alert = await screen.findByTestId('parcel-inventory-incomplete');
+    expect(alert).toHaveTextContent('125 loaded parcels');
+    expect(alert).toHaveTextContent('5,000-parcel workspace');
+    expect(screen.getByTestId('parcel-inventory-status')).toHaveTextContent(
+      'Inventory incomplete · 125 of 5,000 loaded',
+    );
+    expect(
+      screen.queryByText(/Full inventory verified/i),
+    ).not.toBeInTheDocument();
+    expect(mocks.getParcelIntelSweep).toHaveBeenCalledTimes(5);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Retry full inventory' }),
+    );
+    await waitFor(() =>
+      expect(mocks.getParcelIntelMap.mock.calls.length).toBeGreaterThanOrEqual(
+        3,
+      ),
     );
   });
 

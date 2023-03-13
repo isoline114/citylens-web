@@ -68,6 +68,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
             transit_access_tier: 'walkable',
           },
         ],
+        access_scope: 'authenticated_full',
+        requested_top_per_borough: 1000,
+        returned_count: 1,
+        available_count: 1,
+        inventory_complete: true,
       }),
     });
   });
@@ -861,6 +866,9 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   );
 
   await page.goto('/parcel-intel');
+  await expect(page.getByTestId('parcel-inventory-status')).toContainText(
+    'Full inventory verified',
+  );
 
   const initialMapBounds = await page
     .getByTestId('parcel-citywide-map')

@@ -17,6 +17,7 @@ import {
   LoaderCircle,
   LockKeyhole,
   MapPinned,
+  RefreshCw,
   Ruler,
   Search,
   Sparkles,
@@ -127,6 +128,14 @@ type WorkflowBorough = (typeof WORKFLOW_BOROUGHS)[number];
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error';
 type DetailState = 'idle' | 'loading' | 'ready' | 'error';
+type InventoryState = 'preview' | 'upgrading' | 'full' | 'incomplete';
+
+type ExplorerLoadResult = {
+  rows: ParcelIntelMapRow[];
+  failures: string[];
+  generatedAt: string | null;
+  fullInventoryVerified: boolean;
+};
 
 type Props = {
   boroughs: ParcelIntelBorough[];
@@ -182,6 +191,9 @@ export function ParcelIntelExplorer({
   const [exporting, setExporting] = useState(false);
   const fullInventoryLoaded = useRef(false);
   const [fullInventoryReady, setFullInventoryReady] = useState(false);
+  const [inventoryState, setInventoryState] =
+    useState<InventoryState>('preview');
+  const [inventoryReloadKey, setInventoryReloadKey] = useState(0);
   const [filters, setFilters] = useState<ExplorerFilters>(() => ({
     ...DEFAULT_FILTERS,
     borough: boroughs.some((borough) => borough.slug === initialBorough)
@@ -219,11 +231,7 @@ export function ParcelIntelExplorer({
 
   const loadLegacySweeps = async (
     includeAuth: boolean,
-  ): Promise<{
-    rows: ParcelIntelMapRow[];
-    failures: string[];
-    generatedAt: string | null;
-  }> => {
+  ): Promise<ExplorerLoadResult> => {
     const results = await Promise.allSettled(
       boroughs.map(async (borough) => {
         const sweep = await getParcelIntelSweep(borough.slug, 1000, {
@@ -249,23 +257,56 @@ export function ParcelIntelExplorer({
         failures.push(boroughs[index]?.slug ?? `borough-${index + 1}`);
       }
     });
-    return { rows: legacyRows, failures, generatedAt };
+    const uniqueCount = new Set(legacyRows.map((row) => row.bbl)).size;
+    return {
+      rows: legacyRows,
+      failures,
+      generatedAt,
+      fullInventoryVerified:
+        includeAuth &&
+        failures.length === 0 &&
+        uniqueCount >= totalAvailable,
+    };
   };
 
   const loadExplorerRows = async (
     includeAuth: boolean,
-  ): Promise<{
-    rows: ParcelIntelMapRow[];
-    failures: string[];
-    generatedAt: string | null;
-  }> => {
+  ): Promise<ExplorerLoadResult> => {
     try {
       const response = await getParcelIntelMap(1000, { includeAuth });
-      return {
+      const hasInventoryReceipt =
+        typeof response.returned_count === 'number' &&
+        typeof response.available_count === 'number' &&
+        typeof response.inventory_complete === 'boolean' &&
+        typeof response.access_scope === 'string';
+      const uniqueMapCount = new Set(
+        response.rows.map((row) => row.bbl),
+      ).size;
+      const receiptMatchesRows =
+        response.returned_count === response.rows.length &&
+        uniqueMapCount === response.rows.length &&
+        response.available_count === response.returned_count;
+      const fullInventoryVerified =
+        includeAuth &&
+        (hasInventoryReceipt
+          ? response.access_scope === 'authenticated_full' &&
+            response.inventory_complete === true &&
+            receiptMatchesRows
+          : response.rows.length >= totalAvailable);
+      const mapResult: ExplorerLoadResult = {
         rows: response.rows,
         failures: [],
         generatedAt: response.generated_at,
+        fullInventoryVerified,
       };
+
+      if (!includeAuth || fullInventoryVerified) return mapResult;
+
+      // During a rolling engine/web deploy—or if an intermediary incorrectly
+      // reuses a public response—never accept 125 preview rows as the signed-in
+      // inventory. The authenticated borough feeds provide a recovery path.
+      const legacyResult = await loadLegacySweeps(true);
+      return legacyResult.fullInventoryVerified ? legacyResult : mapResult;
     } catch {
       // Backwards-compatible during the coordinated engine/web rollout.
       return loadLegacySweeps(includeAuth);
@@ -285,6 +326,7 @@ export function ParcelIntelExplorer({
       setRows([...unique.values()]);
       setFailedBoroughs(result.failures);
       setLoadState(unique.size > 0 ? 'ready' : 'error');
+      setInventoryState('preview');
     });
     return () => {
       cancelled = true;
@@ -302,22 +344,33 @@ export function ParcelIntelExplorer({
     if (!includeAuth && !fullInventoryLoaded.current) return;
     let cancelled = false;
     setFullInventoryReady(false);
+    setInventoryState(includeAuth ? 'upgrading' : 'preview');
     void loadExplorerRows(includeAuth).then((result) => {
       if (cancelled) return;
-      fullInventoryLoaded.current = includeAuth;
       const unique = new Map(result.rows.map((row) => [row.bbl, row]));
+      const fullInventoryVerified =
+        includeAuth &&
+        result.fullInventoryVerified &&
+        unique.size > 0 &&
+        result.failures.length === 0;
+      fullInventoryLoaded.current = fullInventoryVerified;
       setRows([...unique.values()]);
       setFailedBoroughs(result.failures);
       setLoadState(unique.size > 0 ? 'ready' : 'error');
-      setFullInventoryReady(
-        includeAuth && unique.size > 0 && result.failures.length === 0,
+      setFullInventoryReady(fullInventoryVerified);
+      setInventoryState(
+        includeAuth
+          ? fullInventoryVerified
+            ? 'full'
+            : 'incomplete'
+          : 'preview',
       );
     });
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.status, boroughs]);
+  }, [auth.status, boroughs, inventoryReloadKey]);
 
   // A signed-out browser must not retain authenticated parcel detail in the
   // comparison workspace. Public-preview comparisons remain available.
@@ -829,8 +882,10 @@ export function ParcelIntelExplorer({
           </div>
           <div className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] text-slate-300 sm:hidden">
             <span>
-              <strong className="text-sm text-white">{boroughs.length}</strong>{' '}
-              boroughs
+              <strong className="text-sm text-white">
+                {loadState === 'ready' ? rows.length.toLocaleString() : '…'}
+              </strong>{' '}
+              loaded
             </span>
             <span>
               <strong className="text-sm text-white">
@@ -838,20 +893,26 @@ export function ParcelIntelExplorer({
                   ? filtered.length.toLocaleString()
                   : '…'}
               </strong>{' '}
-              {isAuthenticated ? 'visible' : 'preview'}
+              matches
             </span>
             <span>
               <strong className="text-sm text-white">
                 {totalAvailable.toLocaleString()}
               </strong>{' '}
-              {isAuthenticated ? 'available' : 'with account'}
+              available
             </span>
           </div>
-          <div className="hidden grid-cols-3 gap-2 sm:grid lg:min-w-[430px]">
+          <div className="hidden grid-cols-4 gap-2 sm:grid lg:min-w-[520px]">
             {[
               ['Boroughs', boroughs.length.toString()],
               [
-                'Visible now',
+                'Loaded',
+                loadState === 'ready'
+                  ? rows.length.toLocaleString()
+                  : 'Loading…',
+              ],
+              [
+                'Matches',
                 loadState === 'ready' ? filtered.length.toLocaleString() : 'Loading…',
               ],
               ['Available', totalAvailable.toLocaleString()],
@@ -894,19 +955,37 @@ export function ParcelIntelExplorer({
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2 text-xs text-slate-300">
             <span className="hidden items-center gap-2 sm:inline-flex">
-              {auth.status === 'loading' ? (
+              {auth.status === 'loading' || inventoryState === 'upgrading' ? (
                 <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-              ) : isAuthenticated ? (
+              ) : inventoryState === 'full' ? (
                 <Sparkles className="h-3.5 w-3.5 text-emerald-300" />
+              ) : inventoryState === 'incomplete' ? (
+                <TriangleAlert className="h-3.5 w-3.5 text-amber-300" />
               ) : (
                 <LockKeyhole className="h-3.5 w-3.5 text-amber-300" />
               )}
-              <span>
-                {isAuthenticated
-                  ? `Full workspace coverage · ${totalAvailable.toLocaleString()} available`
-                  : `Preview coverage · sign in to load all ${totalAvailable.toLocaleString()}`}
+              <span data-testid="parcel-inventory-status">
+                {auth.status === 'loading'
+                  ? 'Checking workspace access…'
+                  : inventoryState === 'upgrading'
+                    ? `Loading all ${totalAvailable.toLocaleString()} parcels…`
+                    : inventoryState === 'full'
+                      ? `Full inventory verified · ${rows.length.toLocaleString()} loaded`
+                      : inventoryState === 'incomplete'
+                        ? `Inventory incomplete · ${rows.length.toLocaleString()} of ${totalAvailable.toLocaleString()} loaded`
+                        : `Preview coverage · sign in to load all ${totalAvailable.toLocaleString()}`}
               </span>
             </span>
+            {isAuthenticated && inventoryState === 'incomplete' && (
+              <button
+                type="button"
+                onClick={() => setInventoryReloadKey((value) => value + 1)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-amber-300/40 bg-amber-300/10 px-3 text-xs font-semibold text-amber-100 hover:bg-amber-300/20"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Retry inventory
+              </button>
+            )}
             {isAuthenticated && (
               <button
                 type="button"
@@ -983,6 +1062,31 @@ export function ParcelIntelExplorer({
           </div>
         </div>
       </div>
+
+      {isAuthenticated && inventoryState === 'incomplete' && (
+        <div
+          role="alert"
+          data-testid="parcel-inventory-incomplete"
+          className="flex flex-col gap-2 border-b border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-950 sm:flex-row sm:items-center sm:justify-between md:px-6"
+        >
+          <span className="inline-flex items-start gap-2">
+            <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+            <span>
+              <strong>Full inventory could not be verified.</strong>{' '}
+              The map is showing {rows.length.toLocaleString()} loaded parcels,
+              not claiming the {totalAvailable.toLocaleString()}-parcel workspace.
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setInventoryReloadKey((value) => value + 1)}
+            className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 font-semibold text-amber-950 hover:bg-amber-100"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Retry full inventory
+          </button>
+        </div>
+      )}
 
       {isAuthenticated && insightsOpen && (
         <ParcelWorkflowInsights onClose={() => setInsightsOpen(false)} />

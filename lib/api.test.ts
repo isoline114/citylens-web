@@ -749,6 +749,28 @@ describe('parcel intelligence progressive reads', () => {
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(url).toContain('/v1/parcel-intel/map?top_per_borough=250');
     expect(new Headers(init.headers).has('Authorization')).toBe(false);
+    expect(init.cache).toBeUndefined();
+  });
+
+  it('bypasses the public HTTP cache for the authenticated citywide map', async () => {
+    setAuthTokenGetter(async () => 'tok-abc');
+    const mockFetch = stubFetch({
+      rows: [],
+      generated_at: null,
+      access_scope: 'authenticated_full',
+      requested_top_per_borough: 1000,
+      returned_count: 0,
+      available_count: 0,
+      inventory_complete: true,
+    });
+
+    await getParcelIntelMap(1000, { includeAuth: true });
+
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(new Headers(init.headers).get('Authorization')).toBe(
+      'Bearer tok-abc',
+    );
+    expect(init.cache).toBe('no-store');
   });
 
   it('loads full selected-parcel detail with the user token', async () => {

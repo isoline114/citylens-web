@@ -125,6 +125,11 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
       body: JSON.stringify({
         generated_at: '2026-07-24T02:43:29Z',
         rows: mapRows,
+        access_scope: 'authenticated_full',
+        requested_top_per_borough: 1000,
+        returned_count: mapRows.length,
+        available_count: mapRows.length,
+        inventory_complete: true,
       }),
     });
   });
@@ -159,6 +164,9 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   );
 
   await page.goto('/parcel-intel');
+  await expect(page.getByTestId('parcel-inventory-status')).toContainText(
+    'Full inventory verified',
+  );
   await page.getByRole('button', { name: /^Signals$/ }).click();
   await page
     .getByRole('button', { name: /Owner concentration \+ assemblage/i })

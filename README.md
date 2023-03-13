@@ -97,6 +97,12 @@ underlying official value was edited or hidden.
 The explorer renders its public preview immediately, upgrades authenticated
 users with one compact 5,000-row citywide request, and fetches polygon,
 explanation, provenance, and underwriting detail only when a parcel is opened.
+The upgrade is fail-closed: authenticated map reads bypass the public HTTP
+cache and must carry an internally consistent full-inventory receipt from the
+API. Until that receipt is verified, the interface labels the loaded count as
+incomplete, keeps full-inventory saved-view actions disabled, and offers an
+authenticated retry instead of presenting the 125-row preview as the complete
+workspace.
 The selected-parcel panel also has a Decision Audit tab. It separates the
 historical next-year DOB filing signal from current acquisition gates,
 post-score diligence overlays, source dates, and user-entered workflow
