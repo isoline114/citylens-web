@@ -16,6 +16,7 @@ import {
   type DemoFeaturedRun,
   type ParcelIntelIndex,
 } from '@/lib/api';
+import parcelIntelE2eFixture from '@/tests/e2e/fixtures/parcel-intel-index.json';
 
 /**
  * Production API URL for server-side fetches. Order of preference:
@@ -92,6 +93,13 @@ export async function fetchParcelIntelIndexOnServer(): Promise<ParcelIntelIndex>
     prospective_validation: null,
     prospective_validation_health: null,
   };
+  if (process.env.CITYLENS_USE_PARCEL_INTEL_INDEX_FIXTURE === '1') {
+    // Browser journeys need a deterministic server-rendered shell. Browser
+    // route interception cannot see the Server Component fetch that occurs
+    // during `next build`, so CI explicitly opts into this versioned fixture.
+    // Production never sets this variable and continues to use the live API.
+    return parcelIntelE2eFixture as ParcelIntelIndex;
+  }
   if (process.env.CITYLENS_DISABLE_SSR_PARCEL_INTEL === '1') return empty;
 
   const url = `${serverApiBase()}/v1/parcel-intel/index`;

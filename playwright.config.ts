@@ -37,6 +37,9 @@ export default defineConfig({
       // this set, RunForm falls through to its client-side fetch where
       // page.route does intercept.
       CITYLENS_DISABLE_SSR_DEMOS: '1',
+      // Keep the Server Component shell deterministic. Browser page.route
+      // mocks cannot intercept the index fetch performed during `next build`.
+      CITYLENS_USE_PARCEL_INTEL_INDEX_FIXTURE: '1',
     },
   },
   projects: [

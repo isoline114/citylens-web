@@ -1006,6 +1006,15 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     /3020960069|100 E 21|owner|notes|tags|count|overlap|union/i,
   );
   await page.getByRole('button', { name: 'Overview' }).click();
+  const decisionBrief = page.getByTestId('parcel-decision-posture');
+  await expect(decisionBrief).toContainText('Acquisition decision brief');
+  await expect(decisionBrief).toContainText('Historical model #65');
+  await expect(decisionBrief).toContainText('1 current gate cleared');
+  await expect(decisionBrief).toContainText('2 open evidence items');
+  await expect(decisionBrief).toContainText(
+    'NYC PLUTO/FEMA and NYC Planning MIH',
+  );
+  await expect(decisionBrief).toContainText('no composite confidence score');
   await expect(page.getByTestId('mih-diligence')).toContainText(
     'Mandatory Inclusionary Housing screen',
   );

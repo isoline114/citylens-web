@@ -76,6 +76,21 @@ type Props = {
 
 type ExternalParcelLink = { label: string; href: string };
 
+type ParcelDecisionBriefLane = {
+  key: 'signal' | 'eligibility' | 'open_questions' | 'next_decision';
+  eyebrow: string;
+  headline: string;
+  detail: string;
+  source: string;
+  tone: 'violet' | 'emerald' | 'amber' | 'sky' | 'rose' | 'slate';
+};
+
+export type ParcelDecisionBrief = {
+  label: string;
+  lanes: ParcelDecisionBriefLane[];
+  evidenceAsOf: string | null;
+};
+
 const MODEL_FEATURE_LABELS: Record<string, string> = {
   allowed_far: 'Allowed development density',
   assessbldg_per_lot: 'Assessed building value',
@@ -213,6 +228,166 @@ const READINESS_STYLES: Record<
   initial_review_ready: 'border-emerald-200 bg-emerald-50 text-emerald-950',
   limited_preview: 'border-sky-200 bg-sky-50 text-sky-950',
 };
+
+function pluralize(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function briefSource(
+  check: ParcelDecisionAuditCheck | undefined,
+  fallback: string,
+): string {
+  if (!check) return fallback;
+  return `${check.source}${check.as_of ? ` · as of ${check.as_of}` : ''}`;
+}
+
+export function buildParcelDecisionBrief(
+  row: ParcelIntelRow,
+): ParcelDecisionBrief | null {
+  const audit = row.decision_audit;
+  const readiness = audit?.readiness;
+  if (!audit || !readiness) return null;
+
+  const modelCheck = audit.checks.find(
+    (check) => check.layer === 'model_signal',
+  );
+  const eligibilityChecks = audit.checks.filter(
+    (check) => check.layer === 'eligibility_gate',
+  );
+  const verifiedEligibility = eligibilityChecks.filter(
+    (check) => check.status === 'verified',
+  );
+  const unresolvedChecks = audit.checks.filter(
+    (check) =>
+      (check.layer === 'current_diligence' ||
+        check.layer === 'source_freshness') &&
+      (check.status === 'review' ||
+        check.status === 'excluded' ||
+        check.status === 'unavailable'),
+  );
+  const firstOpenQuestion =
+    readiness.blockers[0] ??
+    readiness.review_items[0] ??
+    unresolvedChecks[0]?.summary ??
+    null;
+
+  const eligibilityBlocked =
+    audit.overall_status === 'excluded' ||
+    eligibilityChecks.some((check) => check.status === 'excluded');
+  const eligibilityNeedsReview = eligibilityChecks.some(
+    (check) =>
+      check.status === 'review' ||
+      check.status === 'excluded' ||
+      check.status === 'unavailable',
+  );
+  const eligibilityEvidence =
+    eligibilityChecks.find((check) => check.status !== 'verified') ??
+    eligibilityChecks.at(-1);
+  const unresolvedEvidence = unresolvedChecks[0];
+  const eligibilityHeadline = eligibilityBlocked
+    ? 'Current gate blocked'
+    : eligibilityChecks.length === 0
+      ? audit.overall_label
+      : eligibilityNeedsReview
+        ? 'Current gate needs review'
+        : `${pluralize(
+            verifiedEligibility.length,
+            'current gate',
+          )} cleared`;
+  const eligibilityTone: ParcelDecisionBriefLane['tone'] = eligibilityBlocked
+    ? 'rose'
+    : eligibilityChecks.length === 0
+      ? 'slate'
+      : eligibilityNeedsReview
+        ? 'amber'
+        : 'emerald';
+  const modelRank =
+    typeof row.model_rank === 'number'
+      ? `Historical model #${row.model_rank.toLocaleString()}`
+      : 'Historical model context';
+  const openQuestionCount =
+    readiness.blockers.length > 0
+      ? readiness.blockers.length
+      : readiness.review_items.length > 0
+        ? readiness.review_items.length
+        : unresolvedChecks.length;
+  const openHeadline =
+    openQuestionCount > 0
+      ? pluralize(openQuestionCount, 'open evidence item')
+      : readiness.status === 'blocked'
+        ? 'Decision blocker present'
+        : readiness.status === 'limited_preview'
+          ? 'Protected evidence withheld'
+          : readiness.status === 'incomplete' ||
+              readiness.status === 'review_required'
+            ? 'Evidence review required'
+            : 'No feed-level exception';
+
+  return {
+    label: readiness.label,
+    evidenceAsOf: audit.evidence_generated_at?.slice(0, 10) ?? null,
+    lanes: [
+      {
+        key: 'signal',
+        eyebrow: 'Why it surfaced',
+        headline: `${modelRank} · ${opportunityLabel(
+          row.opportunity_category,
+        )}`,
+        detail:
+          modelCheck?.summary ??
+          'Historical redevelopment evidence supplied the screening order; it is not a parcel probability.',
+        source: briefSource(modelCheck, 'Accepted historical model bundle'),
+        tone: 'violet',
+      },
+      {
+        key: 'eligibility',
+        eyebrow: 'Why it survived',
+        headline: eligibilityHeadline,
+        detail: eligibilityEvidence?.summary ?? audit.overall_label,
+        source: briefSource(
+          eligibilityEvidence,
+          'CityLens deterministic acquisition policy',
+        ),
+        tone: eligibilityTone,
+      },
+      {
+        key: 'open_questions',
+        eyebrow: 'What remains',
+        headline: openHeadline,
+        detail:
+          firstOpenQuestion ??
+          (readiness.status === 'initial_review_ready'
+            ? 'No unresolved exception appears in the cited feed. Official records and professional diligence are still required.'
+            : readiness.recommended_action),
+        source: briefSource(
+          unresolvedEvidence,
+          'Current cited feed and decision audit',
+        ),
+        tone:
+          readiness.blockers.length > 0
+            ? 'rose'
+            : openQuestionCount > 0 ||
+                readiness.status === 'limited_preview' ||
+                readiness.status === 'incomplete' ||
+                readiness.status === 'review_required'
+              ? 'amber'
+              : 'slate',
+      },
+      {
+        key: 'next_decision',
+        eyebrow: 'Next decision',
+        headline: readiness.label,
+        detail: readiness.recommended_action,
+        source: `CityLens decision-readiness policy${
+          audit.evidence_generated_at
+            ? ` · evidence ${audit.evidence_generated_at.slice(0, 10)}`
+            : ''
+        }`,
+        tone: 'sky',
+      },
+    ],
+  };
+}
 
 function parseBbl(
   bbl: string,
@@ -512,58 +687,122 @@ function ParcelDecisionAuditPanel({
   );
 }
 
-function ParcelDecisionPosture({
-  readiness,
+function ParcelAcquisitionBrief({
+  row,
+  audit,
   onOpenAudit,
 }: {
-  readiness: NonNullable<ParcelDecisionAudit['readiness']>;
+  row: ParcelIntelRow;
+  audit: ParcelDecisionAudit;
   onOpenAudit: () => void;
 }) {
+  const readiness = audit.readiness;
+  const brief = buildParcelDecisionBrief(row);
+  if (!readiness || !brief) return null;
+
   const counts = [
     ['Blocked', readiness.blockers.length],
     ['Review', readiness.review_items.length],
     ['Cleared', readiness.cleared_items.length],
   ] as const;
+  const laneStyles = {
+    violet:
+      'border-violet-300/20 bg-violet-400/[0.08] text-violet-100',
+    emerald:
+      'border-emerald-300/20 bg-emerald-400/[0.08] text-emerald-100',
+    amber: 'border-amber-300/20 bg-amber-400/[0.08] text-amber-100',
+    sky: 'border-sky-300/20 bg-sky-400/[0.08] text-sky-100',
+    rose: 'border-rose-300/20 bg-rose-400/[0.08] text-rose-100',
+    slate: 'border-white/10 bg-white/[0.05] text-slate-100',
+  } as const;
+  const laneIcons = {
+    signal: Gauge,
+    eligibility: ShieldCheck,
+    open_questions: CircleAlert,
+    next_decision: ClipboardCheck,
+  } as const;
 
   return (
     <section
-      className={`mb-3 rounded-xl border p-3 ${READINESS_STYLES[readiness.status]}`}
+      className="mb-3 overflow-hidden rounded-2xl bg-[radial-gradient(circle_at_top_right,_rgba(14,165,233,0.2),_transparent_42%),linear-gradient(145deg,#020617,#0f172a)] text-white shadow-lg ring-1 ring-inset ring-white/10"
       data-testid="parcel-decision-posture"
     >
-      <div className="flex items-start gap-2">
-        <ClipboardCheck className="mt-0.5 h-4 w-4 shrink-0" />
-        <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">
-            Decision posture
+      <div className="p-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300">
+              <BriefcaseBusiness className="h-3.5 w-3.5" />
+              Acquisition decision brief
+            </div>
+            <h4 className="mt-1 text-sm font-semibold text-white">
+              {brief.label}
+            </h4>
+            <p className="mt-1 text-[11px] leading-4 text-slate-300">
+              Four evidence lanes kept separate—no composite confidence score.
+            </p>
           </div>
-          <h4 className="mt-0.5 text-sm font-semibold">{readiness.label}</h4>
-          <p className="mt-1 text-xs leading-5 opacity-85">
-            {readiness.recommended_action}
-          </p>
-        </div>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-current/10 pt-3">
-        {counts.map(([label, count]) => (
-          <span
-            key={label}
-            className="rounded-full bg-white/70 px-2 py-1 text-[10px] font-semibold ring-1 ring-inset ring-current/10"
-          >
-            {label} {count}
+          <span className="shrink-0 rounded-full bg-white/[0.08] px-2 py-1 text-[10px] font-semibold text-slate-200 ring-1 ring-inset ring-white/10">
+            Source-bound
           </span>
-        ))}
-        <button
-          type="button"
-          onClick={onOpenAudit}
-          className="ml-auto inline-flex h-7 items-center gap-1 rounded-lg bg-slate-950 px-2.5 text-[10px] font-semibold text-white hover:bg-slate-800"
+        </div>
+
+        <div
+          className="mt-3 grid gap-2 sm:grid-cols-2"
+          data-testid="parcel-decision-brief"
         >
-          Open evidence audit
-          <ArrowRight className="h-3 w-3" />
-        </button>
+          {brief.lanes.map((lane) => {
+            const Icon = laneIcons[lane.key];
+            return (
+              <article
+                key={lane.key}
+                className={`rounded-xl border p-2.5 ${laneStyles[lane.tone]}`}
+                data-testid={`parcel-decision-brief-${lane.key}`}
+              >
+                <div className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] opacity-70">
+                  <Icon className="h-3 w-3" />
+                  {lane.eyebrow}
+                </div>
+                <div className="mt-1 text-xs font-semibold leading-4">
+                  {lane.headline}
+                </div>
+                <p className="mt-1 line-clamp-3 text-[10px] leading-4 opacity-75">
+                  {lane.detail}
+                </p>
+                <p className="mt-2 truncate border-t border-current/10 pt-1.5 text-[9px] leading-3 opacity-60">
+                  {lane.source}
+                </p>
+              </article>
+            );
+          })}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-3">
+          {counts.map(([label, count]) => (
+            <span
+              key={label}
+              className="rounded-full bg-white/[0.07] px-2 py-1 text-[10px] font-semibold text-slate-300 ring-1 ring-inset ring-white/10"
+            >
+              {label} {count}
+            </span>
+          ))}
+          {brief.evidenceAsOf && (
+            <span className="text-[10px] text-slate-400">
+              Evidence {formatIsoDate(brief.evidenceAsOf)}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={onOpenAudit}
+            className="ml-auto inline-flex h-7 items-center gap-1 rounded-lg bg-white px-2.5 text-[10px] font-semibold text-slate-950 hover:bg-sky-50"
+          >
+            Open evidence audit
+            <ArrowRight className="h-3 w-3" />
+          </button>
+        </div>
+        <p className="mt-2 text-[10px] leading-4 text-slate-400">
+          {readiness.disclaimer} The brief is not a buy/pass recommendation.
+        </p>
       </div>
-      <p className="mt-2 text-[10px] leading-4 opacity-70">
-        Source-bound screening guidance—not a buy/pass recommendation or completed
-        diligence.
-      </p>
     </section>
   );
 }
@@ -1215,8 +1454,9 @@ export function ParcelIntelPropertyPanel({
         {tab === 'overview' && (
           <div>
             {row.decision_audit?.readiness && (
-              <ParcelDecisionPosture
-                readiness={row.decision_audit.readiness}
+              <ParcelAcquisitionBrief
+                row={row}
+                audit={row.decision_audit}
                 onOpenAudit={() => openDecisionAudit('decision_posture')}
               />
             )}

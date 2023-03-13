@@ -42,6 +42,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
 });
 
 import {
+  buildParcelDecisionBrief,
   externalParcelLinks,
   ParcelIntelPropertyPanel,
 } from './parcel-intel-property-panel';
@@ -924,6 +925,7 @@ describe('ParcelIntelPropertyPanel', () => {
       <ParcelIntelPropertyPanel
         row={{
           ...parcel,
+          model_rank: 28,
           acquisition_eligible: true,
           acquisition_status: 'eligible',
           property_facts_current: true,
@@ -1001,6 +1003,16 @@ describe('ParcelIntelPropertyPanel', () => {
     );
 
     const posture = screen.getByTestId('parcel-decision-posture');
+    const brief = screen.getByTestId('parcel-decision-brief');
+    expect(brief).toHaveTextContent('Why it surfaced');
+    expect(brief).toHaveTextContent('Historical model #28');
+    expect(brief).toHaveTextContent('Why it survived');
+    expect(brief).toHaveTextContent('1 current gate cleared');
+    expect(brief).toHaveTextContent('What remains');
+    expect(brief).toHaveTextContent('1 open evidence item');
+    expect(brief).toHaveTextContent('NYC PLUTO/FEMA · as of 2026-07-24');
+    expect(brief).toHaveTextContent('Next decision');
+    expect(posture).toHaveTextContent('no composite confidence score');
     expect(posture).toHaveTextContent('Diligence review required before advancing');
     expect(posture).toHaveTextContent('Review 1');
     expect(posture).toHaveTextContent('Cleared 1');
@@ -1029,6 +1041,123 @@ describe('ParcelIntelPropertyPanel', () => {
     expect(screen.getByTestId('parcel-decision-readiness')).toHaveTextContent(
       'not a purchase recommendation',
     );
+  });
+
+  it('fails conservative when an older decision audit has no atomic checks', () => {
+    const brief = buildParcelDecisionBrief({
+      ...parcel,
+      decision_audit: {
+        schema_version: 'citylens/parcel-decision-audit@v1',
+        overall_status: 'incomplete',
+        overall_label: 'Evidence incomplete',
+        readiness: {
+          status: 'incomplete',
+          label: 'Evidence incomplete',
+          recommended_action:
+            'Reload the cited source evidence before advancing.',
+          blockers: [],
+          review_items: [],
+          cleared_items: [],
+          disclaimer: 'Not a purchase recommendation.',
+        },
+        validation: {
+          target: 'dob_nb_job_filing',
+          evaluation_scope: 'Historical cohort only',
+          precision_at_100: null,
+          precision_at_1000: null,
+          base_rate: null,
+          prospective_validated: false,
+          disclaimer: 'No parcel probability.',
+        },
+        checks: [],
+        limitations: [],
+      },
+    });
+
+    expect(brief).not.toBeNull();
+    expect(brief?.lanes.find((lane) => lane.key === 'eligibility')).toMatchObject(
+      {
+        headline: 'Evidence incomplete',
+        tone: 'slate',
+      },
+    );
+    expect(
+      brief?.lanes.find((lane) => lane.key === 'open_questions'),
+    ).toMatchObject({
+      headline: 'Evidence review required',
+      detail: 'Reload the cited source evidence before advancing.',
+      tone: 'amber',
+    });
+    expect(JSON.stringify(brief)).not.toContain('0 current gates cleared');
+  });
+
+  it('keeps diligence blockers separate from a cleared acquisition gate', () => {
+    const brief = buildParcelDecisionBrief({
+      ...parcel,
+      acquisition_eligible: true,
+      decision_audit: {
+        schema_version: 'citylens/parcel-decision-audit@v1',
+        overall_status: 'screened_with_flags',
+        overall_label: 'Eligible lead with a diligence blocker',
+        readiness: {
+          status: 'blocked',
+          label: 'Resolve the blocker before advancing',
+          recommended_action: 'Verify the current environmental instrument.',
+          blockers: ['Environmental review is unresolved.'],
+          review_items: [],
+          cleared_items: ['Current acquisition gate passed.'],
+          disclaimer: 'Not a purchase recommendation.',
+        },
+        validation: {
+          target: 'dob_nb_job_filing',
+          evaluation_scope: 'Historical cohort only',
+          precision_at_100: null,
+          precision_at_1000: null,
+          base_rate: null,
+          prospective_validated: false,
+          disclaimer: 'No parcel probability.',
+        },
+        checks: [
+          {
+            key: 'acquisition_eligibility',
+            layer: 'eligibility_gate',
+            label: 'Current acquisition gate',
+            status: 'verified',
+            summary: 'The deterministic publication gate passed.',
+            source: 'CityLens acquisition policy',
+            as_of: '2026-07-26',
+            affects_model_rank: false,
+            affects_acquisition_eligibility: true,
+          },
+          {
+            key: 'current_diligence',
+            layer: 'current_diligence',
+            label: 'Environmental review',
+            status: 'excluded',
+            summary: 'An environmental instrument requires review.',
+            source: 'NYC PLUTO',
+            as_of: '2026-07-26',
+            affects_model_rank: false,
+            affects_acquisition_eligibility: false,
+          },
+        ],
+        limitations: [],
+      },
+    });
+
+    expect(brief?.lanes.find((lane) => lane.key === 'eligibility')).toMatchObject(
+      {
+        headline: '1 current gate cleared',
+        tone: 'emerald',
+      },
+    );
+    expect(
+      brief?.lanes.find((lane) => lane.key === 'open_questions'),
+    ).toMatchObject({
+      headline: '1 open evidence item',
+      detail: 'Environmental review is unresolved.',
+      tone: 'rose',
+    });
   });
 
   it('records one value-minimized decision-audit entry per parcel', async () => {

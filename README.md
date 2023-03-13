@@ -124,6 +124,13 @@ current blockers, items requiring review, checks that passed the current
 screening gates, and one conservative next diligence action. Signed-in users
 can carry that action into the private workflow as an editable draft; it is
 never saved automatically and does not alter model rank.
+The Overview tab synthesizes that same immutable audit contract into a compact
+acquisition decision brief: why the parcel surfaced, why it survived current
+gates, what evidence remains unresolved, and the next decision. Each lane
+retains its source and date, and the interface deliberately refuses to collapse
+them into a confidence score, buy/pass recommendation, or parcel-level
+probability. Missing or older atomic audit evidence fails conservative instead
+of being presented as a cleared gate.
 Once a parcel is saved, its Workflow tab also exposes a source-bound evidence
 review ledger for the current acquisition gate, project clearance, PLUTO
 facts, ownership provenance, diligence overlays, and transit context. A user

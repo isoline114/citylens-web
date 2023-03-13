@@ -83,7 +83,18 @@ export default async function ParcelIntelIndexPage({
   const staleSources = Object.values(index.data_sources ?? {}).flatMap((value) => {
     if (!value || typeof value !== 'object') return [];
     const status = value as Record<string, unknown>;
-    if (status.stale !== true) return [];
+    // A stale warning is meaningful only for a refreshable operational source
+    // with an explicit SLA. Historical model/imagery provenance may carry a
+    // baseline year without a retrieval timestamp; it must not masquerade as
+    // an overdue current-record feed.
+    if (
+      status.stale !== true ||
+      typeof status.max_age_days !== 'number' ||
+      !Number.isFinite(status.max_age_days) ||
+      status.max_age_days <= 0
+    ) {
+      return [];
+    }
     const source = typeof status.source === 'string' ? status.source : 'A required source';
     const age = typeof status.age_days === 'number' ? ` (${status.age_days} days old)` : '';
     return [`${source}${age}`];

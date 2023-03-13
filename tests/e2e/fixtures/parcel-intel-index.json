@@ -1,0 +1,103 @@
+{
+  "boroughs": [
+    {
+      "slug": "manhattan",
+      "display_name": "Manhattan",
+      "count": 1000,
+      "top_score": 0.0686922061
+    },
+    {
+      "slug": "brooklyn",
+      "display_name": "Brooklyn",
+      "count": 1000,
+      "top_score": 0.0919117647
+    },
+    {
+      "slug": "queens",
+      "display_name": "Queens",
+      "count": 1000,
+      "top_score": 0.3870967742
+    },
+    {
+      "slug": "bronx",
+      "display_name": "Bronx",
+      "count": 1000,
+      "top_score": 0.0919117647
+    },
+    {
+      "slug": "staten_island",
+      "display_name": "Staten Island",
+      "count": 1000,
+      "top_score": 0.2244897959
+    }
+  ],
+  "generated_at": "2026-07-24T02:43:29Z",
+  "feed_generation": "20260724T024329000000Z-e2efixture000",
+  "model_metadata": {
+    "model_type": "gradient_boosting",
+    "feature_year": 2018,
+    "label_window": "2019-2024",
+    "performance_scope": "historical spatial cross-validation",
+    "precision_at_100": 0.34,
+    "precision_at_1000": 0.104,
+    "spatial_cv_base_rate": 0.0012439591,
+    "evaluation_evidence": {
+      "status": "historical_only"
+    }
+  },
+  "data_sources": {
+    "property_facts": {
+      "source": "NYC PLUTO",
+      "retrieved_at": "2026-07-24",
+      "age_days": 0,
+      "max_age_days": 45,
+      "stale": false
+    },
+    "land_use_activity": {
+      "source": "NYC ZAP",
+      "retrieved_at": "2026-07-24",
+      "age_days": 0,
+      "max_age_days": 8,
+      "stale": false
+    },
+    "imagery": {
+      "source": "CityLens",
+      "baseline_year": 2017,
+      "age_days": null,
+      "max_age_days": null,
+      "stale": false,
+      "freshness_status": "not_applicable"
+    }
+  },
+  "quality_gate": {
+    "passed": true,
+    "failures": [],
+    "citywide_acquisition_eligible_count": 5000,
+    "citywide_rank_sequence_valid": true,
+    "screening_ledger": {
+      "evaluated_candidate_count": 24524,
+      "published_candidate_count": 5000,
+      "screened_out_count": 12119,
+      "eligible_below_cutoff_count": 7405,
+      "passed": true,
+      "failures": []
+    },
+    "land_use_reconciliation": {
+      "blocking_project_count": 800,
+      "joined_blocking_project_count": 800,
+      "published_leakage_count": 0,
+      "passed": true,
+      "failures": []
+    },
+    "address_identity": {
+      "row_count": 5000,
+      "pad_enriched_count": 500,
+      "pluto_address_count": 4500,
+      "ranking_use": "none"
+    }
+  },
+  "prospective_validation": null,
+  "prospective_validation_health": null,
+  "generation_diff": {},
+  "inference_replay": {}
+}
