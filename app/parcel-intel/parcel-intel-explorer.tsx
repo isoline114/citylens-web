@@ -28,6 +28,7 @@ import {
 import { useAuth } from '@/lib/auth';
 import {
   advanceParcelWorkflow,
+  ApiError,
   getParcelIntelMap,
   getParcelIntelParcel,
   getParcelIntelSweep,
@@ -129,12 +130,14 @@ type WorkflowBorough = (typeof WORKFLOW_BOROUGHS)[number];
 type LoadState = 'idle' | 'loading' | 'ready' | 'error';
 type DetailState = 'idle' | 'loading' | 'ready' | 'error';
 type InventoryState = 'preview' | 'upgrading' | 'full' | 'incomplete';
+type InventoryIssue = 'auth' | 'response' | 'network' | null;
 
 type ExplorerLoadResult = {
   rows: ParcelIntelMapRow[];
   failures: string[];
   generatedAt: string | null;
   fullInventoryVerified: boolean;
+  issue: InventoryIssue;
 };
 
 type Props = {
@@ -193,6 +196,8 @@ export function ParcelIntelExplorer({
   const [fullInventoryReady, setFullInventoryReady] = useState(false);
   const [inventoryState, setInventoryState] =
     useState<InventoryState>('preview');
+  const [inventoryIssue, setInventoryIssue] =
+    useState<InventoryIssue>(null);
   const [inventoryReloadKey, setInventoryReloadKey] = useState(0);
   const [filters, setFilters] = useState<ExplorerFilters>(() => ({
     ...DEFAULT_FILTERS,
@@ -266,6 +271,12 @@ export function ParcelIntelExplorer({
         includeAuth &&
         failures.length === 0 &&
         uniqueCount >= totalAvailable,
+      issue:
+        includeAuth && failures.length > 0
+          ? 'network'
+          : includeAuth && uniqueCount < totalAvailable
+            ? 'response'
+            : null,
     };
   };
 
@@ -298,6 +309,7 @@ export function ParcelIntelExplorer({
         failures: [],
         generatedAt: response.generated_at,
         fullInventoryVerified,
+        issue: includeAuth && !fullInventoryVerified ? 'response' : null,
       };
 
       if (!includeAuth || fullInventoryVerified) return mapResult;
@@ -307,9 +319,16 @@ export function ParcelIntelExplorer({
       // inventory. The authenticated borough feeds provide a recovery path.
       const legacyResult = await loadLegacySweeps(true);
       return legacyResult.fullInventoryVerified ? legacyResult : mapResult;
-    } catch {
+    } catch (error) {
       // Backwards-compatible during the coordinated engine/web rollout.
-      return loadLegacySweeps(includeAuth);
+      const legacy = await loadLegacySweeps(includeAuth);
+      return {
+        ...legacy,
+        issue:
+          includeAuth && error instanceof ApiError && error.status === 401
+            ? 'auth'
+            : legacy.issue ?? 'network',
+      };
     }
   };
 
@@ -327,6 +346,7 @@ export function ParcelIntelExplorer({
       setFailedBoroughs(result.failures);
       setLoadState(unique.size > 0 ? 'ready' : 'error');
       setInventoryState('preview');
+      setInventoryIssue(null);
     });
     return () => {
       cancelled = true;
@@ -345,6 +365,7 @@ export function ParcelIntelExplorer({
     let cancelled = false;
     setFullInventoryReady(false);
     setInventoryState(includeAuth ? 'upgrading' : 'preview');
+    setInventoryIssue(null);
     void loadExplorerRows(includeAuth).then((result) => {
       if (cancelled) return;
       const unique = new Map(result.rows.map((row) => [row.bbl, row]));
@@ -354,10 +375,17 @@ export function ParcelIntelExplorer({
         unique.size > 0 &&
         result.failures.length === 0;
       fullInventoryLoaded.current = fullInventoryVerified;
-      setRows([...unique.values()]);
+      // Do not erase a useful public preview when the signed-in upgrade
+      // cannot obtain a credential or inventory response.
+      setRows((current) =>
+        unique.size > 0 ? [...unique.values()] : current,
+      );
       setFailedBoroughs(result.failures);
-      setLoadState(unique.size > 0 ? 'ready' : 'error');
+      setLoadState((current) =>
+        unique.size > 0 ? 'ready' : current === 'ready' ? current : 'error',
+      );
       setFullInventoryReady(fullInventoryVerified);
+      setInventoryIssue(includeAuth && !fullInventoryVerified ? result.issue : null);
       setInventoryState(
         includeAuth
           ? fullInventoryVerified
@@ -1073,18 +1101,38 @@ export function ParcelIntelExplorer({
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
             <span>
               <strong>Full inventory could not be verified.</strong>{' '}
+              {inventoryIssue === 'auth'
+                ? 'Your account session is visible, but its data-access credential could not be refreshed. '
+                : 'The signed-in inventory response was incomplete. '}
               The map is showing {rows.length.toLocaleString()} loaded parcels,
               not claiming the {totalAvailable.toLocaleString()}-parcel workspace.
             </span>
           </span>
-          <button
-            type="button"
-            onClick={() => setInventoryReloadKey((value) => value + 1)}
-            className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 font-semibold text-amber-950 hover:bg-amber-100"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Retry full inventory
-          </button>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {inventoryIssue === 'auth' && (
+              <button
+                type="button"
+                onClick={() => {
+                  void Promise.resolve(auth.signOut()).finally(() => {
+                    window.location.assign(
+                      '/sign-in?next=%2Fparcel-intel',
+                    );
+                  });
+                }}
+                className="inline-flex h-8 items-center justify-center rounded-lg border border-amber-300 bg-white px-3 font-semibold text-amber-950 hover:bg-amber-100"
+              >
+                Reconnect account
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setInventoryReloadKey((value) => value + 1)}
+              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 font-semibold text-amber-950 hover:bg-amber-100"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Retry full inventory
+            </button>
+          </div>
         </div>
       )}
 

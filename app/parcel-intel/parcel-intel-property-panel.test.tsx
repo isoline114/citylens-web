@@ -49,6 +49,7 @@ import {
 const parcel: ParcelIntelRow = {
   bbl: '3050660023',
   address: '224 Clarkson Avenue',
+  address_source: 'nyc_pluto',
   borough: 'brooklyn',
   score_calibrated: 0.94,
   score_calibrated_p10: 0.8,
@@ -158,6 +159,36 @@ describe('ParcelIntelPropertyPanel', () => {
     expect(screen.getByText('Why it surfaced')).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('shows official address provenance and flags genuinely unnumbered lots', () => {
+    const { rerender } = render(
+      <ParcelIntelPropertyPanel
+        row={{
+          ...parcel,
+          address: '70-25 Queens Midtown Expressway',
+          address_source: 'nyc_pad',
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('PAD · BBL matched')).toBeInTheDocument();
+    expect(screen.queryByText('Unnumbered tax lot')).not.toBeInTheDocument();
+
+    rerender(
+      <ParcelIntelPropertyPanel
+        row={{
+          ...parcel,
+          address: 'Taylor Street',
+          address_source: 'nyc_pluto',
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Unnumbered tax lot')).toBeInTheDocument();
+    expect(screen.queryByText('PAD · BBL matched')).not.toBeInTheDocument();
   });
 
   it('shows underwriting in place and gates workflow actions when signed out', () => {

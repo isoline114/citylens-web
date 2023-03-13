@@ -9,6 +9,14 @@ import { useAuth } from '@/lib/auth';
 const PROVIDER = (process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'mock').toLowerCase();
 const IS_NEON = PROVIDER === 'neon';
 
+function requestedDestination(): string {
+  if (typeof window === 'undefined') return '/';
+  const requested = new URLSearchParams(window.location.search).get('next');
+  return requested?.startsWith('/') && !requested.startsWith('//')
+    ? requested
+    : '/';
+}
+
 export default function SignInPage() {
   const auth = useAuth();
   const router = useRouter();
@@ -26,7 +34,7 @@ export default function SignInPage() {
           <button
             type="button"
             className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
-            onClick={() => router.push('/')}
+            onClick={() => router.push(requestedDestination())}
           >
             Continue to dashboard
           </button>
@@ -74,10 +82,10 @@ export default function SignInPage() {
                 setError(msg || 'Sign in failed. Check your email and password.');
                 return;
               }
-              router.push('/');
+              router.push(requestedDestination());
             } else {
               await auth.signIn(email.trim() || undefined);
-              router.push('/');
+              router.push(requestedDestination());
             }
           } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Sign in failed.');

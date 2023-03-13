@@ -14,6 +14,10 @@ not five separate borough workspaces. Borough and eligibility filters update the
 same map/list, and selecting a lot opens its overview, underwriting, workflow,
 official-source links, provenance, and model explanation in an in-place parcel
 panel. Legacy `/parcel-intel/<borough>` links redirect into the citywide route.
+The selected-parcel header exposes address identity honestly: numbered NYC PAD
+addresses are labeled as BBL-matched enrichment, while street-only records are
+marked as unnumbered tax lots. Address provenance never implies a rank or
+eligibility change.
 Users can place up to three fully loaded parcels into an evidence comparison
 desk without leaving the explorer. The desk keeps current acquisition posture,
 capacity, ownership/sale context, official project activity, surfaced diligence

@@ -608,6 +608,7 @@ export function ParcelIntelPropertyPanel({
     workflowContextBbl === row.bbl ? workflowError : null;
   const reasons = useMemo(() => explainParcel(row), [row]);
   const links = useMemo(() => externalParcelLinks(row), [row]);
+  const hasNumberedAddress = /\d/.test(row.address ?? '');
   const hasViolationSnapshot =
     (row.dob_safety_active_count ?? 0) +
       (row.ecb_active_count ?? 0) +
@@ -1054,6 +1055,20 @@ export function ParcelIntelPropertyPanel({
               {row.acquisition_eligible && (
                 <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200">
                   Acquisition screened
+                </span>
+              )}
+              {row.address_source === 'nyc_pad' && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-800 ring-1 ring-inset ring-sky-200"
+                  title="NYC Property Address Directory address matched to this tax-lot BBL"
+                >
+                  <MapPin className="h-3 w-3" />
+                  PAD · BBL matched
+                </span>
+              )}
+              {!hasNumberedAddress && (
+                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-900 ring-1 ring-inset ring-amber-200">
+                  Unnumbered tax lot
                 </span>
               )}
               {row.recent_change && (

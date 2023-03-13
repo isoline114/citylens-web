@@ -47,6 +47,16 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   basePath,
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'citylens.dev' }],
+        destination: 'https://www.citylens.dev/:path*',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

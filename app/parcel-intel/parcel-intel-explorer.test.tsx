@@ -6,7 +6,7 @@ import {
   within,
 } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ParcelIntelRow } from '@/lib/api';
+import { ApiError, type ParcelIntelRow } from '@/lib/api';
 
 const mocks = vi.hoisted(() => ({
   authStatus: 'unauthenticated' as 'loading' | 'unauthenticated' | 'authenticated',
@@ -409,6 +409,47 @@ describe('ParcelIntelExplorer', () => {
       expect(mocks.getParcelIntelMap.mock.calls.length).toBeGreaterThanOrEqual(
         3,
       ),
+    );
+  });
+
+  it('keeps the preview and exposes account recovery when JWT access fails', async () => {
+    mocks.authStatus = 'authenticated';
+    const previewRows = [
+      row('1000010001', 'manhattan'),
+      row('3000010001', 'brooklyn'),
+    ];
+    mocks.getParcelIntelMap.mockImplementation(
+      async (_topPerBorough, opts) => {
+        if (opts?.includeAuth) {
+          throw new ApiError('Sign in required', { status: 401 });
+        }
+        return {
+          rows: previewRows,
+          generated_at: '2026-07-26T00:00:00Z',
+          access_scope: 'public_preview' as const,
+          requested_top_per_borough: 1000,
+          returned_count: previewRows.length,
+          available_count: 5000,
+          inventory_complete: false,
+        };
+      },
+    );
+    mocks.getParcelIntelSweep.mockRejectedValue(
+      new ApiError('Sign in required', { status: 401 }),
+    );
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    const alert = await screen.findByTestId('parcel-inventory-incomplete');
+    expect(alert).toHaveTextContent(
+      'account session is visible, but its data-access credential could not be refreshed',
+    );
+    expect(alert).toHaveTextContent('2 loaded parcels');
+    expect(
+      screen.getByRole('button', { name: 'Reconnect account' }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('citywide-map-stub')).toHaveTextContent(
+      '2 mapped rows',
     );
   });
 

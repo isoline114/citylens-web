@@ -23,11 +23,22 @@ export function NeonAuthProvider({ children }: { children: ReactNode }) {
           }
         | null;
       isPending: boolean;
+      refetch: (queryParams?: {
+        query?: { disableCookieCache?: boolean };
+      }) => Promise<void>;
     };
   }).useSession();
+  const sessionData = session.data;
+  const refetchSession = session.refetch;
 
   // Cache the most-recently-fetched JWT so successive API calls don't refetch.
-  const cachedJwt = useRef<{ token: string; expiresAt: number } | null>(null);
+  // Bind it to the opaque Neon session token so switching accounts can never
+  // reuse a JWT minted for the previous browser session.
+  const cachedJwt = useRef<{
+    token: string;
+    expiresAt: number;
+    sessionToken: string;
+  } | null>(null);
 
   const signIn = useCallback(async () => {
     // Neon Auth requires a real email+password form. The /sign-in page calls
@@ -46,40 +57,65 @@ export function NeonAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const getAccessToken = useCallback(async (): Promise<string | null> => {
-    if (!session.data) return null;
+    if (!sessionData) return null;
 
+    const sessionToken = sessionData.session.token;
     const cached = cachedJwt.current;
     const now = Date.now();
-    if (cached && cached.expiresAt - now > 30_000) {
+    if (
+      cached &&
+      cached.sessionToken === sessionToken &&
+      cached.expiresAt - now > 30_000
+    ) {
       return cached.token;
     }
 
-    // Better Auth's JWT plugin exposes a /api/auth/token endpoint that
-    // returns { token: "..." }. Verifiers fetch JWKS from
-    // /api/auth/.well-known/jwks.json (standard OIDC location). Both must
-    // be enabled in the Neon Auth / Better Auth config for cross-service
-    // Bearer auth to work.
-    try {
-      const res = await fetch('/api/auth/token', {
-        method: 'GET',
-        credentials: 'include',
-      });
-      if (!res.ok) return null;
-      const body = (await res.json()) as { token?: string } | null;
-      const token = body?.token;
-      if (typeof token !== 'string' || token.length === 0) return null;
-      cachedJwt.current = { token, expiresAt: extractJwtExpMs(token) ?? now + 60_000 };
-      return token;
-    } catch {
+    const requestToken = async (): Promise<string | null> => {
+      try {
+        // Use the Neon client rather than a hand-written endpoint request.
+        // The client owns the auth base path, cookie credentials, and response
+        // contract; keeping those details here had allowed a visible cached
+        // session to coexist with a failed JWT request.
+        const response = await authClient.token();
+        const token = response.data?.token;
+        return typeof token === 'string' && token.length > 0 ? token : null;
+      } catch {
+        return null;
+      }
+    };
+
+    let token = await requestToken();
+    if (!token) {
+      // A signed session_data cookie can briefly outlive or lag the upstream
+      // session token. Force one upstream session validation and retry JWT
+      // minting before declaring the API credential unavailable.
+      try {
+        await refetchSession({
+          query: { disableCookieCache: true },
+        });
+      } catch {
+        // The retry below is the authoritative result.
+      }
+      token = await requestToken();
+    }
+    if (!token) {
+      cachedJwt.current = null;
       return null;
     }
-  }, [session.data]);
+
+    cachedJwt.current = {
+      token,
+      expiresAt: extractJwtExpMs(token) ?? now + 60_000,
+      sessionToken,
+    };
+    return token;
+  }, [sessionData, refetchSession]);
 
   const value = useMemo<AuthContextValue>(() => {
     if (session.isPending) {
       return { status: 'loading', user: null, signIn, signOut, getAccessToken };
     }
-    const data = session.data;
+    const data = sessionData;
     if (!data) {
       return { status: 'unauthenticated', user: null, signIn, signOut, getAccessToken };
     }
@@ -89,7 +125,7 @@ export function NeonAuthProvider({ children }: { children: ReactNode }) {
       displayName: data.user.name ?? data.user.email ?? data.user.id,
     };
     return { status: 'authenticated', user, signIn, signOut, getAccessToken };
-  }, [session.isPending, session.data, signIn, signOut, getAccessToken]);
+  }, [session.isPending, sessionData, signIn, signOut, getAccessToken]);
 
   return <NeonAuthContext.Provider value={value}>{children}</NeonAuthContext.Provider>;
 }

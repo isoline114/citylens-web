@@ -487,6 +487,8 @@ export type ParcelDecisionAudit = {
 export type ParcelIntelRow = {
   bbl: string;
   address: string | null;
+  /** Official source used for the displayed tax-lot address. */
+  address_source?: 'nyc_pad' | 'nyc_pluto' | 'model_sweep' | null;
   borough: string | null;
   score_calibrated: number | null;
   score_calibrated_p10: number | null;
