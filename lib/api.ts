@@ -1261,6 +1261,10 @@ export type ParcelWorkflowAlerts = {
 export type ParcelSavedSearchFilters = {
   query: string;
   priority: 'all' | 'highest' | 'high_or_better';
+  /**
+   * Compatibility field for saved views created before compound screening.
+   * New views send "all" and persist site_type + signals independently.
+   */
   opportunity:
     | 'all'
     | 'uncommitted'
@@ -1276,6 +1280,25 @@ export type ParcelSavedSearchFilters = {
     | 'ground_up_candidate'
     | 'conversion_or_overbuilt'
     | 'active_project';
+  site_type?:
+    | 'all'
+    | 'uncommitted'
+    | 'vacant_site'
+    | 'ground_up_candidate'
+    | 'conversion_or_overbuilt'
+    | 'active_project';
+  signals?: Array<
+    | 'assemblage'
+    | 'tax_lien'
+    | 'violations'
+    | 'floodplain'
+    | 'environmental_review'
+    | 'mih'
+    | 'transit_800m'
+    | 'portfolio'
+    | 'recent_change'
+    | 'long_held'
+  >;
   owner_portfolio_id: string | null;
   overlay: 'priority' | 'opportunity' | 'borough';
 };

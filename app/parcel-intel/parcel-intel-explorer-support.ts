@@ -1,4 +1,8 @@
-import type { ParcelIntelMapRow, ParcelIntelRow } from '@/lib/api';
+import type {
+  ParcelIntelMapRow,
+  ParcelIntelRow,
+  ParcelSavedSearchFilters,
+} from '@/lib/api';
 
 export const BOROUGH_LABELS: Record<string, string> = {
   manhattan: 'Manhattan',
@@ -41,9 +45,14 @@ export const OPPORTUNITY_COLORS: Record<string, string> = {
 
 export type ExplorerOverlay = 'priority' | 'opportunity' | 'borough';
 export type ExplorerPriority = 'all' | 'highest' | 'high_or_better';
-export type ExplorerOpportunity =
+export type ExplorerSiteType =
   | 'all'
   | 'uncommitted'
+  | 'vacant_site'
+  | 'ground_up_candidate'
+  | 'conversion_or_overbuilt'
+  | 'active_project';
+export type ExplorerSignal =
   | 'assemblage'
   | 'tax_lien'
   | 'violations'
@@ -52,15 +61,14 @@ export type ExplorerOpportunity =
   | 'mih'
   | 'transit_800m'
   | 'portfolio'
-  | 'vacant_site'
-  | 'ground_up_candidate'
-  | 'conversion_or_overbuilt'
-  | 'active_project';
+  | 'recent_change'
+  | 'long_held';
 
 export type ExplorerFilters = {
   borough: string;
   priority: ExplorerPriority;
-  opportunity: ExplorerOpportunity;
+  siteType: ExplorerSiteType;
+  signals: ExplorerSignal[];
   query: string;
   ownerPortfolioId: string | null;
 };
@@ -101,46 +109,7 @@ export function filterExplorerRows<T extends ParcelExplorerRow>(
     ) {
       return false;
     }
-    if (filters.opportunity === 'assemblage') {
-      if (
-        !row.assemblage_lot_count ||
-        row.assemblage_lot_count < 2
-      ) {
-        return false;
-      }
-    } else if (filters.opportunity === 'tax_lien') {
-      if (row.tax_lien_sale_year === null || row.tax_lien_sale_year === undefined) {
-        return false;
-      }
-    } else if (filters.opportunity === 'violations') {
-      if ((row.critical_violation_count ?? 0) <= 0) {
-        return false;
-      }
-    } else if (filters.opportunity === 'floodplain') {
-      if (row.floodplain_1pct !== true) {
-        return false;
-      }
-    } else if (filters.opportunity === 'environmental_review') {
-      if (row.environmental_review_required !== true) {
-        return false;
-      }
-    } else if (filters.opportunity === 'mih') {
-      if (row.mandatory_inclusionary_housing !== true) {
-        return false;
-      }
-    } else if (filters.opportunity === 'transit_800m') {
-      if (
-        row.nearest_transit_station_distance_m === null ||
-        row.nearest_transit_station_distance_m === undefined ||
-        row.nearest_transit_station_distance_m > 800
-      ) {
-        return false;
-      }
-    } else if (filters.opportunity === 'portfolio') {
-      if ((row.owner_portfolio_lot_count ?? 0) < 2) {
-        return false;
-      }
-    } else if (filters.opportunity === 'uncommitted') {
+    if (filters.siteType === 'uncommitted') {
       const eligible =
         row.acquisition_eligible ??
         [
@@ -152,9 +121,14 @@ export function filterExplorerRows<T extends ParcelExplorerRow>(
         return false;
       }
     } else if (
-      filters.opportunity !== 'all' &&
-      row.opportunity_category !== filters.opportunity
+      filters.siteType !== 'all' &&
+      row.opportunity_category !== filters.siteType
     ) return false;
+    if (
+      filters.signals.some((signal) => !rowMatchesSignal(row, signal))
+    ) {
+      return false;
+    }
     if (!query) return true;
     return [
       row.address,
@@ -166,6 +140,105 @@ export function filterExplorerRows<T extends ParcelExplorerRow>(
       .filter((value): value is string => typeof value === 'string')
       .some((value) => value.toLowerCase().includes(query));
   });
+}
+
+export function rowMatchesSignal(
+  row: ParcelExplorerRow,
+  signal: ExplorerSignal,
+): boolean {
+  if (signal === 'assemblage') {
+    return (row.assemblage_lot_count ?? 0) >= 2;
+  }
+  if (signal === 'tax_lien') {
+    return row.tax_lien_sale_year !== null && row.tax_lien_sale_year !== undefined;
+  }
+  if (signal === 'violations') {
+    return (row.critical_violation_count ?? 0) > 0;
+  }
+  if (signal === 'floodplain') {
+    return row.floodplain_1pct === true;
+  }
+  if (signal === 'environmental_review') {
+    return row.environmental_review_required === true;
+  }
+  if (signal === 'mih') {
+    return row.mandatory_inclusionary_housing === true;
+  }
+  if (signal === 'transit_800m') {
+    return (
+      row.nearest_transit_station_distance_m !== null &&
+      row.nearest_transit_station_distance_m !== undefined &&
+      row.nearest_transit_station_distance_m <= 800
+    );
+  }
+  if (signal === 'portfolio') {
+    return (row.owner_portfolio_lot_count ?? 0) >= 2;
+  }
+  if (signal === 'recent_change') {
+    return row.recent_change === true;
+  }
+  return row.years_held !== null && row.years_held >= 10;
+}
+
+export function siteTypeLabel(value: ExplorerSiteType): string {
+  return {
+    all: 'All site types',
+    uncommitted: 'Qualified acquisition leads',
+    vacant_site: 'Vacant sites',
+    ground_up_candidate: 'Ground-up candidates',
+    conversion_or_overbuilt: 'Conversion / overbuilt',
+    active_project: 'Active projects',
+  }[value];
+}
+
+export function signalLabel(value: ExplorerSignal): string {
+  return {
+    assemblage: 'Assemblage',
+    tax_lien: 'Final lien-sale history',
+    violations: 'Immediate-hazard violations',
+    floodplain: '1% floodplain exposure',
+    environmental_review: 'E/R-designated',
+    mih: 'MIH mapped area',
+    transit_800m: 'Transit within 800 m',
+    portfolio: 'Multi-lot legal owner',
+    recent_change: 'Recent aerial change',
+    long_held: 'Held 10+ years',
+  }[value];
+}
+
+export function savedSearchDimensions(
+  filters: ParcelSavedSearchFilters,
+): Pick<ExplorerFilters, 'siteType' | 'signals'> {
+  const legacySiteTypes = new Set<ExplorerSiteType>([
+    'uncommitted',
+    'vacant_site',
+    'ground_up_candidate',
+    'conversion_or_overbuilt',
+    'active_project',
+  ]);
+  const legacySignals = new Set<ExplorerSignal>([
+    'assemblage',
+    'tax_lien',
+    'violations',
+    'floodplain',
+    'environmental_review',
+    'mih',
+    'transit_800m',
+    'portfolio',
+  ]);
+  const legacy = filters.opportunity;
+  return {
+    siteType:
+      filters.site_type ??
+      (legacySiteTypes.has(legacy as ExplorerSiteType)
+        ? (legacy as ExplorerSiteType)
+        : 'all'),
+    signals:
+      filters.signals ??
+      (legacySignals.has(legacy as ExplorerSignal)
+        ? [legacy as ExplorerSignal]
+        : []),
+  };
 }
 
 export function sortExplorerRows<T extends ParcelExplorerRow>(rows: T[]): T[] {

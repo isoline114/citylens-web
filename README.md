@@ -35,10 +35,16 @@ assignee, or note. The aggregate adoption ledger can count only that a
 canonical workflow originated from comparison; it receives no parcel
 identifier, action, due date, or compared value.
 Signed-in users can save and restore private explorer views containing the
-borough scope, query, opportunity/priority filters, owner-portfolio focus, and
-map overlay. Saved views intentionally do not expose alert-frequency controls:
-watchlist change monitoring remains the implemented change-review workflow,
-while scheduled saved-search delivery is not yet available.
+borough scope, query, priority, site type, multiple required evidence signals,
+owner-portfolio focus, and map overlay. Site type and evidence are independent:
+users can, for example, require an uncommitted site that is both long-held and
+within 800 meters of current MTA service. Multiple signals use transparent AND
+semantics and never alter model score or rank or imply seller intent. Legacy
+single-opportunity saved views migrate when restored. Private signal state and
+owner focus are removed immediately when a session ends. Saved views
+intentionally do not expose alert-frequency controls: watchlist change
+monitoring remains the implemented change-review workflow, while scheduled
+saved-search delivery is not yet available.
 
 Signed-in users also have a private Evidence change center. It compares the
 baseline captured when a parcel entered the acquisition workflow with the
@@ -105,14 +111,17 @@ intervals appear only after the complete 365-day horizon. If the engine cannot
 match the status to the active feed generation, the UI shows an explicit
 unavailable warning rather than falling back to historical metrics.
 Full borough payloads are deferred until the user requests a CSV. The explorer
-also exposes multi-lot assemblage candidates, a signed-in filter for official
+separates acquisition site type from combinable evidence screens, including
+multi-lot assemblage candidates, a signed-in filter for official
 NYC DOF final tax-lien sale history, a filter for parcels with current Class 1
 ECB or Class C HPD immediately hazardous records, a signed-in 1% annual-chance
 floodplain screen, a signed-in exact-name current-PLUTO legal-owner portfolio
 filter, a signed-in PLUTO E-designation/restrictive-declaration screen, a
 signed-in current NYC Planning MIH mapped-area screen, an official MTA
-subway/SIR proximity screen, and the accepted model's clearly labeled
-forward-test hit rate. Environmental instruments are
+subway/SIR proximity screen, recent aerial change, held-ten-years-or-more
+tenure, and the accepted model's clearly labeled forward-test hit rate. Every
+selected evidence screen must match; none changes the accepted ranking.
+Environmental instruments are
 presented only as current air/noise/hazardous-materials diligence requirements;
 none is described as proof of contamination or as an automatic prohibition.
 The MIH card and underwriting warning explicitly treat an overlap as a dated

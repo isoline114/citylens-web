@@ -18,6 +18,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
 });
 
 import { ParcelSavedViewsPanel } from './parcel-saved-views';
+import type { ExplorerFilters } from './parcel-intel-explorer-support';
 
 const savedView = {
   schema_version: 'citylens/parcel-saved-view@v2' as const,
@@ -41,10 +42,11 @@ const currentView = {
   filters: {
     borough: 'all',
     priority: 'high_or_better' as const,
-    opportunity: 'uncommitted' as const,
+    siteType: 'uncommitted' as const,
+    signals: ['long_held', 'transit_800m'],
     query: '  owner llc  ',
     ownerPortfolioId: null,
-  },
+  } satisfies ExplorerFilters,
   overlay: 'borough' as const,
 };
 
@@ -102,7 +104,9 @@ describe('ParcelSavedViewsPanel', () => {
       filters: {
         query: 'owner llc',
         priority: 'high_or_better',
-        opportunity: 'uncommitted',
+        opportunity: 'all',
+        site_type: 'uncommitted',
+        signals: ['long_held', 'transit_800m'],
         owner_portfolio_id: null,
         overlay: 'borough',
       },

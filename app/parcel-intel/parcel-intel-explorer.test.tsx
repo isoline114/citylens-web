@@ -308,14 +308,23 @@ describe('ParcelIntelExplorer', () => {
     render(<ParcelIntelExplorer boroughs={boroughs} />);
 
     expect(screen.getByText(/Full workspace coverage/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Signals$/i }));
+    const signalPanel = document.getElementById('parcel-signal-filters');
+    expect(signalPanel).not.toBeNull();
     expect(
-      screen.getByRole('option', { name: /Immediate-hazard violations/i }),
+      within(signalPanel as HTMLElement).getByRole('button', {
+        name: /Immediate-hazard violations/i,
+      }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('option', { name: /1% floodplain exposure/i }),
+      within(signalPanel as HTMLElement).getByRole('button', {
+        name: /1% floodplain exposure/i,
+      }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('option', { name: /MIH mapped-area overlap/i }),
+      within(signalPanel as HTMLElement).getByRole('button', {
+        name: /MIH mapped area/i,
+      }),
     ).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('citywide-map-stub')).toHaveTextContent('2 mapped rows'));
     expect(mocks.getParcelIntelMap).toHaveBeenCalledWith(1000, {
@@ -416,7 +425,7 @@ describe('ParcelIntelExplorer', () => {
 
     expect(screen.getByLabelText('Filter by borough')).toHaveValue('brooklyn');
     expect(screen.getByLabelText('Filter by priority')).toHaveValue('highest');
-    expect(screen.getByLabelText('Filter by opportunity')).toHaveValue(
+    expect(screen.getByLabelText('Filter by site type')).toHaveValue(
       'vacant_site',
     );
     await waitFor(() =>
@@ -437,6 +446,35 @@ describe('ParcelIntelExplorer', () => {
       { scroll: false },
     );
     expect(screen.queryByTestId('saved-views-panel')).not.toBeInTheDocument();
+  });
+
+  it('removes private evidence filters when an authenticated session ends', async () => {
+    mocks.authStatus = 'authenticated';
+    const { rerender } = render(
+      <ParcelIntelExplorer boroughs={boroughs} />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Signals/i }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /Final lien-sale history/i }),
+    );
+    expect(
+      screen.getByRole('button', {
+        name: /Final lien-sale history/i,
+      }),
+    ).toHaveAttribute('aria-pressed', 'true');
+
+    mocks.authStatus = 'unauthenticated';
+    rerender(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    await waitFor(() =>
+      expect(
+        screen.queryByText('Final lien-sale history'),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.getByRole('button', { name: /Signals/i })).toHaveTextContent(
+      'Signals',
+    );
   });
 
   it('resumes an attention queue without making users rediscover the workflow menu', async () => {

@@ -20,8 +20,10 @@ import {
 } from '@/lib/api';
 import {
   BOROUGH_LABELS,
+  savedSearchDimensions,
+  signalLabel,
+  siteTypeLabel,
   type ExplorerFilters,
-  type ExplorerOpportunity,
   type ExplorerOverlay,
   type ExplorerPriority,
 } from './parcel-intel-explorer-support';
@@ -38,23 +40,6 @@ const PRIORITY_LABELS: Record<ExplorerPriority, string> = {
   high_or_better: 'High or better',
 };
 
-const OPPORTUNITY_LABELS: Record<ExplorerOpportunity, string> = {
-  all: 'All opportunities',
-  uncommitted: 'Qualified leads',
-  assemblage: 'Assemblage opportunities',
-  tax_lien: 'Lien-sale history',
-  violations: 'Immediate-hazard violations',
-  floodplain: 'Floodplain exposure',
-  environmental_review: 'E/R-designated lots',
-  mih: 'MIH mapped areas',
-  transit_800m: 'Transit within 800 m',
-  portfolio: 'Multi-lot owners',
-  vacant_site: 'Vacant sites',
-  ground_up_candidate: 'Ground-up candidates',
-  conversion_or_overbuilt: 'Conversion / overbuilt',
-  active_project: 'Active projects',
-};
-
 function createSavedViewId(): string {
   return `view-${Date.now().toString(36)}-${Math.random()
     .toString(36)
@@ -66,7 +51,13 @@ function suggestedName(draft: SavedViewDraft): string {
     draft.borough === 'all'
       ? 'All NYC'
       : (BOROUGH_LABELS[draft.borough] ?? draft.borough);
-  return `${scope} · ${OPPORTUNITY_LABELS[draft.filters.opportunity]}`;
+  const signalSuffix =
+    draft.filters.signals.length > 0
+      ? ` + ${draft.filters.signals.length} signal${
+          draft.filters.signals.length === 1 ? '' : 's'
+        }`
+      : '';
+  return `${scope} · ${siteTypeLabel(draft.filters.siteType)}${signalSuffix}`;
 }
 
 export function ParcelSavedViewsPanel({
@@ -129,7 +120,9 @@ export function ParcelSavedViewsPanel({
         filters: {
           query: currentView.filters.query.trim(),
           priority: currentView.filters.priority,
-          opportunity: currentView.filters.opportunity,
+          opportunity: 'all',
+          site_type: currentView.filters.siteType,
+          signals: currentView.filters.signals,
           owner_portfolio_id: currentView.filters.ownerPortfolioId,
           overlay: currentView.overlay,
         },
@@ -216,8 +209,16 @@ export function ParcelSavedViewsPanel({
               {PRIORITY_LABELS[currentView.filters.priority]}
             </span>
             <span className="rounded-full bg-white/10 px-2 py-1">
-              {OPPORTUNITY_LABELS[currentView.filters.opportunity]}
+              {siteTypeLabel(currentView.filters.siteType)}
             </span>
+            {currentView.filters.signals.map((signal) => (
+              <span
+                key={signal}
+                className="rounded-full bg-sky-400/15 px-2 py-1 text-sky-100"
+              >
+                {signalLabel(signal)}
+              </span>
+            ))}
             <span className="rounded-full bg-white/10 px-2 py-1">
               {currentView.overlay} overlay
             </span>
@@ -266,51 +267,66 @@ export function ParcelSavedViewsPanel({
             </div>
           ) : (
             <div className="grid max-h-72 gap-2 overflow-y-auto pr-1 md:grid-cols-2">
-              {orderedViews.map((view) => (
-                <article
-                  key={view.search_id}
-                  className="rounded-xl border border-white/10 bg-white/5 p-3"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h4 className="truncate text-sm font-semibold text-white">
-                        {view.name}
-                      </h4>
-                      <p className="mt-1 text-[11px] text-slate-400">
-                        {view.borough === 'all'
-                          ? 'All boroughs'
-                          : BOROUGH_LABELS[view.borough]}{' '}
-                        · {OPPORTUNITY_LABELS[view.filters.opportunity]}
-                      </p>
+              {orderedViews.map((view) => {
+                const dimensions = savedSearchDimensions(view.filters);
+                return (
+                  <article
+                    key={view.search_id}
+                    className="rounded-xl border border-white/10 bg-white/5 p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h4 className="truncate text-sm font-semibold text-white">
+                          {view.name}
+                        </h4>
+                        <p className="mt-1 text-[11px] text-slate-400">
+                          {view.borough === 'all'
+                            ? 'All boroughs'
+                            : BOROUGH_LABELS[view.borough]}{' '}
+                          · {siteTypeLabel(dimensions.siteType)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void deleteView(view.search_id)}
+                        disabled={deletingId === view.search_id}
+                        aria-label={`Delete saved view ${view.name}`}
+                        className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-rose-400/10 hover:text-rose-200 disabled:opacity-50"
+                      >
+                        {deletingId === view.search_id ? (
+                          <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                      </button>
                     </div>
+                    {view.filters.query && (
+                      <p className="mt-2 truncate text-[11px] text-slate-300">
+                        Search: “{view.filters.query}”
+                      </p>
+                    )}
+                    {dimensions.signals.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {dimensions.signals.map((signal) => (
+                          <span
+                            key={signal}
+                            className="rounded-full bg-sky-400/10 px-2 py-0.5 text-[10px] text-sky-100"
+                          >
+                            {signalLabel(signal)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <button
                       type="button"
-                      onClick={() => void deleteView(view.search_id)}
-                      disabled={deletingId === view.search_id}
-                      aria-label={`Delete saved view ${view.name}`}
-                      className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-rose-400/10 hover:text-rose-200 disabled:opacity-50"
+                      onClick={() => onApply(view)}
+                      className="mt-3 inline-flex h-8 w-full items-center justify-center rounded-md border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
                     >
-                      {deletingId === view.search_id ? (
-                        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3.5 w-3.5" />
-                      )}
+                      Apply view
                     </button>
-                  </div>
-                  {view.filters.query && (
-                    <p className="mt-2 truncate text-[11px] text-slate-300">
-                      Search: “{view.filters.query}”
-                    </p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => onApply(view)}
-                    className="mt-3 inline-flex h-8 w-full items-center justify-center rounded-md border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
-                  >
-                    Apply view
-                  </button>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           )}
           {error && views.length > 0 && (

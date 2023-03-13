@@ -47,13 +47,14 @@ function row(overrides: Partial<ParcelIntelRow>): ParcelIntelRow {
 const filters: ExplorerFilters = {
   borough: 'all',
   priority: 'all',
-  opportunity: 'all',
+  siteType: 'all',
+  signals: [],
   query: '',
   ownerPortfolioId: null,
 };
 
 describe('parcel citywide explorer support', () => {
-  it('combines borough, priority, opportunity, and search filters', () => {
+  it('combines borough, priority, site type, and search filters', () => {
     const rows = [
       row({ bbl: '3000010001' }),
       row({
@@ -71,7 +72,7 @@ describe('parcel citywide explorer support', () => {
         ...filters,
         borough: 'manhattan',
         priority: 'highest',
-        opportunity: 'vacant_site',
+        siteType: 'vacant_site',
         query: 'downtown',
       }).map((item) => item.bbl),
     ).toEqual(['1000010001']);
@@ -118,7 +119,7 @@ describe('parcel citywide explorer support', () => {
     expect(
       filterExplorerRows(rows, {
         ...filters,
-        opportunity: 'uncommitted',
+        siteType: 'uncommitted',
       }).map((item) => item.bbl),
     ).toEqual(['vacant', 'ground-up', 'conversion']);
   });
@@ -133,7 +134,7 @@ describe('parcel citywide explorer support', () => {
     expect(
       filterExplorerRows(rows, {
         ...filters,
-        opportunity: 'assemblage',
+        signals: ['assemblage'],
       }).map((item) => item.bbl),
     ).toEqual(['pair', 'cluster']);
   });
@@ -147,7 +148,7 @@ describe('parcel citywide explorer support', () => {
     expect(
       filterExplorerRows(rows, {
         ...filters,
-        opportunity: 'tax_lien',
+        signals: ['tax_lien'],
       }).map((item) => item.bbl),
     ).toEqual(['final-sale']);
   });
@@ -162,7 +163,7 @@ describe('parcel citywide explorer support', () => {
     expect(
       filterExplorerRows(rows, {
         ...filters,
-        opportunity: 'violations',
+        signals: ['violations'],
       }).map((item) => item.bbl),
     ).toEqual(['critical']);
   });
@@ -177,7 +178,7 @@ describe('parcel citywide explorer support', () => {
     expect(
       filterExplorerRows(rows, {
         ...filters,
-        opportunity: 'floodplain',
+        signals: ['floodplain'],
       }).map((item) => item.bbl),
     ).toEqual(['overlap']);
   });
@@ -197,7 +198,7 @@ describe('parcel citywide explorer support', () => {
     expect(
       filterExplorerRows(rows, {
         ...filters,
-        opportunity: 'environmental_review',
+        signals: ['environmental_review'],
       }).map((item) => item.bbl),
     ).toEqual(['review']);
   });
@@ -212,7 +213,7 @@ describe('parcel citywide explorer support', () => {
     expect(
       filterExplorerRows(rows, {
         ...filters,
-        opportunity: 'mih',
+        signals: ['mih'],
       }).map((item) => item.bbl),
     ).toEqual(['overlap']);
   });
@@ -228,7 +229,7 @@ describe('parcel citywide explorer support', () => {
     expect(
       filterExplorerRows(rows, {
         ...filters,
-        opportunity: 'transit_800m',
+        signals: ['transit_800m'],
       }).map((item) => item.bbl),
     ).toEqual(['near', 'boundary']);
   });
@@ -253,15 +254,50 @@ describe('parcel citywide explorer support', () => {
     expect(
       filterExplorerRows(rows, {
         ...filters,
-        opportunity: 'portfolio',
+        signals: ['portfolio'],
       }).map((item) => item.bbl),
     ).toEqual(['portfolio-a', 'portfolio-b']);
     expect(
       filterExplorerRows(rows, {
         ...filters,
-        opportunity: 'portfolio',
+        signals: ['portfolio'],
         ownerPortfolioId: 'owner-b',
       }).map((item) => item.bbl),
     ).toEqual(['portfolio-b']);
+  });
+
+  it('requires every selected evidence signal without changing rank', () => {
+    const rows = [
+      row({
+        bbl: 'all-signals',
+        citywide_rank: 4,
+        nearest_transit_station_distance_m: 500,
+        years_held: 18,
+        recent_change: true,
+      }),
+      row({
+        bbl: 'not-long-held',
+        citywide_rank: 2,
+        nearest_transit_station_distance_m: 500,
+        years_held: 4,
+        recent_change: true,
+      }),
+      row({
+        bbl: 'no-change',
+        citywide_rank: 1,
+        nearest_transit_station_distance_m: 500,
+        years_held: 20,
+        recent_change: false,
+      }),
+    ];
+
+    const result = filterExplorerRows(rows, {
+      ...filters,
+      siteType: 'uncommitted',
+      signals: ['transit_800m', 'long_held', 'recent_change'],
+    });
+
+    expect(result.map((item) => item.bbl)).toEqual(['all-signals']);
+    expect(result[0]?.citywide_rank).toBe(4);
   });
 });

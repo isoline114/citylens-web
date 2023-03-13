@@ -12,6 +12,7 @@ import {
   CalendarClock,
   Columns3,
   Download,
+  Filter,
   Layers3,
   LoaderCircle,
   LockKeyhole,
@@ -44,11 +45,15 @@ import {
   filterExplorerRows,
   opportunityLabel,
   priorityLabel,
+  rowMatchesSignal,
+  savedSearchDimensions,
+  signalLabel,
   sortExplorerRows,
   type ExplorerFilters,
-  type ExplorerOpportunity,
   type ExplorerOverlay,
   type ExplorerPriority,
+  type ExplorerSignal,
+  type ExplorerSiteType,
 } from './parcel-intel-explorer-support';
 import { downloadCsv } from './[borough]/parcel-intel-csv';
 import { ParcelIntelPropertyPanel } from './parcel-intel-property-panel';
@@ -69,10 +74,24 @@ const ParcelIntelExplorerMap = dynamic(
 const DEFAULT_FILTERS: ExplorerFilters = {
   borough: 'all',
   priority: 'all',
-  opportunity: 'uncommitted',
+  siteType: 'uncommitted',
+  signals: [],
   query: '',
   ownerPortfolioId: null,
 };
+
+const EXPLORER_SIGNALS: ExplorerSignal[] = [
+  'assemblage',
+  'long_held',
+  'recent_change',
+  'transit_800m',
+  'portfolio',
+  'tax_lien',
+  'violations',
+  'floodplain',
+  'environmental_review',
+  'mih',
+];
 
 const INITIAL_LEAD_LIMIT = 30;
 const MOBILE_COMPACT_LEAD_LIMIT = 10;
@@ -149,6 +168,7 @@ export function ParcelIntelExplorer({
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [savedViewsOpen, setSavedViewsOpen] = useState(false);
+  const [signalFiltersOpen, setSignalFiltersOpen] = useState(false);
   const [comparisonRows, setComparisonRows] = useState<ParcelIntelRow[]>([]);
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [workflowActions, setWorkflowActions] =
@@ -273,6 +293,13 @@ export function ParcelIntelExplorer({
       setComparisonRows([]);
       setComparisonOpen(false);
       comparisonOpenTrackedRef.current = false;
+      setFilters((current) => ({
+        ...current,
+        signals: current.signals.filter(
+          (signal) => signal === 'assemblage',
+        ),
+        ownerPortfolioId: null,
+      }));
     }
   }, [auth.status]);
 
@@ -313,8 +340,8 @@ export function ParcelIntelExplorer({
     () => filterExplorerRows(rows, filters),
     [rows, filters],
   );
-  const opportunityScope = useMemo(
-    () => filterExplorerRows(rows, { ...filters, opportunity: 'all' }),
+  const signalScope = useMemo(
+    () => filterExplorerRows(rows, { ...filters, signals: [] }),
     [rows, filters],
   );
   const ranked = useMemo(() => sortExplorerRows(filtered), [filtered]);
@@ -360,45 +387,36 @@ export function ParcelIntelExplorer({
       cancelled = true;
     };
   }, [isAuthenticated, selectedBbl, selectedSummary]);
-  const assemblageCount = opportunityScope.filter(
-    (row) => (row.assemblage_lot_count ?? 0) >= 2,
-  ).length;
-  const taxLienCount = opportunityScope.filter(
-    (row) => row.tax_lien_sale_year !== null && row.tax_lien_sale_year !== undefined,
-  ).length;
-  const criticalViolationParcelCount = opportunityScope.filter(
-    (row) => (row.critical_violation_count ?? 0) > 0,
-  ).length;
-  const floodplainParcelCount = opportunityScope.filter(
-    (row) => row.floodplain_1pct === true,
-  ).length;
-  const environmentalReviewParcelCount = opportunityScope.filter(
-    (row) => row.environmental_review_required === true,
-  ).length;
-  const mihParcelCount = opportunityScope.filter(
-    (row) => row.mandatory_inclusionary_housing === true,
-  ).length;
-  const transit800mParcelCount = opportunityScope.filter(
-    (row) =>
-      row.nearest_transit_station_distance_m !== null &&
-      row.nearest_transit_station_distance_m !== undefined &&
-      row.nearest_transit_station_distance_m <= 800,
-  ).length;
-  const ownerPortfolioParcelCount = opportunityScope.filter(
-    (row) => (row.owner_portfolio_lot_count ?? 0) >= 2,
-  ).length;
-  const uncommittedCount = opportunityScope.filter(
-    (row) =>
-      row.acquisition_eligible ??
-      [
-        'vacant_site',
-        'ground_up_candidate',
-        'conversion_or_overbuilt',
-      ].includes(row.opportunity_category ?? ''),
-  ).length;
-  const hasFilters = Object.entries(filters).some(
-    ([key, value]) => value !== DEFAULT_FILTERS[key as keyof ExplorerFilters],
+  const signalCounts = useMemo(
+    () =>
+      Object.fromEntries(
+        EXPLORER_SIGNALS.map((signal) => [
+          signal,
+          signalScope.filter((row) => rowMatchesSignal(row, signal)).length,
+        ]),
+      ) as Record<ExplorerSignal, number>,
+    [signalScope],
   );
+  const visibleSignals = isAuthenticated
+    ? EXPLORER_SIGNALS
+    : EXPLORER_SIGNALS.filter((signal) => signal === 'assemblage');
+  const uncommittedCount = useMemo(
+    () =>
+      filterExplorerRows(rows, {
+        ...filters,
+        siteType: 'uncommitted',
+        signals: [],
+        ownerPortfolioId: null,
+      }).length,
+    [rows, filters],
+  );
+  const hasFilters =
+    filters.borough !== DEFAULT_FILTERS.borough ||
+    filters.priority !== DEFAULT_FILTERS.priority ||
+    filters.siteType !== DEFAULT_FILTERS.siteType ||
+    filters.signals.length > 0 ||
+    filters.query !== DEFAULT_FILTERS.query ||
+    filters.ownerPortfolioId !== null;
 
   const syncExplorerUrl = (borough: string, bbl: string | null) => {
     const params = new URLSearchParams();
@@ -418,7 +436,8 @@ export function ParcelIntelExplorer({
       ...current,
       [key]: value,
       ownerPortfolioId:
-        key === 'opportunity' && value !== 'portfolio'
+        key === 'signals' &&
+        !(value as ExplorerSignal[]).includes('portfolio')
           ? null
           : current.ownerPortfolioId,
     }));
@@ -429,6 +448,13 @@ export function ParcelIntelExplorer({
       setSelectedBbl(null);
     }
     if (key === 'borough' || selectedBbl) syncExplorerUrl(nextBorough, null);
+  };
+
+  const toggleSignal = (signal: ExplorerSignal) => {
+    const nextSignals = filters.signals.includes(signal)
+      ? filters.signals.filter((value) => value !== signal)
+      : [...filters.signals, signal];
+    updateFilter('signals', nextSignals);
   };
 
   const selectParcel = (
@@ -533,7 +559,8 @@ export function ParcelIntelExplorer({
     setFilters({
       ...DEFAULT_FILTERS,
       borough: 'all',
-      opportunity: 'portfolio',
+      siteType: 'all',
+      signals: ['portfolio'],
       ownerPortfolioId,
     });
     setLeadLimit(INITIAL_LEAD_LIMIT);
@@ -595,10 +622,12 @@ export function ParcelIntelExplorer({
   };
 
   const applySavedView = (view: ParcelSavedSearch) => {
+    const dimensions = savedSearchDimensions(view.filters);
     setFilters({
       borough: view.borough,
       priority: view.filters.priority,
-      opportunity: view.filters.opportunity,
+      siteType: dimensions.siteType,
+      signals: dimensions.signals,
       query: view.filters.query,
       ownerPortfolioId: view.filters.owner_portfolio_id,
     });
@@ -967,43 +996,19 @@ export function ParcelIntelExplorer({
             </select>
           </label>
           <label>
-            <span className="sr-only">Filter by opportunity</span>
+            <span className="sr-only">Filter by site type</span>
             <select
-              value={filters.opportunity}
+              value={filters.siteType}
               onChange={(event) =>
                 updateFilter(
-                  'opportunity',
-                  event.target.value as ExplorerOpportunity,
+                  'siteType',
+                  event.target.value as ExplorerSiteType,
                 )
               }
               className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
             >
-              <option value="all">All opportunities</option>
+              <option value="all">All site types</option>
               <option value="uncommitted">Qualified acquisition leads</option>
-              {isAuthenticated && (
-                <option value="tax_lien">Final lien-sale history</option>
-              )}
-              {isAuthenticated && (
-                <option value="violations">Immediate-hazard violations</option>
-              )}
-              {isAuthenticated && (
-                <option value="floodplain">1% floodplain exposure</option>
-              )}
-              {isAuthenticated && (
-                <option value="environmental_review">
-                  E/R-designated lots
-                </option>
-              )}
-              {isAuthenticated && (
-                <option value="mih">MIH mapped-area overlap</option>
-              )}
-              {isAuthenticated && (
-                <option value="transit_800m">Subway/SIR within 800 m</option>
-              )}
-              {isAuthenticated && (
-                <option value="portfolio">Multi-lot legal owners</option>
-              )}
-              <option value="assemblage">Assemblage opportunities</option>
               <option value="vacant_site">Vacant sites</option>
               <option value="ground_up_candidate">Ground-up candidates</option>
               <option value="conversion_or_overbuilt">Conversion / overbuilt</option>
@@ -1011,6 +1016,25 @@ export function ParcelIntelExplorer({
             </select>
           </label>
           <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setSignalFiltersOpen((value) => !value)}
+              aria-expanded={signalFiltersOpen}
+              aria-controls="parcel-signal-filters"
+              className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-semibold ${
+                signalFiltersOpen || filters.signals.length > 0
+                  ? 'border-sky-300 bg-sky-50 text-sky-900'
+                  : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <Filter className="h-3.5 w-3.5" />
+              Signals
+              {filters.signals.length > 0 && (
+                <span className="rounded-full bg-sky-700 px-1.5 py-0.5 text-[10px] text-white">
+                  {filters.signals.length}
+                </span>
+              )}
+            </button>
             {hasFilters && (
               <button
                 type="button"
@@ -1037,6 +1061,83 @@ export function ParcelIntelExplorer({
             </button>
           </div>
         </div>
+        {signalFiltersOpen && (
+          <div
+            id="parcel-signal-filters"
+            className="mt-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <div className="text-xs font-semibold text-slate-950">
+                  Require every selected signal
+                </div>
+                <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
+                  Compound filters narrow the current inventory; they never alter
+                  model rank or imply seller intent.
+                </p>
+              </div>
+              {filters.signals.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => updateFilter('signals', [])}
+                  className="text-xs font-semibold text-sky-700 hover:text-sky-900"
+                >
+                  Clear signals
+                </button>
+              )}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {visibleSignals.map(
+                (signal) => {
+                  const selected = filters.signals.includes(signal);
+                  return (
+                    <button
+                      key={signal}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => toggleSignal(signal)}
+                      className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[11px] font-semibold transition-colors ${
+                        selected
+                          ? 'border-sky-300 bg-sky-100 text-sky-950'
+                          : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-sky-200 hover:bg-sky-50'
+                      }`}
+                    >
+                      {signalLabel(signal)}
+                      <span className="text-[10px] font-medium opacity-60">
+                        {signalCounts[signal].toLocaleString()}
+                      </span>
+                    </button>
+                  );
+                },
+              )}
+            </div>
+            {!isAuthenticated && (
+              <p className="mt-3 text-[11px] text-slate-500">
+                Sign in to combine ownership, transaction, hazard, environmental,
+                transit, and imagery signals.
+              </p>
+            )}
+          </div>
+        )}
+        {filters.signals.length > 0 && !signalFiltersOpen && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              Required
+            </span>
+            {filters.signals.map((signal) => (
+              <button
+                key={signal}
+                type="button"
+                onClick={() => toggleSignal(signal)}
+                aria-label={`Remove ${signalLabel(signal)} filter`}
+                className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-[10px] font-semibold text-sky-900"
+              >
+                {signalLabel(signal)}
+                <X className="h-3 w-3" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {failedBoroughs.length > 0 && (
@@ -1174,10 +1275,10 @@ export function ParcelIntelExplorer({
           <div className="grid grid-cols-2 gap-2 border-b border-slate-200 p-3">
             <button
               type="button"
-              onClick={() => updateFilter('opportunity', 'uncommitted')}
-              aria-pressed={filters.opportunity === 'uncommitted'}
+              onClick={() => updateFilter('siteType', 'uncommitted')}
+              aria-pressed={filters.siteType === 'uncommitted'}
               className={`rounded-xl px-3 py-2 text-left transition-colors ${
-                filters.opportunity === 'uncommitted'
+                filters.siteType === 'uncommitted'
                   ? 'bg-emerald-100 ring-2 ring-inset ring-emerald-400'
                   : 'bg-emerald-50 hover:bg-emerald-100'
               }`}
@@ -1192,10 +1293,10 @@ export function ParcelIntelExplorer({
             {isAuthenticated && (
               <button
                 type="button"
-                onClick={() => updateFilter('opportunity', 'portfolio')}
-                aria-pressed={filters.opportunity === 'portfolio'}
+                onClick={() => toggleSignal('portfolio')}
+                aria-pressed={filters.signals.includes('portfolio')}
                 className={`rounded-xl px-3 py-2 text-left transition-colors ${
-                  filters.opportunity === 'portfolio'
+                  filters.signals.includes('portfolio')
                     ? 'bg-indigo-100 ring-2 ring-inset ring-indigo-400'
                     : 'bg-indigo-50 hover:bg-indigo-100'
                 }`}
@@ -1205,17 +1306,17 @@ export function ParcelIntelExplorer({
                   Multi-lot owners
                 </div>
                 <div className="text-lg font-semibold text-indigo-950">
-                  {ownerPortfolioParcelCount.toLocaleString()}
+                  {signalCounts.portfolio.toLocaleString()}
                 </div>
               </button>
             )}
             {isAuthenticated && (
               <button
                 type="button"
-                onClick={() => updateFilter('opportunity', 'tax_lien')}
-                aria-pressed={filters.opportunity === 'tax_lien'}
+                onClick={() => toggleSignal('tax_lien')}
+                aria-pressed={filters.signals.includes('tax_lien')}
                 className={`rounded-xl px-3 py-2 text-left transition-colors ${
-                  filters.opportunity === 'tax_lien'
+                  filters.signals.includes('tax_lien')
                     ? 'bg-amber-100 ring-2 ring-inset ring-amber-400'
                     : 'bg-amber-50 hover:bg-amber-100'
                 }`}
@@ -1224,17 +1325,17 @@ export function ParcelIntelExplorer({
                   Lien-sale records
                 </div>
                 <div className="text-lg font-semibold text-amber-950">
-                  {taxLienCount.toLocaleString()}
+                  {signalCounts.tax_lien.toLocaleString()}
                 </div>
               </button>
             )}
             {isAuthenticated && (
               <button
                 type="button"
-                onClick={() => updateFilter('opportunity', 'violations')}
-                aria-pressed={filters.opportunity === 'violations'}
+                onClick={() => toggleSignal('violations')}
+                aria-pressed={filters.signals.includes('violations')}
                 className={`rounded-xl px-3 py-2 text-left transition-colors ${
-                  filters.opportunity === 'violations'
+                  filters.signals.includes('violations')
                     ? 'bg-rose-100 ring-2 ring-inset ring-rose-400'
                     : 'bg-rose-50 hover:bg-rose-100'
                 }`}
@@ -1243,17 +1344,17 @@ export function ParcelIntelExplorer({
                   Immediate hazards
                 </div>
                 <div className="text-lg font-semibold text-rose-950">
-                  {criticalViolationParcelCount.toLocaleString()}
+                  {signalCounts.violations.toLocaleString()}
                 </div>
               </button>
             )}
             {isAuthenticated && (
               <button
                 type="button"
-                onClick={() => updateFilter('opportunity', 'floodplain')}
-                aria-pressed={filters.opportunity === 'floodplain'}
+                onClick={() => toggleSignal('floodplain')}
+                aria-pressed={filters.signals.includes('floodplain')}
                 className={`rounded-xl px-3 py-2 text-left transition-colors ${
-                  filters.opportunity === 'floodplain'
+                  filters.signals.includes('floodplain')
                     ? 'bg-sky-100 ring-2 ring-inset ring-sky-400'
                     : 'bg-sky-50 hover:bg-sky-100'
                 }`}
@@ -1262,21 +1363,17 @@ export function ParcelIntelExplorer({
                   1% floodplain
                 </div>
                 <div className="text-lg font-semibold text-sky-950">
-                  {floodplainParcelCount.toLocaleString()}
+                  {signalCounts.floodplain.toLocaleString()}
                 </div>
               </button>
             )}
             {isAuthenticated && (
               <button
                 type="button"
-                onClick={() =>
-                  updateFilter('opportunity', 'environmental_review')
-                }
-                aria-pressed={
-                  filters.opportunity === 'environmental_review'
-                }
+                onClick={() => toggleSignal('environmental_review')}
+                aria-pressed={filters.signals.includes('environmental_review')}
                 className={`rounded-xl px-3 py-2 text-left transition-colors ${
-                  filters.opportunity === 'environmental_review'
+                  filters.signals.includes('environmental_review')
                     ? 'bg-orange-100 ring-2 ring-inset ring-orange-400'
                     : 'bg-orange-50 hover:bg-orange-100'
                 }`}
@@ -1285,17 +1382,17 @@ export function ParcelIntelExplorer({
                   E/R-designated lots
                 </div>
                 <div className="text-lg font-semibold text-orange-950">
-                  {environmentalReviewParcelCount.toLocaleString()}
+                  {signalCounts.environmental_review.toLocaleString()}
                 </div>
               </button>
             )}
             {isAuthenticated && (
               <button
                 type="button"
-                onClick={() => updateFilter('opportunity', 'mih')}
-                aria-pressed={filters.opportunity === 'mih'}
+                onClick={() => toggleSignal('mih')}
+                aria-pressed={filters.signals.includes('mih')}
                 className={`rounded-xl px-3 py-2 text-left transition-colors ${
-                  filters.opportunity === 'mih'
+                  filters.signals.includes('mih')
                     ? 'bg-fuchsia-100 ring-2 ring-inset ring-fuchsia-400'
                     : 'bg-fuchsia-50 hover:bg-fuchsia-100'
                 }`}
@@ -1304,17 +1401,17 @@ export function ParcelIntelExplorer({
                   MIH mapped areas
                 </div>
                 <div className="text-lg font-semibold text-fuchsia-950">
-                  {mihParcelCount.toLocaleString()}
+                  {signalCounts.mih.toLocaleString()}
                 </div>
               </button>
             )}
             {isAuthenticated && (
               <button
                 type="button"
-                onClick={() => updateFilter('opportunity', 'transit_800m')}
-                aria-pressed={filters.opportunity === 'transit_800m'}
+                onClick={() => toggleSignal('transit_800m')}
+                aria-pressed={filters.signals.includes('transit_800m')}
                 className={`rounded-xl px-3 py-2 text-left transition-colors ${
-                  filters.opportunity === 'transit_800m'
+                  filters.signals.includes('transit_800m')
                     ? 'bg-cyan-100 ring-2 ring-inset ring-cyan-400'
                     : 'bg-cyan-50 hover:bg-cyan-100'
                 }`}
@@ -1324,16 +1421,16 @@ export function ParcelIntelExplorer({
                   Subway/SIR ≤800 m
                 </div>
                 <div className="text-lg font-semibold text-cyan-950">
-                  {transit800mParcelCount.toLocaleString()}
+                  {signalCounts.transit_800m.toLocaleString()}
                 </div>
               </button>
             )}
             <button
               type="button"
-              onClick={() => updateFilter('opportunity', 'assemblage')}
-              aria-pressed={filters.opportunity === 'assemblage'}
+              onClick={() => toggleSignal('assemblage')}
+              aria-pressed={filters.signals.includes('assemblage')}
               className={`rounded-xl px-3 py-2 text-left transition-colors ${
-                filters.opportunity === 'assemblage'
+                filters.signals.includes('assemblage')
                   ? 'bg-violet-100 ring-2 ring-inset ring-violet-400'
                   : 'bg-violet-50 hover:bg-violet-100'
               }`}
@@ -1342,7 +1439,7 @@ export function ParcelIntelExplorer({
                 Assemblages
               </div>
               <div className="text-lg font-semibold text-violet-950">
-                {assemblageCount.toLocaleString()}
+                {signalCounts.assemblage.toLocaleString()}
               </div>
             </button>
           </div>
