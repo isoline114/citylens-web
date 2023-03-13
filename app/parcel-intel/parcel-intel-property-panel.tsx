@@ -85,6 +85,11 @@ type ParcelDecisionBriefLane = {
   tone: 'violet' | 'emerald' | 'amber' | 'sky' | 'rose' | 'slate';
 };
 
+const BRIEF_SOURCE_LABELS: Record<string, string> = {
+  'accepted_model_bundle.rolling_validation':
+    'CityLens rolling-origin validation using NYC PLUTO and DOB filings',
+};
+
 export type ParcelDecisionBrief = {
   label: string;
   lanes: ParcelDecisionBriefLane[];
@@ -238,7 +243,15 @@ function briefSource(
   fallback: string,
 ): string {
   if (!check) return fallback;
-  return `${check.source}${check.as_of ? ` · as of ${check.as_of}` : ''}`;
+  const source = BRIEF_SOURCE_LABELS[check.source] ?? check.source;
+  const sameYear = /^(\d{4})-\1$/.exec(check.as_of ?? '');
+  const yearRange = /^(\d{4})-(\d{4})$/.exec(check.as_of ?? '');
+  const asOf = sameYear
+    ? sameYear[1]
+    : yearRange
+      ? `${yearRange[1]}–${yearRange[2]}`
+      : formatIsoDate(check.as_of);
+  return `${source}${asOf ? ` · as of ${asOf}` : ''}`;
 }
 
 export function buildParcelDecisionBrief(
@@ -690,11 +703,15 @@ function ParcelDecisionAuditPanel({
 function ParcelAcquisitionBrief({
   row,
   audit,
+  isAuthenticated,
   onOpenAudit,
+  onOpenWorkflow,
 }: {
   row: ParcelIntelRow;
   audit: ParcelDecisionAudit;
+  isAuthenticated: boolean;
   onOpenAudit: () => void;
+  onOpenWorkflow: () => void;
 }) {
   const readiness = audit.readiness;
   const brief = buildParcelDecisionBrief(row);
@@ -768,7 +785,10 @@ function ParcelAcquisitionBrief({
                 <p className="mt-1 line-clamp-3 text-[10px] leading-4 opacity-75">
                   {lane.detail}
                 </p>
-                <p className="mt-2 truncate border-t border-current/10 pt-1.5 text-[9px] leading-3 opacity-60">
+                <p
+                  className="mt-2 border-t border-current/10 pt-1.5 text-[9px] leading-[1.35] opacity-65"
+                  title={lane.source}
+                >
                   {lane.source}
                 </p>
               </article>
@@ -790,14 +810,38 @@ function ParcelAcquisitionBrief({
               Evidence {formatIsoDate(brief.evidenceAsOf)}
             </span>
           )}
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={onOpenAudit}
-            className="ml-auto inline-flex h-7 items-center gap-1 rounded-lg bg-white px-2.5 text-[10px] font-semibold text-slate-950 hover:bg-sky-50"
+            className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-white/15 bg-white/[0.06] px-2.5 text-[10px] font-semibold text-white hover:bg-white/[0.12]"
           >
-            Open evidence audit
-            <ArrowRight className="h-3 w-3" />
+            Inspect evidence
+            <FileSearch className="h-3 w-3" />
           </button>
+          {isAuthenticated ? (
+            <button
+              type="button"
+              onClick={onOpenWorkflow}
+              data-testid="parcel-decision-next-action"
+              className="inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-white px-2.5 text-[10px] font-semibold text-slate-950 hover:bg-sky-50"
+            >
+              Plan next action
+              <ArrowRight className="h-3 w-3" />
+            </button>
+          ) : (
+            <Link
+              href={`/sign-in?next=${encodeURIComponent(
+                `/parcel-intel?bbl=${row.bbl}`,
+              )}`}
+              data-testid="parcel-decision-next-action"
+              className="inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-white px-2.5 text-[10px] font-semibold text-slate-950 hover:bg-sky-50"
+            >
+              Unlock full screen
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          )}
         </div>
         <p className="mt-2 text-[10px] leading-4 text-slate-400">
           {readiness.disclaimer} The brief is not a buy/pass recommendation.
@@ -1457,7 +1501,9 @@ export function ParcelIntelPropertyPanel({
               <ParcelAcquisitionBrief
                 row={row}
                 audit={row.decision_audit}
+                isAuthenticated={auth.status === 'authenticated'}
                 onOpenAudit={() => openDecisionAudit('decision_posture')}
+                onOpenWorkflow={() => setTab('workflow')}
               />
             )}
             {row.acquisition_status === 'active_project' && (

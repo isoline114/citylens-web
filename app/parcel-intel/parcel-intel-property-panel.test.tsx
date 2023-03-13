@@ -965,7 +965,7 @@ describe('ParcelIntelPropertyPanel', () => {
                 label: 'Historical redevelopment signal',
                 status: 'informational',
                 summary: 'Historical screening order, not a parcel probability.',
-                source: 'Accepted model bundle',
+                source: 'accepted_model_bundle.rolling_validation',
                 as_of: '2025-2025',
                 affects_model_rank: true,
                 affects_acquisition_eligibility: false,
@@ -1010,16 +1010,27 @@ describe('ParcelIntelPropertyPanel', () => {
     expect(brief).toHaveTextContent('1 current gate cleared');
     expect(brief).toHaveTextContent('What remains');
     expect(brief).toHaveTextContent('1 open evidence item');
-    expect(brief).toHaveTextContent('NYC PLUTO/FEMA · as of 2026-07-24');
+    expect(brief).toHaveTextContent(
+      'NYC PLUTO/FEMA · as of July 24, 2026',
+    );
+    expect(brief).toHaveTextContent(
+      'CityLens rolling-origin validation using NYC PLUTO and DOB filings · as of 2025',
+    );
+    expect(brief).not.toHaveTextContent(
+      'accepted_model_bundle.rolling_validation',
+    );
     expect(brief).toHaveTextContent('Next decision');
     expect(posture).toHaveTextContent('no composite confidence score');
     expect(posture).toHaveTextContent('Diligence review required before advancing');
     expect(posture).toHaveTextContent('Review 1');
     expect(posture).toHaveTextContent('Cleared 1');
     expect(posture).toHaveTextContent('not a buy/pass recommendation');
+    expect(screen.getByTestId('parcel-decision-next-action')).toHaveTextContent(
+      'Unlock full screen',
+    );
 
     fireEvent.click(
-      screen.getByRole('button', { name: /Open evidence audit/i }),
+      screen.getByRole('button', { name: /Inspect evidence/i }),
     );
     expect(mocks.recordParcelProductEvent).not.toHaveBeenCalled();
 
@@ -1196,7 +1207,7 @@ describe('ParcelIntelPropertyPanel', () => {
     );
 
     fireEvent.click(
-      screen.getByRole('button', { name: /Open evidence audit/i }),
+      screen.getByRole('button', { name: /Inspect evidence/i }),
     );
     await waitFor(() =>
       expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
@@ -1226,6 +1237,50 @@ describe('ParcelIntelPropertyPanel', () => {
     expect(JSON.stringify(mocks.recordParcelProductEvent.mock.calls)).not.toMatch(
       /3050660024|3050660025|address|owner|notes/i,
     );
+  });
+
+  it('opens the governed workflow from the decision brief when signed in', () => {
+    mocks.authStatus = 'authenticated';
+    mocks.getParcelWorkflow.mockReturnValue(new Promise(() => {}));
+    render(
+      <ParcelIntelPropertyPanel
+        row={{
+          ...parcel,
+          decision_audit: {
+            schema_version: 'citylens/parcel-decision-audit@v1',
+            overall_status: 'screened',
+            overall_label: 'Eligible lead after current gates',
+            readiness: {
+              status: 'initial_review_ready',
+              label: 'Ready for an initial acquisition review',
+              recommended_action:
+                'Verify the linked official records, then assign an owner/title review.',
+              blockers: [],
+              review_items: [],
+              cleared_items: ['Current acquisition gate passed.'],
+              disclaimer: 'Not a purchase recommendation.',
+            },
+            validation: {
+              target: 'dob_nb_job_filing',
+              evaluation_scope: 'Historical cohort only',
+              precision_at_100: null,
+              precision_at_1000: null,
+              base_rate: null,
+              prospective_validated: false,
+              disclaimer: 'No parcel probability.',
+            },
+            checks: [],
+            limitations: [],
+          },
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('parcel-decision-next-action'));
+    expect(
+      screen.getByText('Checking pipeline status…'),
+    ).toBeInTheDocument();
   });
 
   it('does not emit city-system links for malformed BBLs', () => {
