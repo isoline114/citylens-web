@@ -4,6 +4,10 @@ import type {
   ParcelProspectiveValidationHealth,
   ParcelProspectiveValidationStatus,
 } from '@/lib/api';
+import {
+  historicalBenchmarkCopy,
+  normalizePerformanceScope,
+} from '@/lib/parcel-intel-evidence';
 import { ParcelIntelExplorer } from './parcel-intel-explorer';
 import { ParcelProspectiveValidation } from './parcel-prospective-validation';
 
@@ -47,15 +51,27 @@ export default async function ParcelIntelIndexPage({
     | number
     | undefined;
   const labelWindow = index.model_metadata?.label_window as string | undefined;
-  const performanceScope =
-    typeof index.model_metadata?.performance_scope === 'string'
-      ? (index.model_metadata.performance_scope as string)
+  // Older published feeds described the latest historical fold as
+  // "untouched." That cohort has since been inspected during challenger
+  // development, so the browser fails conservative even before the next feed
+  // publication replaces the metadata.
+  const performanceScope = normalizePerformanceScope(
+    index.model_metadata?.performance_scope,
+  );
+  const evaluationEvidence =
+    index.model_metadata?.evaluation_evidence &&
+    typeof index.model_metadata.evaluation_evidence === 'object'
+      ? (index.model_metadata.evaluation_evidence as Record<string, unknown>)
       : null;
+  const evaluationEvidenceStatus =
+    typeof evaluationEvidence?.status === 'string'
+      ? evaluationEvidence.status
+      : 'unclassified';
   const latestEvaluationSummary =
-    performanceScope?.match(/latest untouched test:\s*(.+)$/i)?.[1] ??
+    performanceScope?.match(/(?:historical|reserved) rolling benchmark:\s*(.+)$/i)?.[1] ??
     (featureYear !== undefined && featureYear !== null && labelWindow
       ? `${String(featureYear)} features · ${labelWindow} outcomes`
-      : 'Latest untouched evaluation');
+      : 'Historical evaluation');
   const precisionAt100 =
     typeof index.model_metadata?.precision_at_100 === 'number'
       ? (index.model_metadata.precision_at_100 as number)
@@ -221,6 +237,7 @@ export default async function ParcelIntelIndexPage({
             precisionAt100={precisionAt100}
             precisionAt1000={precisionAt1000}
             evaluationBaseRate={evaluationBaseRate}
+            evaluationEvidenceStatus={evaluationEvidenceStatus}
             prospectiveValidation={index.prospective_validation ?? null}
             prospectiveValidationHealth={
               index.prospective_validation_health ?? null
@@ -240,6 +257,7 @@ function MethodologyDisclosure({
   precisionAt100,
   precisionAt1000,
   evaluationBaseRate,
+  evaluationEvidenceStatus,
   prospectiveValidation,
   prospectiveValidationHealth,
 }: {
@@ -250,23 +268,16 @@ function MethodologyDisclosure({
   precisionAt100: number | null;
   precisionAt1000: number | null;
   evaluationBaseRate: number | null;
+  evaluationEvidenceStatus: string;
   prospectiveValidation: ParcelProspectiveValidationStatus | null;
   prospectiveValidationHealth: ParcelProspectiveValidationHealth | null;
 }) {
-  const forwardTestBody =
-    precisionAt100 !== null && precisionAt1000 !== null
-      ? `In the untouched 2024→2025 cohort, ${(precisionAt100 * 100).toFixed(
-          0,
-        )}% of the top 100 and ${(precisionAt1000 * 100).toFixed(
-          1,
-        )}% of the top 1,000 received a DOB new-building filing within one year${
-          evaluationBaseRate !== null
-            ? `, versus a ${(evaluationBaseRate * 100).toFixed(
-                3,
-              )}% eligible-population base rate`
-            : ''
-        }. This measures filing hazard—not seller intent, acquisition, or closing probability.`
-      : 'Forward-test hit rates are unavailable for this feed. Treat the rank as a screening order, not a conversion probability.';
+  const forwardTestBody = historicalBenchmarkCopy({
+    precisionAt100,
+    precisionAt1000,
+    baseRate: evaluationBaseRate,
+    evidenceStatus: evaluationEvidenceStatus,
+  });
 
   return (
     <details className="group mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -298,7 +309,7 @@ function MethodologyDisclosure({
         />
         <MethodCard
           icon={Database}
-          title="Forward-test hit rate"
+          title="Historical benchmark hit rate"
           body={forwardTestBody}
         />
         <ParcelProspectiveValidation

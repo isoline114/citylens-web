@@ -376,7 +376,7 @@ function ParcelDecisionAuditPanel({
       <section className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
         <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-700">
           <Gauge className="h-3.5 w-3.5" />
-          Historical forward validation
+          Historical filing benchmark
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2">
           {[
