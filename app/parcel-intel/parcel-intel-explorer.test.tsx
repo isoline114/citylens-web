@@ -6,7 +6,12 @@ import {
   within,
 } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, type ParcelIntelRow } from '@/lib/api';
+import {
+  ApiError,
+  type ParcelIntelMapRow,
+  type ParcelIntelRow,
+} from '@/lib/api';
+import type { ParcelDecisionPeer } from './parcel-decision-peers';
 
 const mocks = vi.hoisted(() => ({
   authStatus: 'unauthenticated' as 'loading' | 'unauthenticated' | 'authenticated',
@@ -75,14 +80,26 @@ vi.mock('./parcel-intel-property-panel', () => ({
     onClose,
     isCompared,
     onToggleCompare,
+    decisionPeers,
+    peerInventoryComplete,
+    onOpenPeer,
+    onComparePeer,
   }: {
     row: ParcelIntelRow;
     onClose: () => void;
     isCompared?: boolean;
     onToggleCompare?: () => void;
+    decisionPeers?: ParcelDecisionPeer[];
+    peerInventoryComplete?: boolean;
+    onOpenPeer?: (bbl: string) => void;
+    onComparePeer?: (peer: ParcelIntelMapRow) => Promise<void>;
   }) => (
     <div data-testid="property-panel-stub">
       {row.borough}:{row.bbl}
+      <span data-testid="peer-props">
+        {decisionPeers?.length ?? 0} peers:
+        {peerInventoryComplete ? 'full' : 'preview'}
+      </span>
       <button type="button" onClick={onClose}>
         Back to ranking
       </button>
@@ -93,6 +110,22 @@ vi.mock('./parcel-intel-property-panel', () => ({
       >
         {isCompared ? 'Compared' : 'Compare'}
       </button>
+      {decisionPeers?.[0] && (
+        <>
+          <button
+            type="button"
+            onClick={() => onOpenPeer?.(decisionPeers[0].row.bbl)}
+          >
+            Open first decision peer
+          </button>
+          <button
+            type="button"
+            onClick={() => void onComparePeer?.(decisionPeers[0].row)}
+          >
+            Compare first decision peer
+          </button>
+        </>
+      )}
     </div>
   ),
 }));
@@ -113,6 +146,8 @@ function row(
     score_calibrated_p90: 0.95,
     priority_rank: 1,
     priority_tier: 'highest',
+    acquisition_eligible: true,
+    acquisition_status: 'eligible',
     lot_area_sqft: 5000,
     allowed_far: 2,
     max_floor_area_sqft: 10000,
@@ -956,5 +991,74 @@ describe('ParcelIntelExplorer', () => {
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByTestId('parcel-comparison-tray')).toBeInTheDocument();
+  });
+
+  it('prepares a focused source-fact peer comparison from the complete inventory', async () => {
+    mocks.authStatus = 'authenticated';
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /manhattan test site/i }),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('peer-props')).toHaveTextContent(
+        '1 peers:full',
+      ),
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Compare first decision peer',
+      }),
+    );
+
+    const desk = await screen.findByTestId('parcel-comparison-desk');
+    expect(desk).toHaveTextContent('MN test site');
+    expect(desk).toHaveTextContent('BK test site');
+    expect(mocks.getParcelIntelParcel).toHaveBeenCalledWith(
+      '3000010001',
+      { includeAuth: true },
+    );
+    await waitFor(() =>
+      expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+        'comparison_opened',
+        'decision_peers',
+      ),
+    );
+    expect(
+      JSON.stringify(mocks.recordParcelProductEvent.mock.calls),
+    ).not.toMatch(/1000010001|3000010001|test site/i);
+  });
+
+  it('opens a decision peer without including parcel identity in telemetry', async () => {
+    mocks.authStatus = 'authenticated';
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /manhattan test site/i }),
+    );
+    await screen.findByRole('button', {
+      name: 'Open first decision peer',
+    });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open first decision peer',
+      }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('property-panel-stub')).toHaveTextContent(
+        'brooklyn:3000010001',
+      ),
+    );
+    await waitFor(() =>
+      expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+        'parcel_opened',
+        'decision_peers',
+      ),
+    );
+    expect(
+      JSON.stringify(mocks.recordParcelProductEvent.mock.calls),
+    ).not.toMatch(/1000010001|3000010001|test site/i);
   });
 });

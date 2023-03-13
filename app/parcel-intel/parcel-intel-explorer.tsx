@@ -72,6 +72,10 @@ import { ParcelWorkflowAlertsPanel } from './parcel-workflow-alerts';
 import { ParcelWorkflowActionsPanel } from './parcel-workflow-actions';
 import { ParcelSavedViewsPanel } from './parcel-saved-views';
 import { ParcelScreenAudit } from './parcel-screen-audit';
+import {
+  findParcelDecisionPeers,
+  type ParcelDecisionPeer,
+} from './parcel-decision-peers';
 
 const ParcelIntelExplorerMap = dynamic(
   () =>
@@ -230,6 +234,7 @@ export function ParcelIntelExplorer({
   const comparisonDialogRef = useRef<HTMLDivElement>(null);
   const comparisonReturnFocusRef = useRef<HTMLElement | null>(null);
   const wasAuthenticatedRef = useRef(false);
+  const selectedBblRef = useRef<string | null>(selectedBbl);
 
   const isAuthenticated = auth.status === 'authenticated';
   const totalAvailable = boroughs.reduce((sum, borough) => sum + borough.count, 0);
@@ -469,6 +474,17 @@ export function ParcelIntelExplorer({
     () => rows.find((row) => row.bbl === selectedBbl) ?? null,
     [rows, selectedBbl],
   );
+  const decisionPeers: ParcelDecisionPeer[] = useMemo(
+    () =>
+      selectedDetail
+        ? findParcelDecisionPeers(selectedDetail, rows, 3)
+        : [],
+    [rows, selectedDetail],
+  );
+
+  useEffect(() => {
+    selectedBblRef.current = selectedBbl;
+  }, [selectedBbl]);
 
   useEffect(() => {
     if (!selectedBbl || !selectedSummary) {
@@ -703,7 +719,12 @@ export function ParcelIntelExplorer({
     syncExplorerUrl(filters.borough, null);
   };
 
-  const trackComparisonOpen = () => {
+  const trackComparisonOpen = (
+    source: Extract<
+      ParcelProductEventSource,
+      'comparison' | 'decision_peers'
+    > = 'comparison',
+  ) => {
     if (
       auth.status !== 'authenticated' ||
       comparisonOpenTrackedRef.current
@@ -713,7 +734,7 @@ export function ParcelIntelExplorer({
     comparisonOpenTrackedRef.current = true;
     void recordParcelProductEvent(
       'comparison_opened',
-      'comparison',
+      source,
     ).catch(() => {
       // Comparison remains available if coarse, value-minimized adoption
       // telemetry is unavailable.
@@ -758,6 +779,29 @@ export function ParcelIntelExplorer({
       setComparisonOpen(true);
       trackComparisonOpen();
     }
+  };
+
+  const compareDecisionPeer = async (peer: ParcelIntelMapRow) => {
+    if (!selectedDetail) {
+      throw new Error('Selected parcel detail is unavailable');
+    }
+    const subject = selectedDetail;
+    const peerDetail = await getParcelIntelParcel(peer.bbl, {
+      includeAuth: isAuthenticated,
+    });
+    if (selectedBblRef.current !== subject.bbl) {
+      throw new Error('Selected parcel changed while preparing comparison');
+    }
+    comparisonReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    setComparisonRows([
+      subject,
+      { ...peerDetail, borough: peer.borough },
+    ]);
+    setComparisonOpen(true);
+    trackComparisonOpen('decision_peers');
   };
 
   const removeComparison = (bbl: string) => {
@@ -1821,6 +1865,10 @@ export function ParcelIntelExplorer({
                 )
               }
               onToggleCompare={() => toggleComparison(selectedDetail)}
+              decisionPeers={decisionPeers}
+              peerInventoryComplete={fullInventoryReady}
+              onOpenPeer={(bbl) => selectParcel(bbl, 'decision_peers')}
+              onComparePeer={compareDecisionPeer}
             />
           ) : selectedSummary && detailState === 'loading' ? (
             <div

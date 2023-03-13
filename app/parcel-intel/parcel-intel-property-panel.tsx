@@ -40,6 +40,7 @@ import {
   withdrawParcelWorkflowEvidenceIssue,
   type ParcelDecisionAudit,
   type ParcelDecisionAuditCheck,
+  type ParcelIntelMapRow,
   type ParcelIntelRow,
   type ParcelWorkflowEvidenceReviewKey,
   type ParcelWorkflowEvidenceIssueReason,
@@ -62,6 +63,10 @@ import {
   opportunityLabel,
   priorityLabel,
 } from './parcel-intel-explorer-support';
+import {
+  ParcelDecisionPeers,
+  type ParcelDecisionPeer,
+} from './parcel-decision-peers';
 
 type PanelTab = 'overview' | 'audit' | 'underwrite' | 'workflow';
 
@@ -72,6 +77,10 @@ type Props = {
   isCompared?: boolean;
   compareLimitReached?: boolean;
   onToggleCompare?: () => void;
+  decisionPeers?: ParcelDecisionPeer[];
+  peerInventoryComplete?: boolean;
+  onOpenPeer?: (bbl: string) => void;
+  onComparePeer?: (peer: ParcelIntelMapRow) => Promise<void>;
 };
 
 type ExternalParcelLink = { label: string; href: string };
@@ -858,6 +867,10 @@ export function ParcelIntelPropertyPanel({
   isCompared = false,
   compareLimitReached = false,
   onToggleCompare,
+  decisionPeers = [],
+  peerInventoryComplete = false,
+  onOpenPeer,
+  onComparePeer,
 }: Props) {
   const auth = useAuth();
   const [tab, setTab] = useState<PanelTab>('overview');
@@ -1598,6 +1611,15 @@ export function ParcelIntelPropertyPanel({
                 value={row.year_built && row.year_built > 0 ? String(row.year_built) : 'None recorded'}
               />
             </dl>
+
+            {decisionPeers.length > 0 && onOpenPeer && onComparePeer && (
+              <ParcelDecisionPeers
+                peers={decisionPeers}
+                fullInventory={peerInventoryComplete}
+                onOpen={onOpenPeer}
+                onCompare={onComparePeer}
+              />
+            )}
 
             {row.owner_portfolio_id &&
               (row.owner_portfolio_lot_count ?? 0) >= 2 && (

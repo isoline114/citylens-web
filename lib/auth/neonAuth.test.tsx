@@ -47,17 +47,20 @@ function Probe({
 
 describe('NeonAuthProvider access token recovery', () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     mocks.token.mockReset();
     mocks.refetch.mockReset();
     mocks.signOut.mockReset();
     mocks.refetch.mockResolvedValue(undefined);
   });
 
-  it('uses the official token client and caches the minted JWT', async () => {
-    mocks.token.mockResolvedValue({
-      data: { token: 'header.payload.signature' },
-      error: null,
-    });
+  it('uses the same-origin auth endpoint and caches the minted JWT', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ token: 'header.payload.signature' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
     let auth: AuthContextValue | null = null;
     render(
       <NeonAuthProvider>
@@ -74,17 +77,37 @@ describe('NeonAuthProvider access token recovery', () => {
 
     expect(first).toBe('header.payload.signature');
     expect(second).toBe('header.payload.signature');
-    expect(mocks.token).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/auth/token', {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    expect(mocks.token).not.toHaveBeenCalled();
     expect(mocks.refetch).not.toHaveBeenCalled();
   });
 
   it('force-validates the session and retries one failed JWT mint', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ token: null }), {
+          status: 401,
+          headers: { 'content-type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ token: 'recovered.payload.signature' }),
+          {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          },
+        ),
+      );
     mocks.token
-      .mockResolvedValueOnce({ data: null, error: { status: 401 } })
-      .mockResolvedValueOnce({
-        data: { token: 'recovered.payload.signature' },
-        error: null,
-      });
+      .mockResolvedValue({ data: null, error: { status: 401 } });
     let auth: AuthContextValue | null = null;
     render(
       <NeonAuthProvider>
@@ -101,6 +124,7 @@ describe('NeonAuthProvider access token recovery', () => {
     expect(mocks.refetch).toHaveBeenCalledWith({
       query: { disableCookieCache: true },
     });
-    expect(mocks.token).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(mocks.token).toHaveBeenCalledTimes(1);
   });
 });

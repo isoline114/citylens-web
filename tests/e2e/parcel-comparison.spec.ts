@@ -109,6 +109,7 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   page,
 }) => {
   const advanceRequests: unknown[] = [];
+  const productEvents: unknown[] = [];
   await page.addInitScript(() => {
     sessionStorage.setItem(
       'citylens_mock_auth_user',
@@ -162,6 +163,10 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
       });
     },
   );
+  await page.route('**/v1/parcel-intel/product-events', async (route) => {
+    productEvents.push(route.request().postDataJSON());
+    await route.fulfill({ status: 204, body: '' });
+  });
 
   await page.goto('/parcel-intel');
   await expect(page.getByTestId('parcel-inventory-status')).toContainText(
@@ -203,20 +208,16 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   await ranking
     .getByRole('button', { name: /100 E 21 STREET/i })
     .click();
-  await page
-    .getByRole('button', { name: 'Add 100 E 21 STREET to comparison' })
-    .click();
+  await expect(page.getByTestId('parcel-decision-peers')).toContainText(
+    'Similar qualified leads',
+  );
+  await expect(page.getByTestId('parcel-decision-peers')).toContainText(
+    'not valuation or sale comps',
+  );
   await page
     .getByRole('button', {
-      name: 'Close parcel panel and return to ranked parcels',
+      name: 'Compare 1:1 with 41-20 QUEENS PLAZA',
     })
-    .click();
-
-  await ranking
-    .getByRole('button', { name: /41-20 QUEENS PLAZA/i })
-    .click();
-  await page
-    .getByRole('button', { name: 'Add 41-20 QUEENS PLAZA to comparison' })
     .click();
 
   const desk = page.getByTestId('parcel-comparison-desk');
@@ -224,6 +225,22 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   await expect(desk).toContainText('100 E 21 STREET');
   await expect(desk).toContainText('41-20 QUEENS PLAZA');
   await expect(desk).toContainText('Evidence currency');
+  await expect
+    .poll(() =>
+      productEvents.some(
+        (event) =>
+          JSON.stringify(event) ===
+          JSON.stringify({
+            schema_version: 'citylens/parcel-product-event@v1',
+            event: 'comparison_opened',
+            source: 'decision_peers',
+          }),
+      ),
+    )
+    .toBe(true);
+  expect(JSON.stringify(productEvents)).not.toMatch(
+    /3020960069|4012340056|100 E 21|41-20 QUEENS/i,
+  );
   const overlayOrder = await page.evaluate(() => {
     const dialog = document.querySelector<HTMLElement>(
       '[aria-label="Compare shortlisted parcels"]',

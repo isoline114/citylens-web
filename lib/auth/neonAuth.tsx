@@ -4,6 +4,8 @@ import { createAuthClient } from '@neondatabase/auth/next';
 import { createContext, useCallback, useContext, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 
+import { withSiteBasePath } from '@/lib/site';
+
 import type { AuthContextValue, AuthUser } from './types';
 
 // Singleton Neon Auth client. Talks to /api/auth/[...all] which proxies to
@@ -71,14 +73,40 @@ export function NeonAuthProvider({ children }: { children: ReactNode }) {
     }
 
     const requestToken = async (): Promise<string | null> => {
+      // Read the JWT from CityLens' same-origin auth endpoint first. In a real
+      // browser session the Neon client can have a valid cached `session_data`
+      // cookie while its `token()` helper returns no credential. That state is
+      // enough to render "signed in", but it leaves API calls on the 125-row
+      // public Parcel Intelligence preview. The endpoint is already owned by
+      // our `/api/auth/[...path]` handler and sees the authoritative HttpOnly
+      // session cookie.
       try {
-        // Use the Neon client rather than a hand-written endpoint request.
-        // The client owns the auth base path, cookie credentials, and response
-        // contract; keeping those details here had allowed a visible cached
-        // session to coexist with a failed JWT request.
+        const response = await fetch(withSiteBasePath('/api/auth/token'), {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          credentials: 'include',
+          cache: 'no-store',
+        });
+        if (response.ok) {
+          const payload = (await response.json()) as { token?: unknown };
+          if (
+            typeof payload.token === 'string' &&
+            payload.token.split('.').length === 3
+          ) {
+            return payload.token;
+          }
+        }
+      } catch {
+        // Fall through to the SDK call, which remains useful for alternate
+        // Neon client configurations and keeps this recovery path portable.
+      }
+
+      try {
         const response = await authClient.token();
         const token = response.data?.token;
-        return typeof token === 'string' && token.length > 0 ? token : null;
+        return typeof token === 'string' && token.split('.').length === 3
+          ? token
+          : null;
       } catch {
         return null;
       }

@@ -1,0 +1,70 @@
+name: production-auth-smoke
+
+on:
+  schedule:
+    - cron: "41 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      web_base:
+        description: Web origin to verify
+        required: false
+        default: https://www.citylens.dev
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-auth-smoke
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CITYLENS_WEB_BASE: ${{ inputs.web_base || 'https://www.citylens.dev' }}
+      CITYLENS_WEB_SMOKE_EMAIL: ${{ secrets.CITYLENS_WEB_SMOKE_EMAIL }}
+      CITYLENS_WEB_SMOKE_PASSWORD: ${{ secrets.CITYLENS_WEB_SMOKE_PASSWORD }}
+    steps:
+      - name: Check out verifier
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 20.19.0
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Verify real signed-in Parcel Intelligence map
+        run: node scripts/verify-production-authenticated-parcel-map.mjs
+
+      - name: Publish verification summary
+        if: always()
+        run: |
+          node - <<'NODE' >> "${GITHUB_STEP_SUMMARY}"
+          const fs = require('node:fs');
+          const path = 'test-results/production-auth-smoke/report.json';
+          const report = fs.existsSync(path)
+            ? JSON.parse(fs.readFileSync(path, 'utf8'))
+            : null;
+          const passed = Boolean(report?.passed);
+          console.log(`## ${passed ? '✅' : '❌'} Real browser authentication`);
+          console.log('');
+          console.log(`- Signed-in 5,000-parcel map: \`${passed ? 'passed' : 'failed'}\``);
+          console.log(`- Browser console errors: \`${report?.console_error_count ?? 'unknown'}\``);
+          console.log(`- Browser page errors: \`${report?.page_error_count ?? 'unknown'}\``);
+          if (report?.failure) console.log(`- Failure: \`${report.failure}\``);
+          NODE
+
+      - name: Upload sanitized verification artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: production-auth-smoke
+          path: test-results/production-auth-smoke/
+          if-no-files-found: warn
+          retention-days: 14

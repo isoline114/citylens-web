@@ -108,7 +108,8 @@ export type ParcelProductEventSource =
   | 'underwrite_tab'
   | 'base_assumptions'
   | 'screen_summary'
-  | 'screen_audit';
+  | 'screen_audit'
+  | 'decision_peers';
 
 export class ApiConfigError extends Error {
   constructor(message: string) {
