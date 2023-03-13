@@ -119,8 +119,11 @@ describe('EvidenceReviewChecklist', () => {
         audit={audit}
         item={baseItem}
         busyKey={null}
+        issueBusyKey={null}
         onReview={onReview}
         onClear={onClear}
+        onReportIssue={vi.fn().mockResolvedValue(true)}
+        onWithdrawIssue={vi.fn()}
       />,
     );
 
@@ -158,8 +161,11 @@ describe('EvidenceReviewChecklist', () => {
         audit={audit}
         item={currentItem}
         busyKey={null}
+        issueBusyKey={null}
         onReview={vi.fn()}
         onClear={vi.fn()}
+        onReportIssue={vi.fn().mockResolvedValue(true)}
+        onWithdrawIssue={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByTestId('evidence-review-toggle'));
@@ -176,8 +182,11 @@ describe('EvidenceReviewChecklist', () => {
         }}
         item={currentItem}
         busyKey={null}
+        issueBusyKey={null}
         onReview={vi.fn()}
         onClear={vi.fn()}
+        onReportIssue={vi.fn().mockResolvedValue(true)}
+        onWithdrawIssue={vi.fn()}
       />,
     );
     expect(
@@ -196,8 +205,11 @@ describe('EvidenceReviewChecklist', () => {
         audit={audit}
         item={{ ...baseItem, stage: 'pass' }}
         busyKey={null}
+        issueBusyKey={null}
         onReview={vi.fn()}
         onClear={vi.fn()}
+        onReportIssue={vi.fn().mockResolvedValue(true)}
+        onWithdrawIssue={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByTestId('evidence-review-toggle'));
@@ -210,6 +222,119 @@ describe('EvidenceReviewChecklist', () => {
         name: 'Mark Current property facts version reviewed',
       }),
     ).toBeDisabled();
+  });
+
+  it('submits a bounded correction request against the exact citation', async () => {
+    const onReportIssue = vi.fn().mockResolvedValue(true);
+    render(
+      <EvidenceReviewChecklist
+        audit={audit}
+        item={baseItem}
+        busyKey={null}
+        issueBusyKey={null}
+        onReview={vi.fn()}
+        onClear={vi.fn()}
+        onReportIssue={onReportIssue}
+        onWithdrawIssue={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('evidence-review-toggle'));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Report a source issue for Current property facts',
+      }),
+    );
+    expect(
+      screen.getByText(/does not immediately edit, hide, or clear/i),
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Request'), {
+      target: { value: 'suppression_review' },
+    });
+    fireEvent.change(screen.getByLabelText('Reason'), {
+      target: { value: 'privacy_or_safety' },
+    });
+    fireEvent.change(
+      screen.getByLabelText('What should CityLens verify?'),
+      {
+        target: {
+          value:
+            'Please verify whether the current source match creates a specific privacy concern.',
+        },
+      },
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Submit for review' }),
+    );
+
+    await waitFor(() =>
+      expect(onReportIssue).toHaveBeenCalledWith(
+        'property_facts',
+        audit.checks[0],
+        {
+          issue_type: 'suppression_review',
+          reason_code: 'privacy_or_safety',
+          note:
+            'Please verify whether the current source match creates a specific privacy concern.',
+        },
+      ),
+    );
+  });
+
+  it('keeps an open issue visible and withdrawable without claiming correction', () => {
+    const onWithdrawIssue = vi.fn().mockResolvedValue(undefined);
+    render(
+      <EvidenceReviewChecklist
+        audit={audit}
+        item={{
+          ...baseItem,
+          evidence_issues: {
+            property_facts: {
+              issue_id: 'pei_0123456789abcdef0123456789abcdef',
+              check_key: 'property_facts',
+              label: 'Current property facts',
+              issue_type: 'correction',
+              reason_code: 'incorrect_value',
+              note: 'The mapped lot area conflicts with a current signed survey.',
+              status: 'submitted',
+              check_status: 'verified',
+              source: 'NYC PLUTO',
+              source_as_of: '2026-07-24',
+              feed_generated_at: '2026-07-24T02:43:29Z',
+              submitted_at: '2026-07-25T10:00:00Z',
+              updated_at: '2026-07-25T10:00:00Z',
+              resolved_at: null,
+              resolution_note: null,
+            },
+          },
+        }}
+        busyKey={null}
+        issueBusyKey={null}
+        onReview={vi.fn()}
+        onClear={vi.fn()}
+        onReportIssue={vi.fn().mockResolvedValue(true)}
+        onWithdrawIssue={onWithdrawIssue}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('evidence-review-toggle'));
+
+    expect(screen.getByText('CityLens review pending')).toBeInTheDocument();
+    expect(
+      screen.getByText(/source remains visible unless/i),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('open-evidence-issue-count')).toHaveTextContent(
+      '1 source issue',
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Withdraw source issue for Current property facts',
+      }),
+    );
+    expect(onWithdrawIssue).toHaveBeenCalledWith('property_facts');
+    expect(
+      screen.queryByRole('button', {
+        name: 'Report a source issue for Current property facts',
+      }),
+    ).not.toBeInTheDocument();
   });
 });
 

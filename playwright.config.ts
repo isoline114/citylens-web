@@ -8,6 +8,7 @@ const baseURL = `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: './tests/e2e',
+  outputDir: process.env.PLAYWRIGHT_OUTPUT_DIR ?? 'test-results',
   fullyParallel: false,
   workers: process.env.CI ? 1 : undefined,
   retries: process.env.CI ? 1 : 0,

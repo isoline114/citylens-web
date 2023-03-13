@@ -133,7 +133,7 @@ describe('ParcelWorkflowAlertsPanel', () => {
 
     expect(
       await screen.findByText(
-        /No decision-relevant differences or stale reviewed evidence versions/i,
+        /No decision-relevant differences, stale reviewed evidence versions/i,
       ),
     ).toBeInTheDocument();
     expect(screen.getByText(/Current feed: 2026-07-24/i)).toBeInTheDocument();
@@ -271,6 +271,93 @@ describe('ParcelWorkflowAlertsPanel', () => {
       .toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Review evidence' }));
+    expect(onSelectParcel).toHaveBeenCalledWith('4012340056');
+  });
+
+  it('surfaces a pending source report without implying the fact changed', async () => {
+    mocks.getAlerts.mockResolvedValue({
+      schema_version: 'citylens/parcel-workflow-alerts@v4',
+      generated_at: '2026-07-26T06:00:00Z',
+      feed_generated_at: '2026-07-26T02:00:00Z',
+      watched_count: 0,
+      changed_lead_count: 1,
+      alert_count: 1,
+      removed_from_feed_count: 0,
+      reviewed_lead_count: 0,
+      stale_review_count: 0,
+      issue_lead_count: 1,
+      open_issue_count: 1,
+      severity_counts: { urgent: 0, high: 0, medium: 1, low: 0 },
+      alerts: [
+        {
+          bbl: '4012340056',
+          borough: 'queens',
+          code: 'evidence_issue_submitted',
+          severity: 'medium',
+          title: 'Source issue awaiting review · Current property facts',
+          detail:
+            'Your private request is in the CityLens evidence-governance queue. The cited official value remains visible and unchanged until the request is resolved.',
+          field: 'evidence_issues.property_facts',
+          before: {
+            status: 'verified',
+            source: 'NYC PLUTO',
+            as_of: '2026-07-26',
+          },
+          after: { request_status: 'submitted' },
+          reason_codes: ['incorrect_value'],
+          recommended_action:
+            'Open the parcel workflow to inspect or withdraw the request.',
+          source_evidence: [
+            {
+              source: 'NYC PLUTO',
+              as_of: '2026-07-26',
+              url: null,
+              supports: 'reported evidence version',
+            },
+          ],
+          evidence_issue: {
+            issue_id: 'pei_0123456789abcdef0123456789abcdef',
+            check_key: 'property_facts',
+            label: 'Current property facts',
+            issue_type: 'correction',
+            reason_code: 'incorrect_value',
+            note:
+              'The displayed lot area conflicts with a current signed survey.',
+            status: 'submitted',
+            check_status: 'verified',
+            source: 'NYC PLUTO',
+            source_as_of: '2026-07-26',
+            feed_generated_at: '2026-07-26T02:00:00Z',
+            submitted_at: '2026-07-26T05:30:00Z',
+            updated_at: '2026-07-26T05:30:00Z',
+            resolved_at: null,
+            resolution_note: null,
+          },
+          parcel_available: true,
+        },
+      ],
+      warnings: [],
+    });
+    const onSelectParcel = vi.fn();
+
+    render(
+      <ParcelWorkflowAlertsPanel
+        onClose={vi.fn()}
+        onSelectParcel={onSelectParcel}
+      />,
+    );
+
+    expect(await screen.findByTestId('open-evidence-issue-summary'))
+      .toHaveTextContent('1 private source report is awaiting CityLens review');
+    expect(
+      screen.getByTestId(
+        'open-evidence-issue-4012340056-property_facts',
+      ),
+    ).toHaveTextContent('Correction review');
+    expect(screen.getByText(/does not edit or suppress/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Saved:/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect request' }));
     expect(onSelectParcel).toHaveBeenCalledWith('4012340056');
   });
 });

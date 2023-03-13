@@ -27,6 +27,8 @@ import {
   setAuthTokenGetter,
   snoozeParcelWorkflowReminder,
   submitPilotRequest,
+  submitParcelWorkflowEvidenceIssue,
+  withdrawParcelWorkflowEvidenceIssue,
 } from '@/lib/api';
 
 afterEach(() => {
@@ -325,6 +327,66 @@ describe('api client', () => {
     expect(clearUrl).toBe(reviewUrl);
     expect(clearInit.method).toBe('DELETE');
     expect(clearInit.cache).toBe('no-store');
+  });
+
+  it('submits and withdraws a source-bound evidence issue request', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({
+        bbl: '3020960069',
+        evidence_issues: {},
+      }),
+      text: async () => '',
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await submitParcelWorkflowEvidenceIssue(
+      '3020960069',
+      'property_facts',
+      {
+        issue_type: 'correction',
+        reason_code: 'incorrect_value',
+        note: 'The displayed lot area conflicts with a current signed survey.',
+        expected_check_status: 'verified',
+        expected_source: 'NYC PLUTO',
+        expected_source_as_of: '2026-07-24',
+        expected_feed_generated_at: '2026-07-24T02:43:29Z',
+      },
+    );
+    const [submitUrl, submitInit] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(submitUrl).toContain(
+      '/v1/parcel-intel/workflow/3020960069/evidence-issues/property_facts',
+    );
+    expect(submitInit.method).toBe('POST');
+    expect(submitInit.cache).toBe('no-store');
+    expect(JSON.parse(String(submitInit.body))).toEqual({
+      issue_type: 'correction',
+      reason_code: 'incorrect_value',
+      note: 'The displayed lot area conflicts with a current signed survey.',
+      expected_check_status: 'verified',
+      expected_source: 'NYC PLUTO',
+      expected_source_as_of: '2026-07-24',
+      expected_feed_generated_at: '2026-07-24T02:43:29Z',
+    });
+    expect(String(submitInit.body)).not.toMatch(
+      /bbl|address|owner|assignee|tags|score|price/i,
+    );
+
+    await withdrawParcelWorkflowEvidenceIssue(
+      '3020960069',
+      'property_facts',
+    );
+    const [withdrawUrl, withdrawInit] = fetchMock.mock.calls[1] as [
+      string,
+      RequestInit,
+    ];
+    expect(withdrawUrl).toBe(submitUrl);
+    expect(withdrawInit.method).toBe('DELETE');
+    expect(withdrawInit.cache).toBe('no-store');
   });
 
   it('records only the strict coarse product-event contract', async () => {

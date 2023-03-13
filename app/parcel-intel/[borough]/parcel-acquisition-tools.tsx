@@ -10,9 +10,11 @@ import {
   CheckCircle2,
   ChevronDown,
   Equal,
+  Flag,
   Printer,
   RefreshCw,
   Save,
+  Send,
   Share2,
   ShieldCheck,
   Trash2,
@@ -24,6 +26,9 @@ import type {
   ParcelDecisionAuditCheck,
   ParcelIntelRow,
   ParcelWorkflowEvidenceReview,
+  ParcelWorkflowEvidenceIssue,
+  ParcelWorkflowEvidenceIssueReason,
+  ParcelWorkflowEvidenceIssueType,
   ParcelWorkflowEvidenceReviewKey,
   ParcelWorkflowItem,
   ParcelWorkflowStage,
@@ -318,27 +323,69 @@ const EVIDENCE_STATUS_STYLES: Record<
   informational: 'bg-sky-50 text-sky-800 ring-sky-200',
 };
 
+const EVIDENCE_ISSUE_REASON_OPTIONS: Array<
+  [ParcelWorkflowEvidenceIssueReason, string]
+> = [
+  ['incorrect_value', 'Incorrect value'],
+  ['outdated_source', 'Outdated source'],
+  ['wrong_parcel_match', 'Wrong parcel match'],
+  ['duplicate_or_merged_lot', 'Duplicate or merged lot'],
+  ['privacy_or_safety', 'Privacy or safety concern'],
+  ['other', 'Other evidence issue'],
+];
+
+function evidenceIssueIsCurrent(
+  issue: ParcelWorkflowEvidenceIssue | undefined,
+  check: ParcelDecisionAuditCheck,
+  feedGeneratedAt: string | null,
+): boolean {
+  return Boolean(
+    issue &&
+      issue.check_status === check.status &&
+      issue.source === check.source &&
+      issue.source_as_of === check.as_of &&
+      issue.feed_generated_at === feedGeneratedAt,
+  );
+}
+
 export function EvidenceReviewChecklist({
   audit,
   item,
   busyKey,
+  issueBusyKey,
   onReview,
   onClear,
+  onReportIssue,
+  onWithdrawIssue,
 }: {
   audit?: ParcelDecisionAudit;
   item: ParcelWorkflowItem;
   busyKey: ParcelWorkflowEvidenceReviewKey | null;
+  issueBusyKey: ParcelWorkflowEvidenceReviewKey | null;
   onReview: (
     checkKey: ParcelWorkflowEvidenceReviewKey,
     check: ParcelDecisionAuditCheck,
   ) => Promise<void>;
   onClear: (checkKey: ParcelWorkflowEvidenceReviewKey) => Promise<void>;
+  onReportIssue: (
+    checkKey: ParcelWorkflowEvidenceReviewKey,
+    check: ParcelDecisionAuditCheck,
+    input: {
+      issue_type: ParcelWorkflowEvidenceIssueType;
+      reason_code: ParcelWorkflowEvidenceIssueReason;
+      note: string;
+    },
+  ) => Promise<boolean>;
+  onWithdrawIssue: (
+    checkKey: ParcelWorkflowEvidenceReviewKey,
+  ) => Promise<void>;
 }) {
   const feedGeneratedAt = audit?.evidence_generated_at ?? null;
   const checks = REVIEWABLE_EVIDENCE_KEYS.map((key) => ({
     key,
     check: audit?.checks.find((candidate) => candidate.key === key),
     review: item.evidence_reviews?.[key],
+    issue: item.evidence_issues?.[key],
   })).filter(
     (
       value,
@@ -346,6 +393,7 @@ export function EvidenceReviewChecklist({
       key: ParcelWorkflowEvidenceReviewKey;
       check: ParcelDecisionAuditCheck;
       review: ParcelWorkflowEvidenceReview | undefined;
+      issue: ParcelWorkflowEvidenceIssue | undefined;
     } => Boolean(value.check),
   );
   const currentCount = checks.filter(({ check, review }) =>
@@ -360,6 +408,16 @@ export function EvidenceReviewChecklist({
     item.stage === 'pass' ||
     ['closed', 'rejected', 'lost'].includes(item.outcome);
   const [expanded, setExpanded] = useState(false);
+  const [issueFormKey, setIssueFormKey] =
+    useState<ParcelWorkflowEvidenceReviewKey | null>(null);
+  const [issueType, setIssueType] =
+    useState<ParcelWorkflowEvidenceIssueType>('correction');
+  const [issueReason, setIssueReason] =
+    useState<ParcelWorkflowEvidenceIssueReason>('incorrect_value');
+  const [issueNote, setIssueNote] = useState('');
+  const openIssueCount = checks.filter(
+    ({ issue }) => issue?.status === 'submitted',
+  ).length;
 
   useEffect(() => {
     if (staleCount > 0) setExpanded(true);
@@ -392,7 +450,15 @@ export function EvidenceReviewChecklist({
               marker when its status, source, source date, or feed version changes.
             </span>
           </span>
-          <span className="flex shrink-0 items-center gap-1.5">
+          <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+            {openIssueCount > 0 && (
+              <span
+                className="rounded-full bg-amber-300/15 px-2 py-1 text-[10px] font-semibold tabular-nums text-amber-100 ring-1 ring-inset ring-amber-200/20"
+                data-testid="open-evidence-issue-count"
+              >
+                {openIssueCount} source {openIssueCount === 1 ? 'issue' : 'issues'}
+              </span>
+            )}
             <span
               className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-semibold tabular-nums text-sky-100 ring-1 ring-inset ring-white/15"
               aria-label={`${currentCount} of ${checks.length} evidence versions reviewed`}
@@ -434,7 +500,7 @@ export function EvidenceReviewChecklist({
             </p>
           )}
           <ul className="divide-y divide-slate-100">
-            {checks.map(({ key, check, review }) => {
+            {checks.map(({ key, check, review, issue }) => {
               const isCurrent = evidenceReviewIsCurrent(
                 review,
                 check,
@@ -442,6 +508,14 @@ export function EvidenceReviewChecklist({
               );
               const isStale = Boolean(review && !isCurrent);
               const isBusy = busyKey === key;
+              const issueIsCurrent = evidenceIssueIsCurrent(
+                issue,
+                check,
+                feedGeneratedAt,
+              );
+              const issueIsOpen = issue?.status === 'submitted';
+              const isIssueBusy = issueBusyKey === key;
+              const issueFormOpen = issueFormKey === key;
               return (
                 <li
                   key={key}
@@ -492,38 +566,237 @@ export function EvidenceReviewChecklist({
                       )}
                     </div>
 
-                    {isCurrent ? (
-                      <button
-                        type="button"
-                        disabled={isTerminal || busyKey !== null}
-                        onClick={() => void onClear(key)}
-                        aria-label={`Undo review of ${check.label}`}
-                        className={`inline-flex h-8 shrink-0 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600 hover:border-slate-300 hover:text-slate-950 disabled:opacity-50 ${FOCUS_RING}`}
-                      >
-                        <Undo2 className="h-3 w-3" />
-                        Undo
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={isTerminal || busyKey !== null}
-                        onClick={() => void onReview(key, check)}
-                        aria-label={`Mark ${check.label} version reviewed`}
-                        className={`inline-flex min-h-8 shrink-0 items-center gap-1 rounded-md bg-slate-950 px-2.5 py-1.5 text-[10px] font-semibold text-white hover:bg-slate-800 disabled:opacity-50 ${FOCUS_RING}`}
-                      >
-                        {isBusy ? (
-                          <RefreshCw className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="h-3 w-3" />
-                        )}
-                        {isBusy
-                          ? 'Saving…'
-                          : isStale
-                            ? 'Review current'
-                            : 'Mark reviewed'}
-                      </button>
-                    )}
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      {isCurrent ? (
+                        <button
+                          type="button"
+                          disabled={isTerminal || busyKey !== null}
+                          onClick={() => void onClear(key)}
+                          aria-label={`Undo review of ${check.label}`}
+                          className={`inline-flex h-8 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600 hover:border-slate-300 hover:text-slate-950 disabled:opacity-50 ${FOCUS_RING}`}
+                        >
+                          <Undo2 className="h-3 w-3" />
+                          Undo
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={isTerminal || busyKey !== null}
+                          onClick={() => void onReview(key, check)}
+                          aria-label={`Mark ${check.label} version reviewed`}
+                          className={`inline-flex min-h-8 items-center gap-1 rounded-md bg-slate-950 px-2.5 py-1.5 text-[10px] font-semibold text-white hover:bg-slate-800 disabled:opacity-50 ${FOCUS_RING}`}
+                        >
+                          {isBusy ? (
+                            <RefreshCw className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="h-3 w-3" />
+                          )}
+                          {isBusy
+                            ? 'Saving…'
+                            : isStale
+                              ? 'Review current'
+                              : 'Mark reviewed'}
+                        </button>
+                      )}
+                      {!issueIsOpen && (
+                        <button
+                          type="button"
+                          disabled={issueBusyKey !== null}
+                          onClick={() => {
+                            setIssueFormKey(issueFormOpen ? null : key);
+                            setIssueType('correction');
+                            setIssueReason('incorrect_value');
+                            setIssueNote('');
+                          }}
+                          aria-expanded={issueFormOpen}
+                          aria-label={`Report a source issue for ${check.label}`}
+                          className={`inline-flex min-h-7 items-center gap-1 rounded-md px-2 text-[10px] font-semibold text-slate-500 hover:bg-amber-50 hover:text-amber-900 disabled:opacity-50 ${FOCUS_RING}`}
+                        >
+                          <Flag className="h-3 w-3" />
+                          Report issue
+                        </button>
+                      )}
+                    </div>
                   </div>
+
+                  {issue && (
+                    <div
+                      className={`mt-2 rounded-lg border px-2.5 py-2 ${
+                        issue.status === 'submitted'
+                          ? 'border-amber-200 bg-amber-50 text-amber-950'
+                          : issue.status === 'resolved'
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
+                            : 'border-slate-200 bg-slate-50 text-slate-700'
+                      }`}
+                      data-testid={`evidence-issue-${key}`}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide">
+                            <Flag className="h-3 w-3" />
+                            {issue.status === 'submitted'
+                              ? 'CityLens review pending'
+                              : issue.status === 'resolved'
+                                ? 'Issue resolved'
+                                : issue.status === 'dismissed'
+                                  ? 'Issue reviewed · no source change'
+                                  : 'Issue withdrawn'}
+                          </div>
+                          <p className="mt-1 text-[11px] leading-4">
+                            {issue.issue_type === 'suppression_review'
+                              ? 'Suppression review'
+                              : 'Correction request'}{' '}
+                            · {issue.reason_code.replaceAll('_', ' ')}
+                            {!issueIsCurrent && issue.status === 'submitted'
+                              ? ' · reported citation is no longer current'
+                              : ''}
+                          </p>
+                        </div>
+                        {issue.status === 'submitted' && (
+                          <button
+                            type="button"
+                            disabled={issueBusyKey !== null}
+                            onClick={() => void onWithdrawIssue(key)}
+                            aria-label={`Withdraw source issue for ${check.label}`}
+                            className={`rounded-md border border-amber-300 bg-white/60 px-2 py-1 text-[10px] font-semibold hover:bg-white disabled:opacity-50 ${FOCUS_RING}`}
+                          >
+                            {isIssueBusy ? 'Withdrawing…' : 'Withdraw'}
+                          </button>
+                        )}
+                      </div>
+                      {issue.resolution_note && (
+                        <p className="mt-1.5 border-t border-current/10 pt-1.5 text-[11px] leading-4">
+                          {issue.resolution_note}
+                        </p>
+                      )}
+                      <p className="mt-1.5 text-[10px] leading-4 opacity-75">
+                        The cited source remains visible unless a governed source
+                        update is published.
+                      </p>
+                    </div>
+                  )}
+
+                  {issueFormOpen && !issueIsOpen && (
+                    <form
+                      className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3"
+                      data-testid={`evidence-issue-form-${key}`}
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        if (issueNote.trim().length < 20) return;
+                        void onReportIssue(key, check, {
+                          issue_type: issueType,
+                          reason_code: issueReason,
+                          note: issueNote.trim(),
+                        }).then((saved) => {
+                          if (saved) {
+                            setIssueFormKey(null);
+                            setIssueNote('');
+                          }
+                        });
+                      }}
+                    >
+                      <div className="flex items-start gap-2 text-amber-950">
+                        <Flag className="mt-0.5 h-4 w-4 shrink-0" />
+                        <div>
+                          <div className="text-xs font-semibold">
+                            Report this exact source version
+                          </div>
+                          <p className="mt-0.5 text-[10px] leading-4 text-amber-800">
+                            This creates a private governance request. It does not
+                            immediately edit, hide, or clear the official value.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        <label className="text-[10px] font-semibold uppercase tracking-wide text-amber-950">
+                          Request
+                          <select
+                            value={issueType}
+                            onChange={(event) =>
+                              setIssueType(
+                                event.target
+                                  .value as ParcelWorkflowEvidenceIssueType,
+                              )
+                            }
+                            className={`mt-1 h-9 w-full rounded-md border border-amber-200 bg-white px-2 text-xs font-normal normal-case tracking-normal text-slate-900 ${FOCUS_RING}`}
+                          >
+                            <option value="correction">Correction review</option>
+                            <option value="suppression_review">
+                              Suppression review
+                            </option>
+                          </select>
+                        </label>
+                        <label className="text-[10px] font-semibold uppercase tracking-wide text-amber-950">
+                          Reason
+                          <select
+                            value={issueReason}
+                            onChange={(event) =>
+                              setIssueReason(
+                                event.target
+                                  .value as ParcelWorkflowEvidenceIssueReason,
+                              )
+                            }
+                            className={`mt-1 h-9 w-full rounded-md border border-amber-200 bg-white px-2 text-xs font-normal normal-case tracking-normal text-slate-900 ${FOCUS_RING}`}
+                          >
+                            {EVIDENCE_ISSUE_REASON_OPTIONS.map(
+                              ([value, label]) => (
+                                <option key={value} value={value}>
+                                  {label}
+                                </option>
+                              ),
+                            )}
+                          </select>
+                        </label>
+                      </div>
+                      <label className="mt-2 block text-[10px] font-semibold uppercase tracking-wide text-amber-950">
+                        What should CityLens verify?
+                        <textarea
+                          value={issueNote}
+                          onChange={(event) =>
+                            setIssueNote(event.target.value.slice(0, 1000))
+                          }
+                          minLength={20}
+                          maxLength={1000}
+                          required
+                          rows={3}
+                          placeholder="Describe the mismatch and the source your team used. Do not include sensitive personal information."
+                          className={`mt-1 w-full resize-y rounded-md border border-amber-200 bg-white px-2.5 py-2 text-xs font-normal normal-case tracking-normal text-slate-900 placeholder:text-slate-400 ${FOCUS_RING}`}
+                        />
+                      </label>
+                      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-[10px] text-amber-800">
+                          {issueNote.trim().length}/1000 · minimum 20 characters
+                        </span>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIssueFormKey(null);
+                              setIssueNote('');
+                            }}
+                            className={`rounded-md px-2.5 py-1.5 text-[10px] font-semibold text-amber-900 hover:bg-amber-100 ${FOCUS_RING}`}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={
+                              issueBusyKey !== null ||
+                              issueNote.trim().length < 20
+                            }
+                            className={`inline-flex items-center gap-1 rounded-md bg-amber-950 px-2.5 py-1.5 text-[10px] font-semibold text-white hover:bg-amber-900 disabled:opacity-50 ${FOCUS_RING}`}
+                          >
+                            {isIssueBusy ? (
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Send className="h-3 w-3" />
+                            )}
+                            {isIssueBusy ? 'Submitting…' : 'Submit for review'}
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+                  )}
                 </li>
               );
             })}

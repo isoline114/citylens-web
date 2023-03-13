@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   removeParcelWorkflow: vi.fn(),
   reviewParcelWorkflowEvidence: vi.fn(),
   clearParcelWorkflowEvidenceReview: vi.fn(),
+  submitParcelWorkflowEvidenceIssue: vi.fn(),
+  withdrawParcelWorkflowEvidenceIssue: vi.fn(),
 }));
 
 vi.mock('@/lib/auth', () => ({
@@ -32,6 +34,10 @@ vi.mock('@/lib/api', async (importOriginal) => {
     reviewParcelWorkflowEvidence: mocks.reviewParcelWorkflowEvidence,
     clearParcelWorkflowEvidenceReview:
       mocks.clearParcelWorkflowEvidenceReview,
+    submitParcelWorkflowEvidenceIssue:
+      mocks.submitParcelWorkflowEvidenceIssue,
+    withdrawParcelWorkflowEvidenceIssue:
+      mocks.withdrawParcelWorkflowEvidenceIssue,
   };
 });
 
@@ -89,6 +95,8 @@ beforeEach(() => {
   mocks.removeParcelWorkflow.mockReset();
   mocks.reviewParcelWorkflowEvidence.mockReset();
   mocks.clearParcelWorkflowEvidenceReview.mockReset();
+  mocks.submitParcelWorkflowEvidenceIssue.mockReset();
+  mocks.withdrawParcelWorkflowEvidenceIssue.mockReset();
 });
 
 describe('ParcelIntelPropertyPanel', () => {
@@ -551,9 +559,33 @@ describe('ParcelIntelPropertyPanel', () => {
         },
       },
     };
+    const issueItem: ParcelWorkflowItem = {
+      ...item,
+      evidence_issues: {
+        property_facts: {
+          issue_id: 'pei_0123456789abcdef0123456789abcdef',
+          check_key: 'property_facts',
+          label: 'Current property facts',
+          issue_type: 'correction',
+          reason_code: 'incorrect_value',
+          note: 'The displayed lot area conflicts with a current signed survey.',
+          status: 'submitted',
+          check_status: 'verified',
+          source: 'NYC PLUTO',
+          source_as_of: '2026-07-24',
+          feed_generated_at: '2026-07-24T02:43:29Z',
+          submitted_at: '2026-07-25T10:00:00Z',
+          updated_at: '2026-07-25T10:00:00Z',
+          resolved_at: null,
+          resolution_note: null,
+        },
+      },
+    };
     mocks.getParcelWorkflow.mockResolvedValue(item);
     mocks.reviewParcelWorkflowEvidence.mockResolvedValue(reviewedItem);
     mocks.clearParcelWorkflowEvidenceReview.mockResolvedValue(item);
+    mocks.submitParcelWorkflowEvidenceIssue.mockResolvedValue(issueItem);
+    mocks.withdrawParcelWorkflowEvidenceIssue.mockResolvedValue(item);
 
     render(
       <ParcelIntelPropertyPanel row={auditedParcel} onClose={vi.fn()} />,
@@ -592,6 +624,55 @@ describe('ParcelIntelPropertyPanel', () => {
     );
     await waitFor(() =>
       expect(mocks.clearParcelWorkflowEvidenceReview).toHaveBeenCalledWith(
+        parcel.bbl,
+        'property_facts',
+      ),
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Report a source issue for Current property facts',
+      }),
+    );
+    fireEvent.change(
+      screen.getByLabelText('What should CityLens verify?'),
+      {
+        target: {
+          value:
+            'The displayed lot area conflicts with a current signed survey.',
+        },
+      },
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Submit for review' }),
+    );
+    await waitFor(() =>
+      expect(mocks.submitParcelWorkflowEvidenceIssue).toHaveBeenCalledWith(
+        parcel.bbl,
+        'property_facts',
+        {
+          issue_type: 'correction',
+          reason_code: 'incorrect_value',
+          note:
+            'The displayed lot area conflicts with a current signed survey.',
+          expected_check_status: 'verified',
+          expected_source: 'NYC PLUTO',
+          expected_source_as_of: '2026-07-24',
+          expected_feed_generated_at: '2026-07-24T02:43:29Z',
+        },
+      ),
+    );
+    expect(
+      await screen.findByText('CityLens review pending'),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Withdraw source issue for Current property facts',
+      }),
+    );
+    await waitFor(() =>
+      expect(mocks.withdrawParcelWorkflowEvidenceIssue).toHaveBeenCalledWith(
         parcel.bbl,
         'property_facts',
       ),

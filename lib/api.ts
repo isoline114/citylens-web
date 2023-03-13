@@ -829,6 +829,36 @@ export type ParcelWorkflowEvidenceReview = {
   reviewed_at: string;
 };
 
+export type ParcelWorkflowEvidenceIssueType =
+  | 'correction'
+  | 'suppression_review';
+
+export type ParcelWorkflowEvidenceIssueReason =
+  | 'incorrect_value'
+  | 'outdated_source'
+  | 'wrong_parcel_match'
+  | 'duplicate_or_merged_lot'
+  | 'privacy_or_safety'
+  | 'other';
+
+export type ParcelWorkflowEvidenceIssue = {
+  issue_id: string;
+  check_key: ParcelWorkflowEvidenceReviewKey;
+  label: string;
+  issue_type: ParcelWorkflowEvidenceIssueType;
+  reason_code: ParcelWorkflowEvidenceIssueReason;
+  note: string;
+  status: 'submitted' | 'withdrawn' | 'resolved' | 'dismissed';
+  check_status: ParcelDecisionAuditStatus;
+  source: string;
+  source_as_of: string | null;
+  feed_generated_at: string | null;
+  submitted_at: string;
+  updated_at: string;
+  resolved_at: string | null;
+  resolution_note: string | null;
+};
+
 export type ParcelWorkflowSnapshot = {
   feed_generated_at: string | null;
   property_facts_as_of: string | null;
@@ -907,6 +937,10 @@ export type ParcelWorkflowItem = {
   /** Optional during rolling deploys from the pre-review workflow contract. */
   evidence_reviews?: Partial<
     Record<ParcelWorkflowEvidenceReviewKey, ParcelWorkflowEvidenceReview>
+  >;
+  /** Optional during rolling deploys from the pre-issue workflow contract. */
+  evidence_issues?: Partial<
+    Record<ParcelWorkflowEvidenceReviewKey, ParcelWorkflowEvidenceIssue>
   >;
 };
 
@@ -1152,7 +1186,8 @@ export type ParcelWorkflowAlert = {
     | 'transit_access_changed'
     | 'imagery_change_signal_changed'
     | 'owner_portfolio_size_changed'
-    | 'reviewed_evidence_changed';
+    | 'reviewed_evidence_changed'
+    | 'evidence_issue_submitted';
   severity: 'urgent' | 'high' | 'medium' | 'low';
   title: string;
   detail: string;
@@ -1193,6 +1228,7 @@ export type ParcelWorkflowAlert = {
       | 'current_evidence_unavailable'
     )[];
   }[];
+  evidence_issue?: ParcelWorkflowEvidenceIssue | null;
   review_recordable?: boolean | null;
   parcel_available?: boolean;
 };
@@ -1201,7 +1237,8 @@ export type ParcelWorkflowAlerts = {
   schema_version:
     | 'citylens/parcel-workflow-alerts@v1'
     | 'citylens/parcel-workflow-alerts@v2'
-    | 'citylens/parcel-workflow-alerts@v3';
+    | 'citylens/parcel-workflow-alerts@v3'
+    | 'citylens/parcel-workflow-alerts@v4';
   generated_at: string;
   feed_generated_at: string | null;
   watched_count: number;
@@ -1214,6 +1251,8 @@ export type ParcelWorkflowAlerts = {
   eligible_below_cutoff_count?: number;
   reviewed_lead_count?: number;
   stale_review_count?: number;
+  issue_lead_count?: number;
+  open_issue_count?: number;
   severity_counts: Record<'urgent' | 'high' | 'medium' | 'low', number>;
   alerts: ParcelWorkflowAlert[];
   warnings: string[];
@@ -1436,6 +1475,42 @@ export async function clearParcelWorkflowEvidenceReview(
 ): Promise<ParcelWorkflowItem> {
   return requestJson<ParcelWorkflowItem>(
     `/v1/parcel-intel/workflow/${encodeURIComponent(bbl)}/evidence-reviews/${encodeURIComponent(checkKey)}`,
+    {
+      method: 'DELETE',
+      cache: 'no-store',
+    },
+  );
+}
+
+export async function submitParcelWorkflowEvidenceIssue(
+  bbl: string,
+  checkKey: ParcelWorkflowEvidenceReviewKey,
+  input: {
+    issue_type: ParcelWorkflowEvidenceIssueType;
+    reason_code: ParcelWorkflowEvidenceIssueReason;
+    note: string;
+    expected_check_status: ParcelDecisionAuditStatus;
+    expected_source: string;
+    expected_source_as_of: string | null;
+    expected_feed_generated_at: string | null;
+  },
+): Promise<ParcelWorkflowItem> {
+  return requestJson<ParcelWorkflowItem>(
+    `/v1/parcel-intel/workflow/${encodeURIComponent(bbl)}/evidence-issues/${encodeURIComponent(checkKey)}`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+      cache: 'no-store',
+    },
+  );
+}
+
+export async function withdrawParcelWorkflowEvidenceIssue(
+  bbl: string,
+  checkKey: ParcelWorkflowEvidenceReviewKey,
+): Promise<ParcelWorkflowItem> {
+  return requestJson<ParcelWorkflowItem>(
+    `/v1/parcel-intel/workflow/${encodeURIComponent(bbl)}/evidence-issues/${encodeURIComponent(checkKey)}`,
     {
       method: 'DELETE',
       cache: 'no-store',

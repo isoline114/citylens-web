@@ -36,10 +36,14 @@ import {
   removeParcelWorkflow,
   reviewParcelWorkflowEvidence,
   saveParcelWorkflow,
+  submitParcelWorkflowEvidenceIssue,
+  withdrawParcelWorkflowEvidenceIssue,
   type ParcelDecisionAudit,
   type ParcelDecisionAuditCheck,
   type ParcelIntelRow,
   type ParcelWorkflowEvidenceReviewKey,
+  type ParcelWorkflowEvidenceIssueReason,
+  type ParcelWorkflowEvidenceIssueType,
   type ParcelWorkflowEvent,
   type ParcelWorkflowItem,
   type TopFeature,
@@ -579,6 +583,8 @@ export function ParcelIntelPropertyPanel({
   const [workflowBusy, setWorkflowBusy] = useState(false);
   const [evidenceReviewBusyKey, setEvidenceReviewBusyKey] =
     useState<ParcelWorkflowEvidenceReviewKey | null>(null);
+  const [evidenceIssueBusyKey, setEvidenceIssueBusyKey] =
+    useState<ParcelWorkflowEvidenceReviewKey | null>(null);
   const [workflowError, setWorkflowError] = useState<string | null>(null);
   const [workflowLoadState, setWorkflowLoadState] = useState<
     'idle' | 'loading' | 'ready' | 'error'
@@ -685,6 +691,7 @@ export function ParcelIntelPropertyPanel({
     setWorkflowEvents([]);
     setWorkflowBusy(false);
     setEvidenceReviewBusyKey(null);
+    setEvidenceIssueBusyKey(null);
     setWorkflowError(null);
     setWorkflowContextBbl(row.bbl);
     if (auth.status !== 'authenticated') {
@@ -906,6 +913,110 @@ export function ParcelIntelPropertyPanel({
       ) {
         setWorkflowBusy(false);
         setEvidenceReviewBusyKey(null);
+      }
+    }
+  };
+
+  const reportEvidenceIssue = async (
+    checkKey: ParcelWorkflowEvidenceReviewKey,
+    check: ParcelDecisionAuditCheck,
+    input: {
+      issue_type: ParcelWorkflowEvidenceIssueType;
+      reason_code: ParcelWorkflowEvidenceIssueReason;
+      note: string;
+    },
+  ): Promise<boolean> => {
+    if (!workflowItem || effectiveWorkflowLoadState !== 'ready') return false;
+    const bbl = row.bbl;
+    const mutationId = workflowMutationIdRef.current + 1;
+    workflowMutationIdRef.current = mutationId;
+    setWorkflowBusy(true);
+    setEvidenceIssueBusyKey(checkKey);
+    setWorkflowError(null);
+    try {
+      const updated = await submitParcelWorkflowEvidenceIssue(
+        bbl,
+        checkKey,
+        {
+          ...input,
+          expected_check_status: check.status,
+          expected_source: check.source,
+          expected_source_as_of: check.as_of,
+          expected_feed_generated_at:
+            row.decision_audit?.evidence_generated_at ?? null,
+        },
+      );
+      if (
+        workflowMutationIdRef.current !== mutationId ||
+        activeBblRef.current !== bbl
+      ) {
+        return false;
+      }
+      setWorkflowItem(updated);
+      window.dispatchEvent(new Event('citylens:workflow-updated'));
+      return true;
+    } catch (error) {
+      if (
+        workflowMutationIdRef.current === mutationId &&
+        activeBblRef.current === bbl
+      ) {
+        setWorkflowError(
+          error instanceof ApiError && error.status === 409
+            ? 'The cited evidence changed or already has an open request. Reload the parcel before trying again.'
+            : 'Could not submit this source issue. Please retry.',
+        );
+      }
+      return false;
+    } finally {
+      if (
+        workflowMutationIdRef.current === mutationId &&
+        activeBblRef.current === bbl
+      ) {
+        setWorkflowBusy(false);
+        setEvidenceIssueBusyKey(null);
+      }
+    }
+  };
+
+  const withdrawEvidenceIssue = async (
+    checkKey: ParcelWorkflowEvidenceReviewKey,
+  ) => {
+    if (!workflowItem || effectiveWorkflowLoadState !== 'ready') return;
+    const bbl = row.bbl;
+    const mutationId = workflowMutationIdRef.current + 1;
+    workflowMutationIdRef.current = mutationId;
+    setWorkflowBusy(true);
+    setEvidenceIssueBusyKey(checkKey);
+    setWorkflowError(null);
+    try {
+      const updated = await withdrawParcelWorkflowEvidenceIssue(
+        bbl,
+        checkKey,
+      );
+      if (
+        workflowMutationIdRef.current !== mutationId ||
+        activeBblRef.current !== bbl
+      ) {
+        return;
+      }
+      setWorkflowItem(updated);
+      window.dispatchEvent(new Event('citylens:workflow-updated'));
+    } catch {
+      if (
+        workflowMutationIdRef.current === mutationId &&
+        activeBblRef.current === bbl
+      ) {
+        setWorkflowError(
+          'Could not withdraw this source issue. It may already have been resolved.',
+        );
+      }
+    } finally {
+      if (
+        workflowMutationIdRef.current === mutationId &&
+        activeBblRef.current === bbl
+      ) {
+        setWorkflowBusy(false);
+        setEvidenceIssueBusyKey(null);
       }
     }
   };
@@ -1971,11 +2082,15 @@ export function ParcelIntelPropertyPanel({
                 />
                 {workflowItem && (
                   <EvidenceReviewChecklist
+                    key={workflowItem.bbl}
                     audit={row.decision_audit}
                     item={workflowItem}
                     busyKey={evidenceReviewBusyKey}
+                    issueBusyKey={evidenceIssueBusyKey}
                     onReview={reviewEvidence}
                     onClear={clearEvidenceReview}
+                    onReportIssue={reportEvidenceIssue}
+                    onWithdrawIssue={withdrawEvidenceIssue}
                   />
                 )}
                 {workflowEvents.length > 0 && (

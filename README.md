@@ -56,6 +56,10 @@ codes, source dates, exact official-record links, and a conservative next
 action. An absent ledger record remains explicitly unresolved; the client
 never invents a disposition, seller-intent claim, or completed-diligence
 state. Distance-only centroid noise does not create a transit alert.
+The same center keeps private correction and suppression-review requests
+visible while they await CityLens governance review. A request is attached to
+one exact status/source/source-date/feed citation and never implies that the
+underlying official value was edited or hidden.
 The explorer renders its public preview immediately, upgrades authenticated
 users with one compact 5,000-row citywide request, and fetches polygon,
 explanation, provenance, and underwriting detail only when a parcel is opened.
@@ -78,6 +82,12 @@ stale when any part of that citation identity changes, and permits an explicit
 undo. “Reviewed” means that cited version was considered; it never means risk
 was resolved, a record was cleared, or legal, zoning, title, environmental,
 engineering, financial, or seller-intent diligence was completed.
+Each evidence row also supports an inline, bounded “Report issue” flow for
+signed-in users. Users choose correction or suppression review, provide a
+structured reason and a 20–1,000 character note, then see pending and resolved
+status in the same ledger. Open requests may be withdrawn but cannot be
+overwritten; the UI continues to show the cited official fact until the engine
+publishes a governed source update.
 The Underwrite tab replaces a single-point residual with an editable
 downside/base/upside development sensitivity. Every case exposes value, hard
 cost, efficiency, soft-cost, and target-margin assumptions; outputs include
@@ -225,6 +235,9 @@ This frontend aligns to the CityLens API contract served by `citylens-engine`:
 - `PUT|DELETE /v1/parcel-intel/workflow/{bbl}/evidence-reviews/{check_key}` —
   Bearer auth required; writes or removes a source-bound review marker on an
   active workflow record using optimistic citation-version checks
+- `POST|DELETE /v1/parcel-intel/workflow/{bbl}/evidence-issues/{check_key}` —
+  Bearer auth required; submits or withdraws a private source-bound correction
+  or suppression-review request without editing the cited parcel fact
 - `POST /v1/pilot-requests` — public, rate-limited design-partner intake with
   an opaque `Idempotency-Key`; returns a durable receipt and is never cached
 

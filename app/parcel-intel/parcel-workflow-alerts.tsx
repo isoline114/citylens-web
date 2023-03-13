@@ -5,6 +5,7 @@ import {
   BellRing,
   ExternalLink,
   FileClock,
+  Flag,
   LoaderCircle,
   RefreshCw,
   ShieldCheck,
@@ -171,11 +172,12 @@ export function ParcelWorkflowAlertsPanel({
         </div>
       ) : (
         <>
-          <div className="mt-5 grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
+          <div className="mt-5 grid gap-2 sm:grid-cols-3 xl:grid-cols-7">
             {[
               ['Watched leads', data.watched_count],
               ['Leads changed', data.changed_lead_count],
               ['Stale reviews', data.stale_review_count ?? 0],
+              ['Open reports', data.open_issue_count ?? 0],
               ['Explained exits', data.resolved_exit_count ?? 0],
               ['Urgent review', data.severity_counts.urgent],
               ['Total alerts', data.alert_count],
@@ -231,10 +233,28 @@ export function ParcelWorkflowAlertsPanel({
             </div>
           )}
 
+          {(data.open_issue_count ?? 0) > 0 && (
+            <div
+              className="mt-4 flex gap-3 rounded-xl border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-50"
+              data-testid="open-evidence-issue-summary"
+            >
+              <Flag className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+              <p>
+                <strong>
+                  {data.open_issue_count?.toLocaleString()} private source{' '}
+                  {data.open_issue_count === 1 ? 'report is' : 'reports are'} awaiting
+                  CityLens review.
+                </strong>{' '}
+                Reported official values remain visible until a governed source
+                update is resolved and published.
+              </p>
+            </div>
+          )}
+
           {data.alerts.length === 0 ? (
             <div className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-4 text-sm text-emerald-100">
-              No decision-relevant differences or stale reviewed evidence versions
-              were found against the current eligible feed.
+              No decision-relevant differences, stale reviewed evidence versions,
+              or open source reports were found against the current eligible feed.
             </div>
           ) : (
             <div className="mt-4 grid gap-2 xl:grid-cols-2">
@@ -264,6 +284,8 @@ export function ParcelWorkflowAlertsPanel({
                           ? alert.review_recordable === false
                             ? 'Open evidence'
                             : 'Review evidence'
+                          : alert.code === 'evidence_issue_submitted'
+                            ? 'Inspect request'
                           : 'Open parcel'}
                       </button>
                       )}
@@ -271,7 +293,8 @@ export function ParcelWorkflowAlertsPanel({
                   <p className="mt-2 text-xs leading-5 opacity-90">{alert.detail}</p>
                   {alert.parcel_available !== false &&
                     alert.code !== 'removed_from_current_feed' &&
-                    alert.code !== 'reviewed_evidence_changed' && (
+                    alert.code !== 'reviewed_evidence_changed' &&
+                    alert.code !== 'evidence_issue_submitted' && (
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
                       <span className="rounded bg-black/15 px-2 py-1">
                         Saved: {formatValue(alert.before)}
@@ -352,6 +375,41 @@ export function ParcelWorkflowAlertsPanel({
                           </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {alert.evidence_issue && (
+                    <div
+                      className="mt-3 rounded-lg border border-amber-200/20 bg-amber-200/10 p-3"
+                      data-testid={`open-evidence-issue-${alert.bbl}-${alert.evidence_issue.check_key}`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-100">
+                          Private governance request
+                        </div>
+                        <div className="text-[10px] text-amber-100/80">
+                          Submitted{' '}
+                          {formatReviewedAt(
+                            alert.evidence_issue.submitted_at,
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-1 text-xs font-semibold text-white">
+                        {alert.evidence_issue.issue_type ===
+                        'suppression_review'
+                          ? 'Suppression review'
+                          : 'Correction review'}{' '}
+                        · {humanizeCode(alert.evidence_issue.reason_code)}
+                      </div>
+                      <p className="mt-1.5 text-[11px] leading-5 text-amber-50/90">
+                        {alert.evidence_issue.note}
+                      </p>
+                      <div className="mt-2 rounded-md border border-white/10 bg-black/15 px-2.5 py-2 text-[10px] leading-4 text-slate-200">
+                        Reported citation: {alert.evidence_issue.source} · as of{' '}
+                        {formatAsOf(alert.evidence_issue.source_as_of)}. The
+                        request does not edit or suppress this record while
+                        review is pending.
+                      </div>
                     </div>
                   )}
 
