@@ -1109,7 +1109,7 @@ export function ParcelIntelExplorer({
             <input
               value={filters.query}
               onChange={(event) => updateFilter('query', event.target.value)}
-              placeholder="Address, BBL, owner, or zoning"
+              placeholder="Search parcels"
               className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-950 outline-none placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
             />
           </label>
@@ -1155,7 +1155,7 @@ export function ParcelIntelExplorer({
               className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
             >
               <option value="all">All site types</option>
-              <option value="uncommitted">Qualified acquisition leads</option>
+              <option value="uncommitted">Qualified leads</option>
               <option value="vacant_site">Vacant sites</option>
               <option value="ground_up_candidate">Ground-up candidates</option>
               <option value="conversion_or_overbuilt">Conversion / overbuilt</option>
@@ -1205,7 +1205,8 @@ export function ParcelIntelExplorer({
               }`}
             >
               <Ruler className="h-3.5 w-3.5" />
-              Site criteria
+              <span className="xl:hidden">Site criteria</span>
+              <span className="hidden xl:inline">Criteria</span>
               {activeSiteCriteriaCount > 0 && (
                 <span className="rounded-full bg-emerald-700 px-1.5 py-0.5 text-[10px] text-white">
                   {activeSiteCriteriaCount}
