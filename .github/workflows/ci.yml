@@ -23,6 +23,11 @@ jobs:
       # The parcel explorer shell is rendered during `next build`; pin it to
       # a versioned fixture so PR geometry is never changed by live API data.
       CITYLENS_USE_PARCEL_INTEL_INDEX_FIXTURE: '1'
+      # NEXT_PUBLIC_* values are baked into the Next.js bundle during build.
+      # Authenticated E2E journeys seed a mock browser user, so CI must choose
+      # the mock provider before `npm run build`, not only when Playwright
+      # starts the already-built server.
+      NEXT_PUBLIC_AUTH_PROVIDER: 'mock'
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 

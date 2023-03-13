@@ -11,9 +11,29 @@ export type { AuthContextValue, AuthUser, AuthState, AuthActions } from './types
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function selectedProvider(): 'mock' | 'neon' {
-  const provider = (process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'mock').toLowerCase();
-  return provider === 'neon' ? 'neon' : 'mock';
+export function selectAuthProvider(
+  configuredProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER,
+  apiBase = process.env.NEXT_PUBLIC_CITYLENS_API_BASE,
+  nodeEnv = process.env.NODE_ENV,
+): 'mock' | 'neon' {
+  const provider = configuredProvider?.trim().toLowerCase();
+  if (provider === 'neon' || provider === 'mock') return provider;
+
+  // A mock session is useful only with the local development API. Defaulting
+  // to it while the browser points at a deployed API creates a misleading
+  // "signed in" state whose mock JWT is correctly rejected by production,
+  // leaving Parcel Intelligence on the 125-row public preview.
+  if (nodeEnv === 'production') return 'neon';
+  if (apiBase) {
+    try {
+      const hostname = new URL(apiBase).hostname;
+      if (hostname !== 'localhost' && hostname !== '127.0.0.1') return 'neon';
+    } catch {
+      // Relative or malformed development values stay on the explicit local
+      // mock default. API configuration validation owns malformed URLs.
+    }
+  }
+  return 'mock';
 }
 
 function MockBridge({ children }: { children: ReactNode }) {
@@ -27,7 +47,7 @@ function NeonBridge({ children }: { children: ReactNode }) {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  if (selectedProvider() === 'neon') {
+  if (selectAuthProvider() === 'neon') {
     return (
       <NeonAuthProvider>
         <NeonBridge>{children}</NeonBridge>

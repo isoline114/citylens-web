@@ -31,6 +31,10 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120000,
     env: {
+      // E2E routes stub the API and seed a mock browser user. Keep that
+      // isolated test contract explicit so a developer's .env.local can use
+      // real Neon auth without changing authenticated journey behavior.
+      NEXT_PUBLIC_AUTH_PROVIDER: 'mock',
       // Disable the SSR featured-demos fetch entirely during e2e — the
       // test's expectations rely on `page.route` mocks of the browser
       // fetch path, and Server-side fetches bypass those mocks. With

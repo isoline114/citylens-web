@@ -339,7 +339,7 @@ adoption source because they are plan-dependent; the engine's bounded,
 | Var | Notes |
 |---|---|
 | `NEXT_PUBLIC_CITYLENS_API_BASE` | Base URL for the API (e.g. `https://api.citylens.dev`). Required in prod. |
-| `NEXT_PUBLIC_AUTH_PROVIDER` | `neon` in prod, `mock` in dev/CI (default). |
+| `NEXT_PUBLIC_AUTH_PROVIDER` | Set explicitly to `neon` for production or any local web session targeting a deployed API. Use `mock` only with the local API; when omitted, deployed API origins and production builds default safely to `neon`. |
 | `NEON_AUTH_BASE_URL` | Neon Auth managed URL (provisioned by the Vercel ↔ Neon integration). |
 | `NEON_AUTH_COOKIE_SECRET` | ≥32 chars; signs Neon Auth session cookies. |
 | `CITYLENS_API_INTERNAL_URL` | Optional override for the SSR-side API URL (e.g. private VPC). |
