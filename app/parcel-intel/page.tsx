@@ -131,6 +131,11 @@ export default async function ParcelIntelIndexPage({
         <ParcelFeedReceipt
           qualityGate={index.quality_gate}
           dataSources={index.data_sources}
+          modelMetadata={index.model_metadata}
+          prospectiveValidation={index.prospective_validation ?? null}
+          prospectiveValidationHealth={
+            index.prospective_validation_health ?? null
+          }
           generatedLabel={generatedLabel}
         />
       </header>

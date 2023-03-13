@@ -1,10 +1,23 @@
-import { BadgeCheck, CircleAlert, Database, ShieldCheck } from 'lucide-react';
+import {
+  Activity,
+  BadgeCheck,
+  CircleAlert,
+  Database,
+  ShieldCheck,
+} from 'lucide-react';
+import type {
+  ParcelProspectiveValidationHealth,
+  ParcelProspectiveValidationStatus,
+} from '@/lib/api';
 
 type UnknownRecord = Record<string, unknown>;
 
 export type ParcelFeedReceiptProps = {
   qualityGate?: UnknownRecord;
   dataSources?: UnknownRecord;
+  modelMetadata?: UnknownRecord;
+  prospectiveValidation?: ParcelProspectiveValidationStatus | null;
+  prospectiveValidationHealth?: ParcelProspectiveValidationHealth | null;
   generatedLabel: string;
 };
 
@@ -21,6 +34,15 @@ type Receipt = {
   plutoAddresses: number | null;
   currentSources: number;
   staleSources: number;
+  historicalPrecisionAt100: number | null;
+  historicalPrecisionAt1000: number | null;
+  historicalBaseRate: number | null;
+  historicalEvidenceStatus: string | null;
+  prospectiveStatus: ParcelProspectiveValidationStatus['measurement_status'] | null;
+  prospectiveIssuedAt: string | null;
+  prospectiveObservedThrough: string | null;
+  prospectiveMaturesAt: string | null;
+  prospectiveHealth: ParcelProspectiveValidationHealth['status'] | null;
 };
 
 function record(value: unknown): UnknownRecord {
@@ -39,13 +61,43 @@ function formatCount(value: number | null): string {
   return value === null ? '—' : new Intl.NumberFormat('en-US').format(value);
 }
 
+function ratio(value: unknown): number | null {
+  return typeof value === 'number' &&
+    Number.isFinite(value) &&
+    value >= 0 &&
+    value <= 1
+    ? value
+    : null;
+}
+
+function formatPercent(value: number | null): string {
+  if (value === null) return '—';
+  return `${(value * 100).toFixed(value >= 0.1 ? 1 : 2)}%`;
+}
+
+function formatUtcDate(value: string | null): string {
+  if (!value) return '—';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(parsed);
+}
+
 export function parcelFeedReceipt(
   qualityGate: UnknownRecord = {},
   dataSources: UnknownRecord = {},
+  modelMetadata: UnknownRecord = {},
+  prospectiveValidation: ParcelProspectiveValidationStatus | null = null,
+  prospectiveValidationHealth: ParcelProspectiveValidationHealth | null = null,
 ): Receipt {
   const screening = record(qualityGate.screening_ledger);
   const landUse = record(qualityGate.land_use_reconciliation);
   const addresses = record(qualityGate.address_identity);
+  const evaluationEvidence = record(modelMetadata.evaluation_evidence);
   const sources = Object.values(dataSources).filter(
     (value) => Object.keys(record(value)).length > 0,
   );
@@ -72,7 +124,115 @@ export function parcelFeedReceipt(
       .length,
     staleSources: sources.filter((value) => record(value).stale === true)
       .length,
+    historicalPrecisionAt100: ratio(modelMetadata.precision_at_100),
+    historicalPrecisionAt1000: ratio(modelMetadata.precision_at_1000),
+    historicalBaseRate: ratio(modelMetadata.spatial_cv_base_rate),
+    historicalEvidenceStatus:
+      typeof evaluationEvidence.status === 'string'
+        ? evaluationEvidence.status
+        : null,
+    prospectiveStatus: prospectiveValidation?.measurement_status ?? null,
+    prospectiveIssuedAt: prospectiveValidation?.issued_at ?? null,
+    prospectiveObservedThrough:
+      prospectiveValidation?.observed_through ?? null,
+    prospectiveMaturesAt: prospectiveValidation?.matures_at ?? null,
+    prospectiveHealth: prospectiveValidationHealth?.status ?? null,
   };
+}
+
+function HistoricalEvidence({ receipt }: { receipt: Receipt }) {
+  const hasMetrics =
+    receipt.historicalPrecisionAt100 !== null &&
+    receipt.historicalPrecisionAt1000 !== null;
+  const exposed = receipt.historicalEvidenceStatus === 'development_exposed';
+
+  return (
+    <div className="rounded-lg bg-white/[0.06] p-3 ring-1 ring-inset ring-white/10">
+      <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-sky-300">
+        1 · Historical rank
+      </div>
+      <p className="mt-1.5 text-xs font-semibold leading-5 text-white">
+        {hasMetrics
+          ? `${Math.round(
+              receipt.historicalPrecisionAt100! * 100,
+            )} of the top 100 and ${Math.round(
+              receipt.historicalPrecisionAt1000! * 1000,
+            )} of the top 1,000 filed a DOB NB job the next year.`
+          : 'Historical forward-ranking evidence is unavailable.'}
+      </p>
+      <p className="mt-1 text-[10px] leading-4 text-slate-400">
+        2024 features → 2025 outcomes
+        {receipt.historicalBaseRate !== null
+          ? ` · ${formatPercent(receipt.historicalBaseRate)} base rate`
+          : ''}
+        {exposed ? ' · development-exposed benchmark' : ''}. This is ranking
+        evidence, not current parcel accuracy.
+      </p>
+    </div>
+  );
+}
+
+function CurrentQualification({ receipt }: { receipt: Receipt }) {
+  return (
+    <div className="rounded-lg bg-white/[0.06] p-3 ring-1 ring-inset ring-white/10">
+      <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-emerald-300">
+        2 · Current qualification
+      </div>
+      <p className="mt-1.5 text-xs font-semibold leading-5 text-white">
+        {formatCount(receipt.screenedOut)} candidates removed before{' '}
+        {formatCount(receipt.published)} leads were surfaced.
+      </p>
+      <p className="mt-1 text-[10px] leading-4 text-slate-400">
+        {formatCount(receipt.joinedProjects)} current DOB/ZAP projects
+        reconciled · {formatCount(receipt.projectLeakage)} published project
+        leaks. Current gates can change rank eligibility, not the historical
+        model.
+      </p>
+    </div>
+  );
+}
+
+function LiveOutcomeEvidence({ receipt }: { receipt: Receipt }) {
+  const current = receipt.prospectiveHealth === 'current';
+  const mature = receipt.prospectiveStatus === 'mature';
+  const collecting = receipt.prospectiveStatus === 'collecting';
+  const awaiting = receipt.prospectiveStatus === 'awaiting_post_issue_data';
+  const headline = mature
+    ? 'The 365-day production outcome window is complete.'
+    : collecting
+      ? `Official DOB outcomes observed through ${formatUtcDate(
+          receipt.prospectiveObservedThrough,
+        )}.`
+      : awaiting
+        ? 'The exact production cohort is awaiting post-issue DOB data.'
+        : 'Production outcome evidence is unavailable.';
+
+  return (
+    <div className="rounded-lg bg-white/[0.06] p-3 ring-1 ring-inset ring-white/10">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-violet-300">
+          3 · Live outcomes
+        </div>
+        <span
+          className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
+            current
+              ? 'bg-emerald-400/10 text-emerald-200'
+              : 'bg-amber-400/10 text-amber-200'
+          }`}
+        >
+          {current ? 'Monitor current' : 'Inspect monitor'}
+        </span>
+      </div>
+      <p className="mt-1.5 text-xs font-semibold leading-5 text-white">
+        {headline}
+      </p>
+      <p className="mt-1 text-[10px] leading-4 text-slate-400">
+        Cohort issued {formatUtcDate(receipt.prospectiveIssuedAt)} · final
+        eligibility {formatUtcDate(receipt.prospectiveMaturesAt)}. Until then,
+        current precision is intentionally not claimed.
+      </p>
+    </div>
+  );
 }
 
 function ReceiptBody({
@@ -143,6 +303,18 @@ function ReceiptBody({
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="mt-3">
+        <div className="mb-2 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+          <Activity className="h-3 w-3" />
+          Intelligence evidence chain
+        </div>
+        <div className="grid gap-2 lg:grid-cols-3">
+          <HistoricalEvidence receipt={receipt} />
+          <CurrentQualification receipt={receipt} />
+          <LiveOutcomeEvidence receipt={receipt} />
+        </div>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-white/10 pt-2.5 text-[10px] leading-4 text-slate-300">
@@ -243,9 +415,18 @@ function ReceiptSummary({ receipt }: { receipt: Receipt }) {
 export function ParcelFeedReceipt({
   qualityGate = {},
   dataSources = {},
+  modelMetadata = {},
+  prospectiveValidation = null,
+  prospectiveValidationHealth = null,
   generatedLabel,
 }: ParcelFeedReceiptProps) {
-  const receipt = parcelFeedReceipt(qualityGate, dataSources);
+  const receipt = parcelFeedReceipt(
+    qualityGate,
+    dataSources,
+    modelMetadata,
+    prospectiveValidation,
+    prospectiveValidationHealth,
+  );
 
   return (
     <>
