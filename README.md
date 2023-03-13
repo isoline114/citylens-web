@@ -18,6 +18,13 @@ The selected-parcel header exposes address identity honestly: numbered NYC PAD
 addresses are labeled as BBL-matched enrichment, while street-only records are
 marked as unnumbered tax lots. Address provenance never implies a rank or
 eligibility change.
+The explorer header also publishes a compact qualification receipt from the
+active feed manifest. It reports the evaluated, screened-out, below-cutoff,
+and surfaced candidate counts; current private ZAP project-to-BBL coverage;
+published project leakage; source freshness; and PAD/PLUTO address provenance.
+The receipt fails conservative when those release checks are absent or failed.
+It is an auditable feed-eligibility statement—not model accuracy, seller
+intent, transaction probability, or completed parcel diligence.
 Users can place up to three fully loaded parcels into an evidence comparison
 desk without leaving the explorer. The desk keeps current acquisition posture,
 capacity, ownership/sale context, official project activity, surfaced diligence

@@ -8,6 +8,7 @@ import {
   historicalBenchmarkCopy,
   normalizePerformanceScope,
 } from '@/lib/parcel-intel-evidence';
+import { ParcelFeedReceipt } from './parcel-feed-receipt';
 import { ParcelIntelExplorer } from './parcel-intel-explorer';
 import { ParcelProspectiveValidation } from './parcel-prospective-validation';
 
@@ -67,11 +68,6 @@ export default async function ParcelIntelIndexPage({
     typeof evaluationEvidence?.status === 'string'
       ? evaluationEvidence.status
       : 'unclassified';
-  const latestEvaluationSummary =
-    performanceScope?.match(/(?:historical|reserved) rolling benchmark:\s*(.+)$/i)?.[1] ??
-    (featureYear !== undefined && featureYear !== null && labelWindow
-      ? `${String(featureYear)} features · ${labelWindow} outcomes`
-      : 'Historical evaluation');
   const precisionAt100 =
     typeof index.model_metadata?.precision_at_100 === 'number'
       ? (index.model_metadata.precision_at_100 as number)
@@ -121,80 +117,11 @@ export default async function ParcelIntelIndexPage({
             </span>
           </p>
         </div>
-        {(modelType || featureYear || labelWindow || generatedLabel) && (
-          <>
-            <details
-              className="group rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-sm sm:hidden"
-              aria-label="Published model evidence"
-            >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[10px] font-medium text-slate-600 marker:hidden">
-                <span className="inline-flex min-w-0 items-center gap-1.5">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>
-                    {`${
-                      generatedLabel
-                        ? `Refreshed ${generatedLabel}`
-                        : 'Published evidence'
-                    } · ${latestEvaluationSummary}${
-                      qualityGatePassed ? ' · eligibility checked' : ''
-                    }`}
-                  </span>
-                </span>
-                <span className="shrink-0 text-sky-700 group-open:hidden">
-                  Details
-                </span>
-                <span className="hidden shrink-0 text-sky-700 group-open:inline">
-                  Hide
-                </span>
-              </summary>
-              <p className="mt-2 border-t border-slate-200 pt-2 text-[10px] leading-4 text-slate-600">
-                {performanceScope ??
-                  (featureYear !== undefined &&
-                  featureYear !== null &&
-                  labelWindow
-                    ? `${String(featureYear)} features · ${labelWindow} outcomes`
-                    : 'Historical model lineage is available in the methodology.')}
-                {modelType ? ` · ${modelType} ranking.` : ''}
-              </p>
-            </details>
-            <div
-              className="hidden rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-sm sm:block"
-              aria-label="Published model evidence"
-            >
-              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                Published evidence
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] leading-4 text-slate-600">
-                {generatedLabel && (
-                  <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-inset ring-slate-200">
-                    Refreshed {generatedLabel}
-                  </span>
-                )}
-                {modelType && (
-                  <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-inset ring-slate-200">
-                    {modelType} ranking
-                  </span>
-                )}
-                {performanceScope ? (
-                  <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-inset ring-slate-200">
-                    {performanceScope}
-                  </span>
-                ) : featureYear !== undefined && featureYear !== null && labelWindow ? (
-                  <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-inset ring-slate-200">
-                    {String(featureYear)} features · {labelWindow} outcomes
-                  </span>
-                ) : null}
-                {qualityGatePassed && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-800 ring-1 ring-inset ring-emerald-200">
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    Top 100 / borough eligibility-checked
-                  </span>
-                )}
-              </div>
-            </div>
-          </>
-        )}
+        <ParcelFeedReceipt
+          qualityGate={index.quality_gate}
+          dataSources={index.data_sources}
+          generatedLabel={generatedLabel}
+        />
       </header>
 
       {staleSources.length > 0 && (
