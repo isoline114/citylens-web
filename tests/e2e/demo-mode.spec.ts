@@ -181,3 +181,53 @@ test('homepage shows product-safe copy when /v1/demo/featured returns 404', asyn
   await expect(page.getByText(/Failed to load demos/i)).not.toBeVisible();
   await expect(page.getByText(/No featured demos found/i)).not.toBeVisible();
 });
+
+test('homepage foregrounds the acquisition workspace without viewport overflow', async ({
+  page,
+}) => {
+  await page.route('**/v1/demo/featured', async (route) => {
+    await route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({ detail: 'Not Found' }),
+    });
+  });
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+  await expect(
+    page.getByRole('heading', {
+      level: 1,
+      name: /Turn the whole NYC market into a defensible weekly shortlist/i,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Open the NYC opportunity map' }),
+  ).toBeVisible();
+  const desktopPreview = await page
+    .getByTestId('acquisition-workspace-preview')
+    .boundingBox();
+  expect(desktopPreview).not.toBeNull();
+  expect(desktopPreview?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(1000);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await expect(
+    page.getByRole('link', { name: 'Open the NYC opportunity map' }),
+  ).toBeVisible();
+  const mobilePreview = await page
+    .getByTestId('acquisition-workspace-preview')
+    .boundingBox();
+  expect(mobilePreview).not.toBeNull();
+  expect(mobilePreview?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(844);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});

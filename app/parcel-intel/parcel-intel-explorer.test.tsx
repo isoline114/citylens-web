@@ -205,7 +205,10 @@ describe('ParcelIntelExplorer', () => {
     render(<ParcelIntelExplorer boroughs={boroughs} />);
 
     expect(screen.getByText(/Preview coverage/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Sign in for the full map/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Sign in for the full workspace/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Try the public decision flow/i)).toBeInTheDocument();
     expect(
       screen.queryByRole('option', { name: /Immediate-hazard violations/i }),
     ).not.toBeInTheDocument();
@@ -346,12 +349,14 @@ describe('ParcelIntelExplorer', () => {
     render(<ParcelIntelExplorer boroughs={boroughs} />);
 
     const guide = await screen.findByTestId('activation-guide-empty');
-    expect(guide).toHaveTextContent('Review the parcel evidence');
-    expect(guide).toHaveTextContent('Save the lead');
-    expect(guide).toHaveTextContent('Assign a teammate and dated next action');
+    expect(guide).toHaveTextContent('Open a current lead');
+    expect(guide).toHaveTextContent('Add a second parcel to Compare');
+    expect(guide).toHaveTextContent(
+      'Save only the one worth next diligence',
+    );
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Open highest-ranked lead' }),
+      screen.getByRole('button', { name: 'Open the first lead' }),
     );
 
     await waitFor(() =>

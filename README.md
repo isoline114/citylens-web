@@ -1,5 +1,14 @@
 # citylens-web
 
+The public homepage is acquisition-first: it presents CityLens as one
+five-borough decision flow from market scan to parcel evidence, shortlist
+comparison, and private workflow. The historical ranking, current eligibility
+gate, diligence overlays, and team decision remain separate in both copy and
+interface. Aerial change detection and LiDAR reconstruction are positioned as
+deeper site evidence after a parcel warrants investigation, not as a competing
+homepage product. The primary explorer CTA and illustrative decision workspace
+remain useful when featured aerial demos are unavailable.
+
 The Parcel Intelligence surface at `/parcel-intel` is one citywide explorer,
 not five separate borough workspaces. Borough and eligibility filters update the
 same map/list, and selecting a lot opens its overview, underwriting, workflow,

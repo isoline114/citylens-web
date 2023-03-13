@@ -20,7 +20,7 @@ beforeEach(() => {
 });
 
 describe('HomePage', () => {
-  it('renders the outcome-oriented hero copy and the real-output panel', async () => {
+  it('renders the acquisition-first decision flow and deeper evidence panel', async () => {
     mocks.fetchFeaturedDemosOnServer.mockResolvedValueOnce([
       { run_id: 'demo-1', label: 'Brooklyn brownstones', address: '100 E 21st St' },
       { run_id: 'demo-2', label: 'Hudson Yards' },
@@ -33,18 +33,36 @@ describe('HomePage', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: /Find NYC development sites before the broker call/i,
+        name: /Turn the whole NYC market into a defensible weekly shortlist/i,
       }),
     ).toBeInTheDocument();
 
-    expect(screen.getByRole('link', { name: /Explore parcel opportunities/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /See aerial evidence/i })).toBeInTheDocument();
-
-    expect(screen.getByText(/NYC acquisition intelligence · all 5 boroughs/i)).toBeInTheDocument();
-
-    // "What you get per run" — real-output panel
     expect(
-      screen.getByRole('heading', { level: 2, name: /what you get per run/i }),
+      screen.getByRole('link', { name: /Open the NYC opportunity map/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Request a working session/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/NYC acquisition operating system · all five boroughs/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId('acquisition-workspace-preview'),
+    ).toHaveTextContent('Historical rank is a screening order—not seller intent');
+    expect(
+      screen.getByRole('heading', {
+        level: 2,
+        name: /See the market. Commit to the few/i,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Compare before committing')).toBeInTheDocument();
+    expect(screen.getByText('Advance with a reason')).toBeInTheDocument();
+
+    expect(
+      screen.getByRole('heading', {
+        level: 2,
+        name: /When a parcel warrants a deeper site read/i,
+      }),
     ).toBeInTheDocument();
     // Per-class counts from the Brooklyn demo render as semantic text.
     // The same labels appear in the hero legend, so scope by count.
@@ -57,13 +75,16 @@ describe('HomePage', () => {
     expect(screen.getByTestId('run-form')).toBeInTheDocument();
   });
 
-  it('omits the aerial-evidence CTA gracefully when no demos load', async () => {
+  it('keeps the primary acquisition journey intact when no demos load', async () => {
     mocks.fetchFeaturedDemosOnServer.mockResolvedValueOnce([]);
 
     const tree = await HomePage();
     render(tree);
 
-    expect(screen.queryByRole('link', { name: /See aerial evidence/i })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Open the NYC opportunity map/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('acquisition-workspace-preview')).toBeVisible();
     expect(screen.queryByText(/no featured demos found/i)).not.toBeInTheDocument();
   });
 });

@@ -817,16 +817,16 @@ export function ParcelIntelExplorer({
                 <div>
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-sky-800">
                     <Sparkles className="h-4 w-4" />
-                    Start your acquisition pipeline
+                    Build your first evidence-backed shortlist
                   </div>
                   <h3 className="mt-1 text-base font-semibold text-slate-950">
-                    Turn one ranked parcel into a worked lead.
+                    Compare before you commit team time.
                   </h3>
                   <ol className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-600">
                     {[
-                      'Review the parcel evidence',
-                      'Save the lead',
-                      'Assign a teammate and dated next action',
+                      'Open a current lead',
+                      'Add a second parcel to Compare',
+                      'Save only the one worth next diligence',
                     ].map((step, index) => (
                       <li key={step} className="flex items-center gap-2">
                         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-100 text-[10px] font-bold text-sky-800">
@@ -846,7 +846,7 @@ export function ParcelIntelExplorer({
                   }}
                   className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-4 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Open highest-ranked lead
+                  Open the first lead
                   <ArrowUpRight className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -881,15 +881,16 @@ export function ParcelIntelExplorer({
 
       {!isAuthenticated && auth.status !== 'loading' && (
         <div className="hidden items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-950 sm:flex md:px-7">
-          <span>
-            You&apos;re viewing the top public slice from each borough. A free account
-            unlocks the broader five-borough candidate set and parcel workspaces.
+          <span className="leading-5">
+            <strong>Try the public decision flow:</strong> open a parcel, add it
+            to Compare, then choose a second. A free account unlocks the
+            broader inventory and private workflow.
           </span>
           <Link
             href="/sign-in?next=%2Fparcel-intel"
             className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md bg-slate-950 px-3 text-xs font-medium text-white hover:bg-slate-800"
           >
-            Sign in for the full map
+            Sign in for the full workspace
             <ArrowUpRight className="h-3.5 w-3.5" />
           </Link>
         </div>
