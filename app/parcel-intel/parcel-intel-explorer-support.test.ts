@@ -52,6 +52,8 @@ const filters: ExplorerFilters = {
   priority: 'all',
   siteType: 'all',
   signals: [],
+  minLotAreaSqft: null,
+  minUnusedFloorAreaSqft: null,
   query: '',
   ownerPortfolioId: null,
 };
@@ -79,6 +81,44 @@ describe('parcel citywide explorer support', () => {
         query: 'downtown',
       }).map((item) => item.bbl),
     ).toEqual(['1000010001']);
+  });
+
+  it('requires source-backed numeric site criteria and excludes missing values', () => {
+    const rows = [
+      row({
+        bbl: 'meets-both',
+        citywide_rank: 8,
+        lot_area_sqft: 5_000,
+        unused_floor_area_sqft: 10_000,
+      }),
+      row({
+        bbl: 'lot-too-small',
+        citywide_rank: 2,
+        lot_area_sqft: 4_999,
+        unused_floor_area_sqft: 20_000,
+      }),
+      row({
+        bbl: 'capacity-too-small',
+        citywide_rank: 1,
+        lot_area_sqft: 8_000,
+        unused_floor_area_sqft: 9_999,
+      }),
+      row({
+        bbl: 'capacity-missing',
+        citywide_rank: 3,
+        lot_area_sqft: 8_000,
+        unused_floor_area_sqft: null,
+      }),
+    ];
+
+    const result = filterExplorerRows(rows, {
+      ...filters,
+      minLotAreaSqft: 5_000,
+      minUnusedFloorAreaSqft: 10_000,
+    });
+
+    expect(result.map((item) => item.bbl)).toEqual(['meets-both']);
+    expect(result[0]?.citywide_rank).toBe(8);
   });
 
   it('sorts priority rank first and score second', () => {

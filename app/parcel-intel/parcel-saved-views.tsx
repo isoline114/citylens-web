@@ -57,7 +57,18 @@ function suggestedName(draft: SavedViewDraft): string {
           draft.filters.signals.length === 1 ? '' : 's'
         }`
       : '';
-  return `${scope} · ${siteTypeLabel(draft.filters.siteType)}${signalSuffix}`;
+  const criteriaCount =
+    Number(draft.filters.minLotAreaSqft !== null) +
+    Number(draft.filters.minUnusedFloorAreaSqft !== null);
+  const criteriaSuffix =
+    criteriaCount > 0
+      ? ` + ${criteriaCount} site ${
+          criteriaCount === 1 ? 'criterion' : 'criteria'
+        }`
+      : '';
+  return `${scope} · ${siteTypeLabel(
+    draft.filters.siteType,
+  )}${signalSuffix}${criteriaSuffix}`;
 }
 
 export function ParcelSavedViewsPanel({
@@ -123,6 +134,9 @@ export function ParcelSavedViewsPanel({
           opportunity: 'all',
           site_type: currentView.filters.siteType,
           signals: currentView.filters.signals,
+          min_lot_area_sqft: currentView.filters.minLotAreaSqft,
+          min_unused_floor_area_sqft:
+            currentView.filters.minUnusedFloorAreaSqft,
           owner_portfolio_id: currentView.filters.ownerPortfolioId,
           overlay: currentView.overlay,
         },
@@ -219,6 +233,19 @@ export function ParcelSavedViewsPanel({
                 {signalLabel(signal)}
               </span>
             ))}
+            {currentView.filters.minLotAreaSqft !== null && (
+              <span className="rounded-full bg-emerald-400/15 px-2 py-1 text-emerald-100">
+                Lot ≥{' '}
+                {currentView.filters.minLotAreaSqft.toLocaleString()} sf
+              </span>
+            )}
+            {currentView.filters.minUnusedFloorAreaSqft !== null && (
+              <span className="rounded-full bg-emerald-400/15 px-2 py-1 text-emerald-100">
+                Unused FAR ≥{' '}
+                {currentView.filters.minUnusedFloorAreaSqft.toLocaleString()}{' '}
+                sf
+              </span>
+            )}
             <span className="rounded-full bg-white/10 px-2 py-1">
               {currentView.overlay} overlay
             </span>
@@ -305,7 +332,9 @@ export function ParcelSavedViewsPanel({
                         Search: “{view.filters.query}”
                       </p>
                     )}
-                    {dimensions.signals.length > 0 && (
+                    {(dimensions.signals.length > 0 ||
+                      view.filters.min_lot_area_sqft ||
+                      view.filters.min_unused_floor_area_sqft) && (
                       <div className="mt-2 flex flex-wrap gap-1">
                         {dimensions.signals.map((signal) => (
                           <span
@@ -315,6 +344,20 @@ export function ParcelSavedViewsPanel({
                             {signalLabel(signal)}
                           </span>
                         ))}
+                        {view.filters.min_lot_area_sqft && (
+                          <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-[10px] text-emerald-100">
+                            Lot ≥{' '}
+                            {view.filters.min_lot_area_sqft.toLocaleString()}{' '}
+                            sf
+                          </span>
+                        )}
+                        {view.filters.min_unused_floor_area_sqft && (
+                          <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-[10px] text-emerald-100">
+                            Unused FAR ≥{' '}
+                            {view.filters.min_unused_floor_area_sqft.toLocaleString()}{' '}
+                            sf
+                          </span>
+                        )}
                       </div>
                     )}
                     <button

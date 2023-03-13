@@ -17,6 +17,7 @@ const mapRows = [
     opportunity_category: 'ground_up_candidate',
     score_calibrated: 0.42,
     lot_area_sqft: 5_000,
+    unused_floor_area_sqft: 12_000,
     land_use: '01',
     assemblage_lot_count: 3,
     owner_portfolio_lot_count: 4,
@@ -36,6 +37,7 @@ const mapRows = [
     opportunity_category: 'vacant_site',
     score_calibrated: 0.31,
     lot_area_sqft: 7_500,
+    unused_floor_area_sqft: 5_000,
     land_use: '11',
   },
 ];
@@ -167,6 +169,15 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   await expect(
     page.getByRole('button', { name: /Owner concentration \+ assemblage/i }),
   ).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Reset' }).click();
+  await page.getByRole('button', { name: /^Site criteria$/ }).click();
+  await page.getByLabel('Minimum lot area').selectOption('5000');
+  await page
+    .getByLabel('Minimum unused FAR proxy')
+    .selectOption('10000');
+  await expect(page.getByTestId('screen-intelligence')).toContainText(
+    '12k sf',
+  );
   await page.getByRole('button', { name: 'Reset' }).click();
 
   const ranking = page.locator('#parcel-acquisition-ranking');

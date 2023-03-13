@@ -403,6 +403,67 @@ describe('ParcelIntelExplorer', () => {
     );
   });
 
+  it('applies PLUTO site criteria without silently passing missing values', async () => {
+    mocks.authStatus = 'authenticated';
+    mocks.getParcelIntelMap.mockResolvedValue({
+      rows: [
+        row('3000010001', 'brooklyn', {
+          lot_area_sqft: 5_000,
+          unused_floor_area_sqft: 12_000,
+        }),
+        row('3000010002', 'brooklyn', {
+          lot_area_sqft: 4_000,
+          unused_floor_area_sqft: 20_000,
+        }),
+        row('4000010001', 'queens', {
+          lot_area_sqft: 10_000,
+          unused_floor_area_sqft: null,
+        }),
+      ],
+      generated_at: '2026-07-26T00:00:00Z',
+    });
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /^Site criteria$/i }),
+    );
+    fireEvent.change(screen.getByLabelText('Minimum lot area'), {
+      target: { value: '5000' },
+    });
+    fireEvent.change(screen.getByLabelText('Minimum unused FAR proxy'), {
+      target: { value: '10000' },
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('citywide-map-stub')).toHaveTextContent(
+        '1 mapped rows',
+      ),
+    );
+    expect(screen.getByTestId('screen-intelligence')).toHaveTextContent(
+      '12k sf',
+    );
+    expect(screen.getByText(
+      /screening proxies, not surveyed area or buildable yield/i,
+    )).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Site criteria (2 active)',
+      }),
+    );
+    expect(
+      screen.getByRole('button', {
+        name: 'Remove minimum lot area criterion',
+      }),
+    ).toHaveTextContent('Lot ≥ 5,000 sf');
+    expect(
+      screen.getByRole('button', {
+        name: 'Remove minimum unused FAR proxy criterion',
+      }),
+    ).toHaveTextContent('Unused FAR ≥ 10,000 sf');
+  });
+
   it('guides a first-time signed-in user directly into the highest-ranked lead', async () => {
     mocks.authStatus = 'authenticated';
     mocks.getParcelWorkflowActions.mockResolvedValue({
@@ -468,6 +529,8 @@ describe('ParcelIntelExplorer', () => {
           query: 'test site',
           priority: 'highest',
           opportunity: 'vacant_site',
+          min_lot_area_sqft: 5_000,
+          min_unused_floor_area_sqft: 10_000,
           owner_portfolio_id: null,
           overlay: 'opportunity',
         },
@@ -488,6 +551,13 @@ describe('ParcelIntelExplorer', () => {
     expect(screen.getByLabelText('Filter by priority')).toHaveValue('highest');
     expect(screen.getByLabelText('Filter by site type')).toHaveValue(
       'vacant_site',
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Site criteria (2 active)' }),
+    );
+    expect(screen.getByLabelText('Minimum lot area')).toHaveValue('5000');
+    expect(screen.getByLabelText('Minimum unused FAR proxy')).toHaveValue(
+      '10000',
     );
     await waitFor(() =>
       expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(

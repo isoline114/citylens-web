@@ -17,6 +17,7 @@ import {
   LoaderCircle,
   LockKeyhole,
   MapPinned,
+  Ruler,
   Search,
   Sparkles,
   TrendingUp,
@@ -80,6 +81,8 @@ const DEFAULT_FILTERS: ExplorerFilters = {
   priority: 'all',
   siteType: 'uncommitted',
   signals: [],
+  minLotAreaSqft: null,
+  minUnusedFloorAreaSqft: null,
   query: '',
   ownerPortfolioId: null,
 };
@@ -95,6 +98,15 @@ const EXPLORER_SIGNALS: ExplorerSignal[] = [
   'floodplain',
   'environmental_review',
   'mih',
+];
+
+const LOT_AREA_THRESHOLDS_SQFT = [2_500, 5_000, 10_000, 20_000, 50_000];
+const UNUSED_FAR_THRESHOLDS_SQFT = [
+  5_000,
+  10_000,
+  25_000,
+  50_000,
+  100_000,
 ];
 
 const INITIAL_LEAD_LIMIT = 30;
@@ -184,6 +196,7 @@ export function ParcelIntelExplorer({
   const [actionsOpen, setActionsOpen] = useState(false);
   const [savedViewsOpen, setSavedViewsOpen] = useState(false);
   const [signalFiltersOpen, setSignalFiltersOpen] = useState(false);
+  const [siteCriteriaOpen, setSiteCriteriaOpen] = useState(false);
   const [comparisonRows, setComparisonRows] = useState<ParcelIntelRow[]>([]);
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [workflowActions, setWorkflowActions] =
@@ -432,17 +445,28 @@ export function ParcelIntelExplorer({
             priority: recipe.priority,
             siteType: recipe.siteType,
             signals: recipe.signals,
+            minLotAreaSqft: filters.minLotAreaSqft,
+            minUnusedFloorAreaSqft: filters.minUnusedFloorAreaSqft,
             query: filters.query,
             ownerPortfolioId: null,
           }).length,
         ]),
       ) as Record<ExplorerScreenRecipe['id'], number>,
-    [filters.borough, filters.query, rows],
+    [
+      filters.borough,
+      filters.minLotAreaSqft,
+      filters.minUnusedFloorAreaSqft,
+      filters.query,
+      rows,
+    ],
   );
   const activeScreenRecipe =
     EXPLORER_SCREEN_RECIPES.find((recipe) =>
       isScreenRecipeActive(filters, recipe),
     ) ?? null;
+  const activeSiteCriteriaCount =
+    Number(filters.minLotAreaSqft !== null) +
+    Number(filters.minUnusedFloorAreaSqft !== null);
   const uncommittedCount = useMemo(
     () =>
       filterExplorerRows(rows, {
@@ -458,6 +482,8 @@ export function ParcelIntelExplorer({
     filters.priority !== DEFAULT_FILTERS.priority ||
     filters.siteType !== DEFAULT_FILTERS.siteType ||
     filters.signals.length > 0 ||
+    filters.minLotAreaSqft !== null ||
+    filters.minUnusedFloorAreaSqft !== null ||
     filters.query !== DEFAULT_FILTERS.query ||
     filters.ownerPortfolioId !== null;
 
@@ -685,6 +711,9 @@ export function ParcelIntelExplorer({
       priority: view.filters.priority,
       siteType: dimensions.siteType,
       signals: dimensions.signals,
+      minLotAreaSqft: view.filters.min_lot_area_sqft ?? null,
+      minUnusedFloorAreaSqft:
+        view.filters.min_unused_floor_area_sqft ?? null,
       query: view.filters.query,
       ownerPortfolioId: view.filters.owner_portfolio_id,
     });
@@ -1012,8 +1041,8 @@ export function ParcelIntelExplorer({
       )}
 
       <div className="border-b border-slate-200 bg-slate-50 px-4 py-3.5 md:px-6">
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-[minmax(220px,1.4fr)_repeat(3,minmax(150px,0.7fr))_auto]">
-          <label className="relative col-span-2 md:col-span-1">
+        <div className="grid grid-cols-2 gap-2 xl:grid-cols-[minmax(220px,1.4fr)_repeat(3,minmax(150px,0.7fr))_auto]">
+          <label className="relative col-span-2 xl:col-span-1">
             <span className="sr-only">Search parcels</span>
             <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <input
@@ -1072,10 +1101,13 @@ export function ParcelIntelExplorer({
               <option value="active_project">Active projects</option>
             </select>
           </label>
-          <div className="flex gap-2">
+          <div className="col-span-2 flex flex-wrap gap-2 xl:col-span-1 xl:flex-nowrap">
             <button
               type="button"
-              onClick={() => setSignalFiltersOpen((value) => !value)}
+              onClick={() => {
+                setSignalFiltersOpen((value) => !value);
+                setSiteCriteriaOpen(false);
+              }}
               aria-expanded={signalFiltersOpen}
               aria-controls="parcel-signal-filters"
               className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-semibold ${
@@ -1089,6 +1121,33 @@ export function ParcelIntelExplorer({
               {filters.signals.length > 0 && (
                 <span className="rounded-full bg-sky-700 px-1.5 py-0.5 text-[10px] text-white">
                   {filters.signals.length}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSiteCriteriaOpen((value) => !value);
+                setSignalFiltersOpen(false);
+              }}
+              aria-label={
+                activeSiteCriteriaCount > 0
+                  ? `Site criteria (${activeSiteCriteriaCount} active)`
+                  : 'Site criteria'
+              }
+              aria-expanded={siteCriteriaOpen}
+              aria-controls="parcel-site-criteria"
+              className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-semibold ${
+                siteCriteriaOpen || activeSiteCriteriaCount > 0
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-950'
+                  : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <Ruler className="h-3.5 w-3.5" />
+              Site criteria
+              {activeSiteCriteriaCount > 0 && (
+                <span className="rounded-full bg-emerald-700 px-1.5 py-0.5 text-[10px] text-white">
+                  {activeSiteCriteriaCount}
                 </span>
               )}
             </button>
@@ -1228,6 +1287,99 @@ export function ParcelIntelExplorer({
             )}
           </div>
         )}
+        {siteCriteriaOpen && (
+          <div
+            id="parcel-site-criteria"
+            className="mt-3 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-3 shadow-sm"
+          >
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-950">
+                  <Ruler className="h-3.5 w-3.5 text-emerald-700" />
+                  Source-backed site criteria
+                </div>
+                <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
+                  Missing values do not pass a minimum. These PLUTO fields are
+                  screening proxies, not surveyed area or buildable yield.
+                </p>
+              </div>
+              {activeSiteCriteriaCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFilters((current) => ({
+                      ...current,
+                      minLotAreaSqft: null,
+                      minUnusedFloorAreaSqft: null,
+                    }))
+                  }
+                  className="text-xs font-semibold text-emerald-800 hover:text-emerald-950"
+                >
+                  Clear site criteria
+                </button>
+              )}
+            </div>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <label className="rounded-xl border border-white bg-white/80 p-3 shadow-sm">
+                <span className="text-[11px] font-semibold text-slate-900">
+                  Minimum lot area
+                </span>
+                <select
+                  aria-label="Minimum lot area"
+                  value={filters.minLotAreaSqft ?? ''}
+                  onChange={(event) =>
+                    updateFilter(
+                      'minLotAreaSqft',
+                      event.target.value
+                        ? Number(event.target.value)
+                        : null,
+                    )
+                  }
+                  className="mt-2 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                >
+                  <option value="">Any PLUTO lot area</option>
+                  {LOT_AREA_THRESHOLDS_SQFT.map((value) => (
+                    <option key={value} value={value}>
+                      {value.toLocaleString()}+ sf
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1.5 block text-[10px] leading-4 text-slate-500">
+                  Current PLUTO tax-lot area; not a survey.
+                </span>
+              </label>
+              <label className="rounded-xl border border-white bg-white/80 p-3 shadow-sm">
+                <span className="text-[11px] font-semibold text-slate-900">
+                  Minimum unused FAR proxy
+                </span>
+                <select
+                  aria-label="Minimum unused FAR proxy"
+                  value={filters.minUnusedFloorAreaSqft ?? ''}
+                  onChange={(event) =>
+                    updateFilter(
+                      'minUnusedFloorAreaSqft',
+                      event.target.value
+                        ? Number(event.target.value)
+                        : null,
+                    )
+                  }
+                  className="mt-2 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                >
+                  <option value="">Any unused-FAR proxy</option>
+                  {UNUSED_FAR_THRESHOLDS_SQFT.map((value) => (
+                    <option key={value} value={value}>
+                      {value.toLocaleString()}+ sf
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1.5 block text-[10px] leading-4 text-slate-500">
+                  Allowed-FAR minus built-FAR proxy; not feasible development
+                  yield.
+                </span>
+              </label>
+            </div>
+          </div>
+        )}
         {filters.signals.length > 0 && !signalFiltersOpen && (
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
             <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
@@ -1245,6 +1397,38 @@ export function ParcelIntelExplorer({
                 <X className="h-3 w-3" />
               </button>
             ))}
+          </div>
+        )}
+        {activeSiteCriteriaCount > 0 && !siteCriteriaOpen && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              Site criteria
+            </span>
+            {filters.minLotAreaSqft !== null && (
+              <button
+                type="button"
+                onClick={() => updateFilter('minLotAreaSqft', null)}
+                aria-label="Remove minimum lot area criterion"
+                className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-950"
+              >
+                Lot ≥ {filters.minLotAreaSqft.toLocaleString()} sf
+                <X className="h-3 w-3" />
+              </button>
+            )}
+            {filters.minUnusedFloorAreaSqft !== null && (
+              <button
+                type="button"
+                onClick={() =>
+                  updateFilter('minUnusedFloorAreaSqft', null)
+                }
+                aria-label="Remove minimum unused FAR proxy criterion"
+                className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-950"
+              >
+                Unused FAR ≥{' '}
+                {filters.minUnusedFloorAreaSqft.toLocaleString()} sf
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
         )}
         {hasFilters && loadState === 'ready' && (

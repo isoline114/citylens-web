@@ -69,6 +69,8 @@ export type ExplorerFilters = {
   priority: ExplorerPriority;
   siteType: ExplorerSiteType;
   signals: ExplorerSignal[];
+  minLotAreaSqft: number | null;
+  minUnusedFloorAreaSqft: number | null;
   query: string;
   ownerPortfolioId: string | null;
 };
@@ -254,6 +256,20 @@ export function filterExplorerRows<T extends ParcelExplorerRow>(
     ) return false;
     if (
       filters.signals.some((signal) => !rowMatchesSignal(row, signal))
+    ) {
+      return false;
+    }
+    if (
+      filters.minLotAreaSqft !== null &&
+      (typeof row.lot_area_sqft !== 'number' ||
+        row.lot_area_sqft < filters.minLotAreaSqft)
+    ) {
+      return false;
+    }
+    if (
+      filters.minUnusedFloorAreaSqft !== null &&
+      (typeof row.unused_floor_area_sqft !== 'number' ||
+        row.unused_floor_area_sqft < filters.minUnusedFloorAreaSqft)
     ) {
       return false;
     }

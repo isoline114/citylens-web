@@ -1299,6 +1299,8 @@ export type ParcelSavedSearchFilters = {
     | 'recent_change'
     | 'long_held'
   >;
+  min_lot_area_sqft?: number | null;
+  min_unused_floor_area_sqft?: number | null;
   owner_portfolio_id: string | null;
   overlay: 'priority' | 'opportunity' | 'borough';
 };
