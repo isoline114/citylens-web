@@ -1061,4 +1061,21 @@ describe('ParcelIntelExplorer', () => {
       JSON.stringify(mocks.recordParcelProductEvent.mock.calls),
     ).not.toMatch(/1000010001|3000010001|test site/i);
   });
+
+  it('offers an exact screening receipt only after the full inventory is loaded', async () => {
+    mocks.authStatus = 'authenticated';
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    await screen.findByText('2 mapped rows');
+    fireEvent.change(screen.getByLabelText('Search parcels'), {
+      target: { value: '3-05892-0038' },
+    });
+
+    expect(
+      await screen.findByText('Not found in the published 5,000'),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: /check current screening/i }),
+    ).toBeVisible();
+  });
 });

@@ -123,6 +123,15 @@ API. Until that receipt is verified, the interface labels the loaded count as
 incomplete, keeps full-inventory saved-view actions disabled, and offers an
 authenticated retry instead of presenting the 125-row preview as the complete
 workspace.
+For a canonical 10-digit BBL that is absent after that full inventory receipt
+is verified, the signed-in explorer offers an explicit screening lookup
+instead of silently returning zero results. The resulting private receipt
+distinguishes a published lead, an eligible parcel below the 5,000 cutoff, a
+source-backed exclusion, and a parcel outside the evaluated ledger. It
+translates governed reason codes, links official project records, and shows
+source dates without revealing the private bulk ledger, owner identity, score,
+or model rank. Public preview users see a sign-in boundary rather than a
+partial-data conclusion.
 The browser mints the API Bearer JWT through the same-origin
 `/api/auth/token` route using the authoritative HttpOnly Neon session cookie.
 The Neon client helper remains only a fallback: a cached visual session is not

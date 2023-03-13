@@ -73,6 +73,10 @@ import { ParcelWorkflowActionsPanel } from './parcel-workflow-actions';
 import { ParcelSavedViewsPanel } from './parcel-saved-views';
 import { ParcelScreenAudit } from './parcel-screen-audit';
 import {
+  canonicalParcelBbl,
+  ParcelScreeningLookup,
+} from './parcel-screening-lookup';
+import {
   findParcelDecisionPeers,
   type ParcelDecisionPeer,
 } from './parcel-decision-peers';
@@ -470,6 +474,12 @@ export function ParcelIntelExplorer({
     [rows, filters],
   );
   const ranked = useMemo(() => sortExplorerRows(filtered), [filtered]);
+  const screeningLookupBbl = useMemo(() => {
+    const candidate = canonicalParcelBbl(filters.query);
+    return candidate && !rows.some((row) => row.bbl === candidate)
+      ? candidate
+      : null;
+  }, [filters.query, rows]);
   const selectedSummary = useMemo(
     () => rows.find((row) => row.bbl === selectedBbl) ?? null,
     [rows, selectedBbl],
@@ -1814,6 +1824,16 @@ export function ParcelIntelExplorer({
           </section>
         )}
       </div>
+
+      {screeningLookupBbl &&
+        loadState === 'ready' &&
+        auth.status !== 'loading' &&
+        (!isAuthenticated || fullInventoryReady) && (
+          <ParcelScreeningLookup
+            bbl={screeningLookupBbl}
+            isAuthenticated={isAuthenticated}
+          />
+        )}
 
       {failedBoroughs.length > 0 && (
         <div className="border-b border-amber-200 bg-amber-50 px-5 py-2 text-xs text-amber-900">

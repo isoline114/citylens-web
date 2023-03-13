@@ -86,6 +86,7 @@ export type PilotRequestReceipt = {
 
 export type ParcelProductEventName =
   | 'parcel_opened'
+  | 'screening_lookup_completed'
   | 'comparison_opened'
   | 'saved_view_applied'
   | 'decision_audit_opened'
@@ -97,6 +98,7 @@ export type ParcelProductEventName =
 
 export type ParcelProductEventSource =
   | 'direct'
+  | 'screening_lookup'
   | 'map'
   | 'ranking'
   | 'action_queue'
@@ -816,6 +818,50 @@ export type ParcelIntelMapResponse = {
   inventory_complete: boolean;
 };
 
+export type ParcelScreeningStatus = {
+  schema_version: 'citylens/parcel-screening-status@v1';
+  bbl: string;
+  borough:
+    | 'manhattan'
+    | 'brooklyn'
+    | 'queens'
+    | 'bronx'
+    | 'staten_island';
+  result:
+    | 'published_lead'
+    | 'qualified_below_cutoff'
+    | 'screened_out'
+    | 'not_evaluated';
+  evaluated: boolean;
+  published: boolean;
+  acquisition_eligible: boolean | null;
+  acquisition_status:
+    | 'eligible'
+    | 'active_project'
+    | 'completed_project'
+    | 'constrained'
+    | 'incomplete_data'
+    | null;
+  exclusion_reasons: string[];
+  latest_project_filing_year: number | null;
+  latest_project_status: string | null;
+  latest_project_type:
+    | 'new_building'
+    | 'alt_co_new_building'
+    | 'demolition'
+    | 'land_use_entitlement'
+    | null;
+  latest_project_job_number: string | null;
+  latest_project_url: string | null;
+  property_facts_as_of: string | null;
+  ownership_as_of: string | null;
+  project_activity_as_of: string | null;
+  land_use_activity_as_of: string | null;
+  feed_generation: string | null;
+  feed_generated_at: string | null;
+  interpretation: string;
+};
+
 export type ParcelWorkflowStage =
   | 'new'
   | 'reviewing'
@@ -1378,6 +1424,15 @@ export async function getParcelIntelParcel(
     `/v1/parcel-intel/parcel/${encodeURIComponent(bbl)}`,
     undefined,
     { includeAuth: opts?.includeAuth ?? false },
+  );
+}
+
+export async function getParcelScreeningStatus(
+  bbl: string,
+): Promise<ParcelScreeningStatus> {
+  return requestJson<ParcelScreeningStatus>(
+    `/v1/parcel-intel/screening/${encodeURIComponent(bbl)}`,
+    { cache: 'no-store' },
   );
 }
 

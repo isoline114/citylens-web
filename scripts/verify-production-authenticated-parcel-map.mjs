@@ -34,6 +34,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 const mapReceipts = [];
 const consoleErrors = [];
 const pageErrors = [];
+let screeningReceiptVerified = false;
 let passed = false;
 let failure = null;
 
@@ -119,6 +120,25 @@ try {
       'No complete authenticated Parcel Intelligence map response was observed.',
     );
   }
+  await page.getByLabel('Search parcels').fill('3058920038');
+  await page
+    .getByRole('button', { name: 'Check current screening' })
+    .click();
+  const screeningReceipt = page.getByTestId('parcel-screening-receipt');
+  await screeningReceipt.waitFor({ timeout: 15_000 });
+  if (
+    !(await screeningReceipt
+      .getByText('Excluded from the current acquisition inventory')
+      .isVisible()) ||
+    !(await screeningReceipt
+      .getByRole('link', { name: 'Open official record' })
+      .isVisible())
+  ) {
+    throw new Error(
+      'The authenticated exact-BBL screening receipt was incomplete.',
+    );
+  }
+  screeningReceiptVerified = true;
   if (consoleErrors.length > 0 || pageErrors.length > 0) {
     throw new Error(
       `Browser emitted ${consoleErrors.length} console error(s) and ${pageErrors.length} page error(s).`,
@@ -149,6 +169,7 @@ const report = {
   passed,
   failure,
   map_receipts: mapReceipts,
+  screening_receipt_verified: screeningReceiptVerified,
   console_error_count: consoleErrors.length,
   page_error_count: pageErrors.length,
 };

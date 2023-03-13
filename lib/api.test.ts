@@ -10,6 +10,7 @@ import {
   getFeaturedDemos,
   getParcelIntelMap,
   getParcelIntelParcel,
+  getParcelScreeningStatus,
   getParcelWorkflow,
   getParcelWorkflowActions,
   getParcelWorkflowAlerts,
@@ -782,6 +783,24 @@ describe('parcel intelligence progressive reads', () => {
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(url).toContain('/v1/parcel-intel/parcel/3000010001');
     expect(new Headers(init.headers).get('Authorization')).toBe('Bearer tok-abc');
+  });
+
+  it('loads an exact screening receipt privately with the user token', async () => {
+    setAuthTokenGetter(async () => 'tok-abc');
+    const mockFetch = stubFetch({
+      schema_version: 'citylens/parcel-screening-status@v1',
+      bbl: '3058920038',
+      result: 'screened_out',
+    });
+
+    await getParcelScreeningStatus('3058920038');
+
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/v1/parcel-intel/screening/3058920038');
+    expect(new Headers(init.headers).get('Authorization')).toBe(
+      'Bearer tok-abc',
+    );
+    expect(init.cache).toBe('no-store');
   });
 });
 
