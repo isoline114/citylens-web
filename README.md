@@ -16,9 +16,13 @@ baseline captured when a parcel entered the acquisition workflow with the
 current atomic feed and surfaces owner, sale-year, zoning, priority,
 opportunity, lien, violation, flood, imagery, portfolio-size, and
 environmental-designation, MIH mapped-area, and meaningful transit-complex or
-access-tier changes, plus feed-removal changes. Distance-only centroid noise
-does not create a transit alert. A feed-removal alert asks the user to verify current
-official records; it never invents a disposition or seller-intent claim.
+access-tier changes, plus feed-removal changes. For current-generation feeds,
+the change center distinguishes source-backed project/constraint/data
+exclusions from leads that remain eligible below the published cutoff. It shows
+human-readable reason codes, source dates, exact official-record links, and a
+conservative next action. An absent ledger record remains explicitly
+unresolved; the client never invents a disposition or seller-intent claim.
+Distance-only centroid noise does not create a transit alert.
 The explorer renders its public preview immediately, upgrades authenticated
 users with one compact 5,000-row citywide request, and fetches polygon,
 explanation, provenance, and underwriting detail only when a parcel is opened.

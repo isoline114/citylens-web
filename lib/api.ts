@@ -1105,6 +1105,8 @@ export type ParcelWorkflowAlert = {
   borough: string;
   code:
     | 'removed_from_current_feed'
+    | 'screened_out_of_current_feed'
+    | 'eligible_below_published_cutoff'
     | 'owner_changed'
     | 'newer_sale_record'
     | 'zoning_changed'
@@ -1125,16 +1127,37 @@ export type ParcelWorkflowAlert = {
   field: string;
   before: unknown;
   after: unknown;
+  current_disposition?:
+    | 'published'
+    | 'eligible_below_cutoff'
+    | 'screened_out'
+    | 'not_evaluated'
+    | null;
+  reason_codes?: string[];
+  recommended_action?: string | null;
+  source_evidence?: {
+    source: string;
+    as_of: string | null;
+    url: string | null;
+    supports: string;
+  }[];
+  parcel_available?: boolean;
 };
 
 export type ParcelWorkflowAlerts = {
-  schema_version: 'citylens/parcel-workflow-alerts@v1';
+  schema_version:
+    | 'citylens/parcel-workflow-alerts@v1'
+    | 'citylens/parcel-workflow-alerts@v2';
   generated_at: string;
   feed_generated_at: string | null;
   watched_count: number;
   changed_lead_count: number;
   alert_count: number;
   removed_from_feed_count: number;
+  resolved_exit_count?: number;
+  unresolved_exit_count?: number;
+  screened_out_count?: number;
+  eligible_below_cutoff_count?: number;
   severity_counts: Record<'urgent' | 'high' | 'medium' | 'low', number>;
   alerts: ParcelWorkflowAlert[];
   warnings: string[];

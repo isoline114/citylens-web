@@ -360,6 +360,62 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     },
   );
 
+  await page.route(
+    '**/v1/parcel-intel/workflow/alerts',
+    async (route) => {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          schema_version: 'citylens/parcel-workflow-alerts@v2',
+          generated_at: '2026-07-24T03:16:26Z',
+          feed_generated_at: '2026-07-24T02:43:29Z',
+          watched_count: 2,
+          changed_lead_count: 1,
+          alert_count: 1,
+          removed_from_feed_count: 1,
+          resolved_exit_count: 1,
+          unresolved_exit_count: 0,
+          screened_out_count: 1,
+          eligible_below_cutoff_count: 0,
+          severity_counts: {
+            urgent: 1,
+            high: 0,
+            medium: 0,
+            low: 0,
+          },
+          alerts: [
+            {
+              bbl: '3058920038',
+              borough: 'brooklyn',
+              code: 'screened_out_of_current_feed',
+              severity: 'urgent',
+              title: 'Current project activity now screens out this lead',
+              detail:
+                'The current source-backed screen identifies active or recently approved project activity. Official project 2023K0205 is attached.',
+              field: 'acquisition_eligible',
+              before: true,
+              after: false,
+              current_disposition: 'screened_out',
+              reason_codes: ['approved_land_use_project'],
+              recommended_action:
+                'Review the cited project record before changing the lead disposition.',
+              source_evidence: [
+                {
+                  source: 'NYC ZAP project activity',
+                  as_of: '2026-07-24',
+                  url: 'https://zap.planning.nyc.gov/projects/2023K0205',
+                  supports: 'approved_land_use_project',
+                },
+              ],
+              parcel_available: false,
+            },
+          ],
+          warnings: [],
+        }),
+      });
+    },
+  );
+
   await page.route('**/v1/parcel-intel/saved-searches**', async (route) => {
     const method = route.request().method();
     const url = new URL(route.request().url());
@@ -706,6 +762,25 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     page.getByLabel('2 workflow items need attention'),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Close action queue' }).click();
+
+  await page.getByRole('button', { name: 'Watchlist changes' }).click();
+  await expect(page.getByTestId('watchlist-exit-coverage')).toContainText(
+    '1 feed exit has a current screening explanation',
+  );
+  const exitAlert = page.getByTestId(
+    'watchlist-alert-3058920038-screened_out_of_current_feed',
+  );
+  await expect(exitAlert).toContainText('Official project 2023K0205');
+  await expect(exitAlert).toContainText('Approved Land Use Project');
+  await expect(exitAlert.getByRole('link', { name: 'Official record' }))
+    .toHaveAttribute(
+      'href',
+      'https://zap.planning.nyc.gov/projects/2023K0205',
+    );
+  await expect(
+    exitAlert.getByRole('button', { name: 'Open parcel' }),
+  ).toHaveCount(0);
+  await page.getByRole('button', { name: 'Close watchlist changes' }).click();
 
   await page.getByRole('button', { name: /100 E 21 STREET/i }).click();
   await expect(page.getByTestId('workflow-quick-save')).toHaveText('Save lead');
