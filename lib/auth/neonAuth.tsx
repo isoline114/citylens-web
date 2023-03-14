@@ -58,10 +58,16 @@ export function NeonAuthProvider({ children }: { children: ReactNode }) {
     }).signOut();
   }, []);
 
-  const getAccessToken = useCallback(async (): Promise<string | null> => {
+  const getAccessToken = useCallback(async (options?: {
+    forceRefresh?: boolean;
+  }): Promise<string | null> => {
     if (!sessionData) return null;
 
     const sessionToken = sessionData.session.token;
+    const forceRefresh = options?.forceRefresh === true;
+    if (forceRefresh) {
+      cachedJwt.current = null;
+    }
     const cached = cachedJwt.current;
     const now = Date.now();
     if (
@@ -112,8 +118,21 @@ export function NeonAuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    if (forceRefresh) {
+      // A 401 from the CityLens API means the previously minted JWT is no
+      // longer authoritative even when its local `exp` has not elapsed.
+      // Refresh the upstream Neon session before minting its replacement.
+      try {
+        await refetchSession({
+          query: { disableCookieCache: true },
+        });
+      } catch {
+        // The token request below is the authoritative result.
+      }
+    }
+
     let token = await requestToken();
-    if (!token) {
+    if (!token && !forceRefresh) {
       // A signed session_data cookie can briefly outlive or lag the upstream
       // session token. Force one upstream session validation and retry JWT
       // minting before declaring the API credential unavailable.

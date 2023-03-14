@@ -88,6 +88,44 @@ describe('NeonAuthProvider access token recovery', () => {
     expect(mocks.refetch).not.toHaveBeenCalled();
   });
 
+  it('invalidates a cached JWT and refreshes Neon when the API rejects it', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ token: 'stale.payload.signature' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ token: 'fresh.payload.signature' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+    let auth: AuthContextValue | null = null;
+    render(
+      <NeonAuthProvider>
+        <Probe onValue={(value) => { auth = value; }} />
+      </NeonAuthProvider>,
+    );
+
+    let stale: string | null = null;
+    let fresh: string | null = null;
+    await act(async () => {
+      stale = await auth?.getAccessToken() ?? null;
+      fresh = await auth?.getAccessToken({ forceRefresh: true }) ?? null;
+    });
+
+    expect(stale).toBe('stale.payload.signature');
+    expect(fresh).toBe('fresh.payload.signature');
+    expect(mocks.refetch).toHaveBeenCalledOnce();
+    expect(mocks.refetch).toHaveBeenCalledWith({
+      query: { disableCookieCache: true },
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
   it('force-validates the session and retries one failed JWT mint', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')

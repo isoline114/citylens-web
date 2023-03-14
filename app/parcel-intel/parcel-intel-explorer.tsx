@@ -330,7 +330,12 @@ export function ParcelIntelExplorer({
         generatedAt: response.generated_at,
         feedGeneration: response.feed_generation ?? null,
         fullInventoryVerified,
-        issue: includeAuth && !fullInventoryVerified ? 'response' : null,
+        issue:
+          includeAuth && !fullInventoryVerified
+            ? response.access_scope === 'public_preview'
+              ? 'auth'
+              : 'response'
+            : null,
       };
 
       if (!includeAuth || fullInventoryVerified) return mapResult;

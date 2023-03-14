@@ -190,6 +190,66 @@ describe('api client', () => {
     );
   });
 
+  it('refreshes a rejected JWT once before returning the full parcel map', async () => {
+    const getToken = vi
+      .fn()
+      .mockResolvedValueOnce('stale-token')
+      .mockResolvedValueOnce('fresh-token');
+    setAuthTokenGetter(getToken);
+    const observedAuthorization: Array<string | null> = [];
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(async (_url, init) => {
+        observedAuthorization.push(
+          new Headers((init as RequestInit | undefined)?.headers).get(
+            'Authorization',
+          ),
+        );
+        return new Response(
+          JSON.stringify({ detail: 'Invalid or expired token' }),
+          {
+            status: 401,
+            headers: { 'content-type': 'application/json' },
+          },
+        );
+      })
+      .mockImplementationOnce(async (_url, init) => {
+        observedAuthorization.push(
+          new Headers((init as RequestInit | undefined)?.headers).get(
+            'Authorization',
+          ),
+        );
+        return new Response(
+          JSON.stringify({
+            rows: [],
+            generated_at: '2026-07-27T03:03:01Z',
+            feed_generation: '20260727T030301000000Z-a32b245a82db',
+            access_scope: 'authenticated_full',
+            requested_top_per_borough: 1000,
+            returned_count: 0,
+            available_count: 0,
+            inventory_complete: true,
+          }),
+          {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          },
+        );
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await getParcelIntelMap(1000, { includeAuth: true });
+
+    expect(result.access_scope).toBe('authenticated_full');
+    expect(getToken).toHaveBeenNthCalledWith(1, undefined);
+    expect(getToken).toHaveBeenNthCalledWith(2, { forceRefresh: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(observedAuthorization).toEqual([
+      'Bearer stale-token',
+      'Bearer fresh-token',
+    ]);
+  });
+
   it('persists and deletes a citywide saved view with bearer auth', async () => {
     const savedView = {
       schema_version: 'citylens/parcel-saved-view@v2',

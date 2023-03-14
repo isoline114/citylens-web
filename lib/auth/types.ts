@@ -12,7 +12,9 @@ export type AuthState =
 export type AuthActions = {
   signIn: (email?: string) => Promise<void> | void;
   signOut: () => Promise<void> | void;
-  getAccessToken: () => Promise<string | null>;
+  getAccessToken: (options?: {
+    forceRefresh?: boolean;
+  }) => Promise<string | null>;
 };
 
 export type AuthContextValue = AuthState & AuthActions;

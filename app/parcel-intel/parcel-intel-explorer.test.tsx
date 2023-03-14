@@ -502,6 +502,12 @@ describe('ParcelIntelExplorer', () => {
     const alert = await screen.findByTestId('parcel-inventory-incomplete');
     expect(alert).toHaveTextContent('125 loaded parcels');
     expect(alert).toHaveTextContent('5,000-parcel workspace');
+    expect(alert).toHaveTextContent(
+      'account session is visible, but its data-access credential could not be refreshed',
+    );
+    expect(
+      screen.getByRole('button', { name: 'Reconnect account' }),
+    ).toBeInTheDocument();
     expect(screen.getByTestId('parcel-inventory-status')).toHaveTextContent(
       'Inventory incomplete · 125 of 5,000 loaded',
     );

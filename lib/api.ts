@@ -134,16 +134,20 @@ export class ApiError extends Error {
   }
 }
 
-type TokenGetter = () => Promise<string | null> | string | null;
+type TokenGetter = (options?: {
+  forceRefresh?: boolean;
+}) => Promise<string | null> | string | null;
 let tokenGetter: TokenGetter | null = null;
 
 export function setAuthTokenGetter(getter: TokenGetter | null): void {
   tokenGetter = getter;
 }
 
-async function resolveAuthToken(): Promise<string | null> {
+async function resolveAuthToken(options?: {
+  forceRefresh?: boolean;
+}): Promise<string | null> {
   if (!tokenGetter) return null;
-  const result = tokenGetter();
+  const result = tokenGetter(options);
   return result instanceof Promise ? result : result;
 }
 
@@ -214,12 +218,27 @@ async function requestJson<T>(
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  let res: Response;
-  try {
-    res = await fetch(url, { ...init, headers });
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    throw new ApiError(`Network error while calling ${path}: ${msg}`);
+  const send = async (): Promise<Response> => {
+    try {
+      return await fetch(url, { ...init, headers });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new ApiError(`Network error while calling ${path}: ${msg}`);
+    }
+  };
+
+  let res = await send();
+  if (includeAuth && res.status === 401) {
+    // A JWT can be revoked or become invalid before its embedded expiry. Do
+    // not let every Parcel Intelligence recovery attempt reuse that rejected
+    // token and strand a visibly signed-in user on the 125-row public map.
+    // Auth is rejected before route handlers run, so one credential-refresh
+    // replay is safe for the JSON mutations supported by this client.
+    const refreshedToken = await resolveAuthToken({ forceRefresh: true });
+    if (refreshedToken) {
+      headers.set('Authorization', `Bearer ${refreshedToken}`);
+      res = await send();
+    }
   }
 
   const contentType = res.headers.get('content-type') ?? '';
