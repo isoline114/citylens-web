@@ -392,6 +392,12 @@ describe('ParcelIntelExplorer', () => {
       [expect.objectContaining({ bbl: '1000010001' })],
       'citywide-map-view',
     );
+    expect(screen.getByTestId('parcel-export-receipt')).toHaveTextContent(
+      'Downloaded 1 unique parcel',
+    );
+    expect(screen.getByTestId('parcel-export-receipt')).toHaveTextContent(
+      'Jul 19, 2026, 12:00 AM UTC snapshot',
+    );
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Show all matches · 2' }),
@@ -399,6 +405,32 @@ describe('ParcelIntelExplorer', () => {
     expect(
       screen.getByRole('button', { name: /brooklyn test site/i }),
     ).toBeInTheDocument();
+  });
+
+  it('fails closed when export feeds do not match the loaded map generation', async () => {
+    mocks.getParcelIntelSweep.mockImplementation(async (borough: string) => ({
+      borough,
+      rows: [
+        row(
+          borough === 'manhattan' ? '1000010001' : '3000010001',
+          borough === 'manhattan' ? 'MN' : 'BK',
+        ),
+      ],
+      generated_at: '2026-07-20T00:00:00Z',
+      model_metadata: {},
+    }));
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    await screen.findByText('2 mapped rows');
+    fireEvent.click(screen.getByRole('button', { name: 'CSV' }));
+
+    const alert = await screen.findByTestId('parcel-export-receipt');
+    expect(alert).toHaveAttribute('role', 'alert');
+    expect(alert).toHaveTextContent(
+      'A newer parcel snapshot became available while this map was open',
+    );
+    expect(mocks.downloadCsv).not.toHaveBeenCalled();
   });
 
   it('keeps the mobile ranking compact until the user expands it', async () => {

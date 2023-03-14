@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 
 const BOROUGH_CENTERS = {
@@ -50,6 +51,19 @@ test('clusters the citywide preview and converges borough URLs on one explorer',
       }),
     });
   });
+  await page.route('**/v1/parcel-intel/sweep?**', async (route) => {
+    const borough = new URL(route.request().url()).searchParams.get('borough');
+    const sweepRows = rows.filter((row) => row.borough === borough);
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        borough,
+        generated_at: '2026-07-27T09:55:59.858344Z',
+        rows: sweepRows,
+        model_metadata: {},
+      }),
+    });
+  });
 
   await page.goto('/parcel-intel');
 
@@ -82,6 +96,20 @@ test('clusters the citywide preview and converges borough URLs on one explorer',
     .getByRole('button', { name: 'Fit the map to all matching parcels' })
     .click();
   await expect(page.locator('.parcel-map-cluster-icon')).toHaveCount(5);
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'CSV' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe(
+    'parcel-intel-citywide-top125.csv',
+  );
+  const downloadPath = await download.path();
+  expect(downloadPath).not.toBeNull();
+  const csv = await fs.readFile(downloadPath as string, 'utf8');
+  expect(csv.split('\n')).toHaveLength(126);
+  await expect(page.getByTestId('parcel-export-receipt')).toContainText(
+    'Downloaded 125 unique parcels',
+  );
 
   await page.goto('/parcel-intel/queens');
   await expect(page).toHaveURL(/\/parcel-intel\?borough=queens$/);

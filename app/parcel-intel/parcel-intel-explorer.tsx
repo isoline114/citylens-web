@@ -10,6 +10,7 @@ import {
   Bookmark,
   Building2,
   CalendarClock,
+  CheckCircle2,
   Columns3,
   Download,
   Filter,
@@ -65,6 +66,10 @@ import {
   type ExplorerSiteType,
 } from './parcel-intel-explorer-support';
 import { downloadCsv } from './[borough]/parcel-intel-csv';
+import {
+  checkParcelExportIntegrity,
+  type ParcelExportIntegrityFailure,
+} from './parcel-export-integrity';
 import { ParcelIntelPropertyPanel } from './parcel-intel-property-panel';
 import { ParcelAddressResolver } from './parcel-address-resolver';
 import { ParcelOfficialDossierPanel } from './parcel-official-dossier';
@@ -142,6 +147,10 @@ type LoadState = 'idle' | 'loading' | 'ready' | 'error';
 type DetailState = 'idle' | 'loading' | 'ready' | 'error';
 type InventoryState = 'preview' | 'upgrading' | 'full' | 'incomplete';
 type InventoryIssue = 'auth' | 'response' | 'network' | null;
+type ExportNotice = {
+  kind: 'success' | 'error';
+  message: string;
+};
 
 type ExplorerLoadResult = {
   rows: ParcelIntelMapRow[];
@@ -173,6 +182,32 @@ function formatCompactSqft(value: number | null): string {
     return `${Math.round(value / 1_000).toLocaleString()}k sf`;
   }
   return `${Math.round(value).toLocaleString()} sf`;
+}
+
+function formatExportSnapshot(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return `${new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'UTC',
+  }).format(date)} UTC`;
+}
+
+function exportIntegrityMessage(reason: ParcelExportIntegrityFailure): string {
+  if (reason === 'generation_changed') {
+    return 'A newer parcel snapshot became available while this map was open. Refresh the workspace before exporting.';
+  }
+  if (reason === 'mixed_generation') {
+    return 'The borough feeds are updating at different times. Export is paused until one consistent snapshot is available.';
+  }
+  if (reason === 'generation_missing') {
+    return 'This map has no verifiable snapshot receipt. Refresh the workspace before exporting.';
+  }
+  return 'The export scope did not exactly match the visible acquisition ranking. Refresh the workspace and try again.';
 }
 
 const AUTHENTICATED_INVENTORY_RETRY_DELAYS_MS = [1_000, 3_000, 8_000] as const;
@@ -208,6 +243,7 @@ export function ParcelIntelExplorer({
   );
   const [detailState, setDetailState] = useState<DetailState>('idle');
   const [exporting, setExporting] = useState(false);
+  const [exportNotice, setExportNotice] = useState<ExportNotice | null>(null);
   const fullInventoryLoaded = useRef(false);
   const [fullInventoryReady, setFullInventoryReady] = useState(false);
   const [inventoryState, setInventoryState] =
@@ -596,6 +632,9 @@ export function ParcelIntelExplorer({
   const handleViewportRowsChange = useCallback((bbls: string[]) => {
     setViewportBbls(bbls);
   }, []);
+  useEffect(() => {
+    setExportNotice(null);
+  }, [filters, rankMapView, viewportBbls]);
   const queryMatchesFullInventory = useMemo(() => {
     const query = filters.query.trim();
     if (!query) return true;
@@ -1106,6 +1145,8 @@ export function ParcelIntelExplorer({
 
   const exportFilteredRows = async () => {
     if (exporting) return;
+    const startedAt = performance.now();
+    setExportNotice(null);
     setExporting(true);
     try {
       const targets =
@@ -1117,24 +1158,61 @@ export function ParcelIntelExplorer({
           const sweep = await getParcelIntelSweep(borough.slug, 5000, {
             includeAuth: isAuthenticated,
           });
-          return sweep.rows.map((row) => ({
-            ...row,
-            borough: borough.slug,
-          }));
+          return {
+            generatedAt: sweep.generated_at,
+            rows: sweep.rows.map((row) => ({
+              ...row,
+              borough: borough.slug,
+            })),
+          };
         }),
       );
       const filteredExportRows = sortExplorerRows(
-        filterExplorerRows(results.flat(), filters),
+        filterExplorerRows(
+          results.flatMap((result) => result.rows),
+          filters,
+        ),
       );
       const exportRows = rankMapView
         ? filteredExportRows.filter((row) => viewportBblSet.has(row.bbl))
         : filteredExportRows;
+      const integrity = checkParcelExportIntegrity({
+        loadedGeneratedAt: inventoryGeneratedAt,
+        sweepGeneratedAt: results.map((result) => result.generatedAt),
+        expectedBbls: rankingRows.map((row) => row.bbl),
+        exportRows,
+      });
+      if (!integrity.ok) {
+        setExportNotice({
+          kind: 'error',
+          message: exportIntegrityMessage(integrity.reason),
+        });
+        return;
+      }
       downloadCsv(
         exportRows,
         `${
           filters.borough === 'all' ? 'citywide' : filters.borough
         }${rankMapView ? '-map-view' : ''}`,
       );
+      const elapsedSeconds = Math.max(
+        0.1,
+        (performance.now() - startedAt) / 1_000,
+      );
+      setExportNotice({
+        kind: 'success',
+        message: `Downloaded ${integrity.uniqueBblCount.toLocaleString()} unique ${
+          integrity.uniqueBblCount === 1 ? 'parcel' : 'parcels'
+        } from the ${formatExportSnapshot(
+          integrity.generatedAt,
+        )} snapshot in ${elapsedSeconds.toFixed(1)}s.`,
+      });
+    } catch {
+      setExportNotice({
+        kind: 'error',
+        message:
+          'Export could not be prepared. The map is unchanged; check your connection and try again.',
+      });
     } finally {
       setExporting(false);
     }
@@ -1910,6 +1988,34 @@ export function ParcelIntelExplorer({
             </button>
           </div>
         </div>
+        {exportNotice && (
+          <div
+            role={exportNotice.kind === 'error' ? 'alert' : 'status'}
+            data-testid="parcel-export-receipt"
+            className={`mt-3 flex items-start justify-between gap-3 rounded-xl border px-3 py-2.5 text-xs shadow-sm ${
+              exportNotice.kind === 'error'
+                ? 'border-amber-200 bg-amber-50 text-amber-950'
+                : 'border-emerald-200 bg-emerald-50 text-emerald-950'
+            }`}
+          >
+            <div className="flex min-w-0 items-start gap-2">
+              {exportNotice.kind === 'error' ? (
+                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+              ) : (
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+              )}
+              <span>{exportNotice.message}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setExportNotice(null)}
+              className="shrink-0 rounded p-0.5 text-current opacity-60 hover:bg-black/5 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
+              aria-label="Dismiss export receipt"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
         {signalFiltersOpen && (
           <div
             id="parcel-signal-filters"

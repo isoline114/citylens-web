@@ -265,6 +265,7 @@ try {
   const exportDownloadPromise = page.waitForEvent('download', {
     timeout: 60_000,
   });
+  const exportStartedAt = Date.now();
   await exportButton.click();
   const exportDownload = await exportDownloadPromise;
   const exportPath = await exportDownload.path();
@@ -274,9 +275,12 @@ try {
   const exportSummary = summarizeParcelCsv(
     await fs.readFile(exportPath, 'utf8'),
   );
+  const exportStats = await fs.stat(exportPath);
   citywideExportReceipt = {
     ...exportSummary,
     expected_row_count: expectedCount,
+    file_bytes: exportStats.size,
+    duration_ms: Date.now() - exportStartedAt,
     filename_shape_matches:
       exportDownload.suggestedFilename() ===
       `parcel-intel-citywide-top${expectedCount}.csv`,
@@ -550,7 +554,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v8',
+  schema_version: 'citylens/production-authenticated-parcel-map@v9',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
