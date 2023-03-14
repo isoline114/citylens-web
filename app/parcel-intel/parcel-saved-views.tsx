@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import {
+  ApiError,
   listParcelSavedSearches,
   removeParcelSavedSearch,
   saveParcelSearch,
@@ -319,6 +320,7 @@ export function ParcelSavedViewsPanel({
   onSelectParcel,
   onInspectExited,
   onComparisonOpened,
+  onChangesOpened,
   onClose,
 }: {
   currentView: SavedViewDraft;
@@ -330,6 +332,7 @@ export function ParcelSavedViewsPanel({
   onSelectParcel: (bbl: string) => void;
   onInspectExited: (bbl: string) => void;
   onComparisonOpened?: () => void;
+  onChangesOpened?: (searchId: string) => void;
   onClose: () => void;
 }) {
   const [views, setViews] = useState<ParcelSavedSearch[]>([]);
@@ -349,10 +352,10 @@ export function ParcelSavedViewsPanel({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setError(null);
     void listParcelSavedSearches()
       .then((items) => {
         if (!cancelled) {
+          setError(null);
           setViews(items);
           setComparisonViewId((current) =>
             current && items.some((item) => item.search_id === current)
@@ -487,8 +490,15 @@ export function ParcelSavedViewsPanel({
         ),
       );
       setReviewViewId(null);
-    } catch {
-      setError('The current thesis baseline could not be saved. Try again.');
+    } catch (saveError) {
+      if (saveError instanceof ApiError && saveError.status === 409) {
+        setError(
+          'This thesis was updated in another session. Loading its newest baseline…',
+        );
+        setReloadKey((value) => value + 1);
+      } else {
+        setError('The current thesis baseline could not be saved. Try again.');
+      }
     } finally {
       setBaselineBusyId(null);
     }
@@ -737,13 +747,19 @@ export function ParcelSavedViewsPanel({
                         inventoryReady={inventoryReady}
                         expanded={reviewViewId === view.search_id}
                         busy={baselineBusyId === view.search_id}
-                        onToggle={() =>
-                          setReviewViewId((current) =>
-                            current === view.search_id
-                              ? null
-                              : view.search_id,
-                          )
-                        }
+                        onToggle={() => {
+                          const opening =
+                            reviewViewId !== view.search_id;
+                          setReviewViewId(
+                            opening ? view.search_id : null,
+                          );
+                          if (
+                            opening &&
+                            monitor.status === 'changes'
+                          ) {
+                            onChangesOpened?.(view.search_id);
+                          }
+                        }}
                         onRefreshBaseline={() =>
                           void refreshBaseline(view)
                         }

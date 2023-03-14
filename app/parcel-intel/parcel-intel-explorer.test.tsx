@@ -911,6 +911,89 @@ describe('ParcelIntelExplorer', () => {
     expect(screen.queryByTestId('saved-views-panel')).not.toBeInTheDocument();
   });
 
+  it('records one identifier-free change review per saved thesis each session', async () => {
+    mocks.authStatus = 'authenticated';
+    mocks.getParcelIntelMap.mockImplementation(
+      async (_topPerBorough, opts) => {
+        const rows = [
+          row('1000010001', 'manhattan'),
+          row('3000010001', 'brooklyn'),
+        ];
+        const includeAuth = opts?.includeAuth ?? false;
+        return {
+          rows,
+          generated_at: '2026-07-27T03:03:01.358307Z',
+          feed_generation:
+            '20260727T030301358307Z-a32b245a82db',
+          access_scope: includeAuth
+            ? ('authenticated_full' as const)
+            : ('public_preview' as const),
+          requested_top_per_borough: 1000,
+          returned_count: rows.length,
+          available_count: rows.length,
+          inventory_complete: true,
+        };
+      },
+    );
+    mocks.listParcelSavedSearches.mockResolvedValue([
+      {
+        schema_version: 'citylens/parcel-saved-view@v3',
+        search_id: 'private-thesis-id',
+        name: 'Private citywide thesis',
+        borough: 'all',
+        filters: {
+          query: '',
+          priority: 'all',
+          opportunity: 'all',
+          site_type: 'all',
+          signals: [],
+          min_lot_area_sqft: null,
+          min_unused_floor_area_sqft: null,
+          owner_portfolio_id: null,
+          overlay: 'priority',
+        },
+        alert_frequency: 'off',
+        snapshot: {
+          schema_version: 'citylens/parcel-saved-view-snapshot@v1',
+          feed_generation:
+            '20260701T000000000000Z-aaaaaaaaaaaa',
+          feed_generated_at: '2026-07-01T00:00:00Z',
+          match_count: 1,
+          matched_bbls: ['3000019999'],
+        },
+        created_at: '2026-07-01T00:00:00Z',
+        updated_at: '2026-07-01T00:00:00Z',
+      },
+    ]);
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Saved views' }));
+    const changes = await screen.findByRole('button', {
+      name: /2 entered · 1 left/i,
+    });
+    fireEvent.click(changes);
+    fireEvent.click(changes);
+    fireEvent.click(changes);
+
+    await waitFor(() =>
+      expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+        'saved_thesis_changes_opened',
+        'saved_views',
+      ),
+    );
+    expect(
+      mocks.recordParcelProductEvent.mock.calls.filter(
+        ([event]) => event === 'saved_thesis_changes_opened',
+      ),
+    ).toHaveLength(1);
+    expect(
+      JSON.stringify(mocks.recordParcelProductEvent.mock.calls),
+    ).not.toMatch(
+      /private-thesis-id|3000019999|feed_generation|match_count|entered|exited/i,
+    );
+  });
+
   it('removes private evidence filters when an authenticated session ends', async () => {
     mocks.authStatus = 'authenticated';
     const { rerender } = render(

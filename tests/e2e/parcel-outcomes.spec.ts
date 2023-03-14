@@ -1055,6 +1055,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     .toEqual([
       {
         schema_version: 'citylens/parcel-product-event@v1',
+        event: 'saved_thesis_changes_opened',
+        source: 'saved_views',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
         event: 'saved_view_comparison_opened',
         source: 'saved_views',
       },
@@ -1103,6 +1108,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     .toEqual([
       {
         schema_version: 'citylens/parcel-product-event@v1',
+        event: 'saved_thesis_changes_opened',
+        source: 'saved_views',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
         event: 'saved_view_comparison_opened',
         source: 'saved_views',
       },
@@ -1142,6 +1152,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     .toEqual([
       {
         schema_version: 'citylens/parcel-product-event@v1',
+        event: 'saved_thesis_changes_opened',
+        source: 'saved_views',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
         event: 'saved_view_comparison_opened',
         source: 'saved_views',
       },
@@ -1170,6 +1185,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect
     .poll(() => productEvents)
     .toEqual([
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'saved_thesis_changes_opened',
+        source: 'saved_views',
+      },
       {
         schema_version: 'citylens/parcel-product-event@v1',
         event: 'saved_view_comparison_opened',

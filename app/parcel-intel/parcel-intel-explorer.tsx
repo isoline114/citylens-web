@@ -243,6 +243,7 @@ export function ParcelIntelExplorer({
   const parcelOpenSourceRef = useRef<ParcelProductEventSource>('direct');
   const screenAuditOpenTrackedRef = useRef(false);
   const savedViewComparisonOpenTrackedRef = useRef(false);
+  const savedThesisChangesTrackedRef = useRef(new Set<string>());
   const trackedParcelOpensRef = useRef(new Set<string>());
   const comparisonOpenTrackedRef = useRef(false);
   const comparisonDialogRef = useRef<HTMLDivElement>(null);
@@ -493,6 +494,7 @@ export function ParcelIntelExplorer({
       setComparisonOpen(false);
       comparisonOpenTrackedRef.current = false;
       savedViewComparisonOpenTrackedRef.current = false;
+      savedThesisChangesTrackedRef.current.clear();
       setFilters((current) => ({
         ...current,
         signals: current.signals.filter(
@@ -1043,6 +1045,18 @@ export function ParcelIntelExplorer({
     });
   };
 
+  const trackSavedThesisChangesOpen = (searchId: string) => {
+    if (savedThesisChangesTrackedRef.current.has(searchId)) return;
+    savedThesisChangesTrackedRef.current.add(searchId);
+    void recordParcelProductEvent(
+      'saved_thesis_changes_opened',
+      'saved_views',
+    ).catch(() => {
+      // Reviewing exact membership changes remains local when coarse,
+      // identifier-free adoption telemetry is unavailable.
+    });
+  };
+
   return (
     <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_28px_90px_-42px_rgba(15,23,42,0.42)]">
       <div className="relative overflow-hidden bg-slate-950 px-4 py-4 text-white md:px-6 md:py-5">
@@ -1329,6 +1343,7 @@ export function ParcelIntelExplorer({
             syncExplorerUrl('all', null);
           }}
           onComparisonOpened={trackSavedViewComparisonOpen}
+          onChangesOpened={trackSavedThesisChangesOpen}
           onClose={() => setSavedViewsOpen(false)}
         />
       )}

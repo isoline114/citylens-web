@@ -17,6 +17,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
   };
 });
 
+import { ApiError } from '@/lib/api';
 import { ParcelSavedViewsPanel } from './parcel-saved-views';
 import type {
   ExplorerFilters,
@@ -178,6 +179,7 @@ describe('ParcelSavedViewsPanel', () => {
   it('shows exact entered and exited parcels across feed generations', async () => {
     const onSelectParcel = vi.fn();
     const onInspectExited = vi.fn();
+    const onChangesOpened = vi.fn();
     mocks.listParcelSavedSearches.mockResolvedValueOnce([
       {
         ...savedView,
@@ -197,6 +199,7 @@ describe('ParcelSavedViewsPanel', () => {
         {...monitorProps}
         onSelectParcel={onSelectParcel}
         onInspectExited={onInspectExited}
+        onChangesOpened={onChangesOpened}
         currentView={currentView}
         inventoryRows={inventoryRows}
         inventoryReady
@@ -210,6 +213,8 @@ describe('ParcelSavedViewsPanel', () => {
         name: /1 entered · 1 left/i,
       }),
     );
+    expect(onChangesOpened).toHaveBeenCalledWith('view-one');
+    expect(onChangesOpened).toHaveBeenCalledTimes(1);
     fireEvent.click(
       screen.getByRole('button', {
         name: /100 Brooklyn Avenue.*3000010001/i,
@@ -246,6 +251,62 @@ describe('ParcelSavedViewsPanel', () => {
         }),
       ),
     );
+  });
+
+  it('reloads the canonical baseline when another session advanced it', async () => {
+    const staleView = {
+      ...savedView,
+      schema_version: 'citylens/parcel-saved-view@v3' as const,
+      snapshot: {
+        schema_version: 'citylens/parcel-saved-view-snapshot@v1' as const,
+        feed_generation: '20260701T000000000000Z-aaaaaaaaaaaa',
+        feed_generated_at: '2026-07-01T00:00:00Z',
+        match_count: 1,
+        matched_bbls: ['3000019999'],
+      },
+    };
+    const currentViewRecord = {
+      ...staleView,
+      snapshot: {
+        ...staleView.snapshot,
+        feed_generation: monitorProps.feedGeneration,
+        feed_generated_at: monitorProps.feedGeneratedAt,
+        matched_bbls: ['3000010001'],
+      },
+    };
+    mocks.listParcelSavedSearches
+      .mockResolvedValueOnce([staleView])
+      .mockResolvedValueOnce([currentViewRecord]);
+    mocks.saveParcelSearch.mockRejectedValueOnce(
+      new ApiError('Newer baseline exists', { status: 409 }),
+    );
+
+    render(
+      <ParcelSavedViewsPanel
+        {...monitorProps}
+        currentView={currentView}
+        inventoryRows={inventoryRows}
+        inventoryReady
+        onApply={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: /1 entered · 1 left/i,
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Mark current set reviewed' }),
+    );
+
+    await waitFor(() =>
+      expect(mocks.listParcelSavedSearches).toHaveBeenCalledTimes(2),
+    );
+    expect(
+      await screen.findByText(/Current baseline · 1 matching parcel/i),
+    ).toBeInTheDocument();
   });
 
   it('deletes a view and exposes a recoverable load failure', async () => {

@@ -71,7 +71,8 @@ visible conditions, lets the user inspect each change, and advances the
 baseline only when the user marks the current set reviewed. It fails
 conservative if membership disagrees within one generation and never labels
 membership change as seller intent, a new model prediction, feasibility, or
-transaction evidence.
+transaction evidence. The API refuses a stale browser that tries to move a
+baseline backward, while the client reloads the newer canonical baseline.
 Once the complete authenticated inventory is loaded, any saved view can be
 compared with the current working screen against that same inventory. The
 comparison reports shared, current-only, and saved-only membership, the shared
@@ -391,13 +392,16 @@ owner, source fact, readiness state, lead membership, or result.
 Comparison-desk, decision-peer entry, and saved-screen-comparison events contain no parcel
 identifiers, saved-view identity, filters, criteria, thresholds, search text,
 result counts, overlap/union measures, or compared values.
+Opening a saved-thesis change set records only the fixed event/source pair,
+once per view per browser session; it contains no view ID, BBL, generation,
+filters, membership, entered/exited counts, address, owner, value, or note.
 Decision-audit opens identify only whether the posture card or Audit tab was
 used; underwriting events identify only whether the Underwrite tab opened or
 any base assumption was changed. The event does not include which parcel or
 view was used or what assumption changed.
 Delivery is best-effort and cannot block parcel diligence, scenario editing,
 saved-view restoration, or workflow saves. Canonical saved-view
-create/update/delete counts are recorded
+create/update/delete and thesis-baseline create/advance counts are recorded
 transactionally by the engine rather than inferred from browser telemetry.
 
 Vercel pageview analytics use `SafeAnalytics` to strip query parameters and

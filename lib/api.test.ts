@@ -188,6 +188,24 @@ describe('api client', () => {
     expect(String(savedScreenInit.body)).not.toMatch(
       /search_id|view_name|bbl|address|owner|query|filter|count|overlap|union/i,
     );
+
+    fetchMock.mockClear();
+    await recordParcelProductEvent(
+      'saved_thesis_changes_opened',
+      'saved_views',
+    );
+    const [, thesisChangesInit] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(JSON.parse(String(thesisChangesInit.body))).toEqual({
+      schema_version: 'citylens/parcel-product-event@v1',
+      event: 'saved_thesis_changes_opened',
+      source: 'saved_views',
+    });
+    expect(String(thesisChangesInit.body)).not.toMatch(
+      /search_id|view_name|bbl|address|owner|query|filter|count|generation|entered|exited|overlap|union/i,
+    );
   });
 
   it('refreshes a rejected JWT once before returning the full parcel map', async () => {
