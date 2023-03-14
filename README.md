@@ -132,6 +132,14 @@ translates governed reason codes, links official project records, and shows
 source dates without revealing the private bulk ledger, owner identity, score,
 or model rank. Public preview users see a sign-in boundary rather than a
 partial-data conclusion.
+For a non-BBL address that is absent from that same complete 5,000-row
+inventory, the explorer offers a deliberate official tax-lot lookup. The
+address is sent only in an authenticated POST body; it is never placed in the
+URL or browser analytics. The engine returns exact PAD/PLUTO BBL candidates
+from a private resolver that is independent of lead membership. One exact lot
+can proceed to the existing screening receipt, while multiple lots require an
+explicit user choice and no match remains an honest no-match. The UI never
+fuzzy-matches an address or silently guesses a tax lot.
 The browser mints the API Bearer JWT through the same-origin
 `/api/auth/token` route using the authoritative HttpOnly Neon session cookie.
 The Neon client helper remains only a fallback: a cached visual session is not
@@ -310,6 +318,9 @@ This frontend aligns to the CityLens API contract served by `citylens-engine`:
   API-derived weekly-monitor freshness state. The UI withholds stale live
   metrics behind an overdue warning instead of presenting them as current
   accuracy.
+- `POST /v1/parcel-intel/resolve-address` — Bearer-authenticated,
+  rate-limited exact official-address-to-BBL resolution; private/no-store and
+  never returns the submitted address
 - `GET  /v1/demo/featured`, `GET /v1/demo/runs/{run_id}` — public demo endpoints
 - `POST /v1/runs` — Bearer auth required (the engine narrowly validates the public
   request shape; sam2/aoi defaults are server-injected)

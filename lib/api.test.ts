@@ -22,6 +22,7 @@ import {
   recordParcelProductEvent,
   reviewParcelWorkflowEvidence,
   removeParcelSavedSearch,
+  resolveParcelAddress,
   resolveApiUrl,
   revokeApiKey,
   saveParcelSearch,
@@ -801,6 +802,32 @@ describe('parcel intelligence progressive reads', () => {
       'Bearer tok-abc',
     );
     expect(init.cache).toBe('no-store');
+  });
+
+  it('posts an address privately without placing it in the request URL', async () => {
+    setAuthTokenGetter(async () => 'tok-abc');
+    const mockFetch = stubFetch({
+      schema_version: 'citylens/parcel-address-resolve-response@v1',
+      match_status: 'unique',
+      candidates: [{ bbl: '3058920038', borough: 'brooklyn' }],
+    });
+
+    await resolveParcelAddress(
+      '464 Ovington Ave, Brooklyn, NY 11209',
+    );
+
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/v1/parcel-intel/resolve-address');
+    expect(url).not.toContain('Ovington');
+    expect(init.method).toBe('POST');
+    expect(init.cache).toBe('no-store');
+    expect(new Headers(init.headers).get('Authorization')).toBe(
+      'Bearer tok-abc',
+    );
+    expect(JSON.parse(String(init.body))).toEqual({
+      schema_version: 'citylens/parcel-address-resolve-request@v1',
+      address: '464 Ovington Ave, Brooklyn, NY 11209',
+    });
   });
 });
 

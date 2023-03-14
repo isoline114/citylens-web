@@ -66,6 +66,7 @@ import {
 } from './parcel-intel-explorer-support';
 import { downloadCsv } from './[borough]/parcel-intel-csv';
 import { ParcelIntelPropertyPanel } from './parcel-intel-property-panel';
+import { ParcelAddressResolver } from './parcel-address-resolver';
 import { ParcelComparisonDesk } from './parcel-comparison-desk';
 import { ParcelWorkflowInsights } from './parcel-workflow-insights';
 import { ParcelWorkflowAlertsPanel } from './parcel-workflow-alerts';
@@ -474,12 +475,34 @@ export function ParcelIntelExplorer({
     [rows, filters],
   );
   const ranked = useMemo(() => sortExplorerRows(filtered), [filtered]);
+  const queryMatchesFullInventory = useMemo(() => {
+    const query = filters.query.trim();
+    if (!query) return true;
+    return (
+      filterExplorerRows(rows, {
+        ...DEFAULT_FILTERS,
+        siteType: 'all',
+        query,
+      }).length > 0
+    );
+  }, [filters.query, rows]);
   const screeningLookupBbl = useMemo(() => {
     const candidate = canonicalParcelBbl(filters.query);
     return candidate && !rows.some((row) => row.bbl === candidate)
       ? candidate
       : null;
   }, [filters.query, rows]);
+  const addressResolverQuery = useMemo(() => {
+    const query = filters.query.trim();
+    if (
+      query.length < 5 ||
+      canonicalParcelBbl(query) !== null ||
+      queryMatchesFullInventory
+    ) {
+      return null;
+    }
+    return query;
+  }, [filters.query, queryMatchesFullInventory]);
   const selectedSummary = useMemo(
     () => rows.find((row) => row.bbl === selectedBbl) ?? null,
     [rows, selectedBbl],
@@ -1838,6 +1861,13 @@ export function ParcelIntelExplorer({
             bbl={screeningLookupBbl}
             isAuthenticated={isAuthenticated}
           />
+        )}
+
+      {addressResolverQuery &&
+        loadState === 'ready' &&
+        isAuthenticated &&
+        fullInventoryReady && (
+          <ParcelAddressResolver address={addressResolverQuery} />
         )}
 
       {failedBoroughs.length > 0 && (

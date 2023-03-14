@@ -130,6 +130,12 @@ vi.mock('./parcel-intel-property-panel', () => ({
   ),
 }));
 
+vi.mock('./parcel-address-resolver', () => ({
+  ParcelAddressResolver: ({ address }: { address: string }) => (
+    <div data-testid="address-resolver-stub">{address}</div>
+  ),
+}));
+
 import { ParcelIntelExplorer } from './parcel-intel-explorer';
 
 function row(
@@ -402,6 +408,33 @@ describe('ParcelIntelExplorer', () => {
     expect(screen.getByTestId('activation-guide-attention')).toHaveTextContent(
       '2 saved leads',
     );
+  });
+
+  it('offers official address discovery only after the full inventory has no match', async () => {
+    mocks.authStatus = 'authenticated';
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId('parcel-inventory-status')).toHaveTextContent(
+        'Full inventory verified',
+      ),
+    );
+    fireEvent.change(screen.getByLabelText('Search parcels'), {
+      target: {
+        value: '464 Ovington Ave, Brooklyn, NY 11209',
+      },
+    });
+
+    expect(await screen.findByTestId('address-resolver-stub')).toHaveTextContent(
+      '464 Ovington Ave, Brooklyn, NY 11209',
+    );
+
+    fireEvent.change(screen.getByLabelText('Search parcels'), {
+      target: { value: 'manhattan test site' },
+    });
+    expect(
+      screen.queryByTestId('address-resolver-stub'),
+    ).not.toBeInTheDocument();
   });
 
   it('never labels a cached public preview as the signed-in inventory', async () => {

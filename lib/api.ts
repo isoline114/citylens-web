@@ -862,6 +862,33 @@ export type ParcelScreeningStatus = {
   interpretation: string;
 };
 
+export type ParcelAddressCandidate = {
+  bbl: string;
+  borough:
+    | 'manhattan'
+    | 'brooklyn'
+    | 'queens'
+    | 'bronx'
+    | 'staten_island';
+};
+
+export type ParcelAddressResolution = {
+  schema_version: 'citylens/parcel-address-resolve-response@v1';
+  match_status: 'unique' | 'ambiguous' | 'not_found';
+  match_method: 'exact_normalized_official_address';
+  candidate_count: number;
+  truncated: boolean;
+  candidates: ParcelAddressCandidate[];
+  unit_designator_ignored: boolean;
+  locality_ignored: boolean;
+  source_name: string;
+  source_dataset_id: 'bc8t-ecyu';
+  source_retrieved_at: string;
+  resolver_generation: string;
+  address_normalization_schema: 'citylens/address-normalization@v1';
+  interpretation: string;
+};
+
 export type ParcelWorkflowStage =
   | 'new'
   | 'reviewing'
@@ -1433,6 +1460,22 @@ export async function getParcelScreeningStatus(
   return requestJson<ParcelScreeningStatus>(
     `/v1/parcel-intel/screening/${encodeURIComponent(bbl)}`,
     { cache: 'no-store' },
+  );
+}
+
+export async function resolveParcelAddress(
+  address: string,
+): Promise<ParcelAddressResolution> {
+  return requestJson<ParcelAddressResolution>(
+    '/v1/parcel-intel/resolve-address',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        schema_version: 'citylens/parcel-address-resolve-request@v1',
+        address,
+      }),
+      cache: 'no-store',
+    },
   );
 }
 

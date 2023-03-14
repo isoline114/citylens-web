@@ -35,6 +35,7 @@ const mapReceipts = [];
 const consoleErrors = [];
 const pageErrors = [];
 let screeningReceiptVerified = false;
+let addressResolutionVerified = false;
 let passed = false;
 let failure = null;
 
@@ -139,6 +140,33 @@ try {
     );
   }
   screeningReceiptVerified = true;
+  await page
+    .getByLabel('Search parcels')
+    .fill('464 Ovington Ave, Brooklyn, NY 11209');
+  const resolver = page.getByTestId('parcel-address-resolver');
+  await resolver.waitFor({ timeout: 10_000 });
+  await resolver
+    .getByRole('button', { name: 'Resolve official tax lots' })
+    .click();
+  await resolver
+    .getByText('One official tax lot found')
+    .waitFor({ timeout: 15_000 });
+  if (
+    !(await resolver.getByText('3058920038').isVisible()) ||
+    !(await resolver.getByText(/NYC PAD/).isVisible())
+  ) {
+    throw new Error(
+      'The official address resolver did not return its source-bound BBL.',
+    );
+  }
+  await page
+    .getByRole('button', { name: 'Check current screening' })
+    .click();
+  await page
+    .getByTestId('parcel-screening-receipt')
+    .getByText('Excluded from the current acquisition inventory')
+    .waitFor({ timeout: 15_000 });
+  addressResolutionVerified = true;
   if (consoleErrors.length > 0 || pageErrors.length > 0) {
     throw new Error(
       `Browser emitted ${consoleErrors.length} console error(s) and ${pageErrors.length} page error(s).`,
@@ -170,6 +198,7 @@ const report = {
   failure,
   map_receipts: mapReceipts,
   screening_receipt_verified: screeningReceiptVerified,
+  address_resolution_verified: addressResolutionVerified,
   console_error_count: consoleErrors.length,
   page_error_count: pageErrors.length,
 };
