@@ -25,6 +25,10 @@ const viewports = [
   { name: 'desktop', width: 1440, height: 1000 },
   { name: 'mobile', width: 390, height: 844 },
 ];
+const summarizeBrowserErrors = (messages) =>
+  messages
+    .slice(0, 3)
+    .map((message) => message.replace(/\s+/g, ' ').slice(0, 500));
 
 await fs.mkdir(outputDir, { recursive: true });
 
@@ -92,7 +96,9 @@ try {
         viewport_width_px: viewport.width,
         duration_ms: Math.round(performance.now() - startedAt),
         console_error_count: consoleErrors.length,
+        console_error_messages: summarizeBrowserErrors(consoleErrors),
         page_error_count: pageErrors.length,
+        page_error_messages: summarizeBrowserErrors(pageErrors),
         passed: false,
       };
       receipt.passed =
