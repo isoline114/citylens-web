@@ -309,6 +309,35 @@ export function ParcelIntelExplorer({
   const loadExplorerRows = async (
     includeAuth: boolean,
   ): Promise<ExplorerLoadResult> => {
+    if (includeAuth) {
+      try {
+        // A visible Neon session and a usable CityLens API credential are two
+        // different facts. Validate a fresh credential before requesting the
+        // private inventory so an old/null client token cannot silently leave
+        // a signed-in user looking at the 125-row public preview.
+        const credential = await auth.getAccessToken({ forceRefresh: true });
+        if (!credential) {
+          return {
+            rows: [],
+            failures: [],
+            generatedAt: null,
+            feedGeneration: null,
+            fullInventoryVerified: false,
+            issue: 'auth',
+          };
+        }
+      } catch {
+        return {
+          rows: [],
+          failures: [],
+          generatedAt: null,
+          feedGeneration: null,
+          fullInventoryVerified: false,
+          issue: 'auth',
+        };
+      }
+    }
+
     try {
       const response = await getParcelIntelMap(1000, { includeAuth });
       const hasInventoryReceipt =
@@ -1174,6 +1203,11 @@ export function ParcelIntelExplorer({
     });
   };
 
+  const retryFullInventory = () => {
+    automaticInventoryRetryCount.current = 0;
+    setInventoryReloadKey((value) => value + 1);
+  };
+
   return (
     <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_28px_90px_-42px_rgba(15,23,42,0.42)]">
       <div
@@ -1229,14 +1263,20 @@ export function ParcelIntelExplorer({
           <div className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] text-slate-300 sm:hidden">
             <span>
               <strong className="text-sm text-white">
-                {loadState === 'ready' ? rows.length.toLocaleString() : '…'}
+                {loadState === 'ready'
+                  ? inventoryState === 'upgrading'
+                    ? `${rows.length.toLocaleString()} preview`
+                    : rows.length.toLocaleString()
+                  : '…'}
               </strong>{' '}
               loaded
             </span>
             <span>
               <strong className="text-sm text-white">
                 {loadState === 'ready'
-                  ? filtered.length.toLocaleString()
+                  ? inventoryState === 'upgrading'
+                    ? '…'
+                    : filtered.length.toLocaleString()
                   : '…'}
               </strong>{' '}
               matches
@@ -1254,12 +1294,18 @@ export function ParcelIntelExplorer({
               [
                 'Loaded',
                 loadState === 'ready'
-                  ? rows.length.toLocaleString()
+                  ? inventoryState === 'upgrading'
+                    ? `${rows.length.toLocaleString()} preview`
+                    : rows.length.toLocaleString()
                   : 'Loading…',
               ],
               [
                 'Matches',
-                loadState === 'ready' ? filtered.length.toLocaleString() : 'Loading…',
+                loadState === 'ready'
+                  ? inventoryState === 'upgrading'
+                    ? 'Rechecking…'
+                    : filtered.length.toLocaleString()
+                  : 'Loading…',
               ],
               ['Available', totalAvailable.toLocaleString()],
             ].map(([label, value]) => (
@@ -1325,7 +1371,7 @@ export function ParcelIntelExplorer({
             {isAuthenticated && inventoryState === 'incomplete' && (
               <button
                 type="button"
-                onClick={() => setInventoryReloadKey((value) => value + 1)}
+                onClick={retryFullInventory}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-amber-300/40 bg-amber-300/10 px-3 text-xs font-semibold text-amber-100 hover:bg-amber-300/20"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
@@ -1461,10 +1507,7 @@ export function ParcelIntelExplorer({
             )}
             <button
               type="button"
-              onClick={() => {
-                automaticInventoryRetryCount.current = 0;
-                setInventoryReloadKey((value) => value + 1);
-              }}
+              onClick={retryFullInventory}
               className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 font-semibold text-amber-950 hover:bg-amber-100"
             >
               <RefreshCw className="h-3.5 w-3.5" />

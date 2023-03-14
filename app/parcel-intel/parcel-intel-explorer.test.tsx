@@ -25,6 +25,9 @@ const mocks = vi.hoisted(() => ({
   recordParcelProductEvent: vi.fn(),
   advanceParcelWorkflow: vi.fn(),
   routerReplace: vi.fn(),
+  getAccessToken: vi.fn<
+    (options?: { forceRefresh?: boolean }) => Promise<string | null>
+  >(async () => 'token'),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -40,7 +43,7 @@ vi.mock('@/lib/auth', () => ({
         : null,
     signIn: vi.fn(),
     signOut: vi.fn(),
-    getAccessToken: vi.fn(async () => 'token'),
+    getAccessToken: mocks.getAccessToken,
   }),
 }));
 
@@ -208,6 +211,8 @@ beforeEach(() => {
     item: {},
   });
   mocks.routerReplace.mockReset();
+  mocks.getAccessToken.mockReset();
+  mocks.getAccessToken.mockResolvedValue('token');
   mocks.getParcelIntelMap.mockImplementation(
     async (_topPerBorough, opts) => {
       const rows = [
@@ -603,6 +608,9 @@ describe('ParcelIntelExplorer', () => {
     expect(
       screen.queryByText(/Full inventory verified/i),
     ).not.toBeInTheDocument();
+    expect(mocks.getAccessToken).toHaveBeenCalledWith({
+      forceRefresh: true,
+    });
     expect(mocks.getParcelIntelSweep).toHaveBeenCalledTimes(5);
 
     fireEvent.click(
@@ -613,6 +621,25 @@ describe('ParcelIntelExplorer', () => {
         3,
       ),
     );
+  });
+
+  it('keeps the public preview and does not request private rows without a refreshed credential', async () => {
+    mocks.authStatus = 'authenticated';
+    mocks.getAccessToken.mockResolvedValue(null);
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    const alert = await screen.findByTestId('parcel-inventory-incomplete');
+    expect(alert).toHaveTextContent(
+      'account session is visible, but its data-access credential could not be refreshed',
+    );
+    expect(mocks.getAccessToken).toHaveBeenCalledWith({
+      forceRefresh: true,
+    });
+    expect(mocks.getParcelIntelMap).toHaveBeenCalledTimes(1);
+    expect(mocks.getParcelIntelMap).toHaveBeenCalledWith(1000, {
+      includeAuth: false,
+    });
   });
 
   it('automatically recovers when a signed-in session briefly receives the public preview', async () => {
