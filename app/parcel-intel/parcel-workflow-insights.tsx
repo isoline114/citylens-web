@@ -104,11 +104,12 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
 
   return (
     <section
-      className="border-b border-slate-200 bg-slate-950 px-5 py-5 text-white md:px-7"
+      id="parcel-outcome-insights"
+      className="border-b border-slate-200 bg-slate-950 px-4 py-5 text-white md:px-7"
       aria-label="Prospective workflow outcomes"
     >
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-300">
             <TrendingUp className="h-4 w-4" />
             Prospective outcome evidence
@@ -121,7 +122,7 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
             pipeline. These rates are not the historical model&apos;s validation accuracy.
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2 self-end sm:self-auto">
           {data && (
             <button
               type="button"
@@ -139,9 +140,10 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
           )}
           <button
             type="button"
+            autoFocus
             onClick={onClose}
             aria-label="Close outcome insights"
-            className="rounded-lg border border-white/10 p-2 text-slate-300 hover:bg-white/10 hover:text-white"
+            className="rounded-lg border border-white/10 p-2 text-slate-300 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
           >
             <X className="h-4 w-4" />
           </button>
@@ -165,7 +167,10 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
           Loading prospective cohorts…
         </div>
       ) : error || !data ? (
-        <div className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-100">
+        <div
+          className="mt-5 flex flex-col gap-3 rounded-xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-100 sm:flex-row sm:items-center sm:justify-between"
+          role="alert"
+        >
           <span className="flex items-center gap-2">
             <TriangleAlert className="h-4 w-4" />
             Outcome evidence is temporarily unavailable.
@@ -180,8 +185,20 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
         </div>
       ) : (
         <>
+          <div
+            className="sr-only"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            data-testid="workflow-insights-announcer"
+          >
+            {data.measurement_label}. {data.total_records.toLocaleString()}{' '}
+            saved {data.total_records === 1 ? 'lead' : 'leads'} in prospective
+            outcome evidence.
+          </div>
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <span
+              data-testid="workflow-insights-measurement-label"
               className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
                 data.measurement_status === 'usable'
                   ? 'bg-emerald-400/15 text-emerald-200'
@@ -307,7 +324,15 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
               <div className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">
                 Fixed-horizon outcomes by saved rank
               </div>
-              <div className="overflow-x-auto rounded-xl border border-white/10">
+              <div
+                className="overflow-x-auto rounded-xl border border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300"
+                role="region"
+                aria-label="Scrollable fixed-horizon outcomes by saved rank"
+                tabIndex={0}
+              >
+                <p className="px-3 pt-3 text-[11px] leading-4 text-slate-400 md:hidden">
+                  Scroll horizontally to review every cohort outcome.
+                </p>
                 <table className="w-full min-w-[620px] text-left text-xs">
                 <thead className="bg-white/5 text-slate-400">
                   <tr>

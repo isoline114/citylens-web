@@ -1,5 +1,42 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import {
+  applyWcagTextSpacing,
+  clearWcagTextSpacing,
+  expectNoClippedEssentialText,
+  expectNoDocumentHorizontalOverflow,
+} from './accessibility';
+
+async function auditNarrowTextSpacing(
+  page: Page,
+  rootSelector: string,
+  surface: string,
+  localScrollerSelector?: string,
+): Promise<void> {
+  const previousViewport = page.viewportSize() ?? {
+    width: 1280,
+    height: 720,
+  };
+  await page.setViewportSize({ width: 320, height: 800 });
+  await applyWcagTextSpacing(page);
+  try {
+    await expectNoDocumentHorizontalOverflow(
+      page,
+      `${surface} at 400% equivalent zoom with WCAG text spacing`,
+    );
+    await expectNoClippedEssentialText(page, rootSelector, surface);
+    if (localScrollerSelector) {
+      expect(
+        await page.locator(localScrollerSelector).evaluate(
+          (element) => element.scrollWidth > element.clientWidth,
+        ),
+      ).toBe(true);
+    }
+  } finally {
+    await clearWcagTextSpacing(page);
+    await page.setViewportSize(previousViewport);
+  }
+}
 
 const historicalBenchmarkReceipt = {
   schema: 'citylens_historical_benchmark_receipt@v1',
@@ -934,8 +971,23 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     page.viewportSize()?.height ?? 0,
   );
 
-  await page.getByRole('button', { name: 'Saved views' }).click();
+  const savedViewsTrigger = page.getByRole('button', {
+    name: 'Saved views',
+  });
+  await savedViewsTrigger.focus();
+  await savedViewsTrigger.click();
   await expect(page.getByTestId('saved-views-panel')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Close saved views' }),
+  ).toBeFocused();
+  await expect(page.getByTestId('saved-views-announcer')).toContainText(
+    '1 saved view loaded',
+  );
+  await auditNarrowTextSpacing(
+    page,
+    '[data-testid="saved-views-panel"]',
+    'Saved parcel views',
+  );
   await page
     .getByRole('button', { name: /1 entered · 1 left/i })
     .click();
@@ -962,6 +1014,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   );
   await expect(page.getByTestId('saved-screen-shared-count')).toHaveText('1');
   await page.getByRole('button', { name: 'Apply saved screen' }).click();
+  await expect(savedViewsTrigger).toBeFocused();
   await expect(page.getByLabel('Filter by borough')).toHaveValue('brooklyn');
   await expect(page.getByLabel('Filter by priority')).toHaveValue('highest');
   await expect(
@@ -978,6 +1031,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     .click();
   await expect(page.getByText('Priority follow-up')).not.toBeVisible();
   await page.getByRole('button', { name: 'Close saved views' }).click();
+  await expect(savedViewsTrigger).toBeFocused();
   await expect(
     page.getByRole('button', { name: /Subway\/SIR ≤800 m/i }),
   ).toContainText('1');
@@ -988,6 +1042,17 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(
     page.getByRole('heading', { name: 'What needs attention next?' }),
   ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Close action queue' }),
+  ).toBeFocused();
+  await expect(page.getByTestId('workflow-actions-announcer')).toContainText(
+    '2 leads in the attention action queue',
+  );
+  await auditNarrowTextSpacing(
+    page,
+    '[aria-label="Acquisition action queue"]',
+    'Acquisition action queue',
+  );
   await expect(page.getByTestId('workflow-action-3020960069')).toContainText(
     '2 days overdue',
   );
@@ -1012,8 +1077,26 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     page.getByLabel('2 workflow items need attention'),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Close action queue' }).click();
+  await expect(
+    page.getByRole('button', { name: /Action queue/i }),
+  ).toBeFocused();
 
-  await page.getByRole('button', { name: 'Evidence changes' }).click();
+  const evidenceChangesTrigger = page.getByRole('button', {
+    name: 'Evidence changes',
+  });
+  await evidenceChangesTrigger.focus();
+  await evidenceChangesTrigger.click();
+  await expect(
+    page.getByRole('button', { name: 'Close evidence changes' }),
+  ).toBeFocused();
+  await expect(page.getByTestId('workflow-alerts-announcer')).toContainText(
+    '2 evidence-change alerts loaded across 2 watched leads',
+  );
+  await auditNarrowTextSpacing(
+    page,
+    '[aria-label="Evidence and watched parcel changes"]',
+    'Evidence change center',
+  );
   await expect(page.getByTestId('watchlist-exit-coverage')).toContainText(
     '1 feed exit has a current screening explanation',
   );
@@ -1042,6 +1125,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     page.getByRole('button', { name: 'Review evidence' }),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Close evidence changes' }).click();
+  await expect(evidenceChangesTrigger).toBeFocused();
 
   await page.getByRole('button', { name: /100 E 21 STREET/i }).click();
   await expect(page.getByTestId('workflow-quick-save')).toHaveText('Save lead');
@@ -1324,7 +1408,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     })
     .click();
 
-  await page.getByRole('button', { name: 'Outcome insights' }).click();
+  const outcomeInsightsTrigger = page.getByRole('button', {
+    name: 'Outcome insights',
+  });
+  await outcomeInsightsTrigger.focus();
+  await outcomeInsightsTrigger.click();
 
   await expect(
     page.getByRole('heading', {
@@ -1332,8 +1420,25 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     }),
   ).toBeVisible();
   await expect(
-    page.getByText('Directional maturity-qualified evidence'),
-  ).toBeVisible();
+    page.getByRole('button', { name: 'Close outcome insights' }),
+  ).toBeFocused();
+  await expect(page.getByTestId('workflow-insights-announcer')).toContainText(
+    'Directional maturity-qualified evidence. 12 saved leads',
+  );
+  await auditNarrowTextSpacing(
+    page,
+    '[aria-label="Prospective workflow outcomes"]',
+    'Prospective outcome insights',
+    '[aria-label="Scrollable fixed-horizon outcomes by saved rank"]',
+  );
+  const outcomeTableRegion = page.getByRole('region', {
+    name: 'Scrollable fixed-horizon outcomes by saved rank',
+  });
+  await expect(outcomeTableRegion).toBeVisible();
+  await expect(outcomeTableRegion).toHaveAttribute('tabindex', '0');
+  await expect(
+    page.getByTestId('workflow-insights-measurement-label'),
+  ).toHaveText('Directional maturity-qualified evidence');
   await expect(
     page.getByTestId('maturity-window-owner_contacted'),
   ).toContainText('40%');
@@ -1373,4 +1478,8 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(
     page.getByText('Exported 12 privacy-safe outcome records.'),
   ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Close outcome insights' })
+    .click();
+  await expect(outcomeInsightsTrigger).toBeFocused();
 });

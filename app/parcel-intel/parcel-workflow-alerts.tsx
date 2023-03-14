@@ -123,11 +123,12 @@ export function ParcelWorkflowAlertsPanel({
 
   return (
     <section
-      className="border-b border-slate-200 bg-slate-950 px-5 py-5 text-white md:px-7"
+      id="parcel-evidence-changes"
+      className="border-b border-slate-200 bg-slate-950 px-4 py-5 text-white md:px-7"
       aria-label="Evidence and watched parcel changes"
     >
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-sky-300">
             <BellRing className="h-4 w-4" />
             Evidence change center
@@ -143,9 +144,10 @@ export function ParcelWorkflowAlertsPanel({
         </div>
         <button
           type="button"
+          autoFocus
           onClick={onClose}
           aria-label="Close evidence changes"
-          className="rounded-lg border border-white/10 p-2 text-slate-300 hover:bg-white/10 hover:text-white"
+          className="self-end rounded-lg border border-white/10 p-2 text-slate-300 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 sm:self-auto"
         >
           <X className="h-4 w-4" />
         </button>
@@ -157,7 +159,10 @@ export function ParcelWorkflowAlertsPanel({
           Comparing watched leads with the current feed…
         </div>
       ) : error || !data ? (
-        <div className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-100">
+        <div
+          className="mt-5 flex flex-col gap-3 rounded-xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-100 sm:flex-row sm:items-center sm:justify-between"
+          role="alert"
+        >
           <span className="flex items-center gap-2">
             <TriangleAlert className="h-4 w-4" />
             Evidence changes are temporarily unavailable.
@@ -172,6 +177,18 @@ export function ParcelWorkflowAlertsPanel({
         </div>
       ) : (
         <>
+          <div
+            className="sr-only"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            data-testid="workflow-alerts-announcer"
+          >
+            {data.alert_count.toLocaleString()} evidence-change{' '}
+            {data.alert_count === 1 ? 'alert' : 'alerts'} loaded across{' '}
+            {data.watched_count.toLocaleString()} watched{' '}
+            {data.watched_count === 1 ? 'lead' : 'leads'}.
+          </div>
           <div className="mt-5 grid gap-2 sm:grid-cols-3 xl:grid-cols-7">
             {[
               ['Watched leads', data.watched_count],

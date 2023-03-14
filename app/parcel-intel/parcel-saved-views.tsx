@@ -525,12 +525,13 @@ export function ParcelSavedViewsPanel({
 
   return (
     <section
-      className="border-b border-slate-200 bg-slate-950 px-5 py-5 text-white md:px-7"
+      id="parcel-saved-views-panel"
+      className="border-b border-slate-200 bg-slate-950 px-4 py-5 text-white md:px-7"
       aria-label="Saved parcel views"
       data-testid="saved-views-panel"
     >
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-amber-300">
             <Bookmark className="h-4 w-4" />
             Saved views
@@ -547,9 +548,10 @@ export function ParcelSavedViewsPanel({
         </div>
         <button
           type="button"
+          autoFocus
           onClick={onClose}
           aria-label="Close saved views"
-          className="rounded-lg border border-white/10 p-2 text-slate-300 hover:bg-white/10 hover:text-white"
+          className="self-end rounded-lg border border-white/10 p-2 text-slate-300 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 sm:self-auto"
         >
           <X className="h-4 w-4" />
         </button>
@@ -672,7 +674,18 @@ export function ParcelSavedViewsPanel({
               available in your next session.
             </div>
           ) : (
-            <div className="grid max-h-72 gap-2 overflow-y-auto pr-1 md:grid-cols-2">
+            <>
+              <div
+                className="sr-only"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                data-testid="saved-views-announcer"
+              >
+                {orderedViews.length.toLocaleString()} saved{' '}
+                {orderedViews.length === 1 ? 'view' : 'views'} loaded.
+              </div>
+              <div className="grid gap-2 md:max-h-72 md:grid-cols-2 md:overflow-y-auto md:pr-1">
               {orderedViews.map((view) => {
                 const dimensions = savedSearchDimensions(view.filters);
                 const monitor = monitors.get(view.search_id);
@@ -683,7 +696,7 @@ export function ParcelSavedViewsPanel({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <h4 className="truncate text-sm font-semibold text-white">
+                        <h4 className="break-words text-sm font-semibold text-white">
                           {view.name}
                         </h4>
                         <p className="mt-1 text-[11px] text-slate-400">
@@ -708,7 +721,7 @@ export function ParcelSavedViewsPanel({
                       </button>
                     </div>
                     {view.filters.query && (
-                      <p className="mt-2 truncate text-[11px] text-slate-300">
+                      <p className="mt-2 break-words text-[11px] text-slate-300">
                         Search: “{view.filters.query}”
                       </p>
                     )}
@@ -808,7 +821,8 @@ export function ParcelSavedViewsPanel({
                   </article>
                 );
               })}
-            </div>
+              </div>
+            </>
           )}
           {error && views.length > 0 && (
             <p className="mt-2 text-xs text-rose-200">{error}</p>

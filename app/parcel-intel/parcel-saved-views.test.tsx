@@ -124,6 +124,12 @@ describe('ParcelSavedViewsPanel', () => {
     );
 
     expect(await screen.findByText('Brooklyn candidates')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Close saved views' }),
+    ).toHaveFocus();
+    expect(screen.getByTestId('saved-views-announcer')).toHaveTextContent(
+      '1 saved view loaded.',
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Apply view' }));
     expect(onApply).toHaveBeenCalledWith(savedView);
   });

@@ -145,6 +145,22 @@ describe('ParcelWorkflowInsights', () => {
     expect(
       await screen.findByText('Collecting observation time'),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Close outcome insights' }),
+    ).toHaveFocus();
+    expect(
+      screen.getByTestId('workflow-insights-announcer'),
+    ).toHaveTextContent(
+      'Collecting observation time. 3 saved leads in prospective outcome evidence.',
+    );
+    expect(
+      screen.getByTestId('workflow-insights-measurement-label'),
+    ).toHaveTextContent('Collecting observation time');
+    expect(
+      screen.getByRole('region', {
+        name: 'Scrollable fixed-horizon outcomes by saved rank',
+      }),
+    ).toHaveAttribute('tabindex', '0');
     expect(screen.getAllByText('Collecting').length).toBeGreaterThan(0);
     expect(screen.getByText(/0 of 0 mature · 3 pending/i)).toBeInTheDocument();
     expect(screen.getByText(/not the historical model's validation accuracy/i))

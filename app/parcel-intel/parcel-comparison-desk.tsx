@@ -482,7 +482,7 @@ export function ParcelComparisonDesk({
                         {BOROUGH_LABELS[row.borough ?? ''] ?? row.borough} ·{' '}
                         {rankLabel(row)}
                       </div>
-                      <div className="mt-1 truncate text-sm font-semibold text-white">
+                      <div className="mt-1 break-words text-sm font-semibold text-white">
                         {row.address ?? `BBL ${row.bbl}`}
                       </div>
                       <div className="mt-1 text-[11px] font-normal text-slate-400">

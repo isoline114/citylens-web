@@ -472,6 +472,39 @@ describe('ParcelIntelExplorer', () => {
     ).toHaveTextContent('Comparison workspace opened with 2 parcels.');
   });
 
+  it('moves focus into authenticated tool panels and returns it to a stable trigger', async () => {
+    mocks.authStatus = 'authenticated';
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    const savedViews = await screen.findByRole('button', {
+      name: 'Saved views',
+    });
+    savedViews.focus();
+    fireEvent.click(savedViews);
+    const closeSavedViews = await screen.findByRole('button', {
+      name: 'Close saved views',
+    });
+    expect(closeSavedViews).toHaveFocus();
+    fireEvent.click(closeSavedViews);
+    await waitFor(() => expect(savedViews).toHaveFocus());
+
+    const activationGuide = await screen.findByRole('button', {
+      name: 'Review 2 actions',
+    });
+    activationGuide.focus();
+    fireEvent.click(activationGuide);
+    const closeActions = await screen.findByRole('button', {
+      name: 'Close action queue',
+    });
+    expect(closeActions).toHaveFocus();
+    fireEvent.click(closeActions);
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: /Action queue/i }),
+      ).toHaveFocus(),
+    );
+  });
+
   it('offers official address discovery only after the full inventory has no match', async () => {
     mocks.authStatus = 'authenticated';
     render(<ParcelIntelExplorer boroughs={boroughs} />);

@@ -76,3 +76,76 @@ export async function expectNoDocumentHorizontalOverflow(
     `${surface} overflows the ${receipt.viewportWidth}px document viewport: ${receipt.contentWidth}px content width`,
   ).toBeLessThanOrEqual(1);
 }
+
+/**
+ * Applies the four WCAG 1.4.12 text-spacing overrides without changing the
+ * component source. The audit style is removable so one task journey can
+ * check several rendered panels independently.
+ */
+export async function applyWcagTextSpacing(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    document.getElementById('citylens-text-spacing-audit')?.remove();
+    const style = document.createElement('style');
+    style.id = 'citylens-text-spacing-audit';
+    style.textContent = `
+      * {
+        line-height: 1.5 !important;
+        letter-spacing: 0.12em !important;
+        word-spacing: 0.16em !important;
+      }
+      p {
+        margin-bottom: 2em !important;
+      }
+    `;
+    document.head.appendChild(style);
+  });
+}
+
+export async function clearWcagTextSpacing(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    document.getElementById('citylens-text-spacing-audit')?.remove();
+  });
+}
+
+export async function expectNoClippedEssentialText(
+  page: Page,
+  rootSelector: string,
+  surface: string,
+): Promise<void> {
+  const failures = await page.evaluate((selector) => {
+    const root = document.querySelector<HTMLElement>(selector);
+    if (!root) return [`Missing audit root: ${selector}`];
+    return Array.from(
+      root.querySelectorAll<HTMLElement>('button, a, h1, h2, h3, h4, p'),
+    ).flatMap((element) => {
+      if (!element.innerText.trim()) return [];
+      const style = window.getComputedStyle(element);
+      const visible =
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        element.getClientRects().length > 0;
+      if (!visible) return [];
+      const horizontalClip =
+        element.scrollWidth > element.clientWidth + 1 &&
+        (style.overflowX === 'hidden' || style.overflowX === 'clip');
+      const verticalClip =
+        element.scrollHeight > element.clientHeight + 1 &&
+        (style.overflowY === 'hidden' || style.overflowY === 'clip');
+      return horizontalClip || verticalClip
+        ? [
+            `${element.tagName.toLowerCase()} "${element.innerText
+              .trim()
+              .replaceAll(/\s+/g, ' ')
+              .slice(0, 120)}" (${element.clientWidth}×${element.clientHeight} client, ${element.scrollWidth}×${element.scrollHeight} scroll)`,
+          ]
+        : [];
+    });
+  }, rootSelector);
+
+  expect(
+    failures,
+    `${surface} clips essential text under WCAG 1.4.12 spacing:\n${failures.join(
+      '\n',
+    )}`,
+  ).toEqual([]);
+}

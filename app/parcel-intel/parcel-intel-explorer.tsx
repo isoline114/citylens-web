@@ -157,6 +157,8 @@ type Props = {
   initialBbl?: string | null;
 };
 
+type ToolPanelKey = 'actions' | 'alerts' | 'insights' | 'saved';
+
 function isWorkflowBorough(value: string | null | undefined): value is WorkflowBorough {
   return WORKFLOW_BOROUGHS.some((borough) => borough === value);
 }
@@ -250,6 +252,7 @@ export function ParcelIntelExplorer({
   const comparisonReturnFocusRef = useRef<HTMLElement | null>(null);
   const parcelReturnFocusRef = useRef<HTMLElement | null>(null);
   const parcelReturnBblRef = useRef<string | null>(initialBbl);
+  const toolPanelReturnFocusRef = useRef<HTMLElement | null>(null);
   const wasAuthenticatedRef = useRef(false);
   const selectedBblRef = useRef<string | null>(selectedBbl);
 
@@ -1083,7 +1086,37 @@ export function ParcelIntelExplorer({
     syncExplorerUrl('all', null);
   };
 
+  const rememberToolPanelOpener = () => {
+    toolPanelReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+  };
+
+  const closeToolPanel = (panel: ToolPanelKey, close: () => void) => {
+    const returnFocus = toolPanelReturnFocusRef.current;
+    close();
+    window.setTimeout(() => {
+      const fallback = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-tool-panel-trigger]'),
+      ).find(
+        (candidate) => candidate.dataset.toolPanelTrigger === panel,
+      );
+      const target =
+        returnFocus?.isConnected &&
+        returnFocus !== document.body &&
+        returnFocus !== document.documentElement
+          ? returnFocus
+          : fallback;
+      target?.focus();
+      toolPanelReturnFocusRef.current = null;
+    }, 0);
+  };
+
   const openActionQueue = () => {
+    if (!actionsOpen) {
+      rememberToolPanelOpener();
+    }
     setActionsOpen(true);
     setAlertsOpen(false);
     setInsightsOpen(false);
@@ -1107,7 +1140,7 @@ export function ParcelIntelExplorer({
     setLeadLimit(INITIAL_LEAD_LIMIT);
     setMobileRankingExpanded(false);
     setSelectedBbl(null);
-    setSavedViewsOpen(false);
+    closeToolPanel('saved', () => setSavedViewsOpen(false));
     syncExplorerUrl(view.borough, null);
     void recordParcelProductEvent(
       'saved_view_applied',
@@ -1303,12 +1336,17 @@ export function ParcelIntelExplorer({
               <button
                 type="button"
                 onClick={() => {
+                  if (!savedViewsOpen) {
+                    rememberToolPanelOpener();
+                  }
                   setSavedViewsOpen((value) => !value);
                   setActionsOpen(false);
                   setAlertsOpen(false);
                   setInsightsOpen(false);
                 }}
                 aria-expanded={savedViewsOpen}
+                aria-controls="parcel-saved-views-panel"
+                data-tool-panel-trigger="saved"
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
               >
                 <Bookmark className="h-3.5 w-3.5 text-amber-300" />
@@ -1326,6 +1364,8 @@ export function ParcelIntelExplorer({
                   }
                 }}
                 aria-expanded={actionsOpen}
+                aria-controls="parcel-action-queue"
+                data-tool-panel-trigger="actions"
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
               >
                 <CalendarClock className="h-3.5 w-3.5 text-violet-300" />
@@ -1344,12 +1384,17 @@ export function ParcelIntelExplorer({
               <button
                 type="button"
                 onClick={() => {
+                  if (!alertsOpen) {
+                    rememberToolPanelOpener();
+                  }
                   setAlertsOpen((value) => !value);
                   setInsightsOpen(false);
                   setActionsOpen(false);
                   setSavedViewsOpen(false);
                 }}
                 aria-expanded={alertsOpen}
+                aria-controls="parcel-evidence-changes"
+                data-tool-panel-trigger="alerts"
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
               >
                 <BellRing className="h-3.5 w-3.5 text-sky-300" />
@@ -1360,12 +1405,17 @@ export function ParcelIntelExplorer({
               <button
                 type="button"
                 onClick={() => {
+                  if (!insightsOpen) {
+                    rememberToolPanelOpener();
+                  }
                   setInsightsOpen((value) => !value);
                   setAlertsOpen(false);
                   setActionsOpen(false);
                   setSavedViewsOpen(false);
                 }}
                 aria-expanded={insightsOpen}
+                aria-controls="parcel-outcome-insights"
+                data-tool-panel-trigger="insights"
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
               >
                 <TrendingUp className="h-3.5 w-3.5 text-emerald-300" />
@@ -1425,7 +1475,11 @@ export function ParcelIntelExplorer({
       )}
 
       {isAuthenticated && insightsOpen && (
-        <ParcelWorkflowInsights onClose={() => setInsightsOpen(false)} />
+        <ParcelWorkflowInsights
+          onClose={() =>
+            closeToolPanel('insights', () => setInsightsOpen(false))
+          }
+        />
       )}
       {isAuthenticated && savedViewsOpen && (
         <ParcelSavedViewsPanel
@@ -1464,12 +1518,16 @@ export function ParcelIntelExplorer({
           }}
           onComparisonOpened={trackSavedViewComparisonOpen}
           onChangesOpened={trackSavedThesisChangesOpen}
-          onClose={() => setSavedViewsOpen(false)}
+          onClose={() =>
+            closeToolPanel('saved', () => setSavedViewsOpen(false))
+          }
         />
       )}
       {isAuthenticated && actionsOpen && (
         <ParcelWorkflowActionsPanel
-          onClose={() => setActionsOpen(false)}
+          onClose={() =>
+            closeToolPanel('actions', () => setActionsOpen(false))
+          }
           onDataChange={setWorkflowActions}
           onSelectParcel={(bbl) => {
             setActionsOpen(false);
@@ -1479,7 +1537,9 @@ export function ParcelIntelExplorer({
       )}
       {isAuthenticated && alertsOpen && (
         <ParcelWorkflowAlertsPanel
-          onClose={() => setAlertsOpen(false)}
+          onClose={() =>
+            closeToolPanel('alerts', () => setAlertsOpen(false))
+          }
           onSelectParcel={(bbl) => {
             setAlertsOpen(false);
             selectParcel(bbl, 'watchlist');
@@ -1560,6 +1620,7 @@ export function ParcelIntelExplorer({
                 <button
                   type="button"
                   onClick={openActionQueue}
+                  aria-controls="parcel-action-queue"
                   className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-violet-700 px-4 text-xs font-semibold text-white shadow-sm hover:bg-violet-800"
                 >
                   Review {workflowActions.attention_count}{' '}
@@ -2466,10 +2527,10 @@ export function ParcelIntelExplorer({
                         aria-hidden="true"
                       />
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-slate-950">
+                        <div className="break-words text-sm font-medium text-slate-950">
                           {row.address ?? row.bbl}
                         </div>
-                        <div className="mt-0.5 truncate text-xs text-slate-500">
+                        <div className="mt-0.5 break-words text-xs text-slate-500">
                           {BOROUGH_LABELS[row.borough ?? ''] ?? row.borough} ·{' '}
                           {opportunityLabel(row.opportunity_category)}
                         </div>

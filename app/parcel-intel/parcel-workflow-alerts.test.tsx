@@ -87,6 +87,12 @@ describe('ParcelWorkflowAlertsPanel', () => {
     expect(
       await screen.findByText('Current project activity now screens out this lead'),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Close evidence changes' }),
+    ).toHaveFocus();
+    expect(screen.getByTestId('workflow-alerts-announcer')).toHaveTextContent(
+      '2 evidence-change alerts loaded across 2 watched leads.',
+    );
     expect(screen.getByText(/Official project 2023K0205 is attached/i))
       .toBeInTheDocument();
     expect(screen.getByText('Approved Land Use Project')).toBeInTheDocument();
