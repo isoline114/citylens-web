@@ -7,9 +7,11 @@ import {
   CalendarClock,
   CheckCircle2,
   Clock,
-  Inbox,
+  Database,
   Loader2,
   Plus,
+  RefreshCw,
+  Sparkles,
   XCircle,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -18,6 +20,12 @@ import { getRuns } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { forgetRecentRuns, getRecentRuns } from '@/lib/storage';
 import { normalizeServerRuns, type RunHistoryRow } from '@/lib/run-history';
+import {
+  formatRunDateTime,
+  humanizeRunValue,
+  presentRunState,
+  shortRunId,
+} from '@/lib/run-presentation';
 import type { RunListItem } from '@/lib/types';
 
 export default function RunsPage() {
@@ -26,6 +34,7 @@ export default function RunsPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const signedIn = auth.status === 'authenticated';
 
@@ -61,8 +70,6 @@ export default function RunsPage() {
         setServerError(null);
       } catch (e: unknown) {
         if (cancelled) return;
-        setServerRuns([]);
-        setNextCursor(null);
         setServerError(e instanceof Error ? e.message : String(e));
       } finally {
         if (!cancelled) setLoading(false);
@@ -73,7 +80,7 @@ export default function RunsPage() {
     return () => {
       cancelled = true;
     };
-  }, [signedIn]);
+  }, [signedIn, reloadKey]);
 
   const rows: RunHistoryRow[] = useMemo(() => normalizeServerRuns(serverRuns), [serverRuns]);
 
@@ -92,44 +99,59 @@ export default function RunsPage() {
     }
   }
 
+  if (auth.status === 'loading') {
+    return <RunsPageSkeleton />;
+  }
+
   // Signed-out: only sign-in CTAs. No localStorage fallback — the runs
   // tab is account-scoped by design.
   if (!signedIn) {
     return (
-      <div className="flex flex-col gap-6">
-        <header className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold">Your runs</h1>
-          <p className="text-sm text-slate-600">
-            Sign in to view runs from your account. Public demo runs are available without sign-in.
+      <div className="flex flex-col gap-5">
+        <header>
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
+            Processing workspace
+          </div>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+            Runs
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+            Track each imagery-to-evidence job from request through review.
           </p>
         </header>
 
-        <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <span className="absolute inset-y-0 left-0 w-1 bg-sky-500" aria-hidden="true" />
-          <h2 className="text-lg font-semibold">Sign in to view your runs</h2>
-          <p className="mt-2 text-sm text-slate-600">
-            CityLens runs are tied to a free account. Free plan includes 5 runs per month.
-          </p>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <Link
-              href="/sign-in"
-              className="group inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
-            >
-              Sign in
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-            <Link
-              href="/sign-up"
-              className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 hover:bg-slate-50"
-            >
-              Create a free account
-            </Link>
-            <Link
-              href="/#featured-demos"
-              className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 hover:bg-slate-50"
-            >
-              View featured demos
-            </Link>
+        <section className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 p-6 text-white shadow-[0_24px_70px_-36px_rgba(15,23,42,0.65)] sm:p-8">
+          <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-sky-500/20 blur-3xl" />
+          <div className="relative grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(280px,0.65fr)] md:items-end">
+            <div>
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-sky-300">
+                <Database className="h-5 w-5" />
+              </span>
+              <h2 className="mt-5 text-2xl font-semibold tracking-tight">
+                Your processing history stays with your account.
+              </h2>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
+                Sign in to follow active jobs, inspect failures, and reopen
+                completed evidence packages.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Link
+                href="/sign-in?next=%2Fruns"
+                className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-slate-950 hover:bg-sky-50"
+              >
+                Sign in to continue
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+              <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-slate-300">
+                <Link href="/sign-up" className="underline-offset-4 hover:text-white hover:underline">
+                  Create account
+                </Link>
+                <Link href="/#featured-demos" className="underline-offset-4 hover:text-white hover:underline">
+                  Explore a public demo
+                </Link>
+              </div>
+            </div>
           </div>
         </section>
       </div>
@@ -149,16 +171,21 @@ export default function RunsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Your runs</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Account-scoped processing history, newest runs first.
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
+            Processing workspace
+          </div>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+            Runs
+          </h1>
+          <p className="mt-2 text-sm text-slate-600">
+            Monitor active work and reopen completed evidence packages.
           </p>
         </div>
         <Link
           href="/#create"
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 sm:self-auto"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 sm:self-auto"
         >
           <Plus className="h-4 w-4" />
           New run
@@ -166,39 +193,65 @@ export default function RunsPage() {
       </header>
 
       {serverError && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Could not load your run history: {serverError}.
+        <div
+          className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between"
+          role="alert"
+        >
+          <span>
+            <strong>Run history is temporarily unavailable.</strong>{' '}
+            Your existing data has not been changed.
+          </span>
+          <button
+            type="button"
+            onClick={() => setReloadKey((value) => value + 1)}
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold hover:bg-amber-100"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Try again
+          </button>
         </div>
       )}
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <SummaryTile label="Total" value={rows.length} />
-        <SummaryTile label="Succeeded" value={succeeded} tone="emerald" />
-        <SummaryTile label="Active" value={active} tone="sky" />
-        <SummaryTile label="Failed" value={failed} tone="rose" />
+        <SummaryTile label="Loaded" value={rows.length} icon={Database} />
+        <SummaryTile label="Ready" value={succeeded} tone="emerald" icon={CheckCircle2} />
+        <SummaryTile label="Processing" value={active} tone="sky" icon={Loader2} />
+        <SummaryTile label="Needs attention" value={failed} tone="rose" icon={AlertTriangle} />
       </section>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_55px_-38px_rgba(15,23,42,0.4)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50/80 px-5 py-4">
           <div>
-            <div className="text-sm font-medium text-slate-900">Run history</div>
+            <div className="text-sm font-semibold text-slate-950">Recent processing</div>
             <div className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
               <CalendarClock className="h-3.5 w-3.5" />
-              {latestUpdated ? `Last updated ${formatDate(latestUpdated)}` : 'No completed history yet'}
+              {latestUpdated
+                ? `Latest activity ${formatRunDateTime(latestUpdated)}`
+                : 'No processing history yet'}
             </div>
           </div>
-          {loading && <div className="text-xs text-slate-500">Loading…</div>}
+          {loading && (
+            <div className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Refreshing
+            </div>
+          )}
         </div>
-        <div className="p-4">
+        <div className="p-3 sm:p-4">
           {isEmpty && !serverError ? (
-            <div className="flex flex-col items-center gap-3 py-8 text-center">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200">
-                <Inbox className="h-5 w-5" />
+            <div className="flex flex-col items-center gap-3 py-12 text-center">
+              <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200">
+                <Sparkles className="h-6 w-6" />
               </span>
-              <p className="text-sm text-slate-700">No runs yet — create your first run.</p>
+              <div>
+                <p className="font-semibold text-slate-950">Create your first evidence package</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Submit an address and CityLens will track the work here.
+                </p>
+              </div>
               <Link
                 href="/#create"
-                className="group inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
+                className="group inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
               >
                 Create a run
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -207,29 +260,35 @@ export default function RunsPage() {
           ) : (
             <ul className="divide-y divide-slate-200">
               {rows.map((r) => (
-                <li key={r.runId} className="py-3 first:pt-0 last:pb-0">
+                <li key={r.runId} className="py-1 first:pt-0 last:pb-0">
                   <Link
                     href={`/runs/${encodeURIComponent(r.runId)}`}
-                    className="group grid gap-3 rounded-lg px-2 py-2 hover:bg-slate-50 sm:grid-cols-[minmax(0,1fr)_auto]"
+                    className="group grid gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-slate-50 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                    data-testid="run-history-row"
                   >
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-sm font-medium text-slate-900 group-hover:underline">
-                          {r.runId}
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <span className="truncate text-sm font-semibold text-slate-950 group-hover:text-sky-800">
+                          {r.address ?? 'Untitled processing run'}
                         </span>
                         <StatusBadge status={r.status} />
                       </div>
-                      <div className="mt-1 text-sm text-slate-700">
-                        {r.address ?? 'Address unavailable'}
-                      </div>
-                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
-                        {r.stage && <span>Stage: {r.stage}</span>}
-                        {typeof r.progress === 'number' && <span>Progress: {Math.round(r.progress)}%</span>}
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                        <span className="font-mono" title={r.runId}>
+                          {shortRunId(r.runId)}
+                        </span>
+                        {r.stage && <span>{humanizeRunValue(r.stage)}</span>}
+                        {typeof r.progress === 'number' &&
+                          presentRunState(r.status).state === 'running' && (
+                            <span>{Math.round(r.progress)}% complete</span>
+                          )}
                       </div>
                     </div>
-                    <div className="flex flex-col gap-1 text-xs text-slate-500 sm:min-w-36 sm:text-right">
-                      <span>Created {formatDate(r.createdAt)}</span>
-                      <span>Updated {formatDate(r.updatedAt)}</span>
+                    <div className="flex items-center justify-between gap-3 text-xs text-slate-500 sm:min-w-48 sm:justify-end">
+                      <time dateTime={r.updatedAt ?? r.createdAt}>
+                        {formatRunDateTime(r.updatedAt ?? r.createdAt)}
+                      </time>
+                      <ArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-700" />
                     </div>
                   </Link>
                 </li>
@@ -239,14 +298,19 @@ export default function RunsPage() {
 
           {rows.length > 0 && (
             <div className="mt-4 flex items-center justify-between gap-3 text-xs text-slate-500">
-              <div>{nextCursor ? 'More runs are available.' : 'End of history.'}</div>
+              <div>
+                {nextCursor
+                  ? `${rows.length} loaded · more available`
+                  : `${rows.length} run${rows.length === 1 ? '' : 's'} loaded`}
+              </div>
               {nextCursor && (
                 <button
                   type="button"
-                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 hover:bg-slate-50"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-900 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={loadMore}
                   disabled={loading}
                 >
+                  {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                   Load more
                 </button>
               )}
@@ -262,10 +326,12 @@ function SummaryTile({
   label,
   value,
   tone = 'slate',
+  icon: Icon,
 }: {
   label: string;
   value: number;
   tone?: 'slate' | 'emerald' | 'sky' | 'rose';
+  icon: typeof Database;
 }) {
   const toneClass =
     tone === 'emerald'
@@ -276,18 +342,23 @@ function SummaryTile({
           ? 'bg-rose-50 text-rose-800 ring-rose-200'
           : 'bg-slate-50 text-slate-800 ring-slate-200';
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
-      <div className={`mt-2 inline-flex min-w-12 justify-center rounded-md px-2 py-1 text-lg font-semibold ring-1 ring-inset ${toneClass}`}>
-        {value}
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          {label}
+        </div>
+        <Icon className="h-4 w-4 text-slate-400" />
+      </div>
+      <div className={`mt-3 inline-flex min-w-12 justify-center rounded-lg px-2 py-1 text-lg font-semibold ring-1 ring-inset ${toneClass}`}>
+        {value.toLocaleString()}
       </div>
     </div>
   );
 }
 
 function StatusBadge({ status }: { status?: string }) {
-  const value = String(status ?? 'unknown');
-  const normalized = value.toLowerCase();
+  const presentation = presentRunState(status);
+  const normalized = presentation.state;
   const Icon =
     normalized === 'succeeded'
       ? CheckCircle2
@@ -309,19 +380,24 @@ function StatusBadge({ status }: { status?: string }) {
   return (
     <span className={`inline-flex h-6 items-center gap-1.5 rounded-full border px-2 text-xs font-medium ${cls}`}>
       <Icon className={`h-3.5 w-3.5 ${normalized === 'running' ? 'animate-spin' : ''}`} />
-      {value}
+      {presentation.label}
     </span>
   );
 }
 
-function formatDate(value?: string): string {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat('en', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date);
+function RunsPageSkeleton() {
+  return (
+    <div className="flex flex-col gap-5" aria-busy="true" aria-label="Loading runs">
+      <div className="h-24 animate-pulse rounded-2xl bg-slate-100" />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {Array.from({ length: 4 }, (_, index) => (
+          <div
+            key={index}
+            className="h-24 animate-pulse rounded-2xl border border-slate-200 bg-white"
+          />
+        ))}
+      </div>
+      <div className="h-72 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+    </div>
+  );
 }

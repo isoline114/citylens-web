@@ -34,8 +34,7 @@ export function normalizeServerRuns(runs: RunListItem[]): RunHistoryRow[] {
 
 function normalizeProgress(progress: unknown): number | undefined {
   if (typeof progress !== 'number' || !Number.isFinite(progress)) return undefined;
-  const pct = progress > 1 || progress === 1 ? progress : progress * 100;
-  return Math.max(0, Math.min(100, pct));
+  return Math.max(0, Math.min(100, progress));
 }
 
 function normalizeAddress(request: unknown): string | undefined {

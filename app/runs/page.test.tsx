@@ -51,11 +51,14 @@ describe('/runs (signed out)', () => {
     render(<RunsPage />);
 
     expect(
-      screen.getByRole('heading', { level: 1, name: /your runs/i }),
+      screen.getByRole('heading', { level: 1, name: /^runs$/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Sign in' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Create a free account' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View featured demos' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign in to continue' })).toHaveAttribute(
+      'href',
+      '/sign-in?next=%2Fruns',
+    );
+    expect(screen.getByRole('link', { name: 'Create account' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Explore a public demo' })).toBeInTheDocument();
   });
 
   it('does not call /v1/runs while signed out', () => {
@@ -83,7 +86,7 @@ describe('/runs (signed in, empty)', () => {
     mocks.getRuns.mockResolvedValueOnce({ items: [], nextCursor: null });
     render(<RunsPage />);
 
-    await screen.findByText(/No runs yet — create your first run\./i);
+    await screen.findByText(/Create your first evidence package/i);
     expect(screen.getByRole('link', { name: 'Create a run' })).toBeInTheDocument();
   });
 
@@ -122,6 +125,9 @@ describe('/runs (signed in, with server runs)', () => {
 
     await screen.findByText('real-server-1');
     expect(screen.getByText('real-server-2')).toBeInTheDocument();
+    expect(screen.getAllByText('Untitled processing run')).toHaveLength(2);
+    expect(screen.getAllByText('Ready').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Needs attention').length).toBeGreaterThan(0);
     // localStorage orphans must not bleed into the rendered list
     expect(screen.queryByText('leaked-local')).not.toBeInTheDocument();
     // Stage line is only rendered when stage is present (no `source: …` fallback)
