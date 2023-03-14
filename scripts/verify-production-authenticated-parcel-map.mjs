@@ -9,6 +9,7 @@ import { chromium } from '@playwright/test';
 import {
   positiveFormattedCount,
   positiveFormattedCountWithSuffix,
+  summarizeParcelCsv,
   summarizeProductEvent,
 } from './production-auth-smoke-support.mjs';
 
@@ -54,6 +55,7 @@ let thesisComposerEventReceipt = null;
 let returningSessionReloadVerified = false;
 let initialClusteredMapReceipt = null;
 let returningClusteredMapReceipt = null;
+let citywideExportReceipt = null;
 let passed = false;
 let failure = null;
 
@@ -252,6 +254,45 @@ try {
     );
   }
   returningSessionReloadVerified = true;
+
+  const exportButton = page.getByRole('button', { name: 'CSV' });
+  const exportTitle = await exportButton.getAttribute('title');
+  if (exportTitle !== `Export ${expectedFormatted} filtered parcels`) {
+    throw new Error(
+      `Unexpected citywide export scope: ${exportTitle ?? 'missing'}.`,
+    );
+  }
+  const exportDownloadPromise = page.waitForEvent('download', {
+    timeout: 60_000,
+  });
+  await exportButton.click();
+  const exportDownload = await exportDownloadPromise;
+  const exportPath = await exportDownload.path();
+  if (!exportPath) {
+    throw new Error('The citywide CSV download did not produce a local file.');
+  }
+  const exportSummary = summarizeParcelCsv(
+    await fs.readFile(exportPath, 'utf8'),
+  );
+  citywideExportReceipt = {
+    ...exportSummary,
+    expected_row_count: expectedCount,
+    filename_shape_matches:
+      exportDownload.suggestedFilename() ===
+      `parcel-intel-citywide-top${expectedCount}.csv`,
+  };
+  if (
+    citywideExportReceipt.row_count !== expectedCount ||
+    citywideExportReceipt.unique_bbl_count !== expectedCount ||
+    citywideExportReceipt.bbl_column_present !== true ||
+    citywideExportReceipt.column_count <= 1 ||
+    citywideExportReceipt.consistent_column_count !== true ||
+    citywideExportReceipt.filename_shape_matches !== true
+  ) {
+    throw new Error(
+      `Unexpected citywide CSV receipt: ${JSON.stringify(citywideExportReceipt)}.`,
+    );
+  }
 
   const methodology = page
     .locator('details')
@@ -509,7 +550,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v7',
+  schema_version: 'citylens/production-authenticated-parcel-map@v8',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -520,6 +561,7 @@ const report = {
   initial_clustered_map_receipt: initialClusteredMapReceipt,
   returning_clustered_map_receipt: returningClusteredMapReceipt,
   returning_session_reload_verified: returningSessionReloadVerified,
+  citywide_export_receipt: citywideExportReceipt,
   screening_receipt_verified: screeningReceiptVerified,
   address_resolution_verified: addressResolutionVerified,
   official_dossier_verified: officialDossierVerified,

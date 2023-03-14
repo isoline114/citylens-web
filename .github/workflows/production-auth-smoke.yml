@@ -57,6 +57,7 @@ jobs:
           console.log(`- Signed-in API credential: \`${report?.auth_token_receipts?.some((receipt) => receipt.status === 200 && receipt.jwt_shape === true) ? 'passed' : 'failed'}\``);
           console.log(`- Signed-in 5,000-parcel clustered map: \`${report?.initial_clustered_map_receipt?.match_count === 5000 && report?.initial_clustered_map_receipt?.cluster_count > 0 ? 'passed' : 'failed'}\``);
           console.log(`- Returning-session 5,000-parcel reload: \`${report?.returning_session_reload_verified ? 'passed' : 'failed'}\``);
+          console.log(`- Complete unique-BBL citywide CSV: \`${report?.citywide_export_receipt?.row_count === 5000 && report?.citywide_export_receipt?.unique_bbl_count === 5000 && report?.citywide_export_receipt?.consistent_column_count === true ? 'passed' : 'failed'}\``);
           console.log(`- Auditable historical benchmark receipt: \`${report?.historical_benchmark_receipt_verified ? 'passed' : 'failed'}\``);
           console.log(`- Any-NYC-lot official dossier: \`${report?.official_dossier_verified ? 'passed' : 'failed'}\``);
           console.log(`- Source-grounded dossier readiness: \`${report?.dossier_readiness_verified ? 'passed' : 'failed'}\``);

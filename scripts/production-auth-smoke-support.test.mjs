@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   positiveFormattedCount,
   positiveFormattedCountWithSuffix,
+  summarizeParcelCsv,
   summarizeProductEvent,
 } from './production-auth-smoke-support.mjs';
 
@@ -28,6 +29,36 @@ describe('production authenticated smoke support', () => {
     expect(
       positiveFormattedCountWithSuffix('0 matches', 'matches'),
     ).toBeNull();
+  });
+
+  it('summarizes an RFC 4180 parcel export without retaining identities', () => {
+    expect(
+      summarizeParcelCsv(
+        [
+          'Address,BBL,Owner',
+          '"12 Example Ave, Unit 2",1000000001,"Owner ""One"""',
+          '"14 Example Ave\nRear",3000000002,Owner Two',
+        ].join('\r\n'),
+      ),
+    ).toEqual({
+      row_count: 2,
+      unique_bbl_count: 2,
+      bbl_column_present: true,
+      column_count: 3,
+      consistent_column_count: true,
+    });
+  });
+
+  it('rejects malformed or identity-incomplete parcel exports', () => {
+    expect(
+      summarizeParcelCsv('Address,Owner\nOne,Owner One,Unexpected'),
+    ).toEqual({
+      row_count: 1,
+      unique_bbl_count: 0,
+      bbl_column_present: false,
+      column_count: 2,
+      consistent_column_count: false,
+    });
   });
 
   it('summarizes the exact value-minimized composer event', () => {
