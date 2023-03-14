@@ -248,6 +248,8 @@ export function ParcelIntelExplorer({
   const comparisonOpenTrackedRef = useRef(false);
   const comparisonDialogRef = useRef<HTMLDivElement>(null);
   const comparisonReturnFocusRef = useRef<HTMLElement | null>(null);
+  const parcelReturnFocusRef = useRef<HTMLElement | null>(null);
+  const parcelReturnBblRef = useRef<string | null>(initialBbl);
   const wasAuthenticatedRef = useRef(false);
   const selectedBblRef = useRef<string | null>(selectedBbl);
 
@@ -818,14 +820,45 @@ export function ParcelIntelExplorer({
     bbl: string,
     source: ParcelProductEventSource = 'ranking',
   ) => {
+    if (!selectedBblRef.current) {
+      parcelReturnFocusRef.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+      parcelReturnBblRef.current = bbl;
+    }
     parcelOpenSourceRef.current = source;
     setSelectedBbl(bbl);
     syncExplorerUrl(filters.borough, bbl);
   };
 
   const closeParcel = () => {
+    const returnFocus = parcelReturnFocusRef.current;
+    const returnBbl = parcelReturnBblRef.current ?? selectedBblRef.current;
     setSelectedBbl(null);
     syncExplorerUrl(filters.borough, null);
+    window.setTimeout(() => {
+      const fallback =
+        returnBbl === null
+          ? null
+          : Array.from(
+              document.querySelectorAll<HTMLElement>(
+                '[data-parcel-ranking-bbl]',
+              ),
+            ).find(
+              (candidate) =>
+                candidate.dataset.parcelRankingBbl === returnBbl,
+            ) ?? null;
+      const target =
+        returnFocus?.isConnected &&
+        returnFocus !== document.body &&
+        returnFocus !== document.documentElement
+          ? returnFocus
+          : fallback;
+      target?.focus();
+      parcelReturnFocusRef.current = null;
+      parcelReturnBblRef.current = null;
+    }, 0);
   };
 
   const trackComparisonOpen = (
@@ -895,16 +928,20 @@ export function ParcelIntelExplorer({
       throw new Error('Selected parcel detail is unavailable');
     }
     const subject = selectedDetail;
+    // Capture the invoking button before the async detail fetch. The peer
+    // control disables itself while loading, and Chromium may move focus away
+    // from a disabled control before the request resolves.
+    const returnFocus =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     const peerDetail = await getParcelIntelParcel(peer.bbl, {
       includeAuth: isAuthenticated,
     });
     if (selectedBblRef.current !== subject.bbl) {
       throw new Error('Selected parcel changed while preparing comparison');
     }
-    comparisonReturnFocusRef.current =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
+    comparisonReturnFocusRef.current = returnFocus;
     setComparisonRows([
       subject,
       { ...peerDetail, borough: peer.borough },
@@ -2021,7 +2058,10 @@ export function ParcelIntelExplorer({
           )}
         </div>
 
-        <aside className="flex min-h-0 flex-col overflow-hidden border-t border-slate-200 bg-white lg:h-[760px] lg:border-l lg:border-t-0">
+        <aside
+          aria-label="Parcel decision workspace"
+          className="flex min-h-0 flex-col overflow-hidden border-t border-slate-200 bg-white lg:h-[760px] lg:border-l lg:border-t-0"
+        >
           {selectedDetail ? (
             <ParcelIntelPropertyPanel
               key={selectedDetail.bbl}
@@ -2323,8 +2363,9 @@ export function ParcelIntelExplorer({
                 <button
                   key={row.bbl}
                   type="button"
+                  data-parcel-ranking-bbl={row.bbl}
                   onClick={() => selectParcel(row.bbl, 'ranking')}
-                  className={`mb-1 w-full rounded-xl border px-3 py-3 text-left transition-colors ${
+                  className={`mb-1 w-full rounded-xl border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 ${
                     !mobileRankingExpanded && index >= MOBILE_COMPACT_LEAD_LIMIT
                       ? 'hidden sm:block'
                       : ''

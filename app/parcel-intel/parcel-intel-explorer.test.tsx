@@ -100,7 +100,7 @@ vi.mock('./parcel-intel-property-panel', () => ({
         {decisionPeers?.length ?? 0} peers:
         {peerInventoryComplete ? 'full' : 'preview'}
       </span>
-      <button type="button" onClick={onClose}>
+      <button type="button" autoFocus onClick={onClose}>
         Back to ranking
       </button>
       <button
@@ -1120,6 +1120,29 @@ describe('ParcelIntelExplorer', () => {
     });
   });
 
+  it('moves focus into parcel evidence and restores the recreated ranking row', async () => {
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    const brooklynLead = await screen.findByRole('button', {
+      name: /brooklyn test site/i,
+    });
+    brooklynLead.focus();
+    expect(brooklynLead).toHaveFocus();
+    fireEvent.click(brooklynLead);
+
+    const back = await screen.findByRole('button', {
+      name: 'Back to ranking',
+    });
+    expect(back).toHaveFocus();
+    fireEvent.click(back);
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: /brooklyn test site/i }),
+      ).toHaveFocus(),
+    );
+  });
+
   it('records one coarse authenticated parcel open without parcel identifiers', async () => {
     mocks.authStatus = 'authenticated';
     render(<ParcelIntelExplorer boroughs={boroughs} />);
@@ -1232,11 +1255,11 @@ describe('ParcelIntelExplorer', () => {
       ),
     );
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Compare first decision peer',
-      }),
-    );
+    const comparePeer = screen.getByRole('button', {
+      name: 'Compare first decision peer',
+    });
+    comparePeer.focus();
+    fireEvent.click(comparePeer);
 
     const desk = await screen.findByTestId('parcel-comparison-desk');
     expect(desk).toHaveTextContent('MN test site');
@@ -1254,6 +1277,8 @@ describe('ParcelIntelExplorer', () => {
     expect(
       JSON.stringify(mocks.recordParcelProductEvent.mock.calls),
     ).not.toMatch(/1000010001|3000010001|test site/i);
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    await waitFor(() => expect(comparePeer).toHaveFocus());
   });
 
   it('opens a decision peer without including parcel identity in telemetry', async () => {

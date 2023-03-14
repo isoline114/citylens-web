@@ -210,9 +210,16 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
 
   const ranking = page.locator('#parcel-acquisition-ranking');
 
-  await ranking
-    .getByRole('button', { name: /100 E 21 STREET/i })
-    .click();
+  const rankedParcel = ranking.getByRole('button', {
+    name: /100 E 21 STREET/i,
+  });
+  await rankedParcel.focus();
+  await expect(rankedParcel).toBeFocused();
+  await page.keyboard.press('Enter');
+  const closeParcel = page.getByRole('button', {
+    name: 'Close parcel panel and return to ranked parcels',
+  });
+  await expect(closeParcel).toBeFocused();
   await expect(page.getByTestId('parcel-decision-peers')).toContainText(
     'Similar qualified leads',
   );
@@ -220,11 +227,11 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
     'not valuation or sale comps',
   );
   await expectNoWcagViolations(page, 'Parcel evidence workspace');
-  await page
-    .getByRole('button', {
-      name: 'Compare 1:1 with 41-20 QUEENS PLAZA',
-    })
-    .click();
+  const comparePeer = page.getByRole('button', {
+    name: 'Compare 1:1 with 41-20 QUEENS PLAZA',
+  });
+  await comparePeer.focus();
+  await page.keyboard.press('Enter');
 
   const desk = page.getByTestId('parcel-comparison-desk');
   await expect(desk).toBeVisible();
@@ -232,6 +239,28 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   await expect(desk).toContainText('41-20 QUEENS PLAZA');
   await expect(desk).toContainText('Evidence currency');
   await expectNoWcagViolations(page, 'Parcel comparison desk');
+  const closeComparison = desk.getByRole('button', {
+    name: 'Close parcel comparison',
+  });
+  await expect(closeComparison).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Boolean(
+          document
+            .querySelector('[aria-label="Compare shortlisted parcels"]')
+            ?.contains(document.activeElement),
+        ),
+      ),
+    )
+    .toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(desk).not.toBeVisible();
+  await expect(comparePeer).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(desk).toBeVisible();
+  await expect(closeComparison).toBeFocused();
   await expect
     .poll(() =>
       productEvents.some(
