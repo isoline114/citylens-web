@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { expectNoWcagViolations } from './accessibility';
 
 const mapRows = [
   {
@@ -172,6 +173,10 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   await expect(page.getByTestId('parcel-inventory-status')).toContainText(
     'Full inventory verified',
   );
+  await expectNoWcagViolations(
+    page,
+    'Authenticated Parcel Intelligence explorer',
+  );
   await page.getByRole('button', { name: /^Signals$/ }).click();
   await page
     .getByRole('button', { name: /Owner concentration \+ assemblage/i })
@@ -214,6 +219,7 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   await expect(page.getByTestId('parcel-decision-peers')).toContainText(
     'not valuation or sale comps',
   );
+  await expectNoWcagViolations(page, 'Parcel evidence workspace');
   await page
     .getByRole('button', {
       name: 'Compare 1:1 with 41-20 QUEENS PLAZA',
@@ -225,6 +231,7 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   await expect(desk).toContainText('100 E 21 STREET');
   await expect(desk).toContainText('41-20 QUEENS PLAZA');
   await expect(desk).toContainText('Evidence currency');
+  await expectNoWcagViolations(page, 'Parcel comparison desk');
   await expect
     .poll(() =>
       productEvents.some(
