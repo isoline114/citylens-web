@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUpRight,
   BellRing,
@@ -231,6 +231,8 @@ export function ParcelIntelExplorer({
   // immediately legible; users can still switch to priority or opportunity.
   const [overlay, setOverlay] = useState<ExplorerOverlay>('borough');
   const [selectedBbl, setSelectedBbl] = useState<string | null>(initialBbl);
+  const [viewportBbls, setViewportBbls] = useState<string[] | null>(null);
+  const [rankMapView, setRankMapView] = useState(false);
   const [leadLimit, setLeadLimit] = useState(INITIAL_LEAD_LIMIT);
   const [mobileRankingExpanded, setMobileRankingExpanded] = useState(false);
   const [insightsOpen, setInsightsOpen] = useState(false);
@@ -265,7 +267,7 @@ export function ParcelIntelExplorer({
   ): Promise<ExplorerLoadResult> => {
     const results = await Promise.allSettled(
       boroughs.map(async (borough) => {
-        const sweep = await getParcelIntelSweep(borough.slug, 1000, {
+        const sweep = await getParcelIntelSweep(borough.slug, 5000, {
           includeAuth,
         });
         return {
@@ -582,6 +584,18 @@ export function ParcelIntelExplorer({
     [rows, filters],
   );
   const ranked = useMemo(() => sortExplorerRows(filtered), [filtered]);
+  const viewportBblSet = useMemo(
+    () => new Set(viewportBbls ?? []),
+    [viewportBbls],
+  );
+  const rankedInViewport = useMemo(
+    () => ranked.filter((row) => viewportBblSet.has(row.bbl)),
+    [ranked, viewportBblSet],
+  );
+  const rankingRows = rankMapView ? rankedInViewport : ranked;
+  const handleViewportRowsChange = useCallback((bbls: string[]) => {
+    setViewportBbls(bbls);
+  }, []);
   const queryMatchesFullInventory = useMemo(() => {
     const query = filters.query.trim();
     if (!query) return true;
@@ -782,13 +796,25 @@ export function ParcelIntelExplorer({
         : BOROUGH_LABELS[filters.borough] ?? filters.borough;
     const timeout = window.setTimeout(() => {
       setScreenAnnouncement(
-        `${ranked.length.toLocaleString()} ${
-          ranked.length === 1 ? 'parcel matches' : 'parcels match'
-        } the current screen in ${boroughLabel}.`,
+        rankMapView
+          ? `${rankingRows.length.toLocaleString()} ${
+              rankingRows.length === 1 ? 'parcel is' : 'parcels are'
+            } inside the current map view; ${ranked.length.toLocaleString()} ${
+              ranked.length === 1 ? 'parcel matches' : 'parcels match'
+            } the full screen in ${boroughLabel}.`
+          : `${ranked.length.toLocaleString()} ${
+              ranked.length === 1 ? 'parcel matches' : 'parcels match'
+            } the current screen in ${boroughLabel}.`,
       );
     }, 250);
     return () => window.clearTimeout(timeout);
-  }, [filters, loadState, ranked.length]);
+  }, [
+    filters,
+    loadState,
+    ranked.length,
+    rankingRows.length,
+    rankMapView,
+  ]);
 
   const syncExplorerUrl = (borough: string, bbl: string | null) => {
     const params = new URLSearchParams();
@@ -1067,6 +1093,7 @@ export function ParcelIntelExplorer({
     });
     setLeadLimit(INITIAL_LEAD_LIMIT);
     setMobileRankingExpanded(false);
+    setRankMapView(false);
     setSelectedBbl(null);
     syncExplorerUrl('all', null);
   };
@@ -1087,7 +1114,7 @@ export function ParcelIntelExplorer({
           : boroughs.filter((borough) => borough.slug === filters.borough);
       const results = await Promise.all(
         targets.map(async (borough) => {
-          const sweep = await getParcelIntelSweep(borough.slug, 1000, {
+          const sweep = await getParcelIntelSweep(borough.slug, 5000, {
             includeAuth: isAuthenticated,
           });
           return sweep.rows.map((row) => ({
@@ -1096,12 +1123,17 @@ export function ParcelIntelExplorer({
           }));
         }),
       );
-      const exportRows = sortExplorerRows(
+      const filteredExportRows = sortExplorerRows(
         filterExplorerRows(results.flat(), filters),
       );
+      const exportRows = rankMapView
+        ? filteredExportRows.filter((row) => viewportBblSet.has(row.bbl))
+        : filteredExportRows;
       downloadCsv(
         exportRows,
-        filters.borough === 'all' ? 'citywide' : filters.borough,
+        `${
+          filters.borough === 'all' ? 'citywide' : filters.borough
+        }${rankMapView ? '-map-view' : ''}`,
       );
     } finally {
       setExporting(false);
@@ -1112,6 +1144,7 @@ export function ParcelIntelExplorer({
     setFilters(DEFAULT_FILTERS);
     setLeadLimit(INITIAL_LEAD_LIMIT);
     setMobileRankingExpanded(false);
+    setRankMapView(false);
     setSelectedBbl(null);
     syncExplorerUrl('all', null);
   };
@@ -1169,6 +1202,7 @@ export function ParcelIntelExplorer({
     setOverlay(view.filters.overlay);
     setLeadLimit(INITIAL_LEAD_LIMIT);
     setMobileRankingExpanded(false);
+    setRankMapView(false);
     setSelectedBbl(null);
     closeToolPanel('saved', () => setSavedViewsOpen(false));
     syncExplorerUrl(view.borough, null);
@@ -1185,6 +1219,7 @@ export function ParcelIntelExplorer({
     setFilters(next);
     setLeadLimit(INITIAL_LEAD_LIMIT);
     setMobileRankingExpanded(false);
+    setRankMapView(false);
     setSelectedBbl(null);
     setSignalFiltersOpen(false);
     setSiteCriteriaOpen(false);
@@ -1568,6 +1603,7 @@ export function ParcelIntelExplorer({
               selectParcel(bbl, 'saved_views');
               return;
             }
+            setRankMapView(false);
             setSelectedBbl(null);
             setFilters({
               ...DEFAULT_FILTERS,
@@ -1652,9 +1688,9 @@ export function ParcelIntelExplorer({
                 </div>
                 <button
                   type="button"
-                  disabled={ranked.length === 0}
+                  disabled={rankingRows.length === 0}
                   onClick={() => {
-                    const topLead = ranked[0];
+                    const topLead = rankingRows[0];
                     if (topLead) selectParcel(topLead.bbl, 'ranking');
                   }}
                   className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-4 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -1856,10 +1892,14 @@ export function ParcelIntelExplorer({
             )}
             <button
               type="button"
-              disabled={ranked.length === 0 || exporting}
+              disabled={rankingRows.length === 0 || exporting}
               onClick={() => void exportFilteredRows()}
               className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-              title={`Export ${ranked.length.toLocaleString()} filtered parcels`}
+              title={
+                rankMapView
+                  ? `Export ${rankingRows.length.toLocaleString()} parcels from the current map view`
+                  : `Export ${rankingRows.length.toLocaleString()} filtered parcels`
+              }
             >
               {exporting ? (
                 <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
@@ -2293,6 +2333,7 @@ export function ParcelIntelExplorer({
               selectedRow={selectedDetail}
               overlay={overlay}
               onSelect={(bbl) => selectParcel(bbl, 'map')}
+              onViewportRowsChange={handleViewportRowsChange}
             />
           )}
         </div>
@@ -2578,27 +2619,54 @@ export function ParcelIntelExplorer({
             </button>
           </div>
 
-          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-            <div>
+          <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <h3 className="text-sm font-semibold text-slate-950">Acquisition ranking</h3>
               <p className="text-xs text-slate-500">
-                Current-project screened and ranked for pursuit
+                {rankMapView
+                  ? 'Only mapped parcels inside the current extent · unsaved scope'
+                  : 'Current-project screened and ranked for pursuit'}
               </p>
             </div>
-            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
-              {ranked.length.toLocaleString()}
-            </span>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                data-testid="rank-map-view"
+                aria-pressed={rankMapView}
+                disabled={viewportBbls === null}
+                onClick={() => {
+                  setRankMapView((current) => !current);
+                  setLeadLimit(INITIAL_LEAD_LIMIT);
+                  setMobileRankingExpanded(false);
+                }}
+                className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  rankMapView
+                    ? 'border-sky-300 bg-sky-50 text-sky-950 hover:bg-sky-100'
+                    : 'border-slate-300 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-950'
+                }`}
+              >
+                <MapPinned className="h-3.5 w-3.5" />
+                {rankMapView
+                  ? `Show all matches · ${ranked.length.toLocaleString()}`
+                  : `Rank this view · ${rankedInViewport.length.toLocaleString()}`}
+              </button>
+              <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
+                {rankingRows.length.toLocaleString()}
+              </span>
+            </div>
           </div>
           <div
             id="parcel-acquisition-ranking"
             className="min-h-0 flex-1 overflow-y-auto p-2 lg:max-h-[560px]"
           >
-            {ranked.length === 0 ? (
+            {rankingRows.length === 0 ? (
               <div className="p-6 text-center text-sm text-slate-500">
-                No parcels match these filters.
+                {rankMapView
+                  ? 'No mapped parcels are inside this view. Pan, zoom out, or choose Show all matches.'
+                  : 'No parcels match these filters.'}
               </div>
             ) : (
-              ranked.slice(0, leadLimit).map((row, index) => (
+              rankingRows.slice(0, leadLimit).map((row, index) => (
                 <button
                   key={row.bbl}
                   type="button"
@@ -2645,7 +2713,7 @@ export function ParcelIntelExplorer({
                 </button>
               ))
             )}
-            {ranked.length > MOBILE_COMPACT_LEAD_LIMIT && (
+            {rankingRows.length > MOBILE_COMPACT_LEAD_LIMIT && (
               <div className="mt-1 grid gap-2 sm:hidden">
                 <button
                   type="button"
@@ -2659,10 +2727,10 @@ export function ParcelIntelExplorer({
                   {mobileRankingExpanded
                     ? 'Show fewer ranked leads'
                     : `Show more ranked leads · ${(
-                        ranked.length - MOBILE_COMPACT_LEAD_LIMIT
+                        rankingRows.length - MOBILE_COMPACT_LEAD_LIMIT
                       ).toLocaleString()} remaining`}
                 </button>
-                {mobileRankingExpanded && ranked.length > leadLimit && (
+                {mobileRankingExpanded && rankingRows.length > leadLimit && (
                   <button
                     type="button"
                     onClick={() =>
@@ -2670,13 +2738,13 @@ export function ParcelIntelExplorer({
                     }
                     className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-900"
                   >
-                    Load {Math.min(LEAD_PAGE_SIZE, ranked.length - leadLimit)} more
-                    · {(ranked.length - leadLimit).toLocaleString()} remaining
+                    Load {Math.min(LEAD_PAGE_SIZE, rankingRows.length - leadLimit)} more
+                    · {(rankingRows.length - leadLimit).toLocaleString()} remaining
                   </button>
                 )}
               </div>
             )}
-            {ranked.length > leadLimit && (
+            {rankingRows.length > leadLimit && (
               <button
                 type="button"
                 onClick={() =>
@@ -2684,8 +2752,8 @@ export function ParcelIntelExplorer({
                 }
                 className="mt-1 hidden h-9 w-full items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-900 sm:inline-flex"
               >
-                Show {Math.min(LEAD_PAGE_SIZE, ranked.length - leadLimit)} more ·{' '}
-                {(ranked.length - leadLimit).toLocaleString()} remaining
+                Show {Math.min(LEAD_PAGE_SIZE, rankingRows.length - leadLimit)} more ·{' '}
+                {(rankingRows.length - leadLimit).toLocaleString()} remaining
               </button>
             )}
           </div>

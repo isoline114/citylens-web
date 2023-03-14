@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   removeParcelSavedSearch: vi.fn(),
   recordParcelProductEvent: vi.fn(),
   advanceParcelWorkflow: vi.fn(),
+  downloadCsv: vi.fn(),
   routerReplace: vi.fn(),
   getAccessToken: vi.fn<
     (options?: { forceRefresh?: boolean }) => Promise<string | null>
@@ -63,16 +64,30 @@ vi.mock('@/lib/api', async (importOriginal) => {
   };
 });
 
+vi.mock('./[borough]/parcel-intel-csv', () => ({
+  downloadCsv: mocks.downloadCsv,
+}));
+
 vi.mock('./parcel-intel-explorer-map', () => ({
   ParcelIntelExplorerMap: ({
     rows,
     overlay,
+    onViewportRowsChange,
   }: {
     rows: ParcelIntelRow[];
     overlay: string;
+    onViewportRowsChange?: (bbls: string[]) => void;
   }) => (
     <div data-testid="citywide-map-stub" data-overlay={overlay}>
       {rows.length} mapped rows
+      <button
+        type="button"
+        onClick={() =>
+          onViewportRowsChange?.(rows.slice(0, 1).map((row) => row.bbl))
+        }
+      >
+        Simulate map viewport
+      </button>
     </div>
   ),
 }));
@@ -211,6 +226,7 @@ beforeEach(() => {
     item: {},
   });
   mocks.routerReplace.mockReset();
+  mocks.downloadCsv.mockReset();
   mocks.getAccessToken.mockReset();
   mocks.getAccessToken.mockResolvedValue('token');
   mocks.getParcelIntelMap.mockImplementation(
@@ -331,6 +347,58 @@ describe('ParcelIntelExplorer', () => {
     expect(mocks.getParcelIntelMap).toHaveBeenCalledWith(1000, {
       includeAuth: false,
     });
+  });
+
+  it('ranks and exports only the explicitly selected map extent', async () => {
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    await screen.findByText('2 mapped rows');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Simulate map viewport' }),
+    );
+
+    const rankView = await screen.findByRole('button', {
+      name: 'Rank this view · 1',
+    });
+    fireEvent.click(rankView);
+
+    await waitFor(() =>
+      expect(screen.getByTestId('parcel-screen-announcer')).toHaveTextContent(
+        '1 parcel is inside the current map view; 2 parcels match the full screen',
+      ),
+    );
+    expect(
+      screen.getByText(
+        'Only mapped parcels inside the current extent · unsaved scope',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /manhattan test site/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /brooklyn test site/i }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'CSV' }));
+
+    await waitFor(() => expect(mocks.downloadCsv).toHaveBeenCalledTimes(1));
+    expect(mocks.getParcelIntelSweep).toHaveBeenCalledWith('manhattan', 5000, {
+      includeAuth: false,
+    });
+    expect(mocks.getParcelIntelSweep).toHaveBeenCalledWith('brooklyn', 5000, {
+      includeAuth: false,
+    });
+    expect(mocks.downloadCsv).toHaveBeenCalledWith(
+      [expect.objectContaining({ bbl: '1000010001' })],
+      'citywide-map-view',
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Show all matches · 2' }),
+    );
+    expect(
+      screen.getByRole('button', { name: /brooklyn test site/i }),
+    ).toBeInTheDocument();
   });
 
   it('keeps the mobile ranking compact until the user expands it', async () => {

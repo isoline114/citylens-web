@@ -34,9 +34,9 @@ import {
 import {
   buildParcelClusterIndex,
   clusterMarkerDiameter,
-  countRowsInBounds,
   isParcelClusterFeature,
   NYC_MAP_BBOX,
+  rowBblsInBounds,
   type ParcelMapClusterProperties,
   type ParcelMapPointProperties,
 } from './parcel-intel-map-clusters';
@@ -57,6 +57,7 @@ type Props = {
   selectedRow?: ParcelIntelRow | null;
   overlay: ExplorerOverlay;
   onSelect: (bbl: string) => void;
+  onViewportRowsChange?: (bbls: string[]) => void;
 };
 
 function fitMapToRows(map: LeafletMap, rows: ParcelExplorerRow[]) {
@@ -311,6 +312,7 @@ export function ParcelIntelExplorerMap({
   selectedRow = null,
   overlay,
   onSelect,
+  onViewportRowsChange,
 }: Props) {
   const mapRef = useRef<LeafletMap | null>(null);
   const [viewport, setViewport] = useState<MapViewport>({
@@ -332,10 +334,11 @@ export function ParcelIntelExplorerMap({
     () => buildParcelClusterIndex(mappable),
     [mappable],
   );
-  const visibleCount = useMemo(
-    () => countRowsInBounds(mappable, viewport.bounds),
+  const visibleBbls = useMemo(
+    () => rowBblsInBounds(mappable, viewport.bounds),
     [mappable, viewport.bounds],
   );
+  const visibleCount = visibleBbls.length;
   const handleViewportChange = useCallback((next: MapViewport) => {
     setViewport(next);
   }, []);
@@ -344,6 +347,10 @@ export function ParcelIntelExplorerMap({
     | GeoJsonObject
     | null
     | undefined;
+
+  useEffect(() => {
+    onViewportRowsChange?.(visibleBbls);
+  }, [onViewportRowsChange, visibleBbls]);
 
   return (
     <div

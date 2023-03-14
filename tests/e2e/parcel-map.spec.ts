@@ -61,6 +61,18 @@ test('clusters the citywide preview and converges borough URLs on one explorer',
 
   await page.locator('.parcel-map-cluster-icon').first().click();
   await expect(map.getByText(/in view/)).toBeVisible();
+  const rankView = page.getByTestId('rank-map-view');
+  await expect(rankView).toHaveText(/Rank this view · [1-9][0-9]*/);
+  await rankView.click();
+  await expect(rankView).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    page.getByText(
+      'Only mapped parcels inside the current extent · unsaved scope',
+    ),
+  ).toBeVisible();
+  await expect(rankView).toHaveText('Show all matches · 125');
+  await rankView.click();
+  await expect(rankView).toHaveAttribute('aria-pressed', 'false');
   await expect(
     page.getByRole('button', {
       name: 'Fit the map to all matching parcels',

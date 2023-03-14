@@ -6,6 +6,7 @@ import {
   countRowsInBounds,
   isParcelClusterFeature,
   NYC_MAP_BBOX,
+  rowBblsInBounds,
 } from './parcel-intel-map-clusters';
 
 function row(
@@ -75,6 +76,7 @@ describe('parcel explorer map clustering', () => {
     ];
 
     expect(countRowsInBounds(rows, NYC_MAP_BBOX)).toBe(1);
+    expect(rowBblsInBounds(rows, NYC_MAP_BBOX)).toEqual(['inside']);
   });
 
   it('scales cluster controls without allowing unbounded markers', () => {

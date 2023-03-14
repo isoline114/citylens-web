@@ -58,18 +58,25 @@ export function countRowsInBounds(
   rows: ParcelExplorerRow[],
   bounds: BBox,
 ): number {
+  return rowBblsInBounds(rows, bounds).length;
+}
+
+export function rowBblsInBounds(
+  rows: ParcelExplorerRow[],
+  bounds: BBox,
+): string[] {
   const [west, south, east, north] = bounds;
-  return rows.reduce((count, row) => {
+  return rows.flatMap((row) => {
     if (typeof row.lat !== 'number' || typeof row.lng !== 'number') {
-      return count;
+      return [];
     }
     return row.lng >= west &&
       row.lng <= east &&
       row.lat >= south &&
       row.lat <= north
-      ? count + 1
-      : count;
-  }, 0);
+      ? [row.bbl]
+      : [];
+  });
 }
 
 export function clusterMarkerDiameter(pointCount: number): number {
