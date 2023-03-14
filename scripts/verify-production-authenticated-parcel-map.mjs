@@ -50,6 +50,7 @@ let thesisComposerReceiptVerified = false;
 let thesisComposerFiltersVerified = false;
 let thesisComposerPositiveMatchVerified = false;
 let thesisComposerEventReceipt = null;
+let returningSessionReloadVerified = false;
 let passed = false;
 let failure = null;
 
@@ -161,6 +162,58 @@ try {
       'No complete authenticated Parcel Intelligence map response was observed.',
     );
   }
+
+  // A fresh sign-in alone is not enough evidence. Real users commonly return
+  // to an already-authenticated tab or reload the explorer later. Require a
+  // second complete inventory receipt after a full document reload so stale
+  // client auth/session state cannot strand returning users on the public
+  // 125-row preview while this monitor remains green.
+  const completeReceiptCountBeforeReload = mapReceipts.filter(
+    (receipt) =>
+      receipt.status === 200 &&
+      receipt.access_scope === 'authenticated_full' &&
+      receipt.returned_count === expectedCount &&
+      receipt.available_count === expectedCount &&
+      receipt.inventory_complete === true &&
+      receipt.row_count === expectedCount,
+  ).length;
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForFunction(
+    ({ count }) =>
+      document
+        .querySelector('[data-testid="parcel-inventory-status"]')
+        ?.textContent?.includes(
+          `Full inventory verified · ${Number(count).toLocaleString(
+            'en-US',
+          )} loaded`,
+        ),
+    { count: expectedCount },
+    { timeout: 30_000 },
+  );
+  const returningMappedStatus = (
+    await page.getByText(/mapped parcels$/).textContent()
+  )?.trim();
+  const completeReceiptCountAfterReload = mapReceipts.filter(
+    (receipt) =>
+      receipt.status === 200 &&
+      receipt.access_scope === 'authenticated_full' &&
+      receipt.returned_count === expectedCount &&
+      receipt.available_count === expectedCount &&
+      receipt.inventory_complete === true &&
+      receipt.row_count === expectedCount,
+  ).length;
+  if (
+    returningMappedStatus !== `${expectedFormatted} mapped parcels` ||
+    completeReceiptCountAfterReload <= completeReceiptCountBeforeReload
+  ) {
+    throw new Error(
+      `Returning authenticated session did not reload the complete inventory: ${
+        returningMappedStatus ?? 'missing map status'
+      }.`,
+    );
+  }
+  returningSessionReloadVerified = true;
+
   const methodology = page
     .locator('details')
     .filter({ hasText: 'How CityLens ranks and qualifies parcels' });
@@ -417,7 +470,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v5',
+  schema_version: 'citylens/production-authenticated-parcel-map@v6',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -425,6 +478,7 @@ const report = {
   failure,
   auth_token_receipts: authTokenReceipts,
   map_receipts: mapReceipts,
+  returning_session_reload_verified: returningSessionReloadVerified,
   screening_receipt_verified: screeningReceiptVerified,
   address_resolution_verified: addressResolutionVerified,
   official_dossier_verified: officialDossierVerified,
