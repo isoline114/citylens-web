@@ -177,7 +177,7 @@ const AUTHENTICATED_INVENTORY_RETRY_DELAYS_MS = [1_000, 3_000, 8_000] as const;
 function ExplorerMapSkeleton() {
   return (
     <div
-      className="relative flex h-full min-h-[560px] items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100"
+      className="relative flex h-full min-h-[420px] items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 sm:min-h-[560px]"
       role="status"
       aria-label="Loading citywide parcel map"
     >
@@ -709,6 +709,53 @@ export function ParcelIntelExplorer({
     filters.minUnusedFloorAreaSqft !== null ||
     filters.query !== DEFAULT_FILTERS.query ||
     filters.ownerPortfolioId !== null;
+  const [screenAnnouncement, setScreenAnnouncement] = useState('');
+
+  const inventoryAnnouncement =
+    auth.status === 'loading'
+      ? 'Checking parcel workspace access.'
+      : inventoryState === 'upgrading'
+        ? `Loading the full parcel inventory. ${totalAvailable.toLocaleString()} parcels expected.`
+        : inventoryState === 'full'
+          ? `Full parcel inventory loaded and verified. ${rows.length.toLocaleString()} parcels available.`
+          : inventoryState === 'incomplete'
+            ? `Parcel inventory is incomplete. ${rows.length.toLocaleString()} of ${totalAvailable.toLocaleString()} parcels loaded.`
+            : loadState === 'ready'
+              ? `Public parcel preview loaded. ${rows.length.toLocaleString()} of ${totalAvailable.toLocaleString()} parcels available.`
+              : 'Loading the public parcel preview.';
+
+  const workspaceAnnouncement = comparisonOpen
+    ? ''
+    : selectedDetail
+      ? `Parcel workspace opened for ${selectedDetail.address ?? `BBL ${selectedDetail.bbl}`}.`
+      : selectedSummary && detailState === 'loading'
+        ? `Loading parcel workspace for ${selectedSummary.address ?? `BBL ${selectedSummary.bbl}`}.`
+        : selectedSummary && detailState === 'error'
+          ? `Parcel workspace could not load for ${selectedSummary.address ?? `BBL ${selectedSummary.bbl}`}.`
+          : '';
+
+  const comparisonAnnouncement =
+    comparisonRows.length === 0
+      ? ''
+      : comparisonOpen
+        ? `Comparison workspace opened with ${comparisonRows.length} parcels.`
+        : `Comparison shortlist contains ${comparisonRows.length} of ${MAX_COMPARISON_PARCELS} parcels.`;
+
+  useEffect(() => {
+    if (loadState !== 'ready') return;
+    const boroughLabel =
+      filters.borough === 'all'
+        ? 'all five boroughs'
+        : BOROUGH_LABELS[filters.borough] ?? filters.borough;
+    const timeout = window.setTimeout(() => {
+      setScreenAnnouncement(
+        `${ranked.length.toLocaleString()} ${
+          ranked.length === 1 ? 'parcel matches' : 'parcels match'
+        } the current screen in ${boroughLabel}.`,
+      );
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [filters, loadState, ranked.length]);
 
   const syncExplorerUrl = (borough: string, bbl: string | null) => {
     const params = new URLSearchParams();
@@ -1096,6 +1143,42 @@ export function ParcelIntelExplorer({
 
   return (
     <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_28px_90px_-42px_rgba(15,23,42,0.42)]">
+      <div
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-testid="parcel-inventory-announcer"
+      >
+        {inventoryAnnouncement}
+      </div>
+      <div
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-testid="parcel-screen-announcer"
+      >
+        {screenAnnouncement}
+      </div>
+      <div
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-testid="parcel-workspace-announcer"
+      >
+        {workspaceAnnouncement}
+      </div>
+      <div
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-testid="parcel-comparison-announcer"
+      >
+        {comparisonAnnouncement}
+      </div>
       <div className="relative overflow-hidden bg-slate-950 px-4 py-4 text-white md:px-6 md:py-5">
         <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-sky-500/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-emerald-500/15 blur-3xl" />
@@ -1511,8 +1594,8 @@ export function ParcelIntelExplorer({
       )}
 
       <div className="border-b border-slate-200 bg-slate-50 px-4 py-3.5 md:px-6">
-        <div className="grid grid-cols-2 gap-2 xl:grid-cols-[minmax(185px,1fr)_minmax(120px,0.65fr)_minmax(120px,0.65fr)_minmax(185px,1fr)_auto]">
-          <label className="relative col-span-2 xl:col-span-1">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(185px,1fr)_minmax(120px,0.65fr)_minmax(120px,0.65fr)_minmax(185px,1fr)_auto]">
+          <label className="relative sm:col-span-2 xl:col-span-1">
             <span className="sr-only">Search parcels</span>
             <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <input
@@ -1551,7 +1634,7 @@ export function ParcelIntelExplorer({
               <option value="high_or_better">High or better</option>
             </select>
           </label>
-          <label className="col-span-2 xl:col-span-1">
+          <label className="sm:col-span-2 xl:col-span-1">
             <span className="sr-only">Filter by site type</span>
             <select
               value={filters.siteType}
@@ -1571,7 +1654,7 @@ export function ParcelIntelExplorer({
               <option value="active_project">Active projects</option>
             </select>
           </label>
-          <div className="col-span-2 flex flex-wrap gap-2 xl:col-span-1 xl:flex-nowrap">
+          <div className="flex flex-wrap gap-2 sm:col-span-2 xl:col-span-1 xl:flex-nowrap">
             <button
               type="button"
               onClick={() => {
@@ -2032,8 +2115,8 @@ export function ParcelIntelExplorer({
         </div>
       )}
 
-      <div className="grid min-h-[740px] gap-0 lg:h-[760px] lg:grid-cols-[minmax(0,1fr)_460px]">
-        <div className="min-h-[560px] p-3 md:p-4 lg:h-[760px]">
+      <div className="grid min-h-0 gap-0 lg:h-[760px] lg:min-h-[740px] lg:grid-cols-[minmax(0,1fr)_460px]">
+        <div className="min-h-[420px] p-3 sm:min-h-[560px] md:p-4 lg:h-[760px]">
           {loadState === 'idle' || loadState === 'loading' ? (
             <ExplorerMapSkeleton />
           ) : loadState === 'error' ? (
@@ -2167,7 +2250,7 @@ export function ParcelIntelExplorer({
               </button>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-2 border-b border-slate-200 p-3">
+          <div className="grid grid-cols-1 gap-2 border-b border-slate-200 p-3 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => updateFilter('siteType', 'uncommitted')}

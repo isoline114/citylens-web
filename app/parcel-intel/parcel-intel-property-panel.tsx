@@ -1383,6 +1383,8 @@ export function ParcelIntelPropertyPanel({
     <div
       className="flex h-full min-h-0 flex-col bg-white"
       data-testid="parcel-property-panel"
+      role="region"
+      aria-labelledby="parcel-property-panel-title"
     >
       <div className="shrink-0 border-b border-slate-200 px-4 pb-3 pt-4">
         <button
@@ -1400,7 +1402,10 @@ export function ParcelIntelPropertyPanel({
             <div className="text-[11px] font-semibold uppercase tracking-[0.13em] text-sky-700">
               {BOROUGH_LABELS[row.borough ?? ''] ?? row.borough} · BBL {row.bbl}
             </div>
-            <h3 className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
+            <h3
+              id="parcel-property-panel-title"
+              className="mt-1 text-xl font-semibold tracking-tight text-slate-950"
+            >
               {row.address ?? 'Address unavailable'}
             </h3>
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1518,7 +1523,7 @@ export function ParcelIntelPropertyPanel({
         )}
       </div>
 
-      <div className="grid shrink-0 grid-cols-4 border-b border-slate-200 bg-slate-50 p-1.5">
+      <div className="grid shrink-0 grid-cols-2 border-b border-slate-200 bg-slate-50 p-1.5 sm:grid-cols-4">
         {(
           [
             ['overview', FileSearch, 'Overview'],

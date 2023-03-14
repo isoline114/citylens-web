@@ -453,7 +453,15 @@ export function ParcelComparisonDesk({
         </div>
       </div>
 
-      <div className="order-3 overflow-x-auto px-3 py-4 md:px-5">
+      <div
+        className="order-3 overflow-x-auto px-3 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500 md:px-5"
+        role="region"
+        aria-label="Scrollable parcel evidence comparison table"
+        tabIndex={0}
+      >
+        <p className="mb-2 text-[11px] leading-4 text-slate-500 md:hidden">
+          Scroll horizontally to review every parcel and evidence field.
+        </p>
         <table
           className="w-full table-fixed overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
           style={{ minWidth: `${190 + rows.length * 270}px` }}

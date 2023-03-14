@@ -124,11 +124,11 @@ function OverlayLegend({ overlay }: { overlay: ExplorerOverlay }) {
           }));
 
   return (
-    <div className="pointer-events-none absolute bottom-3 left-3 z-[400] rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-xs text-slate-700 shadow-lg backdrop-blur">
+    <div className="pointer-events-none absolute bottom-3 left-3 z-[400] max-w-[calc(100%-1.5rem)] rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-xs text-slate-700 shadow-lg backdrop-blur">
       <div className="mb-1.5 font-semibold uppercase tracking-[0.12em] text-slate-500">
         {overlay}
       </div>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1 sm:flex sm:flex-wrap">
+      <div className="grid grid-cols-1 gap-x-3 gap-y-1 sm:flex sm:flex-wrap">
         {items.map((item) => (
           <span key={item.key} className="flex items-center gap-1.5 whitespace-nowrap">
             <span
@@ -164,13 +164,17 @@ export function ParcelIntelExplorerMap({
 
   return (
     <div
-      className="relative h-full min-h-[560px] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-inner"
+      className="relative h-full min-h-[420px] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-inner sm:min-h-[560px]"
       data-testid="parcel-citywide-map"
+      role="region"
+      aria-label={`Interactive citywide map with ${mappable.length.toLocaleString()} mapped ${
+        mappable.length === 1 ? 'parcel' : 'parcels'
+      }. Use the acquisition ranking after the map for a keyboard-accessible list.`}
     >
       <MapContainer
         bounds={NYC_BOUNDS}
         preferCanvas
-        scrollWheelZoom
+        scrollWheelZoom={false}
         className="h-full w-full"
         style={{ height: '100%', width: '100%', zIndex: 0 }}
       >

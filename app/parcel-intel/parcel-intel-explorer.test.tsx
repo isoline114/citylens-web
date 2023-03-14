@@ -416,6 +416,62 @@ describe('ParcelIntelExplorer', () => {
     );
   });
 
+  it('announces inventory, screen, parcel, and comparison state changes', async () => {
+    mocks.authStatus = 'authenticated';
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('parcel-inventory-announcer'),
+      ).toHaveTextContent(
+        'Full parcel inventory loaded and verified. 2 parcels available.',
+      ),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('parcel-screen-announcer'),
+      ).toHaveTextContent(
+        '2 parcels match the current screen in all five boroughs.',
+      ),
+    );
+
+    fireEvent.change(screen.getByLabelText('Filter by borough'), {
+      target: { value: 'brooklyn' },
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('parcel-screen-announcer'),
+      ).toHaveTextContent(
+        '1 parcel matches the current screen in Brooklyn.',
+      ),
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /brooklyn test site/i }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('parcel-workspace-announcer'),
+      ).toHaveTextContent('Parcel workspace opened for BK test site.'),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Compare' }));
+    expect(
+      screen.getByTestId('parcel-comparison-announcer'),
+    ).toHaveTextContent('Comparison shortlist contains 1 of 3 parcels.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to ranking' }));
+    fireEvent.click(screen.getByRole('button', { name: /All NYC/i }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: /manhattan test site/i }),
+    );
+    await screen.findByTestId('property-panel-stub');
+    fireEvent.click(screen.getByRole('button', { name: 'Compare' }));
+
+    expect(
+      screen.getByTestId('parcel-comparison-announcer'),
+    ).toHaveTextContent('Comparison workspace opened with 2 parcels.');
+  });
+
   it('offers official address discovery only after the full inventory has no match', async () => {
     mocks.authStatus = 'authenticated';
     render(<ParcelIntelExplorer boroughs={boroughs} />);

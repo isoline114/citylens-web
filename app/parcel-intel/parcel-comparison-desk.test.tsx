@@ -86,6 +86,11 @@ describe('ParcelComparisonDesk', () => {
       />,
     );
 
+    expect(
+      screen.getByRole('region', {
+        name: 'Scrollable parcel evidence comparison table',
+      }),
+    ).toHaveAttribute('tabindex', '0');
     fireEvent.click(
       screen.getByRole('button', { name: 'Evidence CSV' }),
     );

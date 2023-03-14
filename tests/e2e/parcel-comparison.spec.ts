@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-import { expectNoWcagViolations } from './accessibility';
+import {
+  expectNoDocumentHorizontalOverflow,
+  expectNoWcagViolations,
+} from './accessibility';
 
 const mapRows = [
   {
@@ -109,6 +112,10 @@ function detail(row: (typeof mapRows)[number]) {
 test('compares two parcels and downloads a source-dated evidence packet', async ({
   page,
 }) => {
+  const desktopViewport = page.viewportSize() ?? {
+    width: 1280,
+    height: 720,
+  };
   const advanceRequests: unknown[] = [];
   const productEvents: unknown[] = [];
   await page.addInitScript(() => {
@@ -173,16 +180,31 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   await expect(page.getByTestId('parcel-inventory-status')).toContainText(
     'Full inventory verified',
   );
+  await expect(page.getByTestId('parcel-inventory-announcer')).toContainText(
+    'Full parcel inventory loaded and verified',
+  );
   await expectNoWcagViolations(
     page,
     'Authenticated Parcel Intelligence explorer',
   );
+  await page.setViewportSize({ width: 320, height: 800 });
+  await expect(page.getByLabel('Search parcels')).toBeVisible();
+  await expect(page.getByTestId('parcel-citywide-map')).toBeVisible();
+  await expect(page.locator('#parcel-acquisition-ranking')).toBeVisible();
+  await expectNoDocumentHorizontalOverflow(
+    page,
+    'Parcel Intelligence explorer at 400% equivalent zoom',
+  );
+  await page.setViewportSize(desktopViewport);
   await page.getByRole('button', { name: /^Signals$/ }).click();
   await page
     .getByRole('button', { name: /Owner concentration \+ assemblage/i })
     .click();
   await expect(page.getByTestId('screen-intelligence')).toContainText(
     '1 of 2',
+  );
+  await expect(page.getByTestId('parcel-screen-announcer')).toContainText(
+    '1 parcel matches the current screen',
   );
   await expect(
     page.getByRole('button', { name: /Owner concentration \+ assemblage/i }),
@@ -220,6 +242,19 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
     name: 'Close parcel panel and return to ranked parcels',
   });
   await expect(closeParcel).toBeFocused();
+  await expect(page.getByTestId('parcel-workspace-announcer')).toContainText(
+    'Parcel workspace opened for 100 E 21 STREET',
+  );
+  await page.setViewportSize({ width: 320, height: 800 });
+  await expect(
+    page.getByRole('region', { name: '100 E 21 STREET' }),
+  ).toBeVisible();
+  await expect(closeParcel).toBeVisible();
+  await expectNoDocumentHorizontalOverflow(
+    page,
+    'Parcel evidence workspace at 400% equivalent zoom',
+  );
+  await page.setViewportSize(desktopViewport);
   await expect(page.getByTestId('parcel-decision-peers')).toContainText(
     'Similar qualified leads',
   );
@@ -235,10 +270,28 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
 
   const desk = page.getByTestId('parcel-comparison-desk');
   await expect(desk).toBeVisible();
+  await expect(page.getByTestId('parcel-comparison-announcer')).toContainText(
+    'Comparison workspace opened with 2 parcels',
+  );
   await expect(desk).toContainText('100 E 21 STREET');
   await expect(desk).toContainText('41-20 QUEENS PLAZA');
   await expect(desk).toContainText('Evidence currency');
   await expectNoWcagViolations(page, 'Parcel comparison desk');
+  await page.setViewportSize({ width: 320, height: 800 });
+  const comparisonTableRegion = page.getByRole('region', {
+    name: 'Scrollable parcel evidence comparison table',
+  });
+  await expect(comparisonTableRegion).toBeVisible();
+  await expectNoDocumentHorizontalOverflow(
+    page,
+    'Parcel comparison desk at 400% equivalent zoom',
+  );
+  expect(
+    await comparisonTableRegion.evaluate(
+      (element) => element.scrollWidth > element.clientWidth,
+    ),
+  ).toBe(true);
+  await page.setViewportSize(desktopViewport);
   const closeComparison = desk.getByRole('button', {
     name: 'Close parcel comparison',
   });

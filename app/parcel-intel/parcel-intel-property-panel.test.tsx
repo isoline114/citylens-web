@@ -192,6 +192,9 @@ describe('ParcelIntelPropertyPanel', () => {
     const onClose = vi.fn();
     render(<ParcelIntelPropertyPanel row={parcel} onClose={onClose} />);
 
+    expect(
+      screen.getByRole('region', { name: '224 Clarkson Avenue' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('224 Clarkson Avenue')).toBeInTheDocument();
     expect(screen.getByText('Example Owner LLC')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /ACRIS/i })).toHaveAttribute(

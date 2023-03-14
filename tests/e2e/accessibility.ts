@@ -49,3 +49,30 @@ export async function expectNoWcagViolations(
     )}`,
   ).toEqual([]);
 }
+
+/**
+ * WCAG 1.4.10's 400% desktop-zoom case is equivalent to a 320 CSS-pixel
+ * viewport. Wide evidence tables may own a labelled local scroller, but the
+ * document itself must not require two-dimensional scrolling.
+ */
+export async function expectNoDocumentHorizontalOverflow(
+  page: Page,
+  surface: string,
+): Promise<void> {
+  const receipt = await page.evaluate(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    const viewportWidth = root.clientWidth;
+    const contentWidth = Math.max(root.scrollWidth, body.scrollWidth);
+    return {
+      viewportWidth,
+      contentWidth,
+      overflow: Math.max(0, contentWidth - viewportWidth),
+    };
+  });
+
+  expect(
+    receipt.overflow,
+    `${surface} overflows the ${receipt.viewportWidth}px document viewport: ${receipt.contentWidth}px content width`,
+  ).toBeLessThanOrEqual(1);
+}
