@@ -38,7 +38,8 @@ test('demo mode renders a precomputed run and its artifacts', async ({ page }) =
         run_id: 'demo-1',
         status: 'succeeded',
         stage: 'complete',
-        progress: 1,
+        progress: 100,
+        request: { address: '100 E 21st St Brooklyn, NY 11226' },
         artifacts: [
           { name: 'preview.png', signed_url: '/v1/demo/artifacts/demo-1/preview.png' },
           { name: 'change.geojson', signed_url: '/v1/demo/artifacts/demo-1/change.geojson' },
@@ -135,8 +136,12 @@ end_header
   await page.getByLabel('Select a featured demo run').selectOption('demo-1');
 
   await expect(page).toHaveURL(/\/runs\/demo-1\?demo=1/);
-  await expect(page.getByRole('heading', { name: 'Run demo-1' })).toBeVisible();
-  await expect(page.getByText('Demo run')).toBeVisible();
+  await expect(page.getByText('Public demo', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', {
+      name: '100 E 21st St Brooklyn, NY 11226',
+    }),
+  ).toBeVisible();
   await expect(page.getByTestId('artifacts-panel')).toBeVisible();
   await expect(page.getByTestId('artifact-preview-name')).toHaveText('preview.png', { timeout: 15000 });
   await expect(page.getByTestId('artifact-preview-download')).toBeVisible();
@@ -161,8 +166,8 @@ test('shows error message instead of infinite loading when demo API is unreachab
   });
 
   await page.goto('/runs/demo-fail?demo=1');
-  await expect(page.getByText('Demo run')).toBeVisible();
-  await expect(page.getByText('Error loading run')).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Public demo', { exact: true })).toBeVisible();
+  await expect(page.getByText('Could not load this run')).toBeVisible({ timeout: 15000 });
 });
 
 test('homepage shows product-safe copy when /v1/demo/featured returns 404', async ({ page }) => {

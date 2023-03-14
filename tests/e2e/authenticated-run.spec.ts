@@ -26,7 +26,8 @@ test('authenticated run detail renders artifacts and qa summary', async ({ page 
         run_id: 'run-123',
         status: 'succeeded',
         stage: 'complete',
-        progress: 1,
+        progress: 100,
+        request: { address: '100 E 21st St Brooklyn, NY 11226' },
         artifacts: [
           { name: 'preview.png', signed_url: 'https://example.test/preview.png' },
           { name: 'change.geojson', signed_url: 'https://example.test/change.geojson' },
@@ -111,8 +112,12 @@ end_header
   });
 
   await page.goto('/runs/run-123');
-  await expect(page.getByRole('heading', { name: 'Run run-123' })).toBeVisible();
-  await expect(page.getByRole('main').getByText('Status', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', {
+      name: '100 E 21st St Brooklyn, NY 11226',
+    }),
+  ).toBeVisible();
+  await expect(page.getByText('Processing receipt', { exact: true })).toBeVisible();
   await expect(page.getByTestId('artifacts-panel')).toBeVisible();
   await expect(page.getByTestId('artifact-preview-name')).toHaveText('preview.png', { timeout: 15000 });
   await expect(page.getByTestId('artifact-preview-download')).toBeVisible();
