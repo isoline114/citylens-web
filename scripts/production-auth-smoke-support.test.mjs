@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   positiveFormattedCount,
+  positiveFormattedCountWithSuffix,
   summarizeProductEvent,
 } from './production-auth-smoke-support.mjs';
 
@@ -12,6 +13,21 @@ describe('production authenticated smoke support', () => {
     expect(positiveFormattedCount('0')).toBeNull();
     expect(positiveFormattedCount('—')).toBeNull();
     expect(positiveFormattedCount('12 leads')).toBeNull();
+  });
+
+  it('parses only the expected map-status suffix', () => {
+    expect(
+      positiveFormattedCountWithSuffix('5,000 matches', 'matches'),
+    ).toBe(5000);
+    expect(
+      positiveFormattedCountWithSuffix('5,000 in view', 'in view'),
+    ).toBe(5000);
+    expect(
+      positiveFormattedCountWithSuffix('5,000 mapped parcels', 'matches'),
+    ).toBeNull();
+    expect(
+      positiveFormattedCountWithSuffix('0 matches', 'matches'),
+    ).toBeNull();
   });
 
   it('summarizes the exact value-minimized composer event', () => {

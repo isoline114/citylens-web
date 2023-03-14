@@ -8,6 +8,7 @@ import { chromium } from '@playwright/test';
 
 import {
   positiveFormattedCount,
+  positiveFormattedCountWithSuffix,
   summarizeProductEvent,
 } from './production-auth-smoke-support.mjs';
 
@@ -51,6 +52,8 @@ let thesisComposerFiltersVerified = false;
 let thesisComposerPositiveMatchVerified = false;
 let thesisComposerEventReceipt = null;
 let returningSessionReloadVerified = false;
+let initialClusteredMapReceipt = null;
+let returningClusteredMapReceipt = null;
 let passed = false;
 let failure = null;
 
@@ -99,6 +102,50 @@ page.on('response', async (response) => {
   }
 });
 
+async function verifyClusteredMap(expectedFormatted) {
+  const map = page.getByTestId('parcel-citywide-map');
+  await map
+    .getByText(`${expectedFormatted} matches`, { exact: true })
+    .waitFor({ timeout: 30_000 });
+  const inViewText = (
+    await map.getByText(/^[\d,]+ in view$/).textContent()
+  )?.trim();
+  const matchText = (
+    await map
+      .getByText(`${expectedFormatted} matches`, { exact: true })
+      .textContent()
+  )?.trim();
+  const clusterCount = await page.locator('.parcel-map-cluster-icon').count();
+  const fitControlVisible = await page
+    .getByRole('button', {
+      name: 'Fit the map to all matching parcels',
+    })
+    .isVisible();
+  const mappedAriaLabel = await map.getAttribute('aria-label');
+  const receipt = {
+    in_view_count: positiveFormattedCountWithSuffix(inViewText, 'in view'),
+    match_count: positiveFormattedCountWithSuffix(matchText, 'matches'),
+    cluster_count: clusterCount,
+    fit_control_visible: fitControlVisible,
+    mapped_aria_label_matches:
+      mappedAriaLabel?.includes(
+        `with ${expectedFormatted} mapped parcels`,
+      ) === true,
+  };
+  if (
+    receipt.in_view_count !== expectedCount ||
+    receipt.match_count !== expectedCount ||
+    receipt.cluster_count <= 0 ||
+    receipt.fit_control_visible !== true ||
+    receipt.mapped_aria_label_matches !== true
+  ) {
+    throw new Error(
+      `Unexpected clustered map receipt: ${JSON.stringify(receipt)}.`,
+    );
+  }
+  return receipt;
+}
+
 try {
   await page.goto(
     `${webBase}/sign-in?next=${encodeURIComponent('/parcel-intel')}`,
@@ -125,9 +172,6 @@ try {
   const inventoryStatus = (
     await page.getByTestId('parcel-inventory-status').textContent()
   )?.trim();
-  const mappedStatus = (
-    await page.getByText(/mapped parcels$/).textContent()
-  )?.trim();
   const expectedFormatted = expectedCount.toLocaleString('en-US');
   if (
     inventoryStatus !==
@@ -135,9 +179,8 @@ try {
   ) {
     throw new Error(`Unexpected inventory status: ${inventoryStatus ?? 'missing'}`);
   }
-  if (mappedStatus !== `${expectedFormatted} mapped parcels`) {
-    throw new Error(`Unexpected map status: ${mappedStatus ?? 'missing'}`);
-  }
+  initialClusteredMapReceipt =
+    await verifyClusteredMap(expectedFormatted);
   if (
     !authTokenReceipts.some(
       (receipt) => receipt.status === 200 && receipt.jwt_shape === true,
@@ -190,9 +233,8 @@ try {
     { count: expectedCount },
     { timeout: 30_000 },
   );
-  const returningMappedStatus = (
-    await page.getByText(/mapped parcels$/).textContent()
-  )?.trim();
+  returningClusteredMapReceipt =
+    await verifyClusteredMap(expectedFormatted);
   const completeReceiptCountAfterReload = mapReceipts.filter(
     (receipt) =>
       receipt.status === 200 &&
@@ -203,13 +245,10 @@ try {
       receipt.row_count === expectedCount,
   ).length;
   if (
-    returningMappedStatus !== `${expectedFormatted} mapped parcels` ||
     completeReceiptCountAfterReload <= completeReceiptCountBeforeReload
   ) {
     throw new Error(
-      `Returning authenticated session did not reload the complete inventory: ${
-        returningMappedStatus ?? 'missing map status'
-      }.`,
+      'Returning authenticated session did not produce a second complete inventory receipt.',
     );
   }
   returningSessionReloadVerified = true;
@@ -470,7 +509,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v6',
+  schema_version: 'citylens/production-authenticated-parcel-map@v7',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -478,6 +517,8 @@ const report = {
   failure,
   auth_token_receipts: authTokenReceipts,
   map_receipts: mapReceipts,
+  initial_clustered_map_receipt: initialClusteredMapReceipt,
+  returning_clustered_map_receipt: returningClusteredMapReceipt,
   returning_session_reload_verified: returningSessionReloadVerified,
   screening_receipt_verified: screeningReceiptVerified,
   address_resolution_verified: addressResolutionVerified,

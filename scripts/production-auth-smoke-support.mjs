@@ -12,6 +12,19 @@ export function positiveFormattedCount(value) {
   return Number.isSafeInteger(count) && count > 0 ? count : null;
 }
 
+export function positiveFormattedCountWithSuffix(value, suffix) {
+  if (
+    typeof value !== 'string' ||
+    typeof suffix !== 'string' ||
+    !value.trim().endsWith(suffix)
+  ) {
+    return null;
+  }
+  return positiveFormattedCount(
+    value.trim().slice(0, -suffix.length).trim(),
+  );
+}
+
 export function summarizeProductEvent(status, payload) {
   const record =
     payload && typeof payload === 'object' && !Array.isArray(payload)

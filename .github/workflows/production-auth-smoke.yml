@@ -55,7 +55,7 @@ jobs:
           console.log(`## ${passed ? '✅' : '❌'} Real browser authentication`);
           console.log('');
           console.log(`- Signed-in API credential: \`${report?.auth_token_receipts?.some((receipt) => receipt.status === 200 && receipt.jwt_shape === true) ? 'passed' : 'failed'}\``);
-          console.log(`- Signed-in 5,000-parcel map: \`${passed ? 'passed' : 'failed'}\``);
+          console.log(`- Signed-in 5,000-parcel clustered map: \`${report?.initial_clustered_map_receipt?.match_count === 5000 && report?.initial_clustered_map_receipt?.cluster_count > 0 ? 'passed' : 'failed'}\``);
           console.log(`- Returning-session 5,000-parcel reload: \`${report?.returning_session_reload_verified ? 'passed' : 'failed'}\``);
           console.log(`- Auditable historical benchmark receipt: \`${report?.historical_benchmark_receipt_verified ? 'passed' : 'failed'}\``);
           console.log(`- Any-NYC-lot official dossier: \`${report?.official_dossier_verified ? 'passed' : 'failed'}\``);
