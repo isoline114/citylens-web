@@ -477,8 +477,14 @@ browser errors. It separately records successful API-credential minting, so a
 stale session cannot pass by rendering the 125-row public preview. It also
 verifies the auditable historical benchmark receipt and its limitations, the
 live Ovington exact-BBL dossier, source-grounded evidence readiness,
-official-address resolution, and current screening receipt while reporting
-only pass/fail booleans. Its email and password live only in the
+official-address resolution, current screening receipt, and the governed
+acquisition-thesis flow. The thesis check requires a reviewed, positive-match
+receipt, the expected visible filters, and an accepted
+`thesis_composer_applied:thesis_composer` API response whose JSON keys are
+exactly `event`, `schema_version`, and `source`. Its v5 report stores only
+booleans plus that response status/event/source/key receipt—never the thesis,
+parsed criteria, thresholds, geography, match count, or parcel identity.
+Its email and password live only in the
 `CITYLENS_WEB_SMOKE_EMAIL` and `CITYLENS_WEB_SMOKE_PASSWORD` GitHub Actions
 secrets; reports contain neither value, JWTs, parcel identifiers, nor owner
 data.

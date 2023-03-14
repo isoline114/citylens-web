@@ -60,6 +60,8 @@ jobs:
           console.log(`- Any-NYC-lot official dossier: \`${report?.official_dossier_verified ? 'passed' : 'failed'}\``);
           console.log(`- Source-grounded dossier readiness: \`${report?.dossier_readiness_verified ? 'passed' : 'failed'}\``);
           console.log(`- Official address → BBL → screening flow: \`${report?.address_resolution_verified ? 'passed' : 'failed'}\``);
+          console.log(`- Governed acquisition-thesis flow: \`${report?.thesis_composer_verified ? 'passed' : 'failed'}\``);
+          console.log(`- Value-minimized thesis event: \`${report?.thesis_composer_event_receipt?.value_minimized ? 'passed' : 'failed'}\``);
           console.log(`- Browser console errors: \`${report?.console_error_count ?? 'unknown'}\``);
           console.log(`- Browser page errors: \`${report?.page_error_count ?? 'unknown'}\``);
           if (report?.failure) console.log(`- Failure: \`${report.failure}\``);

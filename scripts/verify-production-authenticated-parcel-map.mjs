@@ -6,6 +6,11 @@ import process from 'node:process';
 
 import { chromium } from '@playwright/test';
 
+import {
+  positiveFormattedCount,
+  summarizeProductEvent,
+} from './production-auth-smoke-support.mjs';
+
 const webBase = (
   process.env.CITYLENS_WEB_BASE || 'https://www.citylens.dev'
 ).replace(/\/+$/, '');
@@ -40,6 +45,11 @@ let addressResolutionVerified = false;
 let officialDossierVerified = false;
 let dossierReadinessVerified = false;
 let historicalBenchmarkReceiptVerified = false;
+let thesisComposerVerified = false;
+let thesisComposerReceiptVerified = false;
+let thesisComposerFiltersVerified = false;
+let thesisComposerPositiveMatchVerified = false;
+let thesisComposerEventReceipt = null;
 let passed = false;
 let failure = null;
 
@@ -275,6 +285,115 @@ try {
     .getByText('Excluded from the current acquisition inventory')
     .waitFor({ timeout: 15_000 });
   addressResolutionVerified = true;
+
+  await page
+    .getByRole('button', { name: /Compose an acquisition thesis/i })
+    .click();
+  await page
+    .getByRole('textbox', { name: 'Acquisition thesis' })
+    .fill('High-priority sites in Brooklyn near transit');
+  await page.getByTestId('thesis-review').click();
+
+  const thesisReceipt = page.getByTestId('thesis-review-receipt');
+  const receiptChecks = await Promise.all([
+    thesisReceipt.getByText('Geography: Brooklyn').isVisible(),
+    thesisReceipt
+      .getByText('Priority: High or highest tier')
+      .isVisible(),
+    thesisReceipt
+      .getByText('Site type: Qualified acquisition leads')
+      .isVisible(),
+    thesisReceipt
+      .getByText('Required evidence: Transit within 800 m')
+      .isVisible(),
+  ]);
+  if (!receiptChecks.every(Boolean)) {
+    throw new Error(
+      'The acquisition-thesis review receipt was incomplete.',
+    );
+  }
+  thesisComposerReceiptVerified = true;
+
+  const thesisMatchText = (
+    await page.getByTestId('thesis-match-count').textContent()
+  )?.trim();
+  if (positiveFormattedCount(thesisMatchText) === null) {
+    throw new Error(
+      'The reviewed acquisition thesis did not produce a positive full-inventory match count.',
+    );
+  }
+  thesisComposerPositiveMatchVerified = true;
+
+  const thesisEventResponsePromise = page.waitForResponse(
+    (response) => {
+      if (
+        !response.url().includes('/v1/parcel-intel/product-events') ||
+        response.request().method() !== 'POST'
+      ) {
+        return false;
+      }
+      try {
+        return (
+          response.request().postDataJSON()?.event ===
+          'thesis_composer_applied'
+        );
+      } catch {
+        return false;
+      }
+    },
+    { timeout: 15_000 },
+  );
+  await page.getByTestId('thesis-apply').click();
+  const thesisEventResponse = await thesisEventResponsePromise;
+  thesisComposerEventReceipt = summarizeProductEvent(
+    thesisEventResponse.status(),
+    thesisEventResponse.request().postDataJSON(),
+  );
+  if (!thesisComposerEventReceipt.value_minimized) {
+    throw new Error(
+      'The acquisition-thesis event was rejected or exceeded its value-minimized contract.',
+    );
+  }
+
+  const appliedBorough = await page
+    .getByLabel('Filter by borough')
+    .inputValue();
+  const appliedPriority = await page
+    .getByLabel('Filter by priority')
+    .inputValue();
+  const appliedSiteType = await page
+    .getByLabel('Filter by site type')
+    .inputValue();
+  const signalSummaryVisible = await page
+    .getByRole('button', { name: 'Signals (1 active)' })
+    .isVisible();
+  if (
+    appliedBorough !== 'brooklyn' ||
+    appliedPriority !== 'high_or_better' ||
+    appliedSiteType !== 'uncommitted' ||
+    !signalSummaryVisible
+  ) {
+    throw new Error(
+      'The reviewed acquisition thesis did not produce the expected visible filters.',
+    );
+  }
+  thesisComposerFiltersVerified = true;
+
+  const thesisAnnouncement = (
+    await page.getByTestId('thesis-announcement').textContent()
+  )?.trim();
+  if (
+    !thesisAnnouncement?.startsWith(
+      'Applied 3 reviewed criteria.',
+    ) ||
+    !thesisAnnouncement.endsWith('current leads match.')
+  ) {
+    throw new Error(
+      'The applied acquisition thesis did not announce its reviewed result.',
+    );
+  }
+  thesisComposerVerified = true;
+
   if (consoleErrors.length > 0 || pageErrors.length > 0) {
     throw new Error(
       `Browser emitted ${consoleErrors.length} console error(s) and ${pageErrors.length} page error(s).`,
@@ -298,7 +417,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v4',
+  schema_version: 'citylens/production-authenticated-parcel-map@v5',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -311,6 +430,12 @@ const report = {
   official_dossier_verified: officialDossierVerified,
   dossier_readiness_verified: dossierReadinessVerified,
   historical_benchmark_receipt_verified: historicalBenchmarkReceiptVerified,
+  thesis_composer_verified: thesisComposerVerified,
+  thesis_composer_receipt_verified: thesisComposerReceiptVerified,
+  thesis_composer_filters_verified: thesisComposerFiltersVerified,
+  thesis_composer_positive_match_verified:
+    thesisComposerPositiveMatchVerified,
+  thesis_composer_event_receipt: thesisComposerEventReceipt,
   console_error_count: consoleErrors.length,
   page_error_count: pageErrors.length,
 };
