@@ -3,36 +3,36 @@
     {
       "slug": "manhattan",
       "display_name": "Manhattan",
-      "count": 1000,
+      "count": 250,
       "top_score": 0.0686922061
     },
     {
       "slug": "brooklyn",
       "display_name": "Brooklyn",
-      "count": 1000,
+      "count": 1339,
       "top_score": 0.0919117647
     },
     {
       "slug": "queens",
       "display_name": "Queens",
-      "count": 1000,
+      "count": 1520,
       "top_score": 0.3870967742
     },
     {
       "slug": "bronx",
       "display_name": "Bronx",
-      "count": 1000,
+      "count": 672,
       "top_score": 0.0919117647
     },
     {
       "slug": "staten_island",
       "display_name": "Staten Island",
-      "count": 1000,
+      "count": 1219,
       "top_score": 0.2244897959
     }
   ],
-  "generated_at": "2026-07-24T02:43:29Z",
-  "feed_generation": "20260724T024329000000Z-e2efixture000",
+  "generated_at": "2026-07-27T09:55:59.858344Z",
+  "feed_generation": "20260727T095559858344Z-e2efixture000",
   "model_metadata": {
     "model_type": "gradient_boosting",
     "feature_year": 2024,
@@ -136,6 +136,20 @@
       "pad_enriched_count": 500,
       "pluto_address_count": 4500,
       "ranking_use": "none"
+    },
+    "selection_policy": {
+      "schema": "citylens_selection_policy@v1",
+      "policy_id": "borough_floor_250",
+      "citywide_limit": 5000,
+      "minimum_per_borough": 250,
+      "ranking_field": "score_calibrated",
+      "borough_counts": {
+        "manhattan": 250,
+        "brooklyn": 1339,
+        "queens": 1520,
+        "bronx": 672,
+        "staten_island": 1219
+      }
     }
   },
   "prospective_validation": null,

@@ -1,16 +1,24 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CircleMarker,
   GeoJSON,
   MapContainer,
+  Marker,
   TileLayer,
   Tooltip,
   useMap,
+  useMapEvents,
 } from 'react-leaflet';
-import type { LatLngBoundsExpression, LatLngTuple } from 'leaflet';
-import type { GeoJsonObject } from 'geojson';
+import {
+  divIcon,
+  type LatLngBoundsExpression,
+  type LatLngTuple,
+  type Map as LeafletMap,
+} from 'leaflet';
+import type { BBox, GeoJsonObject } from 'geojson';
+import type Supercluster from 'supercluster';
 import type { ParcelIntelRow } from '@/lib/api';
 import {
   BOROUGH_COLORS,
@@ -23,11 +31,25 @@ import {
   type ParcelExplorerRow,
   type ExplorerOverlay,
 } from './parcel-intel-explorer-support';
+import {
+  buildParcelClusterIndex,
+  clusterMarkerDiameter,
+  countRowsInBounds,
+  isParcelClusterFeature,
+  NYC_MAP_BBOX,
+  type ParcelMapClusterProperties,
+  type ParcelMapPointProperties,
+} from './parcel-intel-map-clusters';
 
 const NYC_BOUNDS: LatLngBoundsExpression = [
   [40.4774, -74.2591],
   [40.9176, -73.7002],
 ];
+
+type MapViewport = {
+  bounds: BBox;
+  zoom: number;
+};
 
 type Props = {
   rows: ParcelExplorerRow[];
@@ -36,6 +58,21 @@ type Props = {
   overlay: ExplorerOverlay;
   onSelect: (bbl: string) => void;
 };
+
+function fitMapToRows(map: LeafletMap, rows: ParcelExplorerRow[]) {
+  const points: LatLngTuple[] = rows.flatMap((row) =>
+    typeof row.lat === 'number' && typeof row.lng === 'number'
+      ? ([[row.lat, row.lng]] as LatLngTuple[])
+      : [],
+  );
+  if (points.length === 0) {
+    map.fitBounds(NYC_BOUNDS, { padding: [12, 12], animate: false });
+  } else if (points.length === 1) {
+    map.setView(points[0], 15, { animate: false });
+  } else {
+    map.fitBounds(points, { padding: [28, 28], animate: false, maxZoom: 14 });
+  }
+}
 
 function FitExplorerBounds({
   rows,
@@ -51,20 +88,7 @@ function FitExplorerBounds({
     // panel closes, selectedBbl becomes null and this effect restores the
     // full filtered extent instead of leaving the user stranded at lot zoom.
     if (selectedBbl) return;
-    const points: LatLngTuple[] = rows.flatMap((row) =>
-      typeof row.lat === 'number' && typeof row.lng === 'number'
-        ? ([[row.lat, row.lng]] as LatLngTuple[])
-        : [],
-    );
-    if (points.length === 0) {
-      map.fitBounds(NYC_BOUNDS, { padding: [12, 12], animate: false });
-      return;
-    }
-    if (points.length === 1) {
-      map.setView(points[0], 15, { animate: false });
-      return;
-    }
-    map.fitBounds(points, { padding: [28, 28], animate: false, maxZoom: 14 });
+    fitMapToRows(map, rows);
   }, [map, rows, selectedBbl]);
 
   useEffect(() => {
@@ -97,6 +121,36 @@ function PanToSelection({
       });
     }
   }, [map, rows, selectedBbl]);
+
+  return null;
+}
+
+function currentViewport(map: LeafletMap): MapViewport {
+  const bounds = map.getBounds();
+  return {
+    bounds: [
+      bounds.getWest(),
+      bounds.getSouth(),
+      bounds.getEast(),
+      bounds.getNorth(),
+    ],
+    zoom: Math.round(map.getZoom()),
+  };
+}
+
+function MapViewportObserver({
+  onChange,
+}: {
+  onChange: (viewport: MapViewport) => void;
+}) {
+  const map = useMapEvents({
+    moveend: () => onChange(currentViewport(map)),
+    zoomend: () => onChange(currentViewport(map)),
+  });
+
+  useEffect(() => {
+    onChange(currentViewport(map));
+  }, [map, onChange]);
 
   return null;
 }
@@ -143,6 +197,114 @@ function OverlayLegend({ overlay }: { overlay: ExplorerOverlay }) {
   );
 }
 
+function clusterIcon(pointCount: number) {
+  const diameter = clusterMarkerDiameter(pointCount);
+  return divIcon({
+    className: 'parcel-map-cluster-icon',
+    html: `<span>${pointCount.toLocaleString()}</span>`,
+    iconSize: [diameter, diameter],
+    iconAnchor: [diameter / 2, diameter / 2],
+  });
+}
+
+function ParcelClusterLayer({
+  index,
+  viewport,
+  rowsByBbl,
+  selectedBbl,
+  overlay,
+  onSelect,
+}: {
+  index: Supercluster<
+    ParcelMapPointProperties,
+    ParcelMapClusterProperties
+  >;
+  viewport: MapViewport;
+  rowsByBbl: Map<string, ParcelExplorerRow>;
+  selectedBbl: string | null;
+  overlay: ExplorerOverlay;
+  onSelect: (bbl: string) => void;
+}) {
+  const map = useMap();
+  const features = useMemo(
+    () => index.getClusters(viewport.bounds, viewport.zoom),
+    [index, viewport],
+  );
+
+  return (
+    <>
+      {features.map((feature) => {
+        const [lng, lat] = feature.geometry.coordinates;
+        if (isParcelClusterFeature(feature)) {
+          const count = feature.properties.point_count;
+          const clusterId = feature.properties.cluster_id;
+          return (
+            <Marker
+              key={`cluster-${clusterId}`}
+              position={[lat, lng]}
+              icon={clusterIcon(count)}
+              keyboard
+              title={`${count.toLocaleString()} matched parcels. Activate to zoom in.`}
+              eventHandlers={{
+                click: () => {
+                  map.flyTo(
+                    [lat, lng],
+                    Math.min(index.getClusterExpansionZoom(clusterId), 18),
+                    { duration: 0.4 },
+                  );
+                },
+              }}
+            >
+              <Tooltip direction="top" offset={[0, -18]} opacity={0.97}>
+                <div className="text-xs">
+                  <div className="font-semibold text-slate-950">
+                    {count.toLocaleString()} matched parcels
+                  </div>
+                  <div className="text-slate-500">Select to zoom and separate</div>
+                </div>
+              </Tooltip>
+            </Marker>
+          );
+        }
+
+        const row = rowsByBbl.get(feature.properties.bbl);
+        if (!row || row.bbl === selectedBbl) return null;
+        const color = explorerRowColor(row, overlay);
+        return (
+          <CircleMarker
+            key={row.bbl}
+            center={[lat, lng]}
+            radius={row.priority_tier === 'highest' ? 5 : 3.5}
+            pathOptions={{
+              color: '#ffffff',
+              weight: 0.8,
+              opacity: 1,
+              fillColor: color,
+              fillOpacity: 0.82,
+            }}
+            eventHandlers={{ click: () => onSelect(row.bbl) }}
+          >
+            <Tooltip direction="top" offset={[0, -6]} opacity={0.97}>
+              <div className="min-w-44 text-xs">
+                <div className="font-semibold text-slate-950">
+                  {row.address ?? row.bbl}
+                </div>
+                <div className="mt-0.5 text-slate-600">
+                  {BOROUGH_LABELS[row.borough ?? ''] ?? row.borough} ·{' '}
+                  {priorityLabel(row.priority_tier)} priority
+                </div>
+                <div className="text-slate-500">
+                  {opportunityLabel(row.opportunity_category)}
+                </div>
+              </div>
+            </Tooltip>
+          </CircleMarker>
+        );
+      })}
+    </>
+  );
+}
+
 export function ParcelIntelExplorerMap({
   rows,
   selectedBbl,
@@ -150,6 +312,11 @@ export function ParcelIntelExplorerMap({
   overlay,
   onSelect,
 }: Props) {
+  const mapRef = useRef<LeafletMap | null>(null);
+  const [viewport, setViewport] = useState<MapViewport>({
+    bounds: NYC_MAP_BBOX,
+    zoom: 10,
+  });
   const mappable = useMemo(
     () =>
       rows.filter(
@@ -157,6 +324,22 @@ export function ParcelIntelExplorerMap({
       ),
     [rows],
   );
+  const rowsByBbl = useMemo(
+    () => new Map(mappable.map((row) => [row.bbl, row])),
+    [mappable],
+  );
+  const clusterIndex = useMemo(
+    () => buildParcelClusterIndex(mappable),
+    [mappable],
+  );
+  const visibleCount = useMemo(
+    () => countRowsInBounds(mappable, viewport.bounds),
+    [mappable, viewport.bounds],
+  );
+  const handleViewportChange = useCallback((next: MapViewport) => {
+    setViewport(next);
+  }, []);
+  const selectedMapRow = selectedBbl ? rowsByBbl.get(selectedBbl) : null;
   const selectedGeometry = selectedRow?.parcel_geometry as
     | GeoJsonObject
     | null
@@ -172,6 +355,7 @@ export function ParcelIntelExplorerMap({
       }. Use the acquisition ranking after the map for a keyboard-accessible list.`}
     >
       <MapContainer
+        ref={mapRef}
         bounds={NYC_BOUNDS}
         preferCanvas
         scrollWheelZoom={false}
@@ -186,6 +370,7 @@ export function ParcelIntelExplorerMap({
         />
         <FitExplorerBounds rows={mappable} selectedBbl={selectedBbl} />
         <PanToSelection rows={mappable} selectedBbl={selectedBbl} />
+        <MapViewportObserver onChange={handleViewportChange} />
         {selectedGeometry && (
           <GeoJSON
             key={`citywide-outline-${selectedBbl}`}
@@ -198,44 +383,61 @@ export function ParcelIntelExplorerMap({
             }}
           />
         )}
-        {mappable.map((row) => {
-          const isSelected = row.bbl === selectedBbl;
-          const color = explorerRowColor(row, overlay);
-          return (
-            <CircleMarker
-              key={row.bbl}
-              center={[row.lat as number, row.lng as number]}
-              radius={isSelected ? 10 : row.priority_tier === 'highest' ? 5 : 3.5}
-              pathOptions={{
-                color: isSelected ? '#0f172a' : '#ffffff',
-                weight: isSelected ? 2.5 : 0.8,
-                opacity: 1,
-                fillColor: color,
-                fillOpacity: isSelected ? 1 : 0.78,
-              }}
-              eventHandlers={{ click: () => onSelect(row.bbl) }}
-            >
-              <Tooltip direction="top" offset={[0, -6]} opacity={0.97}>
-                <div className="min-w-44 text-xs">
-                  <div className="font-semibold text-slate-950">
-                    {row.address ?? row.bbl}
-                  </div>
-                  <div className="mt-0.5 text-slate-600">
-                    {BOROUGH_LABELS[row.borough ?? ''] ?? row.borough} ·{' '}
-                    {priorityLabel(row.priority_tier)} priority
-                  </div>
-                  <div className="text-slate-500">
-                    {opportunityLabel(row.opportunity_category)}
-                  </div>
+        <ParcelClusterLayer
+          index={clusterIndex}
+          viewport={viewport}
+          rowsByBbl={rowsByBbl}
+          selectedBbl={selectedBbl}
+          overlay={overlay}
+          onSelect={onSelect}
+        />
+        {selectedMapRow && (
+          <CircleMarker
+            key={`selected-${selectedMapRow.bbl}`}
+            center={[
+              selectedMapRow.lat as number,
+              selectedMapRow.lng as number,
+            ]}
+            radius={10}
+            pathOptions={{
+              color: '#0f172a',
+              weight: 3,
+              opacity: 1,
+              fillColor: explorerRowColor(selectedMapRow, overlay),
+              fillOpacity: 1,
+            }}
+            eventHandlers={{ click: () => onSelect(selectedMapRow.bbl) }}
+          >
+            <Tooltip direction="top" offset={[0, -10]} opacity={0.97}>
+              <div className="min-w-44 text-xs">
+                <div className="font-semibold text-slate-950">
+                  {selectedMapRow.address ?? selectedMapRow.bbl}
                 </div>
-              </Tooltip>
-            </CircleMarker>
-          );
-        })}
+                <div className="mt-0.5 text-slate-600">Selected parcel</div>
+              </div>
+            </Tooltip>
+          </CircleMarker>
+        )}
       </MapContainer>
 
-      <div className="pointer-events-none absolute right-3 top-3 z-[400] rounded-full border border-slate-200 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-md backdrop-blur">
-        {mappable.length.toLocaleString()} mapped parcels
+      <div className="absolute right-3 top-3 z-[400] flex items-center gap-1 rounded-full border border-slate-200 bg-white/95 p-1 pl-3 text-xs text-slate-700 shadow-md backdrop-blur">
+        <span className="font-semibold">
+          {visibleCount.toLocaleString()} in view
+        </span>
+        <span className="text-slate-400" aria-hidden="true">
+          /
+        </span>
+        <span>{mappable.length.toLocaleString()} matches</span>
+        <button
+          type="button"
+          onClick={() => {
+            if (mapRef.current) fitMapToRows(mapRef.current, mappable);
+          }}
+          className="ml-1 rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700 hover:bg-sky-100 hover:text-sky-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          aria-label="Fit the map to all matching parcels"
+        >
+          Fit
+        </button>
       </div>
       <OverlayLegend overlay={overlay} />
       {mappable.length === 0 && (

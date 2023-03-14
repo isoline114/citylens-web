@@ -14,3 +14,28 @@ html,
 body {
   height: 100%;
 }
+
+.parcel-map-cluster-icon {
+  align-items: center;
+  background:
+    radial-gradient(circle at 35% 30%, rgb(14 165 233 / 0.96), rgb(15 23 42));
+  border: 2px solid rgb(255 255 255 / 0.96);
+  border-radius: 9999px;
+  box-shadow:
+    0 0 0 4px rgb(14 165 233 / 0.2),
+    0 8px 20px rgb(15 23 42 / 0.28);
+  color: white;
+  display: flex;
+  font-size: 0.7rem;
+  font-weight: 750;
+  justify-content: center;
+  letter-spacing: -0.02em;
+}
+
+.parcel-map-cluster-icon:hover,
+.parcel-map-cluster-icon:focus {
+  box-shadow:
+    0 0 0 5px rgb(14 165 233 / 0.35),
+    0 10px 24px rgb(15 23 42 / 0.32);
+  transform: scale(1.05);
+}
