@@ -20,6 +20,20 @@ const routes = [
   { name: 'pricing', path: '/pricing', current: 'Pricing', demo: false },
   { name: 'docs', path: '/docs', current: 'Docs', demo: false },
   { name: 'contact', path: '/contact', current: null, demo: false },
+  {
+    name: 'sign-in',
+    path: '/sign-in',
+    current: null,
+    demo: false,
+    requiredTestId: 'auth-page-shell',
+  },
+  {
+    name: 'api-keys',
+    path: '/account/api-keys',
+    current: null,
+    demo: false,
+    requiredTestId: 'api-key-access-gate',
+  },
 ];
 const viewports = [
   { name: 'desktop', width: 1440, height: 1000 },
@@ -71,6 +85,9 @@ try {
       const demoBannerCount = await page
         .getByText(/demo mode \(precomputed\)/i)
         .count();
+      const requiredSurfaceCount = route.requiredTestId
+        ? await page.getByTestId(route.requiredTestId).count()
+        : null;
       const bodyDimensions = await page.evaluate(() => ({
         height: document.body.scrollHeight,
         width: document.body.scrollWidth,
@@ -87,6 +104,8 @@ try {
         expected_current_navigation: route.current,
         demo_banner_visible: demoBannerCount > 0,
         expected_demo_banner: route.demo,
+        required_surface_test_id: route.requiredTestId ?? null,
+        required_surface_count: requiredSurfaceCount,
         body_height_px: bodyDimensions.height,
         body_width_px: bodyDimensions.width,
         footer_bottom_px: footerBounds
@@ -109,6 +128,8 @@ try {
         (route.current === null ||
           receipt.current_navigation[0]?.trim() === route.current) &&
         receipt.demo_banner_visible === route.demo &&
+        (route.requiredTestId === undefined ||
+          receipt.required_surface_count === 1) &&
         receipt.body_width_px <= viewport.width &&
         receipt.footer_bottom_px !== null &&
         receipt.footer_bottom_px >= viewport.height &&
@@ -172,7 +193,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-site-shell@v1',
+  schema_version: 'citylens/production-site-shell@v2',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   passed: failure === null,

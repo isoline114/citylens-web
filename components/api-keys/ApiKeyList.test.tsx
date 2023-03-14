@@ -62,6 +62,7 @@ describe('ApiKeyList (signed out)', () => {
     mocks.authState.status = 'unauthenticated';
     mocks.authState.user = null;
     render(<ApiKeyList />);
+    expect(screen.getByTestId('api-key-access-gate')).toBeInTheDocument();
     expect(screen.getByText(/sign in to manage api keys/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^sign in$/i })).toHaveAttribute(
       'href',
@@ -92,9 +93,7 @@ describe('ApiKeyList (signed in)', () => {
     expect(screen.getByText('prod-server')).toBeInTheDocument();
     expect(screen.getByText('clk_live_abcd…')).toBeInTheDocument();
     expect(screen.getByText('Verify a key')).toBeInTheDocument();
-    expect(
-      screen.getByText(/api\.citylens\.dev\/v1\/me/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/api\.citylens\.dev\/v1\/me/)).toBeInTheDocument();
   });
 
   it('creates a key, surfaces the plaintext once, and refreshes the list', async () => {

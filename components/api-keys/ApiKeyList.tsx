@@ -119,7 +119,10 @@ export function ApiKeyList() {
 
   if (!signedIn) {
     return (
-      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <section
+        className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
+        data-testid="api-key-access-gate"
+      >
         <div
           className="absolute inset-y-0 left-0 w-1 bg-sky-500"
           aria-hidden="true"
