@@ -193,6 +193,22 @@ export type ExplorerScreenComparison = {
   sharedUnionRatePct: number | null;
 };
 
+export type SavedViewMonitor = {
+  status:
+    | 'unavailable'
+    | 'baseline_current'
+    | 'unchanged'
+    | 'changes'
+    | 'inconsistent';
+  baselineGeneration: string | null;
+  currentGeneration: string | null;
+  baselineCount: number | null;
+  currentCount: number;
+  retainedCount: number;
+  enteredRows: ParcelExplorerRow[];
+  exitedBbls: string[];
+};
+
 function medianPositive(values: Array<number | null | undefined>): number | null {
   const valid = values
     .filter(
@@ -657,6 +673,57 @@ export function buildExplorerScreenComparison(
     unionCount,
     sharedUnionRatePct:
       unionCount > 0 ? (sharedCount / unionCount) * 100 : null,
+  };
+}
+
+export function buildSavedViewMonitor(
+  rows: ParcelExplorerRow[],
+  view: Pick<ParcelSavedSearch, 'borough' | 'filters' | 'snapshot'>,
+  currentGeneration: string | null,
+): SavedViewMonitor {
+  const currentRows = sortExplorerRows(
+    filterExplorerRows(rows, explorerFiltersFromSavedSearch(view)),
+  );
+  const snapshot = view.snapshot;
+  if (!snapshot || !currentGeneration) {
+    return {
+      status: 'unavailable',
+      baselineGeneration: snapshot?.feed_generation ?? null,
+      currentGeneration,
+      baselineCount: snapshot?.match_count ?? null,
+      currentCount: currentRows.length,
+      retainedCount: 0,
+      enteredRows: [],
+      exitedBbls: [],
+    };
+  }
+
+  const baselineIds = new Set(snapshot.matched_bbls);
+  const currentIds = new Set(currentRows.map((row) => row.bbl));
+  const enteredRows = currentRows.filter((row) => !baselineIds.has(row.bbl));
+  const exitedBbls = snapshot.matched_bbls.filter(
+    (bbl) => !currentIds.has(bbl),
+  );
+  const retainedCount = currentRows.length - enteredRows.length;
+  const generationChanged = snapshot.feed_generation !== currentGeneration;
+  const membershipChanged =
+    enteredRows.length > 0 || exitedBbls.length > 0;
+
+  return {
+    status: generationChanged
+      ? membershipChanged
+        ? 'changes'
+        : 'unchanged'
+      : membershipChanged
+        ? 'inconsistent'
+        : 'baseline_current',
+    baselineGeneration: snapshot.feed_generation,
+    currentGeneration,
+    baselineCount: snapshot.match_count,
+    currentCount: currentRows.length,
+    retainedCount,
+    enteredRows,
+    exitedBbls,
   };
 }
 

@@ -2,10 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
+  ArrowRight,
   Bookmark,
   Check,
   GitCompareArrows,
+  History,
   LoaderCircle,
+  Radar,
   RefreshCw,
   Save,
   Trash2,
@@ -21,7 +24,10 @@ import {
 } from '@/lib/api';
 import {
   BOROUGH_LABELS,
+  buildSavedViewMonitor,
   buildExplorerScreenComparison,
+  explorerFiltersFromSavedSearch,
+  filterExplorerRows,
   savedSearchDimensions,
   signalLabel,
   siteTypeLabel,
@@ -29,6 +35,7 @@ import {
   type ExplorerOverlay,
   type ParcelExplorerRow,
   type ExplorerPriority,
+  type SavedViewMonitor,
 } from './parcel-intel-explorer-support';
 import { ParcelSavedScreenComparison } from './parcel-saved-screen-comparison';
 
@@ -75,18 +82,253 @@ function suggestedName(draft: SavedViewDraft): string {
   )}${signalSuffix}${criteriaSuffix}`;
 }
 
+function formatBaselineDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'saved baseline';
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function SavedViewMonitorCard({
+  view,
+  monitor,
+  inventoryReady,
+  expanded,
+  busy,
+  onToggle,
+  onRefreshBaseline,
+  onSelectParcel,
+  onInspectExited,
+}: {
+  view: ParcelSavedSearch;
+  monitor: SavedViewMonitor;
+  inventoryReady: boolean;
+  expanded: boolean;
+  busy: boolean;
+  onToggle: () => void;
+  onRefreshBaseline: () => void;
+  onSelectParcel: (bbl: string) => void;
+  onInspectExited: (bbl: string) => void;
+}) {
+  if (!inventoryReady) {
+    return (
+      <div className="mt-3 rounded-lg border border-white/10 bg-slate-950/40 px-3 py-2 text-[11px] text-slate-400">
+        Waiting for the verified full inventory before evaluating this thesis.
+      </div>
+    );
+  }
+  if (monitor.status === 'unavailable') {
+    return (
+      <div className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/10 p-3">
+        <div className="flex items-start gap-2">
+          <Radar className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-200" />
+          <div>
+            <p className="text-[11px] font-semibold text-amber-100">
+              Monitoring baseline not established
+            </p>
+            <p className="mt-1 text-[10px] leading-4 text-amber-100/70">
+              Capture today&apos;s exact BBL membership to audit what enters or
+              leaves this screen after the next published feed.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onRefreshBaseline}
+          disabled={busy}
+          className="mt-2 inline-flex h-7 items-center gap-1 rounded-md border border-amber-200/30 bg-white/10 px-2 text-[10px] font-semibold text-amber-50 hover:bg-white/15 disabled:opacity-50"
+        >
+          {busy ? (
+            <LoaderCircle className="h-3 w-3 animate-spin" />
+          ) : (
+            <Radar className="h-3 w-3" />
+          )}
+          Start monitoring
+        </button>
+      </div>
+    );
+  }
+  if (monitor.status === 'inconsistent') {
+    return (
+      <div
+        role="alert"
+        className="mt-3 rounded-lg border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-[11px] leading-4 text-amber-100"
+      >
+        <strong>Membership could not be compared safely.</strong> The saved and
+        current sets disagree inside one feed generation. Refresh the inventory;
+        CityLens is not labeling this as a market change.
+      </div>
+    );
+  }
+  if (monitor.status === 'baseline_current') {
+    return (
+      <div className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-[11px] text-emerald-100">
+        <Check className="h-3.5 w-3.5 shrink-0" />
+        <span>
+          Current baseline · {monitor.currentCount.toLocaleString()} matching
+          parcel{monitor.currentCount === 1 ? '' : 's'}
+        </span>
+      </div>
+    );
+  }
+  if (monitor.status === 'unchanged') {
+    return (
+      <div className="mt-3 rounded-lg border border-emerald-300/20 bg-emerald-300/10 p-3">
+        <div className="flex items-start gap-2">
+          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-200" />
+          <div>
+            <p className="text-[11px] font-semibold text-emerald-50">
+              No membership changes
+            </p>
+            <p className="mt-1 text-[10px] leading-4 text-emerald-100/70">
+              {monitor.currentCount.toLocaleString()} matching parcel
+              {monitor.currentCount === 1 ? '' : 's'} remain after a newer
+              published feed.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onRefreshBaseline}
+          disabled={busy}
+          className="mt-2 inline-flex h-7 items-center gap-1 rounded-md border border-emerald-200/30 bg-white/10 px-2 text-[10px] font-semibold text-emerald-50 hover:bg-white/15 disabled:opacity-50"
+        >
+          {busy && <LoaderCircle className="h-3 w-3 animate-spin" />}
+          Mark current feed reviewed
+        </button>
+      </div>
+    );
+  }
+
+  const enteredCount = monitor.enteredRows.length;
+  const exitedCount = monitor.exitedBbls.length;
+  return (
+    <div className="mt-3 overflow-hidden rounded-lg border border-sky-300/25 bg-sky-300/10">
+      <button
+        type="button"
+        aria-expanded={expanded}
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-white/5"
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <History className="h-3.5 w-3.5 shrink-0 text-sky-200" />
+          <span>
+            <strong className="text-[11px] text-sky-50">
+              {enteredCount} entered · {exitedCount} left
+            </strong>
+            <span className="mt-0.5 block text-[10px] text-sky-100/70">
+              Since {formatBaselineDate(view.snapshot!.feed_generated_at)}
+            </span>
+          </span>
+        </span>
+        <ArrowRight
+          className={`h-3.5 w-3.5 shrink-0 text-sky-200 transition-transform ${
+            expanded ? 'rotate-90' : ''
+          }`}
+        />
+      </button>
+      {expanded && (
+        <div className="border-t border-sky-200/15 px-3 pb-3 pt-2">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-200">
+                Entered saved screen
+              </div>
+              {enteredCount === 0 ? (
+                <p className="mt-1 text-[10px] text-slate-400">None</p>
+              ) : (
+                <div className="mt-1 space-y-1">
+                  {monitor.enteredRows.slice(0, 5).map((row) => (
+                    <button
+                      key={row.bbl}
+                      type="button"
+                      onClick={() => onSelectParcel(row.bbl)}
+                      className="block w-full truncate rounded-md bg-white/5 px-2 py-1.5 text-left text-[10px] text-slate-200 hover:bg-white/10"
+                    >
+                      <span className="font-semibold text-white">
+                        {row.address ?? row.bbl}
+                      </span>
+                      <span className="ml-1 text-slate-400">· {row.bbl}</span>
+                    </button>
+                  ))}
+                  {enteredCount > 5 && (
+                    <p className="text-[10px] text-slate-400">
+                      +{enteredCount - 5} more; apply the view to inspect all.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-200">
+                Left saved screen
+              </div>
+              {exitedCount === 0 ? (
+                <p className="mt-1 text-[10px] text-slate-400">None</p>
+              ) : (
+                <div className="mt-1 space-y-1">
+                  {monitor.exitedBbls.slice(0, 5).map((bbl) => (
+                    <button
+                      key={bbl}
+                      type="button"
+                      onClick={() => onInspectExited(bbl)}
+                      className="block w-full rounded-md bg-white/5 px-2 py-1.5 text-left text-[10px] font-semibold text-white hover:bg-white/10"
+                    >
+                      BBL {bbl} · inspect current screening
+                    </button>
+                  ))}
+                  {exitedCount > 5 && (
+                    <p className="text-[10px] text-slate-400">
+                      +{exitedCount - 5} more departures.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-2">
+            <span className="text-[10px] leading-4 text-slate-400">
+              Exact membership change—not seller intent or a new prediction.
+            </span>
+            <button
+              type="button"
+              onClick={onRefreshBaseline}
+              disabled={busy}
+              className="inline-flex h-7 items-center gap-1 rounded-md border border-white/15 bg-white/10 px-2 text-[10px] font-semibold text-white hover:bg-white/15 disabled:opacity-50"
+            >
+              {busy && <LoaderCircle className="h-3 w-3 animate-spin" />}
+              Mark current set reviewed
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ParcelSavedViewsPanel({
   currentView,
   inventoryRows,
   inventoryReady,
+  feedGeneration,
+  feedGeneratedAt,
   onApply,
+  onSelectParcel,
+  onInspectExited,
   onComparisonOpened,
   onClose,
 }: {
   currentView: SavedViewDraft;
   inventoryRows: ParcelExplorerRow[];
   inventoryReady: boolean;
+  feedGeneration: string | null;
+  feedGeneratedAt: string | null;
   onApply: (view: ParcelSavedSearch) => void;
+  onSelectParcel: (bbl: string) => void;
+  onInspectExited: (bbl: string) => void;
   onComparisonOpened?: () => void;
   onClose: () => void;
 }) {
@@ -101,6 +343,8 @@ export function ParcelSavedViewsPanel({
   const [comparisonViewId, setComparisonViewId] = useState<string | null>(
     null,
   );
+  const [reviewViewId, setReviewViewId] = useState<string | null>(null);
+  const [baselineBusyId, setBaselineBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -155,10 +399,41 @@ export function ParcelSavedViewsPanel({
         : null,
     [comparisonView, currentView.filters, inventoryReady, inventoryRows],
   );
+  const monitors = useMemo(
+    () =>
+      new Map(
+        views.map((view) => [
+          view.search_id,
+          buildSavedViewMonitor(
+            inventoryRows,
+            view,
+            feedGeneration,
+          ),
+        ]),
+      ),
+    [feedGeneration, inventoryRows, views],
+  );
+
+  const snapshotForFilters = (
+    viewFilters: ExplorerFilters,
+  ): ParcelSavedSearch['snapshot'] | null => {
+    if (!inventoryReady || !feedGeneration || !feedGeneratedAt) return null;
+    const matchedBbls = filterExplorerRows(inventoryRows, viewFilters)
+      .map((row) => row.bbl)
+      .sort();
+    return {
+      schema_version: 'citylens/parcel-saved-view-snapshot@v1',
+      feed_generation: feedGeneration,
+      feed_generated_at: feedGeneratedAt,
+      match_count: matchedBbls.length,
+      matched_bbls: matchedBbls,
+    };
+  };
 
   const saveCurrentView = async () => {
     const normalizedName = name.trim();
-    if (!normalizedName || saving) return;
+    const snapshot = snapshotForFilters(currentView.filters);
+    if (!normalizedName || saving || !snapshot) return;
     setSaving(true);
     setSaved(false);
     setError(null);
@@ -179,6 +454,7 @@ export function ParcelSavedViewsPanel({
           overlay: currentView.overlay,
         },
         alert_frequency: 'off',
+        snapshot,
       });
       setViews((current) => [created, ...current]);
       setSaved(true);
@@ -186,6 +462,35 @@ export function ParcelSavedViewsPanel({
       setError('This view could not be saved. Try again.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const refreshBaseline = async (view: ParcelSavedSearch) => {
+    if (baselineBusyId) return;
+    const snapshot = snapshotForFilters(
+      explorerFiltersFromSavedSearch(view),
+    );
+    if (!snapshot) return;
+    setBaselineBusyId(view.search_id);
+    setError(null);
+    try {
+      const updated = await saveParcelSearch(view.search_id, {
+        name: view.name,
+        borough: view.borough,
+        filters: view.filters,
+        alert_frequency: 'off',
+        snapshot,
+      });
+      setViews((current) =>
+        current.map((item) =>
+          item.search_id === updated.search_id ? updated : item,
+        ),
+      );
+      setReviewViewId(null);
+    } catch {
+      setError('The current thesis baseline could not be saved. Try again.');
+    } finally {
+      setBaselineBusyId(null);
     }
   };
 
@@ -221,12 +526,13 @@ export function ParcelSavedViewsPanel({
             Saved views
           </div>
           <h3 className="mt-1 text-xl font-semibold">
-            Return to the same opportunity set.
+            Monitor an acquisition thesis across feed updates.
           </h3>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-300">
             Save the current borough, filters, search, owner focus, and map
-            overlay. Saved views are private to your account and do not send
-            notifications.
+            overlay with its exact matching BBL set. CityLens will show what
+            entered or left after a new feed is published. Views are private,
+            evaluated when you open the workspace, and do not send notifications.
           </p>
         </div>
         <button
@@ -295,7 +601,13 @@ export function ParcelSavedViewsPanel({
             type="button"
             data-testid="saved-view-save"
             onClick={() => void saveCurrentView()}
-            disabled={!name.trim() || saving}
+            disabled={
+              !name.trim() ||
+              saving ||
+              !inventoryReady ||
+              !feedGeneration ||
+              !feedGeneratedAt
+            }
             className="mt-4 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-white px-4 text-xs font-semibold text-slate-950 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? (
@@ -307,6 +619,12 @@ export function ParcelSavedViewsPanel({
             )}
             {saving ? 'Saving…' : saved ? 'Saved' : 'Save current view'}
           </button>
+          {(!inventoryReady || !feedGeneration || !feedGeneratedAt) && (
+            <p className="mt-2 text-[10px] leading-4 text-amber-200">
+              A verified full inventory and feed generation are required before
+              CityLens can establish an auditable baseline.
+            </p>
+          )}
         </div>
 
         <div>
@@ -347,6 +665,7 @@ export function ParcelSavedViewsPanel({
             <div className="grid max-h-72 gap-2 overflow-y-auto pr-1 md:grid-cols-2">
               {orderedViews.map((view) => {
                 const dimensions = savedSearchDimensions(view.filters);
+                const monitor = monitors.get(view.search_id);
                 return (
                   <article
                     key={view.search_id}
@@ -410,6 +729,27 @@ export function ParcelSavedViewsPanel({
                           </span>
                         )}
                       </div>
+                    )}
+                    {monitor && (
+                      <SavedViewMonitorCard
+                        view={view}
+                        monitor={monitor}
+                        inventoryReady={inventoryReady}
+                        expanded={reviewViewId === view.search_id}
+                        busy={baselineBusyId === view.search_id}
+                        onToggle={() =>
+                          setReviewViewId((current) =>
+                            current === view.search_id
+                              ? null
+                              : view.search_id,
+                          )
+                        }
+                        onRefreshBaseline={() =>
+                          void refreshBaseline(view)
+                        }
+                        onSelectParcel={onSelectParcel}
+                        onInspectExited={onInspectExited}
+                      />
                     )}
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <button

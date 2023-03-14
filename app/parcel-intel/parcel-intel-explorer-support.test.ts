@@ -4,6 +4,7 @@ import {
   EXPLORER_SCREEN_RECIPES,
   buildExplorerScreenAudit,
   buildExplorerScreenComparison,
+  buildSavedViewMonitor,
   explorerFiltersFromSavedSearch,
   filterExplorerRows,
   explorerRowColor,
@@ -542,6 +543,128 @@ describe('parcel citywide explorer support', () => {
       },
     });
     expect(comparison.saved.lotAreaKnownRatePct).toBeCloseTo(200 / 3);
+  });
+
+  it('audits exact membership changes across published feed generations', () => {
+    const rows = [
+      row({
+        bbl: '1000010001',
+        borough: 'manhattan',
+        citywide_rank: 9,
+      }),
+      row({
+        bbl: '3000010002',
+        borough: 'brooklyn',
+        citywide_rank: 2,
+      }),
+      row({
+        bbl: '4000010003',
+        borough: 'queens',
+        citywide_rank: 18,
+      }),
+    ];
+    const monitor = buildSavedViewMonitor(
+      rows,
+      {
+        borough: 'all',
+        filters: {
+          query: '',
+          priority: 'all',
+          opportunity: 'all',
+          site_type: 'all',
+          signals: [],
+          owner_portfolio_id: null,
+          overlay: 'priority',
+        },
+        snapshot: {
+          schema_version: 'citylens/parcel-saved-view-snapshot@v1',
+          feed_generation: '20260701T000000000000Z-aaaaaaaaaaaa',
+          feed_generated_at: '2026-07-01T00:00:00Z',
+          match_count: 3,
+          matched_bbls: [
+            '1000010001',
+            '3000010002',
+            '5000010004',
+          ],
+        },
+      },
+      '20260727T030301358307Z-a32b245a82db',
+    );
+
+    expect(monitor).toMatchObject({
+      status: 'changes',
+      baselineCount: 3,
+      currentCount: 3,
+      retainedCount: 2,
+      exitedBbls: ['5000010004'],
+    });
+    expect(monitor.enteredRows.map((item) => item.bbl)).toEqual([
+      '4000010003',
+    ]);
+  });
+
+  it('distinguishes a newer feed with unchanged saved-view membership', () => {
+    const monitor = buildSavedViewMonitor(
+      [row({ bbl: '3000010002' })],
+      {
+        borough: 'all',
+        filters: {
+          query: '',
+          priority: 'all',
+          opportunity: 'all',
+          site_type: 'all',
+          signals: [],
+          owner_portfolio_id: null,
+          overlay: 'priority',
+        },
+        snapshot: {
+          schema_version: 'citylens/parcel-saved-view-snapshot@v1',
+          feed_generation: '20260701T000000000000Z-aaaaaaaaaaaa',
+          feed_generated_at: '2026-07-01T00:00:00Z',
+          match_count: 1,
+          matched_bbls: ['3000010002'],
+        },
+      },
+      '20260727T030301358307Z-a32b245a82db',
+    );
+
+    expect(monitor).toMatchObject({
+      status: 'unchanged',
+      currentCount: 1,
+      retainedCount: 1,
+      enteredRows: [],
+      exitedBbls: [],
+    });
+  });
+
+  it('fails conservative when membership changes inside one feed generation', () => {
+    const monitor = buildSavedViewMonitor(
+      [row({ bbl: '3000010002' })],
+      {
+        borough: 'all',
+        filters: {
+          query: '',
+          priority: 'all',
+          opportunity: 'all',
+          site_type: 'all',
+          signals: [],
+          owner_portfolio_id: null,
+          overlay: 'priority',
+        },
+        snapshot: {
+          schema_version: 'citylens/parcel-saved-view-snapshot@v1',
+          feed_generation: '20260727T030301358307Z-a32b245a82db',
+          feed_generated_at: '2026-07-27T03:03:01Z',
+          match_count: 1,
+          matched_bbls: ['1000010001'],
+        },
+      },
+      '20260727T030301358307Z-a32b245a82db',
+    );
+
+    expect(monitor.status).toBe('inconsistent');
+    expect(monitor.enteredRows).toHaveLength(1);
+    expect(monitor.exitedBbls).toEqual(['1000010001']);
   });
 
   it('recognizes recipes by exact, order-independent filter semantics', () => {

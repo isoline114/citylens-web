@@ -242,6 +242,13 @@ describe('api client', () => {
         overlay: 'priority',
       },
       alert_frequency: 'off',
+      snapshot: {
+        schema_version: 'citylens/parcel-saved-view-snapshot@v1',
+        feed_generation: '20260727T030301358307Z-a32b245a82db',
+        feed_generated_at: '2026-07-27T03:03:01.358307Z',
+        match_count: 2,
+        matched_bbls: ['1000010001', '3000010001'],
+      },
     });
     await removeParcelSavedSearch('view-one');
 
@@ -250,6 +257,15 @@ describe('api client', () => {
     expect(
       new Headers(putInit.headers).get('Authorization'),
     ).toBe('Bearer tok-abc');
+    expect(JSON.parse(String(putInit.body))).toMatchObject({
+      alert_frequency: 'off',
+      snapshot: {
+        schema_version: 'citylens/parcel-saved-view-snapshot@v1',
+        feed_generation: '20260727T030301358307Z-a32b245a82db',
+        match_count: 2,
+        matched_bbls: ['1000010001', '3000010001'],
+      },
+    });
     const [deleteUrl, deleteInit] = fetchMock.mock.calls[2] as [
       string,
       RequestInit,
@@ -777,6 +793,7 @@ describe('parcel intelligence progressive reads', () => {
     const mockFetch = stubFetch({
       rows: [],
       generated_at: null,
+      feed_generation: '20260727T030301358307Z-a32b245a82db',
       access_scope: 'authenticated_full',
       requested_top_per_borough: 1000,
       returned_count: 0,
@@ -784,13 +801,16 @@ describe('parcel intelligence progressive reads', () => {
       inventory_complete: true,
     });
 
-    await getParcelIntelMap(1000, { includeAuth: true });
+    const result = await getParcelIntelMap(1000, { includeAuth: true });
 
     const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(new Headers(init.headers).get('Authorization')).toBe(
       'Bearer tok-abc',
     );
     expect(init.cache).toBe('no-store');
+    expect(result.feed_generation).toBe(
+      '20260727T030301358307Z-a32b245a82db',
+    );
   });
 
   it('loads full selected-parcel detail with the user token', async () => {

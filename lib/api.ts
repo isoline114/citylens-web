@@ -850,6 +850,7 @@ export type ParcelIntelMapRow = Pick<
 export type ParcelIntelMapResponse = {
   rows: ParcelIntelMapRow[];
   generated_at: string | null;
+  feed_generation?: string | null;
   access_scope: 'public_preview' | 'authenticated_full';
   requested_top_per_borough: number;
   returned_count: number;
@@ -1490,7 +1491,9 @@ export type ParcelSavedSearchFilters = {
 };
 
 export type ParcelSavedSearch = {
-  schema_version: 'citylens/parcel-saved-view@v2';
+  schema_version:
+    | 'citylens/parcel-saved-view@v2'
+    | 'citylens/parcel-saved-view@v3';
   search_id: string;
   name: string;
   borough:
@@ -1502,6 +1505,13 @@ export type ParcelSavedSearch = {
     | 'staten_island';
   filters: ParcelSavedSearchFilters;
   alert_frequency: 'off';
+  snapshot?: {
+    schema_version: 'citylens/parcel-saved-view-snapshot@v1';
+    feed_generation: string;
+    feed_generated_at: string;
+    match_count: number;
+    matched_bbls: string[];
+  } | null;
   created_at: string;
   updated_at: string;
 };
@@ -1776,7 +1786,10 @@ export async function listParcelSavedSearches(): Promise<ParcelSavedSearch[]> {
 
 export async function saveParcelSearch(
   searchId: string,
-  item: Pick<ParcelSavedSearch, 'name' | 'borough' | 'filters' | 'alert_frequency'>,
+  item: Pick<
+    ParcelSavedSearch,
+    'name' | 'borough' | 'filters' | 'alert_frequency' | 'snapshot'
+  >,
 ): Promise<ParcelSavedSearch> {
   return requestJson<ParcelSavedSearch>(
     `/v1/parcel-intel/saved-searches/${encodeURIComponent(searchId)}`,

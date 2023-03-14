@@ -62,9 +62,16 @@ within 800 meters of current MTA service. Multiple signals use transparent AND
 semantics and never alter model score or rank or imply seller intent. Legacy
 single-opportunity saved views migrate when restored. Private signal state and
 owner focus are removed immediately when a session ends. Saved views
-intentionally do not expose alert-frequency controls: watchlist change
-monitoring remains the implemented change-review workflow, while scheduled
-saved-search delivery is not yet available.
+intentionally do not expose alert-frequency controls because scheduled
+saved-search delivery is not yet available. After the complete inventory is
+verified, a new or refreshed view stores only its exact sorted BBL membership
+with the immutable feed generation. On a later feed, the private
+acquisition-thesis monitor shows which ranked leads entered or left those same
+visible conditions, lets the user inspect each change, and advances the
+baseline only when the user marks the current set reviewed. It fails
+conservative if membership disagrees within one generation and never labels
+membership change as seller intent, a new model prediction, feasibility, or
+transaction evidence.
 Once the complete authenticated inventory is loaded, any saved view can be
 compared with the current working screen against that same inventory. The
 comparison reports shared, current-only, and saved-only membership, the shared
@@ -125,7 +132,9 @@ authenticated retry or account reconnection instead of presenting the 125-row
 preview as the complete workspace. A visible browser session alone is not
 treated as data authorization: the production receipt separately proves that
 the session minted a JWT and that the API returned the complete 5,000-row
-inventory.
+inventory. A bounded recovery loop retries a transient session/JWT race and
+rechecks when the browser returns online or regains focus, so one early public
+response cannot strand a valid signed-in user at 125 rows.
 For a canonical 10-digit BBL that is absent after that full inventory receipt
 is verified, the signed-in explorer offers an explicit screening lookup
 instead of silently returning zero results. The resulting private receipt

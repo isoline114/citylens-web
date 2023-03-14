@@ -86,7 +86,16 @@ const inventoryRows = [
   },
 ] as ParcelExplorerRow[];
 
+const monitorProps = {
+  feedGeneration: '20260727T030301358307Z-a32b245a82db',
+  feedGeneratedAt: '2026-07-27T03:03:01.358307Z',
+  onSelectParcel: vi.fn(),
+  onInspectExited: vi.fn(),
+};
+
 beforeEach(() => {
+  monitorProps.onSelectParcel.mockReset();
+  monitorProps.onInspectExited.mockReset();
   mocks.listParcelSavedSearches.mockReset();
   mocks.saveParcelSearch.mockReset();
   mocks.removeParcelSavedSearch.mockReset();
@@ -104,6 +113,7 @@ describe('ParcelSavedViewsPanel', () => {
     const onApply = vi.fn();
     render(
       <ParcelSavedViewsPanel
+        {...monitorProps}
         currentView={currentView}
         inventoryRows={inventoryRows}
         inventoryReady
@@ -120,6 +130,7 @@ describe('ParcelSavedViewsPanel', () => {
   it('saves the complete current state without promising alerts', async () => {
     render(
       <ParcelSavedViewsPanel
+        {...monitorProps}
         currentView={currentView}
         inventoryRows={inventoryRows}
         inventoryReady
@@ -153,13 +164,94 @@ describe('ParcelSavedViewsPanel', () => {
         overlay: 'borough',
       },
       alert_frequency: 'off',
+      snapshot: {
+        schema_version: 'citylens/parcel-saved-view-snapshot@v1',
+        feed_generation: '20260727T030301358307Z-a32b245a82db',
+        feed_generated_at: '2026-07-27T03:03:01.358307Z',
+        match_count: 2,
+        matched_bbls: ['1000010001', '3000010001'],
+      },
     });
     expect(screen.getByText(/do not send notifications/i)).toBeInTheDocument();
+  });
+
+  it('shows exact entered and exited parcels across feed generations', async () => {
+    const onSelectParcel = vi.fn();
+    const onInspectExited = vi.fn();
+    mocks.listParcelSavedSearches.mockResolvedValueOnce([
+      {
+        ...savedView,
+        schema_version: 'citylens/parcel-saved-view@v3',
+        snapshot: {
+          schema_version: 'citylens/parcel-saved-view-snapshot@v1',
+          feed_generation: '20260701T000000000000Z-aaaaaaaaaaaa',
+          feed_generated_at: '2026-07-01T00:00:00Z',
+          match_count: 1,
+          matched_bbls: ['3000019999'],
+        },
+      },
+    ]);
+
+    render(
+      <ParcelSavedViewsPanel
+        {...monitorProps}
+        onSelectParcel={onSelectParcel}
+        onInspectExited={onInspectExited}
+        currentView={currentView}
+        inventoryRows={inventoryRows}
+        inventoryReady
+        onApply={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: /1 entered · 1 left/i,
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /100 Brooklyn Avenue.*3000010001/i,
+      }),
+    );
+    expect(onSelectParcel).toHaveBeenCalledWith('3000010001');
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'BBL 3000019999 · inspect current screening',
+      }),
+    );
+    expect(onInspectExited).toHaveBeenCalledWith('3000019999');
+    expect(
+      screen.getByText(
+        /exact membership change—not seller intent or a new prediction/i,
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Mark current set reviewed' }),
+    );
+    await waitFor(() =>
+      expect(mocks.saveParcelSearch).toHaveBeenCalledWith(
+        'view-one',
+        expect.objectContaining({
+          snapshot: {
+            schema_version: 'citylens/parcel-saved-view-snapshot@v1',
+            feed_generation: monitorProps.feedGeneration,
+            feed_generated_at: monitorProps.feedGeneratedAt,
+            match_count: 1,
+            matched_bbls: ['3000010001'],
+          },
+        }),
+      ),
+    );
   });
 
   it('deletes a view and exposes a recoverable load failure', async () => {
     const { unmount } = render(
       <ParcelSavedViewsPanel
+        {...monitorProps}
         currentView={currentView}
         inventoryRows={inventoryRows}
         inventoryReady
@@ -182,6 +274,7 @@ describe('ParcelSavedViewsPanel', () => {
     mocks.listParcelSavedSearches.mockRejectedValueOnce(new Error('offline'));
     render(
       <ParcelSavedViewsPanel
+        {...monitorProps}
         currentView={currentView}
         inventoryRows={inventoryRows}
         inventoryReady
@@ -200,6 +293,7 @@ describe('ParcelSavedViewsPanel', () => {
     const onComparisonOpened = vi.fn();
     render(
       <ParcelSavedViewsPanel
+        {...monitorProps}
         currentView={currentView}
         inventoryRows={inventoryRows}
         inventoryReady
@@ -239,6 +333,7 @@ describe('ParcelSavedViewsPanel', () => {
   it('keeps comparison disabled until the complete inventory is ready', async () => {
     render(
       <ParcelSavedViewsPanel
+        {...monitorProps}
         currentView={currentView}
         inventoryRows={inventoryRows.slice(0, 1)}
         inventoryReady={false}

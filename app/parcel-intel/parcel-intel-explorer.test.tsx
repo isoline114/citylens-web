@@ -520,6 +520,70 @@ describe('ParcelIntelExplorer', () => {
     );
   });
 
+  it('automatically recovers when a signed-in session briefly receives the public preview', async () => {
+    mocks.authStatus = 'authenticated';
+    const previewRows = [row('1000010001', 'manhattan')];
+    const fullRows = [
+      row('1000010001', 'manhattan'),
+      row('3000010001', 'brooklyn'),
+    ];
+    let authenticatedCalls = 0;
+    mocks.getParcelIntelMap.mockImplementation(
+      async (_topPerBorough, opts) => {
+        if (!opts?.includeAuth) {
+          return {
+            rows: previewRows,
+            generated_at: '2026-07-26T00:00:00Z',
+            access_scope: 'public_preview' as const,
+            requested_top_per_borough: 1000,
+            returned_count: 1,
+            available_count: 2,
+            inventory_complete: false,
+          };
+        }
+        authenticatedCalls += 1;
+        if (authenticatedCalls === 1) {
+          return {
+            rows: previewRows,
+            generated_at: '2026-07-26T00:00:00Z',
+            access_scope: 'public_preview' as const,
+            requested_top_per_borough: 1000,
+            returned_count: 1,
+            available_count: 2,
+            inventory_complete: false,
+          };
+        }
+        return {
+          rows: fullRows,
+          generated_at: '2026-07-26T00:00:00Z',
+          access_scope: 'authenticated_full' as const,
+          requested_top_per_borough: 1000,
+          returned_count: 2,
+          available_count: 2,
+          inventory_complete: true,
+        };
+      },
+    );
+    mocks.getParcelIntelSweep.mockRejectedValue(
+      new ApiError('Credential not ready', { status: 401 }),
+    );
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    await screen.findByTestId('parcel-inventory-incomplete');
+    await waitFor(
+      () =>
+        expect(screen.getByTestId('parcel-inventory-status')).toHaveTextContent(
+          'Full inventory verified · 2 loaded',
+        ),
+      { timeout: 3_000 },
+    );
+    expect(authenticatedCalls).toBe(2);
+    expect(
+      screen.queryByTestId('parcel-inventory-incomplete'),
+    ).not.toBeInTheDocument();
+  });
+
   it('keeps the preview and exposes account recovery when JWT access fails', async () => {
     mocks.authStatus = 'authenticated';
     const previewRows = [

@@ -45,9 +45,9 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   const productEvents: unknown[] = [];
   const evidenceReviewRequests: unknown[] = [];
   const evidenceIssueRequests: unknown[] = [];
-  let savedViews = [
+  let savedViews: Record<string, unknown>[] = [
     {
-      schema_version: 'citylens/parcel-saved-view@v2',
+      schema_version: 'citylens/parcel-saved-view@v3',
       search_id: 'view-brooklyn',
       name: 'Brooklyn priority',
       borough: 'brooklyn',
@@ -59,6 +59,13 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
         overlay: 'priority',
       },
       alert_frequency: 'off',
+      snapshot: {
+        schema_version: 'citylens/parcel-saved-view-snapshot@v1',
+        feed_generation: '20260701T000000000000Z-aaaaaaaaaaaa',
+        feed_generated_at: '2026-07-01T00:00:00Z',
+        match_count: 1,
+        matched_bbls: ['3000019999'],
+      },
       created_at: '2026-07-24T12:00:00Z',
       updated_at: '2026-07-24T12:00:00Z',
     },
@@ -80,6 +87,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
       contentType: 'application/json',
       body: JSON.stringify({
         generated_at: '2026-07-24T02:43:29Z',
+        feed_generation: '20260724T024329000000Z-e2e000000000',
         rows: [
           {
             bbl: '3020960069',
@@ -634,13 +642,15 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     if (method === 'PUT' && searchId) {
       const body = route.request().postDataJSON() as Record<string, unknown>;
       const created = {
-        schema_version: 'citylens/parcel-saved-view@v2',
+        schema_version: body.snapshot
+          ? 'citylens/parcel-saved-view@v3'
+          : 'citylens/parcel-saved-view@v2',
         search_id: searchId,
         ...body,
         created_at: '2026-07-24T13:00:00Z',
         updated_at: '2026-07-24T13:00:00Z',
       };
-      savedViews = [created as (typeof savedViews)[number], ...savedViews];
+      savedViews = [created, ...savedViews];
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify(created),
@@ -926,6 +936,17 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
 
   await page.getByRole('button', { name: 'Saved views' }).click();
   await expect(page.getByTestId('saved-views-panel')).toBeVisible();
+  await page
+    .getByRole('button', { name: /1 entered · 1 left/i })
+    .click();
+  await expect(page.getByTestId('saved-views-panel')).toContainText(
+    'Exact membership change—not seller intent or a new prediction.',
+  );
+  await expect(
+    page.getByRole('button', {
+      name: 'BBL 3000019999 · inspect current screening',
+    }),
+  ).toBeVisible();
   await page
     .getByRole('button', {
       name: 'Compare current screen with Brooklyn priority',

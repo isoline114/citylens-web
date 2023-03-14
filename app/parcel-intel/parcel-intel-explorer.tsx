@@ -146,6 +146,7 @@ type ExplorerLoadResult = {
   rows: ParcelIntelMapRow[];
   failures: string[];
   generatedAt: string | null;
+  feedGeneration: string | null;
   fullInventoryVerified: boolean;
   issue: InventoryIssue;
 };
@@ -170,6 +171,8 @@ function formatCompactSqft(value: number | null): string {
   }
   return `${Math.round(value).toLocaleString()} sf`;
 }
+
+const AUTHENTICATED_INVENTORY_RETRY_DELAYS_MS = [1_000, 3_000, 8_000] as const;
 
 function ExplorerMapSkeleton() {
   return (
@@ -208,7 +211,12 @@ export function ParcelIntelExplorer({
     useState<InventoryState>('preview');
   const [inventoryIssue, setInventoryIssue] =
     useState<InventoryIssue>(null);
+  const [inventoryFeedGeneration, setInventoryFeedGeneration] =
+    useState<string | null>(null);
+  const [inventoryGeneratedAt, setInventoryGeneratedAt] =
+    useState<string | null>(null);
   const [inventoryReloadKey, setInventoryReloadKey] = useState(0);
+  const automaticInventoryRetryCount = useRef(0);
   const [filters, setFilters] = useState<ExplorerFilters>(() => ({
     ...DEFAULT_FILTERS,
     borough: boroughs.some((borough) => borough.slug === initialBorough)
@@ -278,6 +286,7 @@ export function ParcelIntelExplorer({
       rows: legacyRows,
       failures,
       generatedAt,
+      feedGeneration: null,
       fullInventoryVerified:
         includeAuth &&
         failures.length === 0 &&
@@ -319,6 +328,7 @@ export function ParcelIntelExplorer({
         rows: response.rows,
         failures: [],
         generatedAt: response.generated_at,
+        feedGeneration: response.feed_generation ?? null,
         fullInventoryVerified,
         issue: includeAuth && !fullInventoryVerified ? 'response' : null,
       };
@@ -354,6 +364,8 @@ export function ParcelIntelExplorer({
       if (cancelled || fullInventoryLoaded.current) return;
       const unique = new Map(result.rows.map((row) => [row.bbl, row]));
       setRows([...unique.values()]);
+      setInventoryFeedGeneration(result.feedGeneration);
+      setInventoryGeneratedAt(result.generatedAt);
       setFailedBoroughs(result.failures);
       setLoadState(unique.size > 0 ? 'ready' : 'error');
       setInventoryState('preview');
@@ -372,7 +384,10 @@ export function ParcelIntelExplorer({
   useEffect(() => {
     if (auth.status === 'loading' || boroughs.length === 0) return;
     const includeAuth = auth.status === 'authenticated';
-    if (!includeAuth && !fullInventoryLoaded.current) return;
+    if (!includeAuth && !fullInventoryLoaded.current) {
+      automaticInventoryRetryCount.current = 0;
+      return;
+    }
     let cancelled = false;
     setFullInventoryReady(false);
     setInventoryState(includeAuth ? 'upgrading' : 'preview');
@@ -386,11 +401,19 @@ export function ParcelIntelExplorer({
         unique.size > 0 &&
         result.failures.length === 0;
       fullInventoryLoaded.current = fullInventoryVerified;
+      if (fullInventoryVerified) {
+        automaticInventoryRetryCount.current = 0;
+      }
       // Do not erase a useful public preview when the signed-in upgrade
       // cannot obtain a credential or inventory response.
       setRows((current) =>
         unique.size > 0 ? [...unique.values()] : current,
       );
+      // A legacy sweep recovery has no immutable generation receipt. Clear
+      // any earlier public-preview value instead of letting saved views bind
+      // a full inventory to an unverified generation.
+      setInventoryFeedGeneration(result.feedGeneration);
+      setInventoryGeneratedAt(result.generatedAt);
       setFailedBoroughs(result.failures);
       setLoadState((current) =>
         unique.size > 0 ? 'ready' : current === 'ready' ? current : 'error',
@@ -410,6 +433,47 @@ export function ParcelIntelExplorer({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.status, boroughs, inventoryReloadKey]);
+
+  // A browser can learn that a Neon session exists a moment before the
+  // same-origin auth endpoint can mint its API JWT. Without another auth
+  // state transition, that race used to strand the signed-in workspace on
+  // the 125-row public preview until a manual refresh. Retry a bounded number
+  // of times, and retry again when the user returns online or refocuses the
+  // tab. Permanent auth failures still settle into the explicit reconnect UI.
+  useEffect(() => {
+    if (
+      auth.status !== 'authenticated' ||
+      inventoryState !== 'incomplete' ||
+      fullInventoryReady
+    ) {
+      return;
+    }
+
+    const attempt = automaticInventoryRetryCount.current;
+    const delay = AUTHENTICATED_INVENTORY_RETRY_DELAYS_MS[attempt];
+    if (delay === undefined) return;
+
+    const timeout = window.setTimeout(() => {
+      automaticInventoryRetryCount.current += 1;
+      setInventoryReloadKey((value) => value + 1);
+    }, delay);
+    return () => window.clearTimeout(timeout);
+  }, [auth.status, fullInventoryReady, inventoryState]);
+
+  useEffect(() => {
+    if (auth.status !== 'authenticated') return;
+    const retryIncompleteInventory = () => {
+      if (fullInventoryLoaded.current) return;
+      automaticInventoryRetryCount.current = 0;
+      setInventoryReloadKey((value) => value + 1);
+    };
+    window.addEventListener('focus', retryIncompleteInventory);
+    window.addEventListener('online', retryIncompleteInventory);
+    return () => {
+      window.removeEventListener('focus', retryIncompleteInventory);
+      window.removeEventListener('online', retryIncompleteInventory);
+    };
+  }, [auth.status]);
 
   // A signed-out browser must not retain authenticated parcel detail in the
   // comparison workspace. Public-preview comparisons remain available.
@@ -1208,7 +1272,10 @@ export function ParcelIntelExplorer({
             )}
             <button
               type="button"
-              onClick={() => setInventoryReloadKey((value) => value + 1)}
+              onClick={() => {
+                automaticInventoryRetryCount.current = 0;
+                setInventoryReloadKey((value) => value + 1);
+              }}
               className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 font-semibold text-amber-950 hover:bg-amber-100"
             >
               <RefreshCw className="h-3.5 w-3.5" />
@@ -1234,7 +1301,28 @@ export function ParcelIntelExplorer({
             fullInventoryReady &&
             failedBoroughs.length === 0
           }
+          feedGeneration={inventoryFeedGeneration}
+          feedGeneratedAt={inventoryGeneratedAt}
           onApply={applySavedView}
+          onSelectParcel={(bbl) => {
+            setSavedViewsOpen(false);
+            selectParcel(bbl, 'saved_views');
+          }}
+          onInspectExited={(bbl) => {
+            setSavedViewsOpen(false);
+            if (rows.some((row) => row.bbl === bbl)) {
+              selectParcel(bbl, 'saved_views');
+              return;
+            }
+            setSelectedBbl(null);
+            setFilters({
+              ...DEFAULT_FILTERS,
+              query: bbl,
+            });
+            setLeadLimit(INITIAL_LEAD_LIMIT);
+            setMobileRankingExpanded(false);
+            syncExplorerUrl('all', null);
+          }}
           onComparisonOpened={trackSavedViewComparisonOpen}
           onClose={() => setSavedViewsOpen(false)}
         />
