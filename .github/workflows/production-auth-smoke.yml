@@ -56,6 +56,7 @@ jobs:
           console.log('');
           console.log(`- Signed-in 5,000-parcel map: \`${passed ? 'passed' : 'failed'}\``);
           console.log(`- Any-NYC-lot official dossier: \`${report?.official_dossier_verified ? 'passed' : 'failed'}\``);
+          console.log(`- Source-grounded dossier readiness: \`${report?.dossier_readiness_verified ? 'passed' : 'failed'}\``);
           console.log(`- Official address → BBL → screening flow: \`${report?.address_resolution_verified ? 'passed' : 'failed'}\``);
           console.log(`- Browser console errors: \`${report?.console_error_count ?? 'unknown'}\``);
           console.log(`- Browser page errors: \`${report?.page_error_count ?? 'unknown'}\``);

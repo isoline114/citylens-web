@@ -150,6 +150,13 @@ is not a lead score, title report, appraisal, zoning calculation, feasibility
 study, beneficial-owner determination, or seller-intent signal. The existing
 screening receipt follows it and separately explains whether the parcel was
 published, below cutoff, excluded, or not evaluated.
+The dossier also includes a non-scoring evidence-readiness layer. Six source
+groups—tax-lot identity, recorded ownership, latest deed, physical record,
+zoning references, and mapped constraints—are labeled `available`, `partial`,
+`review`, or `missing`. Contradictory evidence is not conflated with
+single-source coverage. The panel gives a bounded official-record verification
+sequence and explicitly says that coverage is not correctness, predictive
+confidence, investment suitability, or completed diligence.
 The browser mints the API Bearer JWT through the same-origin
 `/api/auth/token` route using the authoritative HttpOnly Neon session cookie.
 The Neon client helper remains only a fallback: a cached visual session is not
@@ -360,8 +367,10 @@ Authenticated Parcel Intelligence interactions send only the strict
 `citylens/parcel-product-event@v1` event/source pair to the engine. The client
 never includes a BBL, address, owner, URL, notes, tags, assignee, contact,
 underwriting value, cost, margin, efficiency, or free text. Parcel opens,
-comparison-desk opens, decision-audit opens, Underwrite-tab opens, first
-assumption adjustments, and saved-view applies are coarse directional events.
+official-dossier opens, comparison-desk opens, decision-audit opens,
+Underwrite-tab opens, first assumption adjustments, and saved-view applies are
+coarse directional events. Official-dossier opens contain no BBL, address,
+owner, source fact, readiness state, lead membership, or result.
 Comparison-desk, decision-peer entry, and saved-screen-comparison events contain no parcel
 identifiers, saved-view identity, filters, criteria, thresholds, search text,
 result counts, overlap/union measures, or compared values.
@@ -430,8 +439,8 @@ uses a dedicated least-privilege Neon smoke user every six hours. It signs in
 through the production UI and fails unless the rendered explorer and observed
 API receipt both reach exactly 5,000 authenticated, mappable parcels with no
 browser errors. It also verifies the live Ovington exact-BBL dossier,
-official-address resolution, and current screening receipt while reporting
-only pass/fail booleans. Its email and password live only in the
+source-grounded evidence readiness, official-address resolution, and current
+screening receipt while reporting only pass/fail booleans. Its email and password live only in the
 `CITYLENS_WEB_SMOKE_EMAIL` and `CITYLENS_WEB_SMOKE_PASSWORD` GitHub Actions
 secrets; reports contain neither value, JWTs, parcel identifiers, nor owner
 data.

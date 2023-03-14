@@ -6,6 +6,7 @@ import { ParcelOfficialDossierPanel } from './parcel-official-dossier';
 
 const mocks = vi.hoisted(() => ({
   getParcelOfficialDossier: vi.fn(),
+  recordParcelProductEvent: vi.fn(),
 }));
 
 vi.mock('@/lib/api', async (importOriginal) => {
@@ -13,6 +14,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
   return {
     ...actual,
     getParcelOfficialDossier: mocks.getParcelOfficialDossier,
+    recordParcelProductEvent: mocks.recordParcelProductEvent,
   };
 });
 
@@ -73,6 +75,8 @@ function dossier(
 
 beforeEach(() => {
   mocks.getParcelOfficialDossier.mockReset();
+  mocks.recordParcelProductEvent.mockReset();
+  mocks.recordParcelProductEvent.mockResolvedValue(undefined);
 });
 
 describe('ParcelOfficialDossierPanel', () => {
@@ -88,6 +92,15 @@ describe('ParcelOfficialDossierPanel', () => {
     expect(panel).toHaveTextContent('E-839');
     expect(panel).toHaveTextContent('Official source facts only');
     expect(
+      screen.getByTestId('parcel-dossier-readiness-status'),
+    ).toHaveTextContent('Source review required');
+    expect(
+      screen.getByTestId('parcel-dossier-action-verify-zoning'),
+    ).toHaveAttribute(
+      'href',
+      'https://zola.planning.nyc.gov/l/lot/3/5892/38',
+    );
+    expect(
       screen.getByRole('link', { name: 'ZoLa' }),
     ).toHaveAttribute(
       'href',
@@ -95,6 +108,10 @@ describe('ParcelOfficialDossierPanel', () => {
     );
     expect(mocks.getParcelOfficialDossier).toHaveBeenCalledWith(
       '3058920038',
+    );
+    expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+      'official_dossier_opened',
+      'official_dossier',
     );
   });
 
@@ -115,6 +132,12 @@ describe('ParcelOfficialDossierPanel', () => {
     expect(screen.getByText('CURRENT DEED GRANTEE LLC')).toBeVisible();
     expect(screen.getByText('PLUTO TAX OWNER LLC')).toBeVisible();
     expect(screen.getByText(/preserved both/i)).toBeVisible();
+    expect(
+      screen.getByTestId('parcel-dossier-action-verify-title'),
+    ).toHaveAttribute(
+      'href',
+      'https://a836-acris.nyc.gov/DS/DocumentSearch/BBL',
+    );
   });
 
   it('fails gracefully when the official record cannot be loaded', async () => {

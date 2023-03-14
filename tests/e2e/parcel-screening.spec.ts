@@ -196,6 +196,12 @@ test('explains why an exact BBL is absent from the published inventory', async (
   await expect(page.getByTestId('parcel-official-dossier')).toContainText(
     'Owner sources differ — verify title',
   );
+  await expect(page.getByTestId('parcel-dossier-readiness')).toContainText(
+    'Source review required',
+  );
+  await expect(
+    page.getByTestId('parcel-dossier-action-verify-title'),
+  ).toBeVisible();
   await page
     .getByRole('button', { name: 'Check current screening' })
     .click();
@@ -220,6 +226,11 @@ test('explains why an exact BBL is absent from the published inventory', async (
     schema_version: 'citylens/parcel-product-event@v1',
     event: 'screening_lookup_completed',
     source: 'screening_lookup',
+  });
+  expect(productEvents).toContainEqual({
+    schema_version: 'citylens/parcel-product-event@v1',
+    event: 'official_dossier_opened',
+    source: 'official_dossier',
   });
   expect(JSON.stringify(productEvents)).not.toMatch(
     /3058920038|2023K0205|approved_land_use_project/i,

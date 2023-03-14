@@ -37,6 +37,7 @@ const pageErrors = [];
 let screeningReceiptVerified = false;
 let addressResolutionVerified = false;
 let officialDossierVerified = false;
+let dossierReadinessVerified = false;
 let passed = false;
 let failure = null;
 
@@ -154,6 +155,26 @@ try {
     );
   }
   officialDossierVerified = true;
+  const readiness = officialDossier.getByTestId(
+    'parcel-dossier-readiness',
+  );
+  if (
+    !(await readiness.getByText('Evidence readiness').isVisible()) ||
+    !(await readiness
+      .getByText('6 of 6 groups present', { exact: false })
+      .isVisible()) ||
+    !(await readiness
+      .getByText('Source review required', { exact: true })
+      .isVisible()) ||
+    !(await readiness
+      .getByTestId('parcel-dossier-action-verify-zoning')
+      .isVisible())
+  ) {
+    throw new Error(
+      'The official dossier evidence-readiness guidance was incomplete.',
+    );
+  }
+  dossierReadinessVerified = true;
   await page
     .getByRole('button', { name: 'Check current screening' })
     .click();
@@ -222,7 +243,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v2',
+  schema_version: 'citylens/production-authenticated-parcel-map@v3',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -232,6 +253,7 @@ const report = {
   screening_receipt_verified: screeningReceiptVerified,
   address_resolution_verified: addressResolutionVerified,
   official_dossier_verified: officialDossierVerified,
+  dossier_readiness_verified: dossierReadinessVerified,
   console_error_count: consoleErrors.length,
   page_error_count: pageErrors.length,
 };

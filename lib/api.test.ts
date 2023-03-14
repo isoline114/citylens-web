@@ -442,6 +442,10 @@ describe('api client', () => {
       'underwriting_assumptions_changed',
       'base_assumptions',
     );
+    await recordParcelProductEvent(
+      'official_dossier_opened',
+      'official_dossier',
+    );
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain('/v1/parcel-intel/product-events');
@@ -468,6 +472,19 @@ describe('api client', () => {
     });
     expect(String(underwritingInit.body)).not.toMatch(
       /bbl|address|owner|notes|tags|value|cost|margin|efficiency/i,
+    );
+
+    const [, dossierInit] = fetchMock.mock.calls[2] as [
+      string,
+      RequestInit,
+    ];
+    expect(JSON.parse(String(dossierInit.body))).toEqual({
+      schema_version: 'citylens/parcel-product-event@v1',
+      event: 'official_dossier_opened',
+      source: 'official_dossier',
+    });
+    expect(String(dossierInit.body)).not.toMatch(
+      /bbl|address|owner|source_fact|readiness|lead|result/i,
     );
   });
 

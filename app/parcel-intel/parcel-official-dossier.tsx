@@ -1,24 +1,33 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ArrowUpRight,
+  CheckCircle2,
   CircleAlert,
+  CircleDashed,
+  ClipboardCheck,
   Database,
   FileSearch,
   Landmark,
   Layers3,
   LoaderCircle,
   MapPinned,
+  Route,
   ShieldCheck,
   TriangleAlert,
 } from 'lucide-react';
 
 import {
   getParcelOfficialDossier,
+  recordParcelProductEvent,
   type ParcelOfficialDossier,
 } from '@/lib/api';
 import { BOROUGH_LABELS } from './parcel-intel-explorer-support';
+import {
+  buildDossierEvidenceReadiness,
+  type DossierEvidenceStatus,
+} from './parcel-official-dossier-readiness';
 
 type State =
   | { status: 'loading' }
@@ -135,13 +144,24 @@ function ownerStatus(dossier: ParcelOfficialDossier) {
 
 export function ParcelOfficialDossierPanel({ bbl }: Props) {
   const [state, setState] = useState<State>({ status: 'loading' });
+  const trackedBblsRef = useRef(new Set<string>());
 
   useEffect(() => {
     let current = true;
     setState({ status: 'loading' });
     void getParcelOfficialDossier(bbl)
       .then((dossier) => {
-        if (current) setState({ status: 'ready', dossier });
+        if (!current) return;
+        setState({ status: 'ready', dossier });
+        if (!trackedBblsRef.current.has(bbl)) {
+          trackedBblsRef.current.add(bbl);
+          void recordParcelProductEvent(
+            'official_dossier_opened',
+            'official_dossier',
+          ).catch(() => {
+            // Adoption telemetry is best effort and must never block facts.
+          });
+        }
       })
       .catch((error) => {
         if (!current) return;
@@ -199,6 +219,22 @@ export function ParcelOfficialDossierPanel({ bbl }: Props) {
   ].filter((entry): entry is [string, number] => entry[1] !== null);
   const hasFloodReference =
     dossier.firm_2007_floodplain || dossier.pfirm_2015_floodplain;
+  const readiness = buildDossierEvidenceReadiness(dossier);
+  const readinessTone =
+    readiness.status === 'review_required'
+      ? 'border-amber-300/30 bg-amber-300/10 text-amber-100'
+      : readiness.status === 'partial'
+        ? 'border-sky-300/30 bg-sky-300/10 text-sky-100'
+        : 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100';
+
+  const evidenceTone = (status: DossierEvidenceStatus) =>
+    status === 'available'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+      : status === 'review'
+        ? 'border-amber-200 bg-amber-50 text-amber-900'
+        : status === 'partial'
+          ? 'border-sky-200 bg-sky-50 text-sky-800'
+          : 'border-slate-200 bg-slate-100 text-slate-600';
 
   return (
     <section
@@ -251,6 +287,101 @@ export function ParcelOfficialDossierPanel({ bbl }: Props) {
       </div>
 
       <div className="space-y-4 px-4 py-5 md:px-6">
+        <div
+          data-testid="parcel-dossier-readiness"
+          className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+        >
+          <div className="grid gap-0 lg:grid-cols-[1.35fr_0.65fr]">
+            <div className="p-4 md:p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 text-slate-950">
+                    <ClipboardCheck className="h-4 w-4 text-emerald-700" />
+                    <h4 className="text-sm font-semibold">
+                      Evidence readiness
+                    </h4>
+                  </div>
+                  <p className="mt-1 max-w-2xl text-[11px] leading-5 text-slate-500">
+                    Source coverage and discrepancies—not correctness,
+                    investment suitability, or predictive confidence.
+                  </p>
+                </div>
+                <div
+                  data-testid="parcel-dossier-readiness-status"
+                  className={`rounded-xl border px-3 py-2 ${readinessTone}`}
+                >
+                  <div className="text-[9px] font-semibold uppercase tracking-[0.13em] opacity-75">
+                    {readiness.presentCount} of {readiness.totalCount} groups
+                    present
+                  </div>
+                  <div className="mt-0.5 text-xs font-semibold">
+                    {readiness.label}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {readiness.groups.map((group) => (
+                  <div
+                    key={group.key}
+                    data-testid={`parcel-dossier-evidence-${group.key}`}
+                    className={`rounded-xl border p-3 ${evidenceTone(group.status)}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {group.status === 'available' ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                      ) : group.status === 'review' ? (
+                        <TriangleAlert className="h-3.5 w-3.5 shrink-0" />
+                      ) : (
+                        <CircleDashed className="h-3.5 w-3.5 shrink-0" />
+                      )}
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.1em]">
+                        {group.label}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-[10px] leading-4 opacity-80">
+                      {group.detail}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <aside className="border-t border-slate-200 bg-slate-950 p-4 text-white lg:border-l lg:border-t-0 md:p-5">
+              <div className="flex items-center gap-2">
+                <Route className="h-4 w-4 text-sky-300" />
+                <h4 className="text-xs font-semibold uppercase tracking-[0.12em]">
+                  Verify next
+                </h4>
+              </div>
+              <div className="mt-3 space-y-2">
+                {readiness.actions.map((action, index) => (
+                  <a
+                    key={action.key}
+                    data-testid={`parcel-dossier-action-${action.key}`}
+                    href={dossier.official_links[action.link]}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.06] p-3 transition hover:border-sky-300/30 hover:bg-white/[0.1]"
+                  >
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-300/15 text-[9px] font-bold text-sky-200">
+                      {index + 1}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-white">
+                        {action.label}
+                        <ArrowUpRight className="h-3 w-3 opacity-60 transition group-hover:opacity-100" />
+                      </span>
+                      <span className="mt-1 block text-[10px] leading-4 text-slate-400">
+                        {action.detail}
+                      </span>
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </aside>
+          </div>
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Metric
             label="Lot"

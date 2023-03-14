@@ -86,6 +86,7 @@ export type PilotRequestReceipt = {
 
 export type ParcelProductEventName =
   | 'parcel_opened'
+  | 'official_dossier_opened'
   | 'screening_lookup_completed'
   | 'comparison_opened'
   | 'saved_view_applied'
@@ -98,6 +99,7 @@ export type ParcelProductEventName =
 
 export type ParcelProductEventSource =
   | 'direct'
+  | 'official_dossier'
   | 'screening_lookup'
   | 'map'
   | 'ranking'
