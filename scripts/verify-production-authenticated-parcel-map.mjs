@@ -19,6 +19,7 @@ const webBase = (
 const email = process.env.CITYLENS_WEB_SMOKE_EMAIL?.trim();
 const password = process.env.CITYLENS_WEB_SMOKE_PASSWORD;
 const expectedCount = Number(process.env.CITYLENS_EXPECTED_PARCEL_COUNT || 5_000);
+const mobileViewport = { width: 390, height: 844 };
 const outputDir = path.resolve(
   process.env.CITYLENS_SMOKE_OUTPUT_DIR || 'test-results/production-auth-smoke',
 );
@@ -311,7 +312,7 @@ try {
   mobilePage.on('pageerror', (error) =>
     pageErrors.push(`[mobile] ${error.message}`),
   );
-  await mobilePage.setViewportSize({ width: 390, height: 844 });
+  await mobilePage.setViewportSize(mobileViewport);
   await mobilePage.goto(`${webBase}/parcel-intel`, {
     waitUntil: 'networkidle',
   });
@@ -349,6 +350,8 @@ try {
     workspace_tools_collapsed:
       (await mobileWorkspaceTools.getAttribute('aria-expanded')) === 'false',
     map_top_px: mobileMapBounds ? Math.round(mobileMapBounds.y) : null,
+    map_within_first_viewport:
+      mobileMapBounds !== null && mobileMapBounds.y < mobileViewport.height,
   };
   if (
     mobileWorkspaceReceipt.access_status !== 'Full access' ||
@@ -356,7 +359,8 @@ try {
     mobileWorkspaceReceipt.market_filters_visible !== true ||
     mobileWorkspaceReceipt.market_filters_collapsed !== true ||
     mobileWorkspaceReceipt.workspace_tools_visible !== true ||
-    mobileWorkspaceReceipt.workspace_tools_collapsed !== true
+    mobileWorkspaceReceipt.workspace_tools_collapsed !== true ||
+    mobileWorkspaceReceipt.map_within_first_viewport !== true
   ) {
     throw new Error(
       `Unexpected mobile workspace receipt: ${JSON.stringify(mobileWorkspaceReceipt)}.`,

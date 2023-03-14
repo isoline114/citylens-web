@@ -120,21 +120,20 @@ export default async function ParcelIntelIndexPage({
       : '';
 
   return (
-    <main className="mx-auto max-w-[1480px] px-4 py-5 sm:px-6 md:py-6 xl:px-8">
-      <header className="mb-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.82fr)] lg:items-end">
+    <main className="mx-auto max-w-[1480px] px-4 py-3 sm:px-6 md:py-6 xl:px-8">
+      <header className="mb-3 grid gap-4 md:mb-5 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.82fr)] lg:items-end">
         <div>
           <div className="inline-flex items-center gap-2 self-start rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-800 ring-1 ring-inset ring-sky-200">
             <Building2 className="h-3.5 w-3.5" />
             NYC parcel intelligence · v1
           </div>
-          <h1 className="mt-3 max-w-2xl text-balance text-3xl font-semibold tracking-[-0.03em] text-slate-950 md:text-4xl">
+          <h1 className="mt-2 max-w-2xl text-balance text-3xl font-semibold tracking-[-0.03em] text-slate-950 md:mt-3 md:text-4xl">
             Find the sites worth pursuing this week.
           </h1>
           <p className="mt-2 max-w-3xl text-[13px] leading-5 text-slate-600 sm:text-sm sm:leading-6 md:text-base md:leading-7">
             <span className="sm:hidden">
-              Rank NYC development-site leads from current city records. Open a
-              parcel to verify evidence and underwrite. Rank is a screening
-              order—not a transaction promise.
+              Rank NYC development-site leads, then verify the evidence before
+              diligence.
             </span>
             <span className="hidden sm:inline">
               Rank and qualify NYC development-site leads from current city records,
