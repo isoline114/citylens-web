@@ -93,6 +93,16 @@ unused-FAR-proxy thresholds. It uses production-informed square-foot presets,
 excludes missing values from a minimum screen, persists the thresholds in
 private saved views, and labels both measures as preliminary PLUTO screens—not
 surveyed area, zoning capacity, or feasible development yield.
+Authenticated users can also open the constrained acquisition-thesis composer.
+It deterministically translates plain language into only those same visible
+borough, priority, site-type, positive-evidence, minimum-lot-area, and
+minimum-unused-FAR controls. The thesis text stays in browser memory and is
+never submitted or saved. Before application, a review receipt shows every
+recognized filter, any disclosed safe default, every unsupported concept, any
+conflict, and the exact match count against the verified full inventory.
+Conflicts and empty interpretations fail closed. Unsupported financial,
+program, zoning, contact, seller-intent, range, and negative-exclusion wording
+is never converted into invented data or hidden criteria.
 Every active screen also exposes a collapsible audit. It removes one condition
 at a time while holding the others fixed, reports the marginal result lift,
 shows scoped PLUTO coverage for numeric fields, and lets the user relax that
@@ -395,6 +405,10 @@ result counts, overlap/union measures, or compared values.
 Opening a saved-thesis change set records only the fixed event/source pair,
 once per view per browser session; it contains no view ID, BBL, generation,
 filters, membership, entered/exited counts, address, owner, value, or note.
+Applying a reviewed constrained thesis records only the fixed
+`thesis_composer_applied:thesis_composer` pair. It contains no thesis text,
+recognized or unsupported criterion, safe default, threshold, geography,
+match count, parcel, address, owner, value, or source fact.
 Decision-audit opens identify only whether the posture card or Audit tab was
 used; underwriting events identify only whether the Underwrite tab opened or
 any base assumption was changed. The event does not include which parcel or

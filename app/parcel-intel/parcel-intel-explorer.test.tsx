@@ -706,6 +706,75 @@ describe('ParcelIntelExplorer', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('applies a reviewed browser-local thesis and emits only the coarse event', async () => {
+    mocks.authStatus = 'authenticated';
+    render(
+      <ParcelIntelExplorer
+        boroughs={[
+          ...boroughs,
+          {
+            slug: 'queens',
+            display_name: 'Queens',
+            count: 0,
+            top_score: 1,
+          },
+        ]}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('parcel-inventory-status')).toHaveTextContent(
+        'Full inventory verified',
+      ),
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Compose an acquisition thesis/i,
+      }),
+    );
+    fireEvent.change(screen.getByLabelText('Acquisition thesis'), {
+      target: {
+        value:
+          'Queens assemblage opportunities with at least 12,345 sf unused FAR',
+      },
+    });
+    fireEvent.click(screen.getByTestId('thesis-review'));
+    await waitFor(() =>
+      expect(screen.getByTestId('thesis-apply')).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByTestId('thesis-apply'));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('Filter by borough')).toHaveValue('queens'),
+    );
+    expect(screen.getByRole('button', { name: /Signals \(1 active\)/i })).toBeVisible();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Site criteria (1 active)' }),
+    );
+    expect(screen.getByLabelText('Minimum unused FAR proxy')).toHaveValue(
+      '12345',
+    );
+    await waitFor(() =>
+      expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+        'thesis_composer_applied',
+        'thesis_composer',
+      ),
+    );
+    expect(
+      JSON.stringify(
+        mocks.recordParcelProductEvent.mock.calls.filter(
+          ([event]) => event === 'thesis_composer_applied',
+        ),
+      ),
+    ).not.toMatch(
+      /queens|assemblage|12345|unused|prompt|criterion|filter|result|parcel|bbl|owner/i,
+    );
+    expect(mocks.routerReplace).toHaveBeenLastCalledWith(
+      '/parcel-intel?borough=queens',
+      { scroll: false },
+    );
+  });
+
   it('keeps the preview and exposes account recovery when JWT access fails', async () => {
     mocks.authStatus = 'authenticated';
     const previewRows = [
@@ -1145,7 +1214,11 @@ describe('ParcelIntelExplorer', () => {
     render(<ParcelIntelExplorer boroughs={boroughs} />);
 
     await screen.findByTestId('activation-guide-attention');
-    fireEvent.click(screen.getByRole('button', { name: 'Review 2 actions' }));
+    const reviewActions = screen.getByRole('button', {
+      name: 'Review 2 actions',
+    });
+    expect(reviewActions).not.toHaveAttribute('aria-controls');
+    fireEvent.click(reviewActions);
 
     expect(
       await screen.findByRole('heading', {

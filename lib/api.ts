@@ -95,6 +95,7 @@ export type ParcelProductEventName =
   | 'underwriting_assumptions_changed'
   | 'screen_audit_opened'
   | 'screen_criterion_relaxed'
+  | 'thesis_composer_applied'
   | 'saved_view_comparison_opened'
   | 'saved_thesis_changes_opened';
 
@@ -114,6 +115,7 @@ export type ParcelProductEventSource =
   | 'base_assumptions'
   | 'screen_summary'
   | 'screen_audit'
+  | 'thesis_composer'
   | 'decision_peers';
 
 export class ApiConfigError extends Error {

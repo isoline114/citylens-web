@@ -173,6 +173,24 @@ describe('api client', () => {
 
     fetchMock.mockClear();
     await recordParcelProductEvent(
+      'thesis_composer_applied',
+      'thesis_composer',
+    );
+    const [, thesisComposerInit] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(JSON.parse(String(thesisComposerInit.body))).toEqual({
+      schema_version: 'citylens/parcel-product-event@v1',
+      event: 'thesis_composer_applied',
+      source: 'thesis_composer',
+    });
+    expect(String(thesisComposerInit.body)).not.toMatch(
+      /prompt|criterion|borough|geography|bbl|address|owner|query|filter|min_lot|unused|threshold|result_count|5000|10000/i,
+    );
+
+    fetchMock.mockClear();
+    await recordParcelProductEvent(
       'saved_view_comparison_opened',
       'saved_views',
     );

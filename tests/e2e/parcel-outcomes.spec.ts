@@ -5,6 +5,7 @@ import {
   clearWcagTextSpacing,
   expectNoClippedEssentialText,
   expectNoDocumentHorizontalOverflow,
+  expectNoWcagViolations,
 } from './accessibility';
 
 async function auditNarrowTextSpacing(
@@ -954,6 +955,40 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(page.getByTestId('parcel-inventory-status')).toContainText(
     'Full inventory verified',
   );
+  await page
+    .getByRole('button', { name: /Compose an acquisition thesis/i })
+    .click();
+  await page
+    .getByRole('textbox', { name: 'Acquisition thesis' })
+    .fill(
+      'Highest-priority ground-up sites in Brooklyn near transit with at least 5,000 sf lots',
+    );
+  await page.getByTestId('thesis-review').click();
+  await expect(page.getByTestId('thesis-review-receipt')).toContainText(
+    'Geography: Brooklyn',
+  );
+  await expect(page.getByTestId('thesis-review-receipt')).toContainText(
+    'Site type: Ground-up candidates',
+  );
+  await expect(page.getByTestId('thesis-match-count')).toHaveText('1');
+  await expectNoWcagViolations(
+    page,
+    'Expanded acquisition-thesis composer',
+  );
+  await auditNarrowTextSpacing(
+    page,
+    '[data-testid="parcel-thesis-composer"]',
+    'Acquisition-thesis composer',
+  );
+  await page.getByTestId('thesis-apply').click();
+  await expect(page.getByLabel('Filter by borough')).toHaveValue('brooklyn');
+  await expect(page.getByLabel('Filter by priority')).toHaveValue('highest');
+  await expect(page.getByLabel('Filter by site type')).toHaveValue(
+    'ground_up_candidate',
+  );
+  await expect(page.getByTestId('thesis-announcement')).toContainText(
+    'Applied 5 reviewed criteria. 1 current leads match.',
+  );
   await page.getByText('How CityLens ranks and qualifies parcels').click();
   const historicalMethod = page
     .getByRole('heading', { name: 'Historical benchmark hit rate' })
@@ -1139,6 +1174,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     .toEqual([
       {
         schema_version: 'citylens/parcel-product-event@v1',
+        event: 'thesis_composer_applied',
+        source: 'thesis_composer',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
         event: 'saved_thesis_changes_opened',
         source: 'saved_views',
       },
@@ -1159,7 +1199,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
       },
     ]);
   expect(JSON.stringify(productEvents)).not.toMatch(
-    /3020960069|100 E 21|owner|notes|tags|count|overlap|union/i,
+    /3020960069|100 E 21|owner|notes|tags|count|overlap|union|brooklyn|ground-up|transit|5000|5,000|prompt|criterion|filter/i,
   );
   await page.getByRole('button', { name: 'Overview' }).click();
   const decisionBrief = page.getByTestId('parcel-decision-posture');
@@ -1190,6 +1230,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect
     .poll(() => productEvents)
     .toEqual([
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'thesis_composer_applied',
+        source: 'thesis_composer',
+      },
       {
         schema_version: 'citylens/parcel-product-event@v1',
         event: 'saved_thesis_changes_opened',
@@ -1236,6 +1281,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     .toEqual([
       {
         schema_version: 'citylens/parcel-product-event@v1',
+        event: 'thesis_composer_applied',
+        source: 'thesis_composer',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
         event: 'saved_thesis_changes_opened',
         source: 'saved_views',
       },
@@ -1269,6 +1319,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect
     .poll(() => productEvents)
     .toEqual([
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'thesis_composer_applied',
+        source: 'thesis_composer',
+      },
       {
         schema_version: 'citylens/parcel-product-event@v1',
         event: 'saved_thesis_changes_opened',
