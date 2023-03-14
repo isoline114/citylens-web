@@ -7,6 +7,7 @@ import type {
 import {
   historicalBenchmarkCopy,
   normalizePerformanceScope,
+  parseHistoricalBenchmarkReceipt,
 } from '@/lib/parcel-intel-evidence';
 import { ParcelFeedReceipt } from './parcel-feed-receipt';
 import { ParcelIntelExplorer } from './parcel-intel-explorer';
@@ -80,6 +81,9 @@ export default async function ParcelIntelIndexPage({
     typeof index.model_metadata?.spatial_cv_base_rate === 'number'
       ? (index.model_metadata.spatial_cv_base_rate as number)
       : null;
+  const historicalBenchmarkReceipt = parseHistoricalBenchmarkReceipt(
+    index.model_metadata?.historical_benchmark_receipt,
+  );
   const staleSources = Object.values(index.data_sources ?? {}).flatMap((value) => {
     if (!value || typeof value !== 'object') return [];
     const status = value as Record<string, unknown>;
@@ -185,6 +189,7 @@ export default async function ParcelIntelIndexPage({
             prospectiveValidationHealth={
               index.prospective_validation_health ?? null
             }
+            historicalBenchmarkReceipt={historicalBenchmarkReceipt}
           />
         </>
       )}
@@ -203,6 +208,7 @@ function MethodologyDisclosure({
   evaluationEvidenceStatus,
   prospectiveValidation,
   prospectiveValidationHealth,
+  historicalBenchmarkReceipt,
 }: {
   modelType: string | null;
   featureYear: string | number | undefined;
@@ -214,12 +220,16 @@ function MethodologyDisclosure({
   evaluationEvidenceStatus: string;
   prospectiveValidation: ParcelProspectiveValidationStatus | null;
   prospectiveValidationHealth: ParcelProspectiveValidationHealth | null;
+  historicalBenchmarkReceipt: ReturnType<
+    typeof parseHistoricalBenchmarkReceipt
+  >;
 }) {
   const forwardTestBody = historicalBenchmarkCopy({
     precisionAt100,
     precisionAt1000,
     baseRate: evaluationBaseRate,
     evidenceStatus: evaluationEvidenceStatus,
+    receipt: historicalBenchmarkReceipt,
   });
 
   return (

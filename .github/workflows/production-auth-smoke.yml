@@ -54,7 +54,9 @@ jobs:
           const passed = Boolean(report?.passed);
           console.log(`## ${passed ? '✅' : '❌'} Real browser authentication`);
           console.log('');
+          console.log(`- Signed-in API credential: \`${report?.auth_token_receipts?.some((receipt) => receipt.status === 200 && receipt.jwt_shape === true) ? 'passed' : 'failed'}\``);
           console.log(`- Signed-in 5,000-parcel map: \`${passed ? 'passed' : 'failed'}\``);
+          console.log(`- Auditable historical benchmark receipt: \`${report?.historical_benchmark_receipt_verified ? 'passed' : 'failed'}\``);
           console.log(`- Any-NYC-lot official dossier: \`${report?.official_dossier_verified ? 'passed' : 'failed'}\``);
           console.log(`- Source-grounded dossier readiness: \`${report?.dossier_readiness_verified ? 'passed' : 'failed'}\``);
           console.log(`- Official address → BBL → screening flow: \`${report?.address_resolution_verified ? 'passed' : 'failed'}\``);

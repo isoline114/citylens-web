@@ -32,12 +32,14 @@ await fs.mkdir(outputDir, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 const mapReceipts = [];
+const authTokenReceipts = [];
 const consoleErrors = [];
 const pageErrors = [];
 let screeningReceiptVerified = false;
 let addressResolutionVerified = false;
 let officialDossierVerified = false;
 let dossierReadinessVerified = false;
+let historicalBenchmarkReceiptVerified = false;
 let passed = false;
 let failure = null;
 
@@ -46,6 +48,23 @@ page.on('console', (message) => {
 });
 page.on('pageerror', (error) => pageErrors.push(error.message));
 page.on('response', async (response) => {
+  if (response.url().includes('/api/auth/token')) {
+    try {
+      const payload = await response.json();
+      const token =
+        payload && typeof payload === 'object' ? payload.token : null;
+      authTokenReceipts.push({
+        status: response.status(),
+        jwt_shape:
+          typeof token === 'string' && token.split('.').length === 3,
+      });
+    } catch {
+      authTokenReceipts.push({
+        status: response.status(),
+        jwt_shape: false,
+      });
+    }
+  }
   if (!response.url().includes('/v1/parcel-intel/map?')) return;
   try {
     const payload = await response.json();
@@ -109,6 +128,15 @@ try {
     throw new Error(`Unexpected map status: ${mappedStatus ?? 'missing'}`);
   }
   if (
+    !authTokenReceipts.some(
+      (receipt) => receipt.status === 200 && receipt.jwt_shape === true,
+    )
+  ) {
+    throw new Error(
+      'The signed-in browser session did not mint a valid API credential.',
+    );
+  }
+  if (
     !mapReceipts.some(
       (receipt) =>
         receipt.status === 200 &&
@@ -123,6 +151,33 @@ try {
       'No complete authenticated Parcel Intelligence map response was observed.',
     );
   }
+  const methodology = page
+    .locator('details')
+    .filter({ hasText: 'How CityLens ranks and qualifies parcels' });
+  await page
+    .getByText('How CityLens ranks and qualifies parcels', { exact: true })
+    .click();
+  if (
+    !(await methodology
+      .getByText(/34 of the top 100 received a DOB new-building filing/)
+      .isVisible()) ||
+    !(await methodology.getByText(/observed 95% interval 25\.5–43\.7%/).isVisible()) ||
+    !(await methodology
+      .getByText(/104 of the top 1000 did so/)
+      .isVisible()) ||
+    !(await methodology.getByText(/observed 95% interval 8\.7–12\.4%/).isVisible()) ||
+    !(await methodology
+      .getByText(/not an independent current-accuracy estimate/)
+      .isVisible()) ||
+    !(await methodology
+      .getByText(/do not include model selection, spatial dependence, dataset shift/)
+      .isVisible())
+  ) {
+    throw new Error(
+      'The historical benchmark receipt or its limitations were incomplete.',
+    );
+  }
+  historicalBenchmarkReceiptVerified = true;
   await page.getByLabel('Search parcels').fill('3058920038');
   const officialDossier = page.getByTestId('parcel-official-dossier');
   await officialDossier.waitFor({ timeout: 15_000 });
@@ -243,17 +298,19 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v3',
+  schema_version: 'citylens/production-authenticated-parcel-map@v4',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
   passed,
   failure,
+  auth_token_receipts: authTokenReceipts,
   map_receipts: mapReceipts,
   screening_receipt_verified: screeningReceiptVerified,
   address_resolution_verified: addressResolutionVerified,
   official_dossier_verified: officialDossierVerified,
   dossier_readiness_verified: dossierReadinessVerified,
+  historical_benchmark_receipt_verified: historicalBenchmarkReceiptVerified,
   console_error_count: consoleErrors.length,
   page_error_count: pageErrors.length,
 };

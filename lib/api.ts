@@ -464,6 +464,42 @@ export type ParcelDecisionReadiness = {
   disclaimer: string;
 };
 
+export type ParcelHistoricalTopKReceipt = {
+  k: 100 | 1000;
+  evaluated_rows: number;
+  observed_hits: number;
+  precision: number;
+  precision_95ci: [number, number];
+};
+
+export type ParcelHistoricalBenchmarkReceipt = {
+  schema: 'citylens_historical_benchmark_receipt@v1';
+  target: string;
+  feature_origin: number;
+  outcome_window: string;
+  evaluation_scope: string;
+  evaluation_rows: number;
+  observed_positive_rows: number;
+  base_rate: number;
+  auc: number;
+  pr_auc: number;
+  top_100: ParcelHistoricalTopKReceipt;
+  top_1000: ParcelHistoricalTopKReceipt;
+  interval: {
+    method: 'wilson_score_observed_top_k';
+    confidence_level: 0.95;
+    scope: 'fixed_historical_ranked_list';
+    limitations: string;
+  };
+  evidence_status:
+    | 'unexposed'
+    | 'development_exposed'
+    | 'retired'
+    | 'unclassified';
+  not_current_accuracy: true;
+  not_parcel_confidence: true;
+};
+
 export type ParcelDecisionAudit = {
   schema_version: 'citylens/parcel-decision-audit@v1';
   /** Exact published feed version used to assemble the cited audit checks. */
@@ -482,6 +518,7 @@ export type ParcelDecisionAudit = {
     precision_at_100: number | null;
     precision_at_1000: number | null;
     base_rate: number | null;
+    historical_benchmark_receipt?: ParcelHistoricalBenchmarkReceipt | null;
     prospective_validated: boolean;
     disclaimer: string;
   };

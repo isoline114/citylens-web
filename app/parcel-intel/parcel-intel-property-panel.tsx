@@ -492,6 +492,42 @@ function ParcelDecisionAuditPanel({
   }[audit.overall_status];
   const readiness = audit.readiness;
   const readinessStyle = readiness ? READINESS_STYLES[readiness.status] : '';
+  const benchmark = audit.validation.historical_benchmark_receipt ?? null;
+  const benchmarkCards = benchmark
+    ? [
+        {
+          label: 'Top 100',
+          value: formatRate(benchmark.top_100.precision),
+          detail: `${benchmark.top_100.observed_hits}/${benchmark.top_100.evaluated_rows} hits · 95% ${formatRate(benchmark.top_100.precision_95ci[0])}–${formatRate(benchmark.top_100.precision_95ci[1])}`,
+        },
+        {
+          label: 'Top 1,000',
+          value: formatRate(benchmark.top_1000.precision),
+          detail: `${benchmark.top_1000.observed_hits.toLocaleString()}/${benchmark.top_1000.evaluated_rows.toLocaleString()} hits · 95% ${formatRate(benchmark.top_1000.precision_95ci[0])}–${formatRate(benchmark.top_1000.precision_95ci[1])}`,
+        },
+        {
+          label: 'Eligible base rate',
+          value: formatRate(benchmark.base_rate),
+          detail: `${benchmark.observed_positive_rows.toLocaleString()}/${benchmark.evaluation_rows.toLocaleString()} filings`,
+        },
+      ]
+    : [
+        {
+          label: 'Top 100',
+          value: formatRate(audit.validation.precision_at_100),
+          detail: null,
+        },
+        {
+          label: 'Top 1,000',
+          value: formatRate(audit.validation.precision_at_1000),
+          detail: null,
+        },
+        {
+          label: 'Base rate',
+          value: formatRate(audit.validation.base_rate),
+          detail: null,
+        },
+      ];
 
   return (
     <div data-testid="parcel-decision-audit">
@@ -575,22 +611,47 @@ function ParcelDecisionAuditPanel({
           <Gauge className="h-3.5 w-3.5" />
           Historical filing benchmark
         </div>
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {[
-            ['Top 100', formatRate(audit.validation.precision_at_100)],
-            ['Top 1,000', formatRate(audit.validation.precision_at_1000)],
-            ['Base rate', formatRate(audit.validation.base_rate)],
-          ].map(([label, value]) => (
-            <div key={label} className="rounded-lg bg-slate-50 p-2.5">
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {benchmarkCards.map((card) => (
+            <div
+              key={card.label}
+              className="rounded-lg border border-slate-200 bg-slate-50 p-2.5"
+            >
               <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                {label}
+                {card.label}
               </div>
               <div className="mt-1 text-sm font-semibold text-slate-950">
-                {value}
+                {card.value}
               </div>
+              {card.detail && (
+                <div className="mt-1 text-[10px] leading-4 text-slate-500">
+                  {card.detail}
+                </div>
+              )}
             </div>
           ))}
         </div>
+        {benchmark && (
+          <div
+            data-testid="historical-benchmark-receipt"
+            className="mt-2 rounded-lg border border-violet-200 bg-violet-50 p-2.5 text-[11px] leading-4 text-violet-950"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-semibold">
+                2024 features → 2025 DOB filings
+              </span>
+              <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ring-1 ring-inset ring-violet-200">
+                {benchmark.evidence_status === 'development_exposed'
+                  ? 'Development-exposed evidence'
+                  : benchmark.evidence_status.replaceAll('_', ' ')}
+              </span>
+            </div>
+            <p className="mt-1.5 text-violet-900/80">
+              Observed 95% ranges use a Wilson interval around each fixed
+              historical top-k list. {benchmark.interval.limitations}
+            </p>
+          </div>
+        )}
         <p className="mt-2 text-[11px] leading-4 text-slate-600">
           {audit.validation.evaluation_scope}
         </p>
