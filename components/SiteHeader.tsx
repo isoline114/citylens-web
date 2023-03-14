@@ -16,8 +16,16 @@ const navigation = [
   { href: '/docs', label: 'Docs' },
 ] as const;
 
-function isCurrentRoute(pathname: string, href: string): boolean {
-  return href === '/' ? pathname === href : pathname.startsWith(href);
+function normalizePathname(pathname: string | null): string {
+  if (!pathname) return '/';
+  return pathname.replace(/\/+$/, '') || '/';
+}
+
+function isCurrentRoute(pathname: string | null, href: string): boolean {
+  const normalizedPathname = normalizePathname(pathname);
+  return href === '/'
+    ? normalizedPathname === href
+    : normalizedPathname.startsWith(href);
 }
 
 function navigationClass(current: boolean, mobile: boolean): string {

@@ -3,7 +3,7 @@ import type { ImgHTMLAttributes } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 const navigation = vi.hoisted(() => ({
-  pathname: '/parcel-intel',
+  pathname: '/parcel-intel' as string | null,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -41,6 +41,15 @@ describe('SiteHeader', () => {
     const parcelLinks = screen.getAllByRole('link', { name: 'Parcels' });
     expect(parcelLinks).toHaveLength(2);
     parcelLinks.forEach((link) => {
+      expect(link).toHaveAttribute('aria-current', 'page');
+    });
+  });
+
+  it('keeps Home current while the static root pathname initializes', () => {
+    navigation.pathname = null;
+    render(<SiteHeader />);
+
+    screen.getAllByRole('link', { name: 'Home' }).forEach((link) => {
       expect(link).toHaveAttribute('aria-current', 'page');
     });
   });

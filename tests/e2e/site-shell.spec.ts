@@ -29,4 +29,14 @@ test('shared shell exposes one landmark, active navigation, and a true sticky fo
   await expect(skipLink).toBeFocused();
   await skipLink.press('Enter');
   await expect(page.getByRole('main')).toBeFocused();
+
+  await page.goto('/');
+  await expect(
+    page
+      .getByRole('navigation', {
+        name: 'Primary navigation',
+        exact: true,
+      })
+      .getByRole('link', { name: 'Home', exact: true }),
+  ).toHaveAttribute('aria-current', 'page');
 });

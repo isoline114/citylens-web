@@ -1,0 +1,72 @@
+name: production-shell-smoke
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      web_base:
+        description: Web origin to verify
+        required: false
+        default: https://www.citylens.dev
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-shell-smoke
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CITYLENS_WEB_BASE: ${{ inputs.web_base || 'https://www.citylens.dev' }}
+    steps:
+      - name: Check out verifier
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 20.19.0
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Verify public production shell
+        run: node scripts/verify-production-site-shell.mjs
+
+      - name: Publish verification summary
+        if: always()
+        run: |
+          node - <<'NODE' >> "${GITHUB_STEP_SUMMARY}"
+          const fs = require('node:fs');
+          const path = 'test-results/production-shell-smoke/report.json';
+          const report = fs.existsSync(path)
+            ? JSON.parse(fs.readFileSync(path, 'utf8'))
+            : null;
+          const receipts = Array.isArray(report?.receipts) ? report.receipts : [];
+          const pageReceipts = receipts.filter((receipt) => receipt.viewport !== 'keyboard');
+          const keyboard = receipts.find((receipt) => receipt.viewport === 'keyboard');
+          console.log(`## ${report?.passed ? '✅' : '❌'} Production site shell`);
+          console.log('');
+          console.log(`- Desktop/mobile page receipts: \`${pageReceipts.filter((receipt) => receipt.passed).length}/${pageReceipts.length}\``);
+          console.log(`- One content landmark per page: \`${pageReceipts.every((receipt) => receipt.main_count === 1) ? 'passed' : 'failed'}\``);
+          console.log(`- Active navigation and route messaging: \`${pageReceipts.every((receipt) => receipt.passed) ? 'passed' : 'failed'}\``);
+          console.log(`- Keyboard skip link: \`${keyboard?.passed ? 'passed' : 'failed'}\``);
+          console.log(`- Browser errors: \`${pageReceipts.reduce((count, receipt) => count + (receipt.console_error_count || 0) + (receipt.page_error_count || 0), 0)}\``);
+          if (report?.failure) console.log(`- Failure: \`${report.failure}\``);
+          NODE
+
+      - name: Upload sanitized verification receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: production-shell-smoke
+          path: test-results/production-shell-smoke/
+          if-no-files-found: warn
+          retention-days: 14
