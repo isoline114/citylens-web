@@ -56,6 +56,7 @@ let returningSessionReloadVerified = false;
 let initialClusteredMapReceipt = null;
 let returningClusteredMapReceipt = null;
 let citywideExportReceipt = null;
+let mobileWorkspaceReceipt = null;
 let passed = false;
 let failure = null;
 
@@ -297,6 +298,60 @@ try {
       `Unexpected citywide CSV receipt: ${JSON.stringify(citywideExportReceipt)}.`,
     );
   }
+
+  const mobilePage = await page.context().newPage();
+  mobilePage.on('console', (message) => {
+    if (message.type() === 'error') {
+      consoleErrors.push(`[mobile] ${message.text()}`);
+    }
+  });
+  mobilePage.on('pageerror', (error) =>
+    pageErrors.push(`[mobile] ${error.message}`),
+  );
+  await mobilePage.setViewportSize({ width: 390, height: 844 });
+  await mobilePage.goto(`${webBase}/parcel-intel`, {
+    waitUntil: 'networkidle',
+  });
+  const mobileAccessStatus = mobilePage.getByTestId(
+    'parcel-mobile-access-status',
+  );
+  await mobileAccessStatus
+    .getByText('Full', { exact: true })
+    .waitFor({ timeout: 30_000 });
+  const mobileMap = mobilePage.getByTestId('parcel-citywide-map');
+  await mobileMap
+    .getByText(`${expectedFormatted} matches`, { exact: true })
+    .waitFor({ timeout: 30_000 });
+  const mobileMarketFilters = mobilePage.getByRole('button', {
+    name: 'Market filters',
+  });
+  const mobileMapBounds = await mobileMap.boundingBox();
+  mobileWorkspaceReceipt = {
+    access_status: (await mobileAccessStatus.textContent())?.trim() ?? null,
+    match_count: positiveFormattedCountWithSuffix(
+      (
+        await mobileMap
+          .getByText(`${expectedFormatted} matches`, { exact: true })
+          .textContent()
+      )?.trim(),
+      'matches',
+    ),
+    market_filters_visible: await mobileMarketFilters.isVisible(),
+    market_filters_collapsed:
+      (await mobileMarketFilters.getAttribute('aria-expanded')) === 'false',
+    map_top_px: mobileMapBounds ? Math.round(mobileMapBounds.y) : null,
+  };
+  if (
+    mobileWorkspaceReceipt.access_status !== 'Full access' ||
+    mobileWorkspaceReceipt.match_count !== expectedCount ||
+    mobileWorkspaceReceipt.market_filters_visible !== true ||
+    mobileWorkspaceReceipt.market_filters_collapsed !== true
+  ) {
+    throw new Error(
+      `Unexpected mobile workspace receipt: ${JSON.stringify(mobileWorkspaceReceipt)}.`,
+    );
+  }
+  await mobilePage.close();
 
   const methodology = page
     .locator('details')
@@ -554,7 +609,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v9',
+  schema_version: 'citylens/production-authenticated-parcel-map@v10',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -566,6 +621,7 @@ const report = {
   returning_clustered_map_receipt: returningClusteredMapReceipt,
   returning_session_reload_verified: returningSessionReloadVerified,
   citywide_export_receipt: citywideExportReceipt,
+  mobile_workspace_receipt: mobileWorkspaceReceipt,
   screening_receipt_verified: screeningReceiptVerified,
   address_resolution_verified: addressResolutionVerified,
   official_dossier_verified: officialDossierVerified,

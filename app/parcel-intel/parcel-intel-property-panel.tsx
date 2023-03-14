@@ -1523,7 +1523,11 @@ export function ParcelIntelPropertyPanel({
         )}
       </div>
 
-      <div className="grid shrink-0 grid-cols-2 border-b border-slate-200 bg-slate-50 p-1.5 sm:grid-cols-4">
+      <nav
+        aria-label="Parcel workspace sections"
+        data-testid="parcel-workspace-tabs"
+        className="sticky top-0 z-20 grid shrink-0 grid-cols-2 border-b border-slate-200 bg-slate-50/95 p-1.5 shadow-sm backdrop-blur sm:static sm:grid-cols-4 sm:bg-slate-50 sm:shadow-none"
+      >
         {(
           [
             ['overview', FileSearch, 'Overview'],
@@ -1557,7 +1561,7 @@ export function ParcelIntelPropertyPanel({
             {label}
           </button>
         ))}
-      </div>
+      </nav>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
         {visibleWorkflowError && (

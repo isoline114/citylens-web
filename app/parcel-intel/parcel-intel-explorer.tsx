@@ -277,6 +277,7 @@ export function ParcelIntelExplorer({
   const [savedViewsOpen, setSavedViewsOpen] = useState(false);
   const [signalFiltersOpen, setSignalFiltersOpen] = useState(false);
   const [siteCriteriaOpen, setSiteCriteriaOpen] = useState(false);
+  const [mobileMarketFiltersOpen, setMobileMarketFiltersOpen] = useState(false);
   const [comparisonRows, setComparisonRows] = useState<ParcelIntelRow[]>([]);
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [workflowActions, setWorkflowActions] =
@@ -776,6 +777,10 @@ export function ParcelIntelExplorer({
   const activeSiteCriteriaCount =
     Number(filters.minLotAreaSqft !== null) +
     Number(filters.minUnusedFloorAreaSqft !== null);
+  const activeMarketFilterCount =
+    Number(filters.borough !== DEFAULT_FILTERS.borough) +
+    Number(filters.priority !== DEFAULT_FILTERS.priority) +
+    Number(filters.siteType !== DEFAULT_FILTERS.siteType);
   const uncommittedCount = useMemo(
     () =>
       filterExplorerRows(rows, {
@@ -1222,6 +1227,7 @@ export function ParcelIntelExplorer({
     setFilters(DEFAULT_FILTERS);
     setLeadLimit(INITIAL_LEAD_LIMIT);
     setMobileRankingExpanded(false);
+    setMobileMarketFiltersOpen(false);
     setRankMapView(false);
     setSelectedBbl(null);
     syncExplorerUrl('all', null);
@@ -1391,7 +1397,7 @@ export function ParcelIntelExplorer({
               evidence workspace.
             </p>
           </div>
-          <div className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] text-slate-300 sm:hidden">
+          <div className="grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] text-slate-300 sm:hidden">
             <span>
               <strong className="text-sm text-white">
                 {loadState === 'ready'
@@ -1412,11 +1418,27 @@ export function ParcelIntelExplorer({
               </strong>{' '}
               matches
             </span>
-            <span>
-              <strong className="text-sm text-white">
-                {totalAvailable.toLocaleString()}
+            <span data-testid="parcel-mobile-access-status">
+              <strong
+                className={`text-sm ${
+                  inventoryState === 'full'
+                    ? 'text-emerald-300'
+                    : inventoryState === 'incomplete'
+                      ? 'text-amber-300'
+                      : 'text-white'
+                }`}
+              >
+                {auth.status === 'loading'
+                  ? 'Checking'
+                  : inventoryState === 'upgrading'
+                    ? 'Upgrading'
+                    : inventoryState === 'full'
+                      ? 'Full'
+                      : inventoryState === 'incomplete'
+                        ? 'Reconnect'
+                        : 'Preview'}
               </strong>{' '}
-              available
+              access
             </span>
           </div>
           <div className="hidden grid-cols-4 gap-2 sm:grid lg:min-w-[520px]">
@@ -1853,55 +1875,80 @@ export function ParcelIntelExplorer({
               className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-950 outline-none placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
             />
           </label>
-          <label>
-            <span className="sr-only">Filter by borough</span>
-            <select
-              value={filters.borough}
-              onChange={(event) => updateFilter('borough', event.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
-            >
-              <option value="all">All boroughs</option>
-              {boroughs.map((borough) => (
-                <option key={borough.slug} value={borough.slug}>
-                  {borough.display_name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className="sr-only">Filter by priority</span>
-            <select
-              value={filters.priority}
-              onChange={(event) =>
-                updateFilter('priority', event.target.value as ExplorerPriority)
-              }
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
-            >
-              <option value="all">All priorities</option>
-              <option value="highest">Highest only</option>
-              <option value="high_or_better">High or better</option>
-            </select>
-          </label>
-          <label className="sm:col-span-2 xl:col-span-1">
-            <span className="sr-only">Filter by site type</span>
-            <select
-              value={filters.siteType}
-              onChange={(event) =>
-                updateFilter(
-                  'siteType',
-                  event.target.value as ExplorerSiteType,
-                )
-              }
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
-            >
-              <option value="all">All site types</option>
-              <option value="uncommitted">Qualified leads</option>
-              <option value="vacant_site">Vacant sites</option>
-              <option value="ground_up_candidate">Ground-up candidates</option>
-              <option value="conversion_or_overbuilt">Conversion / overbuilt</option>
-              <option value="active_project">Active projects</option>
-            </select>
-          </label>
+          <button
+            type="button"
+            onClick={() => setMobileMarketFiltersOpen((value) => !value)}
+            aria-label="Market filters"
+            aria-expanded={mobileMarketFiltersOpen}
+            aria-controls="parcel-mobile-market-filters"
+            className="inline-flex h-10 items-center justify-between rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-800 shadow-sm sm:hidden"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <Filter className="h-3.5 w-3.5" />
+              Market filters
+            </span>
+            <span className="text-[11px] font-medium text-slate-500">
+              {activeMarketFilterCount > 0
+                ? `${activeMarketFilterCount} active`
+                : 'Borough · priority · type'}
+            </span>
+          </button>
+          <div
+            id="parcel-mobile-market-filters"
+            className={`col-span-1 gap-2 ${
+              mobileMarketFiltersOpen ? 'grid' : 'hidden'
+            } sm:contents`}
+          >
+            <label>
+              <span className="sr-only">Filter by borough</span>
+              <select
+                value={filters.borough}
+                onChange={(event) => updateFilter('borough', event.target.value)}
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+              >
+                <option value="all">All boroughs</option>
+                {boroughs.map((borough) => (
+                  <option key={borough.slug} value={borough.slug}>
+                    {borough.display_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="sr-only">Filter by priority</span>
+              <select
+                value={filters.priority}
+                onChange={(event) =>
+                  updateFilter('priority', event.target.value as ExplorerPriority)
+                }
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+              >
+                <option value="all">All priorities</option>
+                <option value="highest">Highest only</option>
+                <option value="high_or_better">High or better</option>
+              </select>
+            </label>
+            <label className="sm:col-span-2 xl:col-span-1">
+              <span className="sr-only">Filter by site type</span>
+              <select
+                value={filters.siteType}
+                onChange={(event) =>
+                  updateFilter(
+                    'siteType',
+                    event.target.value as ExplorerSiteType,
+                  )
+                }
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+              >
+                <option value="all">All site types</option>
+                <option value="uncommitted">Qualified leads</option>
+                <option value="vacant_site">Vacant sites</option>
+                <option value="ground_up_candidate">Ground-up candidates</option>
+                <option value="conversion_or_overbuilt">Conversion / overbuilt</option>
+                <option value="active_project">Active projects</option>
+              </select>
+            </label>
+          </div>
           <div className="flex flex-wrap gap-2 sm:col-span-2 xl:col-span-1 xl:flex-nowrap">
             <button
               type="button"
@@ -2446,7 +2493,7 @@ export function ParcelIntelExplorer({
 
         <aside
           aria-label="Parcel decision workspace"
-          className="flex min-h-0 flex-col overflow-hidden border-t border-slate-200 bg-white lg:h-[760px] lg:border-l lg:border-t-0"
+          className="flex min-h-0 flex-col overflow-visible border-t border-slate-200 bg-white lg:h-[760px] lg:overflow-hidden lg:border-l lg:border-t-0"
         >
           {selectedDetail ? (
             <ParcelIntelPropertyPanel

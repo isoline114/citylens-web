@@ -143,6 +143,19 @@ beforeEach(() => {
 });
 
 describe('ParcelIntelPropertyPanel', () => {
+  it('keeps the parcel workspace modes in an accessible sticky navigator', () => {
+    render(<ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />);
+
+    const tabs = screen.getByRole('navigation', {
+      name: 'Parcel workspace sections',
+    });
+    expect(tabs).toHaveAttribute('data-testid', 'parcel-workspace-tabs');
+    expect(tabs).toHaveClass('sticky', 'top-0');
+    expect(
+      screen.getByRole('button', { name: 'Overview' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('supports a bounded comparison action independently of authentication', () => {
     const onToggleCompare = vi.fn();
     const { rerender } = render(

@@ -308,6 +308,9 @@ describe('ParcelIntelExplorer', () => {
     expect(
       screen.getByTestId('parcel-public-inventory-notice'),
     ).toHaveTextContent('Signed out on this browser');
+    expect(screen.getByTestId('parcel-mobile-access-status')).toHaveTextContent(
+      'Preview access',
+    );
     await waitFor(() =>
       expect(
         screen.getByTestId('parcel-public-inventory-notice'),
@@ -332,6 +335,33 @@ describe('ParcelIntelExplorer', () => {
     });
     expect(mocks.getParcelIntelSweep).not.toHaveBeenCalled();
     expect(mocks.getParcelWorkflowActions).not.toHaveBeenCalled();
+  });
+
+  it('keeps secondary market filters compact and explicit on mobile', async () => {
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    const toggle = screen.getByRole('button', { name: 'Market filters' });
+    const controls = document.getElementById('parcel-mobile-market-filters');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAttribute(
+      'aria-controls',
+      'parcel-mobile-market-filters',
+    );
+    expect(controls).toHaveClass('hidden');
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(controls).not.toHaveClass('hidden');
+
+    fireEvent.change(
+      screen.getByRole('combobox', { name: 'Filter by borough' }),
+      { target: { value: 'brooklyn' } },
+    );
+    expect(toggle).toHaveTextContent('1 active');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveTextContent('Borough · priority · type');
   });
 
   it('does not hold the public map behind auth initialization', async () => {

@@ -64,6 +64,25 @@ test('clusters the citywide preview and converges borough URLs on one explorer',
       }),
     });
   });
+  await page.route('**/v1/parcel-intel/parcel/**', async (route) => {
+    const bbl = decodeURIComponent(
+      new URL(route.request().url()).pathname.split('/').pop() ?? '',
+    );
+    const selected = rows.find((row) => row.bbl === bbl) ?? rows[0];
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ...selected,
+        top_features: [],
+        block_id: bbl.slice(0, 6),
+        block_rank: 1,
+        redev_status: 'still_vacant',
+        property_facts_as_of: '2026-07-27',
+        ownership_as_of: '2026-07-27',
+        project_activity_as_of: '2026-07-27',
+      }),
+    });
+  });
 
   await page.goto('/parcel-intel');
 
@@ -118,4 +137,32 @@ test('clusters the citywide preview and converges borough URLs on one explorer',
   await expect(
     page.getByRole('combobox', { name: 'Filter by borough' }),
   ).toHaveValue('queens');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/parcel-intel');
+
+  const mobileMap = page.getByTestId('parcel-citywide-map');
+  const marketFilters = page.getByRole('button', {
+    name: 'Market filters',
+  });
+  await expect(marketFilters).toBeVisible();
+  await expect(marketFilters).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByTestId('parcel-mobile-access-status')).toContainText(
+    'Preview access',
+  );
+  const mobileMapBox = await mobileMap.boundingBox();
+  expect(mobileMapBox).not.toBeNull();
+  expect(mobileMapBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(844);
+
+  await marketFilters.click();
+  await expect(marketFilters).toHaveAttribute('aria-expanded', 'true');
+  await expect(
+    page.getByRole('combobox', { name: 'Filter by borough' }),
+  ).toBeVisible();
+
+  await marketFilters.click();
+  await page.locator('[data-parcel-ranking-bbl]').first().click();
+  const workspaceTabs = page.getByTestId('parcel-workspace-tabs');
+  await expect(workspaceTabs).toBeVisible();
+  await expect(workspaceTabs).toHaveClass(/\bsticky\b/);
 });
