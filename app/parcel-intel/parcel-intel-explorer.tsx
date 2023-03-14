@@ -278,6 +278,8 @@ export function ParcelIntelExplorer({
   const [signalFiltersOpen, setSignalFiltersOpen] = useState(false);
   const [siteCriteriaOpen, setSiteCriteriaOpen] = useState(false);
   const [mobileMarketFiltersOpen, setMobileMarketFiltersOpen] = useState(false);
+  const [mobileWorkspaceToolsOpen, setMobileWorkspaceToolsOpen] =
+    useState(false);
   const [comparisonRows, setComparisonRows] = useState<ParcelIntelRow[]>([]);
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [workflowActions, setWorkflowActions] =
@@ -1346,7 +1348,7 @@ export function ParcelIntelExplorer({
   };
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_28px_90px_-42px_rgba(15,23,42,0.42)]">
+    <section className="flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_28px_90px_-42px_rgba(15,23,42,0.42)]">
       <div
         className="sr-only"
         role="status"
@@ -1498,7 +1500,32 @@ export function ParcelIntelExplorer({
               ),
             )}
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2 text-xs text-slate-300">
+          {isAuthenticated && (
+            <button
+              type="button"
+              onClick={() => setMobileWorkspaceToolsOpen((value) => !value)}
+              aria-label="Workspace tools"
+              aria-expanded={mobileWorkspaceToolsOpen}
+              aria-controls="parcel-mobile-workspace-tools"
+              className="inline-flex h-9 items-center justify-between rounded-xl border border-white/15 bg-white/10 px-3 text-xs font-semibold text-white sm:hidden"
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <Bookmark className="h-3.5 w-3.5 text-sky-300" />
+                Workspace tools
+              </span>
+              <span className="font-medium text-slate-300">
+                {workflowActions && workflowActions.attention_count > 0
+                  ? `${workflowActions.attention_count} need attention`
+                  : 'Views · actions · evidence'}
+              </span>
+            </button>
+          )}
+          <div
+            id="parcel-mobile-workspace-tools"
+            className={`flex-wrap items-center justify-end gap-2 text-xs text-slate-300 ${
+              isAuthenticated && !mobileWorkspaceToolsOpen ? 'hidden' : 'flex'
+            } sm:flex`}
+          >
             <span className="hidden items-center gap-2 sm:inline-flex">
               {auth.status === 'loading' || inventoryState === 'upgrading' ? (
                 <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
@@ -1753,7 +1780,7 @@ export function ParcelIntelExplorer({
         (workflowActions.open_records === 0 ||
           workflowActions.attention_count > 0) && (
           <section
-            className="border-b border-sky-200 bg-gradient-to-r from-sky-50 via-white to-emerald-50 px-5 py-4 md:px-7"
+            className="order-2 border-b border-sky-200 bg-gradient-to-r from-sky-50 via-white to-emerald-50 px-5 py-4 lg:order-none md:px-7"
             aria-label="Acquisition workflow next step"
             data-testid={
               workflowActions.open_records === 0
@@ -1851,16 +1878,18 @@ export function ParcelIntelExplorer({
       )}
 
       {isAuthenticated && (
-        <ParcelThesisComposer
-          currentFilters={filters}
-          inventoryRows={rows}
-          inventoryReady={
-            loadState === 'ready' &&
-            fullInventoryReady &&
-            failedBoroughs.length === 0
-          }
-          onApply={applyThesisFilters}
-        />
+        <div className="order-2 lg:contents">
+          <ParcelThesisComposer
+            currentFilters={filters}
+            inventoryRows={rows}
+            inventoryReady={
+              loadState === 'ready' &&
+              fullInventoryReady &&
+              failedBoroughs.length === 0
+            }
+            onApply={applyThesisFilters}
+          />
+        </div>
       )}
 
       <div className="border-b border-slate-200 bg-slate-50 px-4 py-3.5 md:px-6">
@@ -2464,7 +2493,7 @@ export function ParcelIntelExplorer({
         </div>
       )}
 
-      <div className="grid min-h-0 gap-0 lg:h-[760px] lg:min-h-[740px] lg:grid-cols-[minmax(0,1fr)_460px]">
+      <div className="order-1 grid min-h-0 gap-0 lg:order-none lg:h-[760px] lg:min-h-[740px] lg:grid-cols-[minmax(0,1fr)_460px]">
         <div className="min-h-[420px] p-3 sm:min-h-[560px] md:p-4 lg:h-[760px]">
           {loadState === 'idle' || loadState === 'loading' ? (
             <ExplorerMapSkeleton />
@@ -2919,7 +2948,7 @@ export function ParcelIntelExplorer({
         </aside>
       </div>
 
-      <div className="grid gap-2 border-t border-slate-200 bg-slate-50 p-3 sm:grid-cols-2 lg:grid-cols-6">
+      <div className="order-1 grid gap-2 border-t border-slate-200 bg-slate-50 p-3 sm:grid-cols-2 lg:order-none lg:grid-cols-6">
         <button
           type="button"
           onClick={() => updateFilter('borough', 'all')}

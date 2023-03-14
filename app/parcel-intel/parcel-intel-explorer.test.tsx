@@ -364,6 +364,26 @@ describe('ParcelIntelExplorer', () => {
     expect(toggle).toHaveTextContent('Borough · priority · type');
   });
 
+  it('keeps authenticated workspace tools compact on mobile', async () => {
+    mocks.authStatus = 'authenticated';
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    const toggle = screen.getByRole('button', { name: 'Workspace tools' });
+    const tools = document.getElementById('parcel-mobile-workspace-tools');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await waitFor(() =>
+      expect(toggle).toHaveTextContent('2 need attention'),
+    );
+    expect(tools).toHaveClass('hidden');
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(tools).not.toHaveClass('hidden');
+    expect(
+      screen.getByRole('button', { name: /Action queue/i }),
+    ).toBeInTheDocument();
+  });
+
   it('does not hold the public map behind auth initialization', async () => {
     mocks.authStatus = 'loading';
 
