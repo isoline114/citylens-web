@@ -4,10 +4,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 const navigation = vi.hoisted(() => ({
   pathname: '/parcel-intel' as string | null,
+  segments: ['parcel-intel'] as string[],
 }));
 
 vi.mock('next/navigation', () => ({
   usePathname: () => navigation.pathname,
+  useSelectedLayoutSegments: () => navigation.segments,
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
@@ -47,6 +49,7 @@ describe('SiteHeader', () => {
 
   it('keeps Home current while the static root pathname initializes', () => {
     navigation.pathname = null;
+    navigation.segments = [];
     render(<SiteHeader />);
 
     screen.getAllByRole('link', { name: 'Home' }).forEach((link) => {

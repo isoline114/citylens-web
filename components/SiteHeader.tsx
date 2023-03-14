@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSelectedLayoutSegments } from 'next/navigation';
 
 import { AuthHeaderControls } from '@/components/AuthHeaderControls';
 import { PlanQuotaBadge } from '@/components/PlanQuotaBadge';
@@ -21,11 +21,14 @@ function normalizePathname(pathname: string | null): string {
   return pathname.replace(/\/+$/, '') || '/';
 }
 
-function isCurrentRoute(pathname: string | null, href: string): boolean {
+function isCurrentRoute(
+  pathname: string | null,
+  segments: string[],
+  href: string,
+): boolean {
   const normalizedPathname = normalizePathname(pathname);
-  return href === '/'
-    ? normalizedPathname === href
-    : normalizedPathname.startsWith(href);
+  if (href === '/') return segments.length === 0;
+  return normalizedPathname.startsWith(href);
 }
 
 function navigationClass(current: boolean, mobile: boolean): string {
@@ -45,6 +48,7 @@ function navigationClass(current: boolean, mobile: boolean): string {
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const segments = useSelectedLayoutSegments();
 
   return (
     <header className="sticky top-0 z-[1000] border-b border-slate-200/90 bg-white/95 backdrop-blur">
@@ -71,7 +75,7 @@ export function SiteHeader() {
             className="hidden items-center gap-1 md:flex"
           >
             {navigation.map((item) => {
-              const current = isCurrentRoute(pathname, item.href);
+              const current = isCurrentRoute(pathname, segments, item.href);
               return (
                 <Link
                   key={item.href}
@@ -96,7 +100,7 @@ export function SiteHeader() {
           className="flex w-full items-center gap-5 overflow-x-auto pt-0.5 md:hidden"
         >
           {navigation.map((item) => {
-            const current = isCurrentRoute(pathname, item.href);
+            const current = isCurrentRoute(pathname, segments, item.href);
             return (
               <Link
                 key={item.href}
