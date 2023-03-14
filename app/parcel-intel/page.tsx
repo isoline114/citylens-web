@@ -106,6 +106,18 @@ export default async function ParcelIntelIndexPage({
   const qualityGatePassed = index.quality_gate?.passed === true;
   const qualityGateFailed =
     Object.keys(index.quality_gate ?? {}).length > 0 && !qualityGatePassed;
+  const selectionPolicy =
+    index.quality_gate?.selection_policy &&
+    typeof index.quality_gate.selection_policy === 'object'
+      ? (index.quality_gate.selection_policy as Record<string, unknown>)
+      : null;
+  const selectionPolicySummary =
+    selectionPolicy?.policy_id === 'borough_floor_250' &&
+    typeof selectionPolicy.minimum_per_borough === 'number'
+      ? ` The published 5,000 use one citywide merit order with a minimum of ${selectionPolicy.minimum_per_borough.toLocaleString(
+          'en-US',
+        )} qualified leads per borough; borough counts are intentionally unequal.`
+      : '';
 
   return (
     <main className="mx-auto max-w-[1480px] px-4 py-5 sm:px-6 md:py-6 xl:px-8">
@@ -185,6 +197,7 @@ export default async function ParcelIntelIndexPage({
             precisionAt1000={precisionAt1000}
             evaluationBaseRate={evaluationBaseRate}
             evaluationEvidenceStatus={evaluationEvidenceStatus}
+            selectionPolicySummary={selectionPolicySummary}
             prospectiveValidation={index.prospective_validation ?? null}
             prospectiveValidationHealth={
               index.prospective_validation_health ?? null
@@ -206,6 +219,7 @@ function MethodologyDisclosure({
   precisionAt1000,
   evaluationBaseRate,
   evaluationEvidenceStatus,
+  selectionPolicySummary,
   prospectiveValidation,
   prospectiveValidationHealth,
   historicalBenchmarkReceipt,
@@ -218,6 +232,7 @@ function MethodologyDisclosure({
   precisionAt1000: number | null;
   evaluationBaseRate: number | null;
   evaluationEvidenceStatus: string;
+  selectionPolicySummary: string;
   prospectiveValidation: ParcelProspectiveValidationStatus | null;
   prospectiveValidationHealth: ParcelProspectiveValidationHealth | null;
   historicalBenchmarkReceipt: ReturnType<
@@ -258,7 +273,7 @@ function MethodologyDisclosure({
           body={`${modelType ?? 'The'} model evidence covers ${
             performanceScope ??
             `${featureYear ?? 'historical'} features and ${labelWindow ?? 'later'} outcomes`
-          }. Current DOB projects and constrained or incomplete parcels are removed before acquisition rank is assigned. Rank remains an ordinal screening signal—not a probability that a site will transact.`}
+          }. Current DOB projects and constrained or incomplete parcels are removed before acquisition rank is assigned.${selectionPolicySummary} Rank remains an ordinal screening signal—not a probability that a site will transact.`}
         />
         <MethodCard
           icon={Database}

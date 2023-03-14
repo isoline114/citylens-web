@@ -38,6 +38,9 @@ type Receipt = {
   historicalPrecisionAt1000: number | null;
   historicalBaseRate: number | null;
   historicalEvidenceStatus: string | null;
+  selectionPolicy: string | null;
+  selectionMinimumPerBorough: number | null;
+  selectionPureMeritOverlap: number | null;
   prospectiveStatus: ParcelProspectiveValidationStatus['measurement_status'] | null;
   prospectiveIssuedAt: string | null;
   prospectiveObservedThrough: string | null;
@@ -97,6 +100,7 @@ export function parcelFeedReceipt(
   const screening = record(qualityGate.screening_ledger);
   const landUse = record(qualityGate.land_use_reconciliation);
   const addresses = record(qualityGate.address_identity);
+  const selection = record(qualityGate.selection_policy);
   const evaluationEvidence = record(modelMetadata.evaluation_evidence);
   const sources = Object.values(dataSources).filter(
     (value) => Object.keys(record(value)).length > 0,
@@ -131,6 +135,12 @@ export function parcelFeedReceipt(
       typeof evaluationEvidence.status === 'string'
         ? evaluationEvidence.status
         : null,
+    selectionPolicy:
+      typeof selection.policy_id === 'string' ? selection.policy_id : null,
+    selectionMinimumPerBorough: count(selection.minimum_per_borough),
+    selectionPureMeritOverlap: ratio(
+      selection.pure_citywide_overlap_fraction,
+    ),
     prospectiveStatus: prospectiveValidation?.measurement_status ?? null,
     prospectiveIssuedAt: prospectiveValidation?.issued_at ?? null,
     prospectiveObservedThrough:
@@ -185,8 +195,20 @@ function CurrentQualification({ receipt }: { receipt: Receipt }) {
       <p className="mt-1 text-[10px] leading-4 text-slate-400">
         {formatCount(receipt.joinedProjects)} current DOB/ZAP projects
         reconciled · {formatCount(receipt.projectLeakage)} published project
-        leaks. Current gates can change rank eligibility, not the historical
-        model.
+        leaks.
+        {receipt.selectionPolicy === 'borough_floor_250' &&
+          receipt.selectionMinimumPerBorough !== null &&
+          ` Merit-led citywide selection reserves ${formatCount(
+            receipt.selectionMinimumPerBorough,
+          )} qualified leads per borough${
+            receipt.selectionPureMeritOverlap !== null
+              ? ` and retains ${formatPercent(
+                  receipt.selectionPureMeritOverlap,
+                )} of the pure-merit list`
+              : ''
+          }.`}{' '}
+        Current gates and coverage policy can change published membership, not
+        the historical model.
       </p>
     </div>
   );
@@ -325,6 +347,16 @@ function ReceiptBody({
         <span>
           {formatCount(receipt.belowCutoff)} qualified below cutoff
         </span>
+        {receipt.selectionPolicy && (
+          <>
+            <span aria-hidden="true" className="text-slate-600">
+              ·
+            </span>
+            <span>
+              Selection {receipt.selectionPolicy.replaceAll('_', ' ')}
+            </span>
+          </>
+        )}
         <span aria-hidden="true" className="text-slate-600">
           ·
         </span>

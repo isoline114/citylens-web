@@ -23,6 +23,11 @@ const qualityGate = {
     pad_enriched_count: 500,
     pluto_address_count: 4500,
   },
+  selection_policy: {
+    policy_id: 'borough_floor_250',
+    minimum_per_borough: 250,
+    pure_citywide_overlap_fraction: 0.9766,
+  },
 };
 
 const dataSources = {
@@ -119,6 +124,12 @@ describe('ParcelFeedReceipt', () => {
     );
     expect(screen.getByTestId('parcel-feed-receipt')).toHaveTextContent(
       'Address provenance 500 PAD / 4,500 PLUTO',
+    );
+    expect(screen.getByTestId('parcel-feed-receipt')).toHaveTextContent(
+      'reserves 250 qualified leads per borough and retains 97.7% of the pure-merit list',
+    );
+    expect(screen.getByTestId('parcel-feed-receipt')).toHaveTextContent(
+      'Selection borough floor 250',
     );
     expect(screen.getByTestId('parcel-feed-receipt')).toHaveTextContent(
       /not model accuracy, seller intent, transaction probability/i,
