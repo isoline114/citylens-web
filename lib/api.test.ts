@@ -10,6 +10,7 @@ import {
   getFeaturedDemos,
   getParcelIntelMap,
   getParcelIntelParcel,
+  getParcelOfficialDossier,
   getParcelScreeningStatus,
   getParcelWorkflow,
   getParcelWorkflowActions,
@@ -798,6 +799,24 @@ describe('parcel intelligence progressive reads', () => {
 
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(url).toContain('/v1/parcel-intel/screening/3058920038');
+    expect(new Headers(init.headers).get('Authorization')).toBe(
+      'Bearer tok-abc',
+    );
+    expect(init.cache).toBe('no-store');
+  });
+
+  it('loads one official parcel dossier privately with the user token', async () => {
+    setAuthTokenGetter(async () => 'tok-abc');
+    const mockFetch = stubFetch({
+      schema_version: 'citylens/parcel-official-dossier@v1',
+      bbl: '3058920038',
+      address: '464 OVINGTON AVENUE',
+    });
+
+    await getParcelOfficialDossier('3058920038');
+
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/v1/parcel-intel/official-parcel/3058920038');
     expect(new Headers(init.headers).get('Authorization')).toBe(
       'Bearer tok-abc',
     );

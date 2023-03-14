@@ -130,6 +130,12 @@ vi.mock('./parcel-intel-property-panel', () => ({
   ),
 }));
 
+vi.mock('./parcel-official-dossier', () => ({
+  ParcelOfficialDossierPanel: ({ bbl }: { bbl: string }) => (
+    <div data-testid="official-dossier-stub">Dossier {bbl}</div>
+  ),
+}));
+
 vi.mock('./parcel-address-resolver', () => ({
   ParcelAddressResolver: ({ address }: { address: string }) => (
     <div data-testid="address-resolver-stub">{address}</div>
@@ -434,6 +440,33 @@ describe('ParcelIntelExplorer', () => {
     });
     expect(
       screen.queryByTestId('address-resolver-stub'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('treats a direct authenticated BBL outside the 5,000 as an official parcel, not an access failure', async () => {
+    mocks.authStatus = 'authenticated';
+
+    render(
+      <ParcelIntelExplorer
+        boroughs={boroughs}
+        initialBbl="3058920038"
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('parcel-inventory-status')).toHaveTextContent(
+        'Full inventory verified',
+      ),
+    );
+    expect(screen.getByTestId('official-dossier-stub')).toHaveTextContent(
+      'Dossier 3058920038',
+    );
+    expect(
+      screen.getByText('Parcel is outside the ranked lead inventory'),
+    ).toBeVisible();
+    expect(screen.getByText(/does not infer a rank for it/i)).toBeVisible();
+    expect(
+      screen.queryByText('Parcel not included in this access tier'),
     ).not.toBeInTheDocument();
   });
 

@@ -36,6 +36,7 @@ const consoleErrors = [];
 const pageErrors = [];
 let screeningReceiptVerified = false;
 let addressResolutionVerified = false;
+let officialDossierVerified = false;
 let passed = false;
 let failure = null;
 
@@ -122,6 +123,37 @@ try {
     );
   }
   await page.getByLabel('Search parcels').fill('3058920038');
+  const officialDossier = page.getByTestId('parcel-official-dossier');
+  await officialDossier.waitFor({ timeout: 15_000 });
+  if (
+    !(await officialDossier
+      .getByText('464 OVINGTON AVENUE', { exact: true })
+      .isVisible()) ||
+    !(await officialDossier
+      .getByText('Any NYC tax lot · not a lead score', { exact: true })
+      .isVisible()) ||
+    (await officialDossier
+      .getByText('GEFFEN MANAGEMENT LLC', { exact: true })
+      .count()) < 1 ||
+    !(await officialDossier
+      .getByText('$1,460,000', { exact: true })
+      .isVisible()) ||
+    !(await officialDossier.getByText('R6A', { exact: true }).isVisible()) ||
+    !(await officialDossier
+      .getByRole('link', { name: 'ZoLa', exact: true })
+      .isVisible()) ||
+    !(await officialDossier
+      .getByRole('link', { name: 'ACRIS', exact: true })
+      .isVisible()) ||
+    !(await officialDossier
+      .getByRole('link', { name: 'DOB BIS', exact: true })
+      .isVisible())
+  ) {
+    throw new Error(
+      'The authenticated official parcel dossier was incomplete.',
+    );
+  }
+  officialDossierVerified = true;
   await page
     .getByRole('button', { name: 'Check current screening' })
     .click();
@@ -190,7 +222,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v1',
+  schema_version: 'citylens/production-authenticated-parcel-map@v2',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -199,6 +231,7 @@ const report = {
   map_receipts: mapReceipts,
   screening_receipt_verified: screeningReceiptVerified,
   address_resolution_verified: addressResolutionVerified,
+  official_dossier_verified: officialDossierVerified,
   console_error_count: consoleErrors.length,
   page_error_count: pageErrors.length,
 };

@@ -67,6 +67,7 @@ import {
 import { downloadCsv } from './[borough]/parcel-intel-csv';
 import { ParcelIntelPropertyPanel } from './parcel-intel-property-panel';
 import { ParcelAddressResolver } from './parcel-address-resolver';
+import { ParcelOfficialDossierPanel } from './parcel-official-dossier';
 import { ParcelComparisonDesk } from './parcel-comparison-desk';
 import { ParcelWorkflowInsights } from './parcel-workflow-insights';
 import { ParcelWorkflowAlertsPanel } from './parcel-workflow-alerts';
@@ -487,11 +488,15 @@ export function ParcelIntelExplorer({
     );
   }, [filters.query, rows]);
   const screeningLookupBbl = useMemo(() => {
-    const candidate = canonicalParcelBbl(filters.query);
-    return candidate && !rows.some((row) => row.bbl === candidate)
-      ? candidate
+    const queried = canonicalParcelBbl(filters.query);
+    if (queried && !rows.some((row) => row.bbl === queried)) {
+      return queried;
+    }
+    return selectedBbl &&
+      !rows.some((row) => row.bbl === selectedBbl)
+      ? selectedBbl
       : null;
-  }, [filters.query, rows]);
+  }, [filters.query, rows, selectedBbl]);
   const addressResolverQuery = useMemo(() => {
     const query = filters.query.trim();
     if (
@@ -1857,10 +1862,15 @@ export function ParcelIntelExplorer({
         loadState === 'ready' &&
         auth.status !== 'loading' &&
         (!isAuthenticated || fullInventoryReady) && (
-          <ParcelScreeningLookup
-            bbl={screeningLookupBbl}
-            isAuthenticated={isAuthenticated}
-          />
+          <>
+            {isAuthenticated && (
+              <ParcelOfficialDossierPanel bbl={screeningLookupBbl} />
+            )}
+            <ParcelScreeningLookup
+              bbl={screeningLookupBbl}
+              isAuthenticated={isAuthenticated}
+            />
+          </>
         )}
 
       {addressResolverQuery &&
@@ -1962,11 +1972,14 @@ export function ParcelIntelExplorer({
                 <Search className="h-5 w-5 text-slate-500" />
               </div>
               <h3 className="mt-3 text-sm font-semibold text-slate-950">
-                Parcel not included in this access tier
+                {isAuthenticated
+                  ? 'Parcel is outside the ranked lead inventory'
+                  : 'Parcel not included in this access tier'}
               </h3>
               <p className="mt-1 max-w-xs text-xs leading-5 text-slate-600">
-                BBL {selectedBbl} is not in the current preview. Sign in to load the
-                broader five-borough dataset.
+                {isAuthenticated
+                  ? `BBL ${selectedBbl} is not one of the current 5,000 published leads. Review its official dossier and separate screening receipt above; CityLens does not infer a rank for it.`
+                  : `BBL ${selectedBbl} is not in the current preview. Sign in to load the broader five-borough dataset.`}
               </p>
               {!isAuthenticated && (
                 <Link

@@ -117,6 +117,67 @@ test('explains why an exact BBL is absent from the published inventory', async (
     },
   );
   await page.route(
+    '**/v1/parcel-intel/official-parcel/*',
+    async (route) => {
+      const bbl = new URL(route.request().url()).pathname.split('/').pop();
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          schema_version: 'citylens/parcel-official-dossier@v1',
+          bbl,
+          borough: 'brooklyn',
+          address:
+            bbl === '3058920038'
+              ? '464 OVINGTON AVENUE'
+              : 'OFFICIAL TEST ADDRESS',
+          pluto_owner_name: 'PLUTO OWNER LLC',
+          acris_owner_name: 'ACRIS OWNER LLC',
+          owner_source_status: 'different',
+          last_sale_date: '2022-06-15',
+          last_sale_price: 1_460_000,
+          years_held: 4,
+          lot_area_sqft: 9_260,
+          building_area_sqft: 3_006,
+          units: 2,
+          num_floors: 2,
+          year_built: 1899,
+          land_use: '01',
+          building_class: 'R4',
+          zoning_district_1: 'R6A',
+          zoning_district_2: null,
+          built_far: 0.32,
+          residential_far: 3,
+          commercial_far: 0,
+          facility_far: 3,
+          assessed_land: 32_400,
+          assessed_building: 7_020,
+          assessed_total: 39_420,
+          firm_2007_floodplain: false,
+          pfirm_2015_floodplain: false,
+          environmental_review_required: true,
+          environmental_designation_kind: 'E',
+          environmental_designation_number: 'E-839',
+          property_facts_dataset_id: '64uk-42ks',
+          property_facts_retrieved_at: '2026-07-19T00:00:00Z',
+          ownership_dataset_ids: {
+            master: 'bnx9-e6tj',
+            legals: '8h5j-fqxa',
+            parties: '636b-3b5g',
+          },
+          ownership_features_updated_at: '2026-07-15T00:00:00Z',
+          dossier_generation: 'generation-1',
+          official_links: {
+            zola: 'https://zola.planning.nyc.gov/',
+            acris: 'https://a836-acris.nyc.gov/',
+            dob_bis: 'https://a810-bisweb.nyc.gov/',
+          },
+          interpretation:
+            'Official source facts only. This is not a lead score, title report, appraisal, zoning analysis, seller-intent signal, or beneficial-owner determination.',
+        }),
+      });
+    },
+  );
+  await page.route(
     '**/v1/parcel-intel/product-events',
     async (route) => {
       productEvents.push(route.request().postDataJSON());
@@ -129,6 +190,12 @@ test('explains why an exact BBL is absent from the published inventory', async (
     'Full inventory verified',
   );
   await page.getByLabel('Search parcels').fill('3-05892-0038');
+  await expect(page.getByTestId('parcel-official-dossier')).toContainText(
+    '464 OVINGTON AVENUE',
+  );
+  await expect(page.getByTestId('parcel-official-dossier')).toContainText(
+    'Owner sources differ — verify title',
+  );
   await page
     .getByRole('button', { name: 'Check current screening' })
     .click();
@@ -170,6 +237,9 @@ test('explains why an exact BBL is absent from the published inventory', async (
     '2 official tax lots share this address',
   );
   await resolver.getByRole('button', { name: /3058920039/ }).click();
+  await expect(page.getByTestId('parcel-official-dossier')).toContainText(
+    'Any NYC tax lot · not a lead score',
+  );
   await page
     .getByRole('button', { name: 'Check current screening' })
     .click();

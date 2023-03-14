@@ -23,6 +23,12 @@ vi.mock('./parcel-screening-lookup', () => ({
   ),
 }));
 
+vi.mock('./parcel-official-dossier', () => ({
+  ParcelOfficialDossierPanel: ({ bbl }: { bbl: string }) => (
+    <div data-testid="official-dossier-stub">Dossier {bbl}</div>
+  ),
+}));
+
 function resolution(
   overrides: Partial<ParcelAddressResolution> = {},
 ): ParcelAddressResolution {
@@ -68,6 +74,9 @@ describe('ParcelAddressResolver', () => {
     expect(screen.getByTestId('screening-stub')).toHaveTextContent(
       'Screening 3058920038',
     );
+    expect(screen.getByTestId('official-dossier-stub')).toHaveTextContent(
+      'Dossier 3058920038',
+    );
     expect(mocks.resolveParcelAddress).toHaveBeenCalledWith(
       '464 Ovington Ave, Brooklyn, NY',
     );
@@ -101,6 +110,9 @@ describe('ParcelAddressResolver', () => {
     await user.click(screen.getByRole('button', { name: /3058920039/i }));
     expect(screen.getByTestId('screening-stub')).toHaveTextContent(
       'Screening 3058920039',
+    );
+    expect(screen.getByTestId('official-dossier-stub')).toHaveTextContent(
+      'Dossier 3058920039',
     );
   });
 

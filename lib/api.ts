@@ -889,6 +889,65 @@ export type ParcelAddressResolution = {
   interpretation: string;
 };
 
+export type ParcelOfficialDossier = {
+  schema_version: 'citylens/parcel-official-dossier@v1';
+  bbl: string;
+  borough:
+    | 'manhattan'
+    | 'brooklyn'
+    | 'queens'
+    | 'bronx'
+    | 'staten_island';
+  address: string | null;
+  pluto_owner_name: string | null;
+  acris_owner_name: string | null;
+  owner_source_status:
+    | 'match'
+    | 'different'
+    | 'pluto_only'
+    | 'acris_only'
+    | 'unavailable';
+  last_sale_date: string | null;
+  last_sale_price: number | null;
+  years_held: number | null;
+  lot_area_sqft: number | null;
+  building_area_sqft: number | null;
+  units: number | null;
+  num_floors: number | null;
+  year_built: number | null;
+  land_use: string | null;
+  building_class: string | null;
+  zoning_district_1: string | null;
+  zoning_district_2: string | null;
+  built_far: number | null;
+  residential_far: number | null;
+  commercial_far: number | null;
+  facility_far: number | null;
+  assessed_land: number | null;
+  assessed_building: number | null;
+  assessed_total: number | null;
+  firm_2007_floodplain: boolean;
+  pfirm_2015_floodplain: boolean;
+  environmental_review_required: boolean;
+  environmental_designation_kind: string | null;
+  environmental_designation_number: string | null;
+  property_facts_dataset_id: '64uk-42ks';
+  property_facts_retrieved_at: string;
+  ownership_dataset_ids: {
+    master: string;
+    legals: string;
+    parties: string;
+  };
+  ownership_features_updated_at: string;
+  dossier_generation: string;
+  official_links: {
+    zola: string;
+    acris: string;
+    dob_bis: string;
+  };
+  interpretation: string;
+};
+
 export type ParcelWorkflowStage =
   | 'new'
   | 'reviewing'
@@ -1476,6 +1535,15 @@ export async function resolveParcelAddress(
       }),
       cache: 'no-store',
     },
+  );
+}
+
+export async function getParcelOfficialDossier(
+  bbl: string,
+): Promise<ParcelOfficialDossier> {
+  return requestJson<ParcelOfficialDossier>(
+    `/v1/parcel-intel/official-parcel/${encodeURIComponent(bbl)}`,
+    { cache: 'no-store' },
   );
 }
 

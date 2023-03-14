@@ -20,6 +20,7 @@ import {
   type ParcelAddressResolution,
 } from '@/lib/api';
 import { ParcelScreeningLookup } from './parcel-screening-lookup';
+import { ParcelOfficialDossierPanel } from './parcel-official-dossier';
 import { BOROUGH_LABELS } from './parcel-intel-explorer-support';
 
 type ResolverState =
@@ -245,7 +246,10 @@ export function ParcelAddressResolver({ address }: Props) {
       </section>
 
       {selectedBbl && (
-        <ParcelScreeningLookup bbl={selectedBbl} isAuthenticated />
+        <>
+          <ParcelOfficialDossierPanel bbl={selectedBbl} />
+          <ParcelScreeningLookup bbl={selectedBbl} isAuthenticated />
+        </>
       )}
     </>
   );
