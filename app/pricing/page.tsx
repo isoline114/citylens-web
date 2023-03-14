@@ -38,7 +38,7 @@ const plans = [
 
 export default function PricingPage() {
   return (
-    <main className="mx-auto max-w-6xl py-8 md:py-12">
+    <div className="mx-auto max-w-6xl py-8 md:py-12">
       <div className="max-w-2xl">
         <div className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">Design-partner pricing</div>
         <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-950">Pay for a better acquisition process—not another database.</h1>
@@ -73,6 +73,6 @@ export default function PricingPage() {
         page is not an automated checkout or entitlement system. CityLens is a screening and
         workflow product, not zoning, legal, appraisal, brokerage, or investment advice.
       </p>
-    </main>
+    </div>
   );
 }

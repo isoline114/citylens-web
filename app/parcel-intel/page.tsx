@@ -120,7 +120,7 @@ export default async function ParcelIntelIndexPage({
       : '';
 
   return (
-    <main className="mx-auto max-w-[1480px] px-4 py-3 sm:px-6 md:py-6 xl:px-8">
+    <div>
       <header className="mb-3 grid gap-4 md:mb-5 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.82fr)] lg:items-end">
         <div>
           <div className="inline-flex items-center gap-2 self-start rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-800 ring-1 ring-inset ring-sky-200">
@@ -205,7 +205,7 @@ export default async function ParcelIntelIndexPage({
           />
         </>
       )}
-    </main>
+    </div>
   );
 }
 

@@ -52,4 +52,25 @@ describe('DemoModeBanner', () => {
 
     expect(screen.queryByText(/demo mode \(precomputed\)/i)).not.toBeInTheDocument();
   });
+
+  it.each(['/pricing', '/docs', '/contact', '/account/api-keys'])(
+    'does not put reconstruction-demo messaging on %s',
+    (pathname) => {
+      mocks.pathname = pathname;
+
+      render(<DemoModeBanner />);
+
+      expect(
+        screen.queryByText(/demo mode \(precomputed\)/i),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it('keeps demo context on a public run detail', () => {
+    mocks.pathname = '/runs/demo-brooklyn-reference';
+
+    render(<DemoModeBanner />);
+
+    expect(screen.getByText(/demo mode \(precomputed\)/i)).toBeVisible();
+  });
 });

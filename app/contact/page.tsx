@@ -23,7 +23,7 @@ export default async function ContactPage({
   const initialPlan = selectedPlan(plan);
 
   return (
-    <main className="mx-auto max-w-6xl py-8 md:py-14">
+    <div className="mx-auto max-w-6xl py-8 md:py-14">
       <Link
         href="/pricing"
         className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
@@ -111,6 +111,6 @@ export default async function ContactPage({
           <PilotRequestForm initialPlan={initialPlan} />
         </section>
       </div>
-    </main>
+    </div>
   );
 }

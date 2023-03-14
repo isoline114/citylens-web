@@ -9,10 +9,12 @@ export function DemoModeBanner() {
 
   if (auth.status === 'loading') return null;
   if (auth.status === 'authenticated') return null;
-  // Parcel Intelligence has its own public-preview disclosure inside the
-  // explorer. The global reconstruction-demo banner is unrelated to that
-  // product and makes its live city-data surface look synthetic.
-  if (pathname === '/parcel-intel' || pathname.startsWith('/parcel-intel/')) {
+  // Keep reconstruction-demo context on the surfaces where a user can
+  // actually inspect or choose a run. Product, account, legal, and API pages
+  // should not inherit an unrelated beta-looking banner.
+  const isReconstructionSurface =
+    pathname === '/' || pathname === '/runs' || pathname.startsWith('/runs/');
+  if (!isReconstructionSurface) {
     return null;
   }
 

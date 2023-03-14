@@ -2,7 +2,7 @@ export const metadata = { title: 'Terms — CityLens' };
 
 export default function TermsPage() {
   return (
-    <main className="prose prose-slate mx-auto max-w-3xl py-8">
+    <article className="prose prose-slate mx-auto max-w-3xl py-8">
       <h1>Pilot terms of use</h1>
       <p><strong>Effective July 17, 2026.</strong> These terms apply to evaluation and pilot use of CityLens unless a written order says otherwise.</p>
       <h2>Permitted use</h2>
@@ -16,6 +16,6 @@ export default function TermsPage() {
       <h2>Pilot availability</h2>
       <p>The service is provided on an evaluation basis and may change. Paid scope, support, confidentiality, warranties, liability, and termination should be governed by a written pilot order.</p>
       <p>Questions: <a href="mailto:hello@citylens.dev">hello@citylens.dev</a>.</p>
-    </main>
+    </article>
   );
 }

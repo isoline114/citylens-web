@@ -47,7 +47,7 @@ export default function DocsPage() {
         </nav>
       </aside>
 
-      <main className="min-w-0 space-y-12">
+      <div className="min-w-0 space-y-12">
         {/* Hero */}
         <section id="overview" className="scroll-mt-24">
           <div className="flex flex-wrap items-center gap-2">
@@ -615,7 +615,7 @@ curl -s ${API_BASE}/v1/me \\
           </a>
           .
         </section>
-      </main>
+      </div>
     </div>
   );
 }
