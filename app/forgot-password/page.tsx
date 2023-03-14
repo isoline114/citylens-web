@@ -4,10 +4,17 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import {
+  AuthPageShell,
+  authAlertClass,
+  authInputClass,
+  authPrimaryButtonClass,
+  authTextLinkClass,
+} from '@/components/auth/AuthPageShell';
+import { selectAuthProvider } from '@/lib/auth';
 import { neonAuthClient } from '@/lib/auth/neonAuth';
 
-const PROVIDER = (process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'mock').toLowerCase();
-const IS_NEON = PROVIDER === 'neon';
+const IS_NEON = selectAuthProvider() === 'neon';
 
 type ForgotClient = {
   forgetPassword: {
@@ -29,46 +36,60 @@ export default function ForgotPasswordPage() {
 
   if (!IS_NEON) {
     return (
-      <div className="flex flex-col gap-3 max-w-md">
-        <h1 className="text-2xl font-semibold">Forgot password</h1>
-        <p className="text-slate-700 text-sm">
-          The mock auth provider doesn&apos;t persist passwords.{' '}
-          <Link href="/sign-in" className="font-medium text-slate-900 hover:underline">
-            Go to sign-in
-          </Link>
-        </p>
-      </div>
+      <AuthPageShell
+        eyebrow="Local workspace"
+        title="No password to reset"
+        description="Mock authentication does not persist passwords."
+      >
+        <Link href="/sign-in" className={authPrimaryButtonClass}>
+          Return to sign-in
+        </Link>
+      </AuthPageShell>
     );
   }
 
   if (sent) {
     return (
-      <div className="flex flex-col gap-4 max-w-md">
-        <h1 className="text-2xl font-semibold">Check your email</h1>
-        <p className="text-slate-700 text-sm">
-          If an account exists for <span className="font-mono">{email}</span>, a 6-digit reset code is on its way.
-          Enter it on the next page along with a new password.
-        </p>
+      <AuthPageShell
+        eyebrow="Reset requested"
+        title="Check your email"
+        description={
+          <>
+            If an account exists for{' '}
+            <span className="font-medium text-slate-900">{email}</span>, its
+            six-digit reset code is on the way.
+          </>
+        }
+      >
         <button
           type="button"
-          className="inline-flex h-10 w-fit items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
-          onClick={() => router.push(`/reset-password?email=${encodeURIComponent(email)}`)}
+          className={authPrimaryButtonClass}
+          onClick={() =>
+            router.push(`/reset-password?email=${encodeURIComponent(email)}`)
+          }
         >
-          Continue to reset
+          Enter reset code
         </button>
-      </div>
+      </AuthPageShell>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4 max-w-md">
-      <h1 className="text-2xl font-semibold">Forgot password</h1>
-      <p className="text-slate-700 text-sm">
-        Enter your email. We&apos;ll send a code you can use to reset your password.
-      </p>
-
+    <AuthPageShell
+      eyebrow="Account recovery"
+      title="Reset your password"
+      description="Enter your account email and we’ll send a six-digit reset code."
+      footer={
+        <span>
+          Remembered it?{' '}
+          <Link href="/sign-in" className={authTextLinkClass}>
+            Sign in
+          </Link>
+        </span>
+      }
+    >
       <form
-        className="flex flex-col gap-3"
+        className="flex flex-col gap-4"
         onSubmit={async (e) => {
           e.preventDefault();
           setError(null);
@@ -79,23 +100,29 @@ export default function ForgotPasswordPage() {
           }
           setBusy(true);
           try {
-            const res = await otpClient.forgetPassword.emailOtp({ email: trimmed });
+            const res = await otpClient.forgetPassword.emailOtp({
+              email: trimmed,
+            });
             if (res?.error) {
               setError(res.error.message ?? 'Could not send the reset code.');
               return;
             }
             setSent(true);
           } catch (err) {
-            setError(err instanceof Error ? err.message : 'Could not send the reset code.');
+            setError(
+              err instanceof Error
+                ? err.message
+                : 'Could not send the reset code.',
+            );
           } finally {
             setBusy(false);
           }
         }}
       >
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Email</span>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-slate-800">Email</span>
           <input
-            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+            className={authInputClass}
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -105,7 +132,7 @@ export default function ForgotPasswordPage() {
         </label>
 
         {error && (
-          <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900" role="alert">
+          <div className={authAlertClass} role="alert">
             {error}
           </div>
         )}
@@ -113,18 +140,11 @@ export default function ForgotPasswordPage() {
         <button
           type="submit"
           disabled={busy}
-          className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+          className={authPrimaryButtonClass}
         >
           {busy ? 'Sending…' : 'Send reset code'}
         </button>
       </form>
-
-      <p className="text-slate-500 text-sm">
-        Remembered it?{' '}
-        <Link href="/sign-in" className="font-medium text-slate-900 hover:underline">
-          Sign in
-        </Link>
-      </p>
-    </div>
+    </AuthPageShell>
   );
 }

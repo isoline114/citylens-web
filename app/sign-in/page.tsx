@@ -4,6 +4,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import {
+  AuthPageShell,
+  authAlertClass,
+  authInputClass,
+  authPrimaryButtonClass,
+  authTextLinkClass,
+} from '@/components/auth/AuthPageShell';
 import { selectAuthProvider, useAuth } from '@/lib/auth';
 
 // Keep the sign-in form aligned with the provider selected by AuthProvider.
@@ -32,31 +39,53 @@ export default function SignInPage() {
 
   if (auth.status === 'authenticated') {
     return (
-      <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold">Already signed in</h1>
-        <p className="text-slate-700">Signed in as {auth.user.email ?? auth.user.id}.</p>
-        <div>
-          <button
-            type="button"
-            className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
-            onClick={() => router.push(requestedDestination())}
-          >
-            Continue to dashboard
-          </button>
-        </div>
-      </div>
+      <AuthPageShell
+        eyebrow="Account ready"
+        title="You’re signed in."
+        description={
+          <>
+            Continue as{' '}
+            <span className="font-medium text-slate-900">
+              {auth.user.email ?? auth.user.id}
+            </span>
+            .
+          </>
+        }
+      >
+        <button
+          type="button"
+          className={authPrimaryButtonClass}
+          onClick={() => router.push(requestedDestination())}
+        >
+          Continue to CityLens
+        </button>
+      </AuthPageShell>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4 max-w-md">
-      <h1 className="text-2xl font-semibold">Sign in</h1>
-      <p className="text-slate-700 text-sm">
-        Sign in to create CityLens runs. Free plan includes 5 runs per month.
-      </p>
-
+    <AuthPageShell
+      eyebrow="Welcome back"
+      title="Sign in"
+      description="Open your parcel workspace, saved pursuits, and processing history."
+      footer={
+        IS_NEON ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>
+              New to CityLens?{' '}
+              <Link href="/sign-up" className={authTextLinkClass}>
+                Create an account
+              </Link>
+            </span>
+            <Link href="/forgot-password" className={authTextLinkClass}>
+              Reset password
+            </Link>
+          </div>
+        ) : null
+      }
+    >
       <form
-        className="flex flex-col gap-3"
+        className="flex flex-col gap-4"
         onSubmit={async (e) => {
           e.preventDefault();
           setError(null);
@@ -71,7 +100,12 @@ export default function SignInPage() {
               const { neonAuthClient } = await import('@/lib/auth/neonAuth');
               const result = await (
                 neonAuthClient as unknown as {
-                  signIn: { email: (input: { email: string; password: string }) => Promise<{ error?: { message?: string } | null }> };
+                  signIn: {
+                    email: (input: {
+                      email: string;
+                      password: string;
+                    }) => Promise<{ error?: { message?: string } | null }>;
+                  };
                 }
               ).signIn.email({ email: trimmedEmail, password });
               if (result?.error) {
@@ -81,10 +115,14 @@ export default function SignInPage() {
                   /not verified|verify your email|email.*verif/i.test(msg) ||
                   code === 'EMAIL_NOT_VERIFIED';
                 if (looksLikeVerificationGate) {
-                  router.push(`/verify-email?email=${encodeURIComponent(trimmedEmail)}`);
+                  router.push(
+                    `/verify-email?email=${encodeURIComponent(trimmedEmail)}`,
+                  );
                   return;
                 }
-                setError(msg || 'Sign in failed. Check your email and password.');
+                setError(
+                  msg || 'Sign in failed. Check your email and password.',
+                );
                 return;
               }
               router.push(requestedDestination());
@@ -99,10 +137,10 @@ export default function SignInPage() {
           }
         }}
       >
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Email</span>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-slate-800">Email</span>
           <input
-            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+            className={authInputClass}
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -113,10 +151,10 @@ export default function SignInPage() {
         </label>
 
         {IS_NEON && (
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Password</span>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-slate-800">Password</span>
             <input
-              className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+              className={authInputClass}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -128,7 +166,7 @@ export default function SignInPage() {
         )}
 
         {error && (
-          <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900" role="alert">
+          <div className={authAlertClass} role="alert">
             {error}
           </div>
         )}
@@ -136,34 +174,21 @@ export default function SignInPage() {
         <button
           type="submit"
           disabled={busy}
-          className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+          className={authPrimaryButtonClass}
         >
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
 
-      {IS_NEON && (
-        <div className="flex flex-col gap-1 text-sm text-slate-500">
-          <p>
-            Need an account?{' '}
-            <Link href="/sign-up" className="font-medium text-slate-900 hover:underline">
-              Sign up
-            </Link>
-          </p>
-          <p>
-            <Link href="/forgot-password" className="font-medium text-slate-900 hover:underline">
-              Forgot password?
-            </Link>
-          </p>
-        </div>
-      )}
       {!IS_NEON && (
-        <p className="text-slate-500 text-xs">
+        <p className="mt-4 text-xs leading-5 text-slate-500">
           Local dev uses a mock auth provider. Set{' '}
-          <code className="font-mono px-1">NEXT_PUBLIC_AUTH_PROVIDER=neon</code>
-          {' '}to use the configured production provider.
+          <code className="rounded bg-slate-100 px-1 font-mono text-slate-700">
+            NEXT_PUBLIC_AUTH_PROVIDER=neon
+          </code>{' '}
+          to use the configured production provider.
         </p>
       )}
-    </div>
+    </AuthPageShell>
   );
 }

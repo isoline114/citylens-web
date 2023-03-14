@@ -34,7 +34,10 @@ export const metadata: Metadata = {
     images: [publicAssetPath('/opengraph-image.png')],
   },
   icons: {
-    icon: [{ url: publicAssetPath('/favicon.ico') }, { url: publicAssetPath('/icon.png'), type: 'image/png' }],
+    icon: [
+      { url: publicAssetPath('/favicon.ico') },
+      { url: publicAssetPath('/icon.png'), type: 'image/png' },
+    ],
     apple: [{ url: publicAssetPath('/apple-touch-icon.png') }],
   },
 };
@@ -84,29 +87,67 @@ function SiteFooter() {
           <span className="text-slate-400">·</span>
           <span>NYC development-site intelligence</span>
         </div>
-        <nav className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <Link href="/" className="hover:text-slate-900">
+        <nav
+          aria-label="Footer navigation"
+          className="flex flex-wrap items-center gap-x-2 gap-y-1"
+        >
+          <Link
+            href="/"
+            className="inline-flex min-h-9 items-center px-1 hover:text-slate-900"
+          >
             Home
           </Link>
-          <Link href="/runs" className="hover:text-slate-900">
+          <Link
+            href="/runs"
+            className="inline-flex min-h-9 items-center px-1 hover:text-slate-900"
+          >
             Runs
           </Link>
-          <Link href="/parcel-intel" className="hover:text-slate-900">
+          <Link
+            href="/parcel-intel"
+            className="inline-flex min-h-9 items-center px-1 hover:text-slate-900"
+          >
             Parcels
           </Link>
-          <Link href="/docs" className="hover:text-slate-900">
+          <Link
+            href="/docs"
+            className="inline-flex min-h-9 items-center px-1 hover:text-slate-900"
+          >
             API docs
           </Link>
-          <Link href="/pricing" className="hover:text-slate-900">Pricing</Link>
-          <Link href="/contact" className="hover:text-slate-900">Contact</Link>
-          <Link href="/privacy" className="hover:text-slate-900">Privacy</Link>
-          <Link href="/terms" className="hover:text-slate-900">Terms</Link>
-          <Link href="/account/api-keys" className="hover:text-slate-900">
+          <Link
+            href="/pricing"
+            className="inline-flex min-h-9 items-center px-1 hover:text-slate-900"
+          >
+            Pricing
+          </Link>
+          <Link
+            href="/contact"
+            className="inline-flex min-h-9 items-center px-1 hover:text-slate-900"
+          >
+            Contact
+          </Link>
+          <Link
+            href="/privacy"
+            className="inline-flex min-h-9 items-center px-1 hover:text-slate-900"
+          >
+            Privacy
+          </Link>
+          <Link
+            href="/terms"
+            className="inline-flex min-h-9 items-center px-1 hover:text-slate-900"
+          >
+            Terms
+          </Link>
+          <Link
+            href="/account/api-keys"
+            className="inline-flex min-h-9 items-center px-1 hover:text-slate-900"
+          >
             API keys
           </Link>
           <a
             href="https://api.citylens.dev/v1/health"
-            className="hover:text-slate-900"
+            className="inline-flex min-h-9 items-center px-1 hover:text-slate-900"
             rel="noopener noreferrer"
             target="_blank"
           >

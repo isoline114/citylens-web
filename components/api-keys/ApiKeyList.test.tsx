@@ -5,9 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   authState: {
     status: 'authenticated' as 'unauthenticated' | 'authenticated' | 'loading',
-    user: { id: 'u-test', email: 't@example.com' } as
-      | { id: string; email: string | null }
-      | null,
+    user: { id: 'u-test', email: 't@example.com' } as {
+      id: string;
+      email: string | null;
+    } | null,
   },
   listApiKeys: vi.fn(),
   createApiKey: vi.fn(),
@@ -62,6 +63,11 @@ describe('ApiKeyList (signed out)', () => {
     mocks.authState.user = null;
     render(<ApiKeyList />);
     expect(screen.getByText(/sign in to manage api keys/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^sign in$/i })).toHaveAttribute(
+      'href',
+      '/sign-in?next=%2Faccount%2Fapi-keys',
+    );
+    expect(screen.queryByText(/verify a key/i)).not.toBeInTheDocument();
     expect(mocks.listApiKeys).not.toHaveBeenCalled();
   });
 });
@@ -85,6 +91,10 @@ describe('ApiKeyList (signed in)', () => {
     });
     expect(screen.getByText('prod-server')).toBeInTheDocument();
     expect(screen.getByText('clk_live_abcd…')).toBeInTheDocument();
+    expect(screen.getByText('Verify a key')).toBeInTheDocument();
+    expect(
+      screen.getByText(/api\.citylens\.dev\/v1\/me/),
+    ).toBeInTheDocument();
   });
 
   it('creates a key, surfaces the plaintext once, and refreshes the list', async () => {
@@ -113,12 +123,17 @@ describe('ApiKeyList (signed in)', () => {
     render(<ApiKeyList />);
     await waitFor(() => expect(mocks.listApiKeys).toHaveBeenCalledTimes(1));
 
-    await user.type(screen.getByPlaceholderText(/laptop/i), 'nightly-ingest');
+    await user.type(
+      screen.getByPlaceholderText(/acquisition-notebook/i),
+      'nightly-ingest',
+    );
     await user.click(screen.getByRole('button', { name: /generate key/i }));
 
     // Plaintext block appears with the plaintext
     const plaintextBlock = await screen.findByTestId('api-key-plaintext-block');
-    expect(plaintextBlock).toHaveTextContent('clk_live_zyxwSECRET-VALUE-ONLY-SHOWN-ONCE');
+    expect(plaintextBlock).toHaveTextContent(
+      'clk_live_zyxwSECRET-VALUE-ONLY-SHOWN-ONCE',
+    );
 
     // List refreshed from server (second call)
     expect(mocks.listApiKeys).toHaveBeenCalledTimes(2);

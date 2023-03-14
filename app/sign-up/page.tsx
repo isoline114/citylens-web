@@ -4,8 +4,16 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-const PROVIDER = (process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'mock').toLowerCase();
-const IS_NEON = PROVIDER === 'neon';
+import {
+  AuthPageShell,
+  authAlertClass,
+  authInputClass,
+  authPrimaryButtonClass,
+  authTextLinkClass,
+} from '@/components/auth/AuthPageShell';
+import { selectAuthProvider } from '@/lib/auth';
+
+const IS_NEON = selectAuthProvider() === 'neon';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -17,24 +25,34 @@ export default function SignUpPage() {
 
   if (!IS_NEON) {
     return (
-      <div className="flex flex-col gap-3 max-w-md">
-        <h1 className="text-2xl font-semibold">Sign up</h1>
-        <p className="text-slate-700 text-sm">
-          The mock auth provider does not require sign-up. <Link href="/sign-in">Sign in</Link>{' '}
-          with any email to create a temporary local user.
-        </p>
-      </div>
+      <AuthPageShell
+        eyebrow="Local workspace"
+        title="No account needed"
+        description="Mock authentication creates a temporary local user without registration."
+      >
+        <Link href="/sign-in" className={authPrimaryButtonClass}>
+          Continue to local sign-in
+        </Link>
+      </AuthPageShell>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4 max-w-md">
-      <h1 className="text-2xl font-semibold">Sign up</h1>
-      <p className="text-slate-700 text-sm">
-        Create a CityLens account. Free plan includes 5 runs per month.
-      </p>
+    <AuthPageShell
+      eyebrow="Start free"
+      title="Create your account"
+      description="Explore the full parcel workspace and run five imagery analyses each month."
+      footer={
+        <span>
+          Already have an account?{' '}
+          <Link href="/sign-in" className={authTextLinkClass}>
+            Sign in
+          </Link>
+        </span>
+      }
+    >
       <form
-        className="flex flex-col gap-3"
+        className="flex flex-col gap-4"
         onSubmit={async (e) => {
           e.preventDefault();
           setError(null);
@@ -49,12 +67,20 @@ export default function SignUpPage() {
             const result = await (
               neonAuthClient as unknown as {
                 signUp: {
-                  email: (input: { email: string; password: string; name?: string }) => Promise<{
+                  email: (input: {
+                    email: string;
+                    password: string;
+                    name?: string;
+                  }) => Promise<{
                     error?: { message?: string } | null;
                   }>;
                 };
               }
-            ).signUp.email({ email: trimmedEmail, password, name: name.trim() || undefined });
+            ).signUp.email({
+              email: trimmedEmail,
+              password,
+              name: name.trim() || undefined,
+            });
             if (result?.error) {
               setError(result.error.message ?? 'Sign up failed. Try again.');
               return;
@@ -62,7 +88,9 @@ export default function SignUpPage() {
             // Account created. Whether or not email verification is required
             // for sign-in, route to /verify-email so the user knows where to
             // enter the code that was just emailed.
-            router.push(`/verify-email?email=${encodeURIComponent(trimmedEmail)}`);
+            router.push(
+              `/verify-email?email=${encodeURIComponent(trimmedEmail)}`,
+            );
           } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Sign up failed.');
           } finally {
@@ -70,10 +98,10 @@ export default function SignUpPage() {
           }
         }}
       >
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Email</span>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-slate-800">Email</span>
           <input
-            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+            className={authInputClass}
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -81,10 +109,10 @@ export default function SignUpPage() {
             autoComplete="email"
           />
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Password</span>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-slate-800">Password</span>
           <input
-            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+            className={authInputClass}
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -93,10 +121,13 @@ export default function SignUpPage() {
             minLength={8}
           />
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Display name (optional)</span>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-slate-800">
+            Display name{' '}
+            <span className="font-normal text-slate-500">(optional)</span>
+          </span>
           <input
-            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+            className={authInputClass}
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -105,7 +136,7 @@ export default function SignUpPage() {
         </label>
 
         {error && (
-          <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900" role="alert">
+          <div className={authAlertClass} role="alert">
             {error}
           </div>
         )}
@@ -113,14 +144,11 @@ export default function SignUpPage() {
         <button
           type="submit"
           disabled={busy}
-          className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+          className={authPrimaryButtonClass}
         >
           {busy ? 'Creating account…' : 'Create account'}
         </button>
       </form>
-      <p className="text-slate-500 text-sm">
-        Already have an account? <Link href="/sign-in" className="font-medium text-slate-900 hover:underline">Sign in</Link>
-      </p>
-    </div>
+    </AuthPageShell>
   );
 }

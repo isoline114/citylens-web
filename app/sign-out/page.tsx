@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { AuthPageShell } from '@/components/auth/AuthPageShell';
 import { useAuth } from '@/lib/auth';
 
 export default function SignOutPage() {
@@ -21,9 +22,14 @@ export default function SignOutPage() {
   }, [auth, router]);
 
   return (
-    <div className="flex flex-col gap-2">
-      <h1 className="text-xl font-semibold">Signing out…</h1>
-      <p className="text-slate-700 text-sm">You will be redirected shortly.</p>
-    </div>
+    <AuthPageShell
+      eyebrow="Account"
+      title="Signing out…"
+      description="Closing this CityLens session and returning you home."
+    >
+      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+        <div className="h-full w-2/3 animate-pulse rounded-full bg-sky-500" />
+      </div>
+    </AuthPageShell>
   );
 }
