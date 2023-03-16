@@ -359,12 +359,12 @@ Next.js app for CityLens. It pairs with:
 ```
 app/
   page.tsx                    # async Server Component — SSRs featured demos
-  runs/                       # signed-in run history + run detail
+  runs/                       # signed-in history, dedicated new-run workspace, detail
   sign-in/, sign-up/, sign-out/, verify-email/, forgot-password/, reset-password/
   api/auth/[...path]/route.ts # Neon Auth handler proxy
   docs/                       # user-facing API docs page
 components/
-  RunForm.tsx                 # accepts SSR-prefetched featured demos
+  RunForm.tsx                 # public-demo or focused account-request mode
   FeaturedDemoCards.tsx       # visual demo grid (server-renderable)
   ArtifactsPanel.tsx          # focused, keyboard-operable evidence workspace
   ProductPageHeader.tsx       # shared light header for utility/product routes
@@ -502,20 +502,23 @@ The separate
 [`production-auth-smoke.yml`](.github/workflows/production-auth-smoke.yml)
 uses a dedicated least-privilege Neon smoke user every six hours. It signs in
 through the production UI and fails unless the rendered explorer and observed
-API receipt both reach exactly 5,000 authenticated, mappable parcels with no
-browser errors. It then performs a full document reload and requires a second
-complete 5,000-row receipt from the returning authenticated session. It
+API receipt both reach exactly 5,000 authenticated, mappable parcels, expose
+the `Full inventory · 5,000 loaded` map receipt, and emit no browser errors.
+It then performs a full document reload and requires a second complete
+5,000-row receipt from the returning authenticated session. It
 separately records successful API-credential minting, so a stale session
 cannot pass by rendering the 125-row public preview. It also
 verifies the auditable historical benchmark receipt and its limitations, the
 live Ovington exact-BBL dossier, source-grounded evidence readiness,
 official-address resolution, current screening receipt, and the governed
-acquisition-thesis flow. The v6 receipt records the returning-session result
-as a boolean without storing the credential or account identity. The thesis
+acquisition-thesis flow. The v13 receipt records the returning-session result
+as a boolean without storing the credential or account identity. Browser
+failures retain only a coarse category, desktop/mobile surface, and truncated
+SHA-256 fingerprint—not the raw message. The thesis
 check requires a reviewed, positive-match
 receipt, the expected visible filters, and an accepted
 `thesis_composer_applied:thesis_composer` API response whose JSON keys are
-exactly `event`, `schema_version`, and `source`. Its v6 report stores only
+exactly `event`, `schema_version`, and `source`. Its v13 report stores only
 booleans plus that response status/event/source/key receipt—never the thesis,
 parsed criteria, thresholds, geography, match count, or parcel identity.
 Its email and password live only in the

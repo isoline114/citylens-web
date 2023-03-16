@@ -66,11 +66,23 @@ describe('DemoModeBanner', () => {
     },
   );
 
-  it('keeps demo context on a public run detail', () => {
+  it('lets run detail own its public or private context', () => {
     mocks.pathname = '/runs/demo-brooklyn-reference';
 
     render(<DemoModeBanner />);
 
-    expect(screen.getByText(/demo mode \(precomputed\)/i)).toBeVisible();
+    expect(
+      screen.queryByText(/demo mode \(precomputed\)/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not mislabel the new-run account gate as demo mode', () => {
+    mocks.pathname = '/runs/new';
+
+    render(<DemoModeBanner />);
+
+    expect(
+      screen.queryByText(/demo mode \(precomputed\)/i),
+    ).not.toBeInTheDocument();
   });
 });

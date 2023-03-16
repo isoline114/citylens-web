@@ -80,6 +80,26 @@ describe('RunForm', () => {
     expect(screen.queryByText('unet')).not.toBeInTheDocument();
   });
 
+  it('supports an operational mode without public demo discovery', () => {
+    render(
+      <RunForm
+        showFeaturedDemos={false}
+        submitLabel="Start processing"
+      />,
+    );
+
+    expect(
+      screen.queryByRole('combobox', { name: /featured demo/i }),
+    ).not.toBeInTheDocument();
+    expect(mocks.getFeaturedDemos).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('button', { name: 'Start processing' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Imagery preview')).toBeInTheDocument();
+    expect(screen.getByText('Change evidence')).toBeInTheDocument();
+    expect(screen.getByText('3D massing')).toBeInTheDocument();
+  });
+
   it('renders the server-provided locked values once run options load', async () => {
     mocks.getRunOptions.mockResolvedValueOnce({
       imagery_years: [2025],

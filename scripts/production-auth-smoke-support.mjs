@@ -40,6 +40,43 @@ export function positiveFormattedCountWithSuffix(value, suffix) {
   );
 }
 
+function browserErrorCategory(message) {
+  const value = String(message ?? '');
+  if (/resizeobserver/i.test(value)) return 'resize_observer';
+  if (/hydration|hydrating|server rendered html/i.test(value)) {
+    return 'react_hydration';
+  }
+  if (/chunkloaderror|loading chunk|failed to fetch dynamically imported/i.test(value)) {
+    return 'chunk_load';
+  }
+  if (/leaflet|map container|removelayer/i.test(value)) return 'map_runtime';
+  if (/webgl|canvas|three(?:\\.module)?/i.test(value)) return 'viewer_runtime';
+  if (/networkerror|failed to fetch|load failed/i.test(value)) {
+    return 'network_runtime';
+  }
+  return 'unclassified';
+}
+
+export function summarizeBrowserErrors(messages) {
+  if (!Array.isArray(messages)) return [];
+  return messages.slice(0, 3).map((message) => {
+    const normalized = String(message ?? '')
+      .replace(/^\[mobile\]\s*/i, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return {
+      surface: /^\[mobile\]/i.test(String(message ?? ''))
+        ? 'mobile'
+        : 'desktop',
+      category: browserErrorCategory(normalized),
+      fingerprint: createHash('sha256')
+        .update(normalized)
+        .digest('hex')
+        .slice(0, 12),
+    };
+  });
+}
+
 function parseCsvRecords(value) {
   if (typeof value !== 'string' || value.length === 0) return [];
   const records = [];
@@ -186,3 +223,4 @@ export function summarizeRunListResponse(status, payload) {
 
   return receipt;
 }
+import { createHash } from 'node:crypto';

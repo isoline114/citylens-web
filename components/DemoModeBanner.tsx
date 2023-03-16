@@ -9,11 +9,10 @@ export function DemoModeBanner() {
 
   if (auth.status === 'loading') return null;
   if (auth.status === 'authenticated') return null;
-  // Keep reconstruction-demo context on the surfaces where a user can
-  // actually inspect or choose a run. Product, account, legal, and API pages
-  // should not inherit an unrelated beta-looking banner.
-  const isReconstructionSurface =
-    pathname === '/' || pathname === '/runs' || pathname.startsWith('/runs/');
+  // Keep the global notice only where public demos are discovered. Run
+  // detail pages already carry their own explicit public/private state, and
+  // the new-run route is an account gate rather than a demo surface.
+  const isReconstructionSurface = pathname === '/' || pathname === '/runs';
   if (!isReconstructionSurface) {
     return null;
   }

@@ -17,6 +17,13 @@ const routes = [
   { name: 'home', path: '/', current: 'Home', demo: true },
   { name: 'parcels', path: '/parcel-intel', current: 'Parcels', demo: false },
   { name: 'runs', path: '/runs', current: 'Runs', demo: true },
+  {
+    name: 'new-run',
+    path: '/runs/new',
+    current: 'Runs',
+    demo: false,
+    requiredTestId: 'new-run-access-gate',
+  },
   { name: 'pricing', path: '/pricing', current: 'Pricing', demo: false },
   { name: 'docs', path: '/docs', current: 'Docs', demo: false },
   { name: 'contact', path: '/contact', current: null, demo: false },

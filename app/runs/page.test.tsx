@@ -89,7 +89,14 @@ describe('/runs (signed in, empty)', () => {
     await screen.findByText(/Create your first evidence package/i);
     expect(screen.getByTestId('run-history-empty')).toBeInTheDocument();
     expect(screen.getByTestId('run-summary-loaded')).toHaveTextContent('0');
-    expect(screen.getByRole('link', { name: 'Create a run' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Create a run' })).toHaveAttribute(
+      'href',
+      '/runs/new',
+    );
+    expect(screen.getByRole('link', { name: 'New run' })).toHaveAttribute(
+      'href',
+      '/runs/new',
+    );
   });
 
   it('clears stale localStorage recent-runs on mount (one-time backfill)', async () => {

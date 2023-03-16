@@ -4,6 +4,7 @@ import {
   positiveFormattedCount,
   positiveFormattedCountWithSuffix,
   summarizeParcelCsv,
+  summarizeBrowserErrors,
   summarizeProductEvent,
   summarizeRunListResponse,
 } from './production-auth-smoke-support.mjs';
@@ -30,6 +31,29 @@ describe('production authenticated smoke support', () => {
     expect(
       positiveFormattedCountWithSuffix('0 matches', 'matches'),
     ).toBeNull();
+  });
+
+  it('classifies browser errors without retaining message values', () => {
+    const receipt = summarizeBrowserErrors([
+      '[mobile] ResizeObserver loop completed with undelivered notifications.',
+      'ChunkLoadError: Loading chunk 123 failed at https://private.example/path',
+    ]);
+
+    expect(receipt).toEqual([
+      {
+        surface: 'mobile',
+        category: 'resize_observer',
+        fingerprint: expect.stringMatching(/^[a-f0-9]{12}$/),
+      },
+      {
+        surface: 'desktop',
+        category: 'chunk_load',
+        fingerprint: expect.stringMatching(/^[a-f0-9]{12}$/),
+      },
+    ]);
+    expect(JSON.stringify(receipt)).not.toMatch(
+      /private|example|resizeobserver|loading chunk/i,
+    );
   });
 
   it('summarizes an RFC 4180 parcel export without retaining identities', () => {

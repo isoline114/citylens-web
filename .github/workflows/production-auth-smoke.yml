@@ -72,6 +72,8 @@ jobs:
           console.log(`- Value-minimized run receipt: \`${report?.run_operations_receipt?.value_minimized && report?.run_list_receipts?.every((receipt) => receipt.value_minimized) ? 'passed' : 'failed'}\``);
           console.log(`- Browser console errors: \`${report?.console_error_count ?? 'unknown'}\``);
           console.log(`- Browser page errors: \`${report?.page_error_count ?? 'unknown'}\``);
+          if (report?.console_error_receipts?.length) console.log(`- Console error receipts: \`${JSON.stringify(report.console_error_receipts)}\``);
+          if (report?.page_error_receipts?.length) console.log(`- Page error receipts: \`${JSON.stringify(report.page_error_receipts)}\``);
           if (report?.failure) console.log(`- Failure: \`${report.failure}\``);
           NODE
 

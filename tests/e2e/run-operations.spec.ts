@@ -39,6 +39,59 @@ test('a signed-out private run deep link opens an account gate, not the demo API
   expect(demoRequests).toBe(0);
 });
 
+test('run creation stays inside the authenticated product workspace', async ({
+  page,
+}) => {
+  await useMockAccount(page);
+  await page.route('**/v1/runs?**', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ items: [], next_cursor: null }),
+    });
+  });
+  await page.route('**/v1/run-options', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        imagery_years: [2024],
+        baseline_years: [2017],
+        segmentation_backends: ['sam2'],
+        outputs: ['previews', 'change', 'mesh'],
+        defaults: {
+          imagery_year: 2024,
+          baseline_year: 2017,
+          segmentation_backend: 'sam2',
+          outputs: ['previews', 'change', 'mesh'],
+          aoi_radius_m: 120,
+        },
+      }),
+    });
+  });
+  let demoRequests = 0;
+  await page.route('**/v1/demo/featured', async (route) => {
+    demoRequests += 1;
+    await route.fulfill({ contentType: 'application/json', body: '{}' });
+  });
+
+  await page.goto('/runs');
+  await expect(page.getByTestId('run-history-empty')).toBeVisible();
+  await page.getByRole('link', { name: 'Create a run' }).click();
+
+  await expect(page).toHaveURL(/\/runs\/new$/);
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Start a new run' }),
+  ).toBeVisible();
+  await expect(page.getByTestId('run-form')).toBeVisible();
+  await expect(page.getByLabel('Address')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Start processing' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('combobox', { name: /featured demo/i }),
+  ).toHaveCount(0);
+  expect(demoRequests).toBe(0);
+});
+
 test('run history leads with address and customer-facing status', async ({
   page,
 }) => {

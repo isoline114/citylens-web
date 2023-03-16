@@ -174,7 +174,7 @@ export default function RunsPage() {
         description="Monitor active work and reopen completed evidence packages."
         actions={
           <Link
-            href="/#create"
+            href="/runs/new"
             className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
           >
             <Plus className="h-4 w-4" />
@@ -244,7 +244,7 @@ export default function RunsPage() {
                 </p>
               </div>
               <Link
-                href="/#create"
+                href="/runs/new"
                 className="group inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
               >
                 Create a run

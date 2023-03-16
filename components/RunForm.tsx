@@ -36,9 +36,35 @@ export type RunFormProps = {
    *  provided, the form skips its own client-side fetch and uses these
    *  immediately, so SSR HTML already shows the populated dropdown. */
   initialFeatured?: DemoFeaturedRun[];
+  /** Keep public demo discovery on the homepage while allowing the account
+   *  workspace to focus only on a new processing request. */
+  showFeaturedDemos?: boolean;
+  submitLabel?: string;
 };
 
-export function RunForm({ initialFeatured }: RunFormProps = {}) {
+const OUTPUT_OPTIONS = [
+  {
+    value: 'previews',
+    label: 'Imagery preview',
+    description: 'Review-ready context image',
+  },
+  {
+    value: 'change',
+    label: 'Change evidence',
+    description: 'Mapped building change',
+  },
+  {
+    value: 'mesh',
+    label: '3D massing',
+    description: 'Downloadable site geometry',
+  },
+] as const;
+
+export function RunForm({
+  initialFeatured,
+  showFeaturedDemos = true,
+  submitLabel = 'Create run',
+}: RunFormProps = {}) {
   const router = useRouter();
   const auth = useAuth();
   const [form, setForm] = useState<CitylensCreateRunInput>(DEFAULTS);
@@ -87,7 +113,7 @@ export function RunForm({ initialFeatured }: RunFormProps = {}) {
     // test environment without internet) fall back to the client path so
     // we still discover demos at runtime and so Playwright route mocks
     // still apply during e2e.
-    if (hasInitial) return;
+    if (!showFeaturedDemos || hasInitial) return;
     let alive = true;
     setFeaturedStatus('loading');
     getFeaturedDemos()
@@ -103,7 +129,7 @@ export function RunForm({ initialFeatured }: RunFormProps = {}) {
     return () => {
       alive = false;
     };
-  }, [hasInitial]);
+  }, [hasInitial, showFeaturedDemos]);
 
   const canSubmit = useMemo(() => signedIn && !submitting, [signedIn, submitting]);
 
@@ -193,59 +219,65 @@ export function RunForm({ initialFeatured }: RunFormProps = {}) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">Featured demos</span>
-        <select
-          className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
-          value={selectedDemoRunId}
-          onChange={(e) => {
-            const nextRunId = e.target.value;
-            setSelectedDemoRunId(nextRunId);
-            if (!nextRunId) return;
+    <form
+      onSubmit={onSubmit}
+      className="flex flex-col gap-5"
+      data-testid="run-form"
+    >
+      {showFeaturedDemos && (
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium">Featured demos</span>
+          <select
+            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+            value={selectedDemoRunId}
+            onChange={(e) => {
+              const nextRunId = e.target.value;
+              setSelectedDemoRunId(nextRunId);
+              if (!nextRunId) return;
 
-            const chosen = featured.find((d) => demoRunId(d) === nextRunId);
-            const req: Record<string, unknown> =
-              chosen?.request && typeof chosen.request === 'object'
-                ? (chosen.request as Record<string, unknown>)
-                : {};
+              const chosen = featured.find((d) => demoRunId(d) === nextRunId);
+              const req: Record<string, unknown> =
+                chosen?.request && typeof chosen.request === 'object'
+                  ? (chosen.request as Record<string, unknown>)
+                  : {};
 
-            const nextAddress =
-              (typeof chosen?.address === 'string' ? chosen.address : undefined) ??
-              (typeof req.address === 'string' ? (req.address as string) : undefined);
+              const nextAddress =
+                (typeof chosen?.address === 'string' ? chosen.address : undefined) ??
+                (typeof req.address === 'string' ? (req.address as string) : undefined);
 
-            setForm((prev) => ({
-              ...prev,
-              address: nextAddress ?? prev.address,
-            }));
+              setForm((prev) => ({
+                ...prev,
+                address: nextAddress ?? prev.address,
+              }));
 
-            router.push(`/runs/${encodeURIComponent(nextRunId)}?demo=1`);
-          }}
-          aria-label="Select a featured demo run"
-        >
-          <option value="">
-            {featuredStatus === 'loading' ? 'Loading demos…' : 'Select a demo run…'}
-          </option>
-          {featured
-            .map((d) => ({ d, id: demoRunId(d) }))
-            .filter((x): x is { d: DemoFeaturedRun; id: string } => Boolean(x.id))
-            .map(({ d, id }) => (
-              <option key={id} value={id}>
-                {demoLabel(d)}
-              </option>
-            ))}
-        </select>
-        {featuredStatus === 'error' && (
-          <div className="text-xs text-slate-600">
-            Featured demos are temporarily unavailable. You can still sign in to create a run.
-          </div>
-        )}
-        {featuredStatus === 'loaded' && featured.length === 0 && (
-          <div className="text-xs text-slate-600">
-            Featured demos are temporarily unavailable. You can still sign in to create a run.
-          </div>
-        )}
-      </label>
+              router.push(`/runs/${encodeURIComponent(nextRunId)}?demo=1`);
+            }}
+            aria-label="Select a featured demo run"
+          >
+            <option value="">
+              {featuredStatus === 'loading' ? 'Loading demos…' : 'Select a demo run…'}
+            </option>
+            {featured
+              .map((d) => ({ d, id: demoRunId(d) }))
+              .filter((x): x is { d: DemoFeaturedRun; id: string } => Boolean(x.id))
+              .map(({ d, id }) => (
+                <option key={id} value={id}>
+                  {demoLabel(d)}
+                </option>
+              ))}
+          </select>
+          {featuredStatus === 'error' && (
+            <div className="text-xs text-slate-600">
+              Featured demos are temporarily unavailable. You can still sign in to create a run.
+            </div>
+          )}
+          {featuredStatus === 'loaded' && featured.length === 0 && (
+            <div className="text-xs text-slate-600">
+              Featured demos are temporarily unavailable. You can still sign in to create a run.
+            </div>
+          )}
+        </label>
+      )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <label className="flex flex-col gap-1 md:col-span-2">
@@ -287,23 +319,38 @@ export function RunForm({ initialFeatured }: RunFormProps = {}) {
           >
             {lockedBackend}
           </div>
-          <div className="text-xs text-slate-500">Public MVP supports SAM2 only.</div>
+          <div className="text-xs text-slate-500">
+            Server-locked for reproducibility.
+          </div>
         </div>
       </div>
 
       <div className="flex flex-col gap-2">
         <div className="text-sm font-medium">Outputs</div>
-        <div className="flex flex-wrap gap-3">
-          {(['previews', 'change', 'mesh'] as const).map((o) => {
-            const checked = form.outputs.includes(o);
+        <div className="grid gap-2 sm:grid-cols-3">
+          {OUTPUT_OPTIONS.map((option) => {
+            const checked = form.outputs.includes(option.value);
             return (
-              <label key={o} className="flex items-center gap-2 text-sm">
+              <label
+                key={option.value}
+                className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-3 text-sm transition-colors ${
+                  checked
+                    ? 'border-sky-300 bg-sky-50 text-sky-950'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                }`}
+              >
                 <input
                   type="checkbox"
                   checked={checked}
-                  onChange={() => toggleOutput(o)}
+                  onChange={() => toggleOutput(option.value)}
+                  className="mt-0.5"
                 />
-                <span>{o}</span>
+                <span>
+                  <span className="block font-medium">{option.label}</span>
+                  <span className="mt-0.5 block text-xs text-slate-500">
+                    {option.description}
+                  </span>
+                </span>
               </label>
             );
           })}
@@ -317,7 +364,7 @@ export function RunForm({ initialFeatured }: RunFormProps = {}) {
           className="min-h-20 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200"
           value={form.notes ?? ''}
           onChange={(e) => setField('notes', e.target.value)}
-          placeholder="Anything you want to remember about this run"
+          placeholder="Purpose, assumptions, or review owner"
         />
       </label>
 
@@ -328,7 +375,7 @@ export function RunForm({ initialFeatured }: RunFormProps = {}) {
             disabled={!canSubmit}
             className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
           >
-            {submitting ? 'Creating…' : 'Create run'}
+            {submitting ? 'Starting…' : submitLabel}
           </button>
         ) : (
           <div className="flex flex-wrap items-center gap-3">

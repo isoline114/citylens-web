@@ -9,6 +9,7 @@ import { chromium } from '@playwright/test';
 import {
   positiveFormattedCount,
   positiveFormattedCountWithSuffix,
+  summarizeBrowserErrors,
   summarizeParcelCsv,
   summarizeProductEvent,
   summarizeRunListResponse,
@@ -777,8 +778,12 @@ try {
   }
 
   if (consoleErrors.length > 0 || pageErrors.length > 0) {
+    const errorReceipt = {
+      console: summarizeBrowserErrors(consoleErrors),
+      page: summarizeBrowserErrors(pageErrors),
+    };
     throw new Error(
-      `Browser emitted ${consoleErrors.length} console error(s) and ${pageErrors.length} page error(s).`,
+      `Browser emitted ${consoleErrors.length} console error(s) and ${pageErrors.length} page error(s): ${JSON.stringify(errorReceipt)}.`,
     );
   }
   passed = true;
@@ -801,7 +806,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v12',
+  schema_version: 'citylens/production-authenticated-parcel-map@v13',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -830,7 +835,9 @@ const report = {
   run_list_receipts: runListReceipts,
   run_operations_receipt: runOperationsReceipt,
   console_error_count: consoleErrors.length,
+  console_error_receipts: summarizeBrowserErrors(consoleErrors),
   page_error_count: pageErrors.length,
+  page_error_receipts: summarizeBrowserErrors(pageErrors),
 };
 
 await fs.writeFile(
