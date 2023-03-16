@@ -77,6 +77,7 @@ test('run history leads with address and customer-facing status', async ({
   await expect(
     page.getByRole('heading', { name: 'Runs', exact: true }),
   ).toBeVisible();
+  await expect(page.getByTestId('product-page-header')).toBeVisible();
   const rows = page.getByTestId('run-history-row');
   const activeRow = rows.filter({ hasText: '100 E 21st St, Brooklyn' });
   const readyRow = rows.filter({ hasText: '55 Water St, Manhattan' });

@@ -366,6 +366,7 @@ app/
 components/
   RunForm.tsx                 # accepts SSR-prefetched featured demos
   FeaturedDemoCards.tsx       # visual demo grid (server-renderable)
+  ProductPageHeader.tsx       # shared light header for utility/product routes
   PlanQuotaBadge.tsx          # /v1/me usage display
   AuthHeaderControls.tsx      # sign-in / signed-in pill
 lib/

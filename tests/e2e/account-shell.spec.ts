@@ -33,6 +33,7 @@ test('signed-out developer access stays account-gated and hides key instructions
   await page.goto('/account/api-keys');
 
   await expect(page).toHaveTitle('API keys · CityLens');
+  await expect(page.getByTestId('product-page-header')).toBeVisible();
   await expect(
     page.getByRole('heading', { name: 'Sign in to manage API keys' }),
   ).toBeVisible();

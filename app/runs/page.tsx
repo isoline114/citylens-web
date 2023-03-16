@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
+import { ProductPageHeader } from '@/components/ProductPageHeader';
 import { getRuns } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { forgetRecentRuns, getRecentRuns } from '@/lib/storage';
@@ -108,17 +109,12 @@ export default function RunsPage() {
   if (!signedIn) {
     return (
       <div className="flex flex-col gap-5">
-        <header>
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
-            Processing workspace
-          </div>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-            Runs
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            Track each imagery-to-evidence job from request through review.
-          </p>
-        </header>
+        <ProductPageHeader
+          eyebrow="Processing workspace"
+          title="Runs"
+          icon={Database}
+          description="Track each imagery-to-evidence job from request through review."
+        />
 
         <section className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 p-6 text-white shadow-[0_24px_70px_-36px_rgba(15,23,42,0.65)] sm:p-8">
           <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-sky-500/20 blur-3xl" />
@@ -171,26 +167,21 @@ export default function RunsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
-            Processing workspace
-          </div>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-            Runs
-          </h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Monitor active work and reopen completed evidence packages.
-          </p>
-        </div>
-        <Link
-          href="/#create"
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          New run
-        </Link>
-      </header>
+      <ProductPageHeader
+        eyebrow="Processing workspace"
+        title="Runs"
+        icon={Database}
+        description="Monitor active work and reopen completed evidence packages."
+        actions={
+          <Link
+            href="/#create"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
+          >
+            <Plus className="h-4 w-4" />
+            New run
+          </Link>
+        }
+      />
 
       {serverError && (
         <div

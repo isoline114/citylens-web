@@ -18,6 +18,11 @@ test('shared shell exposes one landmark, active navigation, and a true sticky fo
   await expect(
     page.getByText(/demo mode \(precomputed\)/i),
   ).not.toBeVisible();
+  await expect(page.getByTestId('product-page-header')).toBeVisible();
+  await expect(
+    page.getByText('Full 5,000-lead citywide workspace'),
+  ).toBeVisible();
+  await expectNoWcagViolations(page, 'Pricing');
 
   const footerBounds = await page.locator('footer').boundingBox();
   expect(footerBounds).not.toBeNull();
@@ -96,5 +101,10 @@ test('shared shell exposes one landmark, active navigation, and a true sticky fo
   await expectNoDocumentHorizontalOverflow(
     page,
     'Developer center at 400% equivalent zoom',
+  );
+  await page.goto('/pricing');
+  await expectNoDocumentHorizontalOverflow(
+    page,
+    'Pricing at 400% equivalent zoom',
   );
 });
