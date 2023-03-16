@@ -1,22 +1,116 @@
-export const metadata = { title: 'Privacy — CityLens' };
+import {
+  LegalDocumentShell,
+  LegalSection,
+} from '@/components/LegalDocumentShell';
+
+export const metadata = {
+  title: 'Privacy — CityLens',
+  description:
+    'How CityLens handles account, workflow, public-property, pilot, and aggregate usage data.',
+};
+
+const navigation = [
+  { id: 'information', label: 'Information' },
+  { id: 'measurement', label: 'Measurement' },
+  { id: 'purpose', label: 'Purpose' },
+  { id: 'public-records', label: 'Public records' },
+  { id: 'sharing-retention', label: 'Sharing & retention' },
+  { id: 'choices', label: 'Your choices' },
+];
 
 export default function PrivacyPage() {
   return (
-    <article className="prose prose-slate mx-auto max-w-3xl py-8">
-      <h1>Privacy notice</h1>
-      <p><strong>Effective July 24, 2026.</strong> This notice describes the CityLens pilot product.</p>
-      <h2>Information we process</h2>
-      <p>We process account identifiers, authentication events, API usage, saved parcel workflow records, saved searches, support messages, pilot-request contact and workflow information, and coarse product analytics. Notes and tags are user-provided and should not contain sensitive personal information.</p>
-      <p>For Parcel Intelligence adoption measurement, we keep bounded daily counts of coarse actions and where they began, such as opening a parcel from the map, opening its evidence audit from the posture card or Audit tab, opening the Underwrite tab, making a first underwriting-assumption adjustment, saving a lead, or opening a saved-thesis change review. Transactional counters can record that a thesis baseline was created or advanced, but not its contents. These counters do not include parcel IDs, saved-view IDs, feed generations, membership or result counts, filters, addresses, owners, page URLs, notes, tags, assignees, contacts, underwriting values, costs, margins, efficiencies, which assumption changed, or other free text. They are automatically scheduled for deletion after no more than 90 days.</p>
-      <p>Our pageview analytics are configured to remove URL query parameters and fragments before collection. This prevents parcel-selection parameters, including BBL query values, from being sent with pageview URLs.</p>
-      <h2>Why we process it</h2>
-      <p>We use this information to provide and secure the service, enforce quotas, synchronize acquisition workflow, diagnose failures, improve ranking and product experience, and communicate about a requested pilot.</p>
-      <h2>Public property information</h2>
-      <p>Parcel, ownership, deed, zoning, permit, and imagery-derived information is assembled primarily from public government records and licensed or public imagery sources. Public-source information can be incomplete or outdated.</p>
-      <h2>Sharing and retention</h2>
-      <p>We use infrastructure and authentication providers to operate CityLens. We do not sell account information. Aggregate Parcel Intelligence adoption counters expire after no more than 90 days. Pilot requests are scheduled to expire after no more than 365 days unless they become part of a customer relationship or must be retained for legal or security reasons. Account, security, support, and user-created workflow records may be retained longer as needed to provide the pilot and meet legal or security obligations.</p>
-      <h2>Your choices</h2>
-      <p>Contact <a href="mailto:hello@citylens.dev">hello@citylens.dev</a> to request access, correction, export, or deletion of your account data. Some security and legal records may need to be retained.</p>
-    </article>
+    <LegalDocumentShell
+      eyebrow="Trust center"
+      title="Privacy notice"
+      summary="How CityLens handles account, workflow, pilot, public-property, and aggregate usage data."
+      effectiveDate="July 24, 2026"
+      navigation={navigation}
+    >
+      <LegalSection id="information" title="Information we process">
+        <p>
+          CityLens processes account identifiers, authentication events, API
+          usage, saved parcel workflows and searches, support messages, and
+          information submitted with a pilot request.
+        </p>
+        <p>
+          Notes and tags are user-provided. Do not place sensitive personal
+          information in them.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="measurement" title="Privacy-preserving measurement">
+        <p>
+          We keep bounded daily counts of coarse product actions and where
+          they began. These counts help us understand whether people reach
+          useful workflows without recording the underlying parcel or
+          decision.
+        </p>
+        <ul>
+          <li>
+            Counters exclude parcel and saved-view identifiers, addresses,
+            owners, queries, filters, result counts, notes, contacts,
+            assignees, and other free text.
+          </li>
+          <li>
+            Underwriting inputs, costs, margins, efficiencies, and changed
+            assumptions are not included.
+          </li>
+          <li>
+            Aggregate counters are scheduled for deletion within 90 days.
+          </li>
+          <li>
+            Pageview URLs have query parameters and fragments removed before
+            collection.
+          </li>
+        </ul>
+      </LegalSection>
+
+      <LegalSection id="purpose" title="Why we process it">
+        <p>
+          We use this information to provide and secure CityLens, enforce
+          quotas, synchronize acquisition workflow, diagnose failures,
+          improve the product, and respond to requested pilots.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="public-records" title="Public property information">
+        <p>
+          Parcel, ownership, deed, zoning, permit, and imagery-derived
+          information is assembled primarily from public government records
+          and licensed or public imagery. Source information can be
+          incomplete, delayed, or outdated.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="sharing-retention" title="Sharing and retention">
+        <p>
+          We use infrastructure and authentication providers to operate
+          CityLens. We do not sell account information.
+        </p>
+        <ul>
+          <li>Aggregate product counters expire within 90 days.</li>
+          <li>
+            Pilot requests are scheduled to expire within 365 days unless
+            they become part of a customer relationship or must be retained
+            for legal or security reasons.
+          </li>
+          <li>
+            Account, security, support, and user-created workflow records may
+            be retained as needed to provide the service and meet legal or
+            security obligations.
+          </li>
+        </ul>
+      </LegalSection>
+
+      <LegalSection id="choices" title="Your choices">
+        <p>
+          Contact{' '}
+          <a href="mailto:hello@citylens.dev">hello@citylens.dev</a> to request
+          access, correction, export, or deletion of your account data. Some
+          security and legal records may need to be retained.
+        </p>
+      </LegalSection>
+    </LegalDocumentShell>
   );
 }

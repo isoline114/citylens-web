@@ -1,4 +1,8 @@
 import { expect, test } from '@playwright/test';
+import {
+  expectNoDocumentHorizontalOverflow,
+  expectNoWcagViolations,
+} from './accessibility';
 
 test('shared shell exposes one landmark, active navigation, and a true sticky footer', async ({
   page,
@@ -39,4 +43,37 @@ test('shared shell exposes one landmark, active navigation, and a true sticky fo
       })
       .getByRole('link', { name: 'Home', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
+
+  for (const policy of [
+    {
+      path: '/privacy',
+      title: 'Privacy notice',
+      navigation: 'Privacy notice sections',
+    },
+    {
+      path: '/terms',
+      title: 'Pilot terms of use',
+      navigation: 'Pilot terms of use sections',
+    },
+  ]) {
+    await page.goto(policy.path);
+    await expect(
+      page.getByRole('heading', { level: 1, name: policy.title }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('navigation', { name: policy.navigation }),
+    ).toBeVisible();
+    await expect(page.getByTestId('legal-document-shell')).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: /hello@citylens.dev/i }).last(),
+    ).toHaveAttribute('href', 'mailto:hello@citylens.dev');
+    await expectNoWcagViolations(page, policy.title);
+  }
+
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto('/privacy');
+  await expectNoDocumentHorizontalOverflow(
+    page,
+    'Privacy notice at 400% equivalent zoom',
+  );
 });
