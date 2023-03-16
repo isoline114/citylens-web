@@ -45,6 +45,12 @@ vi.mock('@/lib/api', async (importOriginal) => {
   };
 });
 
+vi.mock('./parcel-official-dossier', () => ({
+  ParcelOfficialDossierPanel: ({ bbl }: { bbl: string }) => (
+    <div data-testid="official-dossier-stub">Official dossier {bbl}</div>
+  ),
+}));
+
 import {
   buildParcelDecisionBrief,
   externalParcelLinks,
@@ -628,6 +634,32 @@ describe('ParcelIntelPropertyPanel', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Workflow' }));
     expect(screen.getByRole('button', { name: /Add to pipeline/i })).toBeInTheDocument();
+  });
+
+  it('opens a ranked lead official dossier as a separate non-scoring workspace', async () => {
+    mocks.authStatus = 'authenticated';
+    render(<ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />);
+
+    const dossierButton = screen.getByRole('button', {
+      name: 'Official dossier',
+    });
+    fireEvent.click(dossierButton);
+
+    expect(screen.getByTestId('official-dossier-stub')).toHaveTextContent(
+      `Official dossier ${parcel.bbl}`,
+    );
+    expect(screen.getByTestId('ranked-parcel-official-dossier')).toHaveTextContent(
+      'Non-scoring PLUTO and ACRIS evidence for this exact BBL.',
+    );
+    expect(dossierButton).toHaveAttribute('aria-pressed', 'true');
+    const back = screen.getByRole('button', {
+      name: 'Back to parcel workspace',
+    });
+    await waitFor(() => expect(back).toHaveFocus());
+
+    fireEvent.click(back);
+    expect(screen.queryByTestId('official-dossier-stub')).not.toBeInTheDocument();
+    expect(dossierButton).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('binds workflow evidence review to the exact server citation version', async () => {

@@ -170,6 +170,9 @@ loads a separate official parcel dossier for that tax lot—even when it is not
 one of the 5,000 ranked leads. The dossier shows source-dated PLUTO physical,
 mapped-zoning, assessment, flood, and environmental facts beside
 source-specific ACRIS deed/recorded-owner facts and official NYC links.
+Signed-in users can open the same compact, non-scoring dossier directly from
+any ranked parcel workspace; they no longer need to leave the lead inventory
+or repeat an address lookup to inspect its current official-source packet.
 PLUTO/ACRIS owner disagreement remains visible. The panel explicitly says it
 is not a lead score, title report, appraisal, zoning calculation, feasibility
 study, beneficial-owner determination, or seller-intent signal. The existing

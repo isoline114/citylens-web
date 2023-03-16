@@ -311,6 +311,64 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   );
 
   await page.route(
+    '**/v1/parcel-intel/official-parcel/3020960069',
+    async (route) => {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          schema_version: 'citylens/parcel-official-dossier@v1',
+          bbl: '3020960069',
+          borough: 'brooklyn',
+          address: '100 E 21 STREET',
+          pluto_owner_name: 'PLUTO OWNER LLC',
+          acris_owner_name: 'ACRIS RECORDED GRANTEE LLC',
+          owner_source_status: 'different',
+          last_sale_date: '2025-03-18',
+          last_sale_price: 1_400_000,
+          years_held: 1,
+          lot_area_sqft: 5_000,
+          building_area_sqft: 2_500,
+          units: 2,
+          num_floors: 2,
+          year_built: 1930,
+          land_use: '01',
+          building_class: 'B2',
+          zoning_district_1: 'R6',
+          zoning_district_2: null,
+          built_far: 0.5,
+          residential_far: 2,
+          commercial_far: 0,
+          facility_far: 2,
+          assessed_land: 72_000,
+          assessed_building: 126_000,
+          assessed_total: 198_000,
+          firm_2007_floodplain: false,
+          pfirm_2015_floodplain: true,
+          environmental_review_required: false,
+          environmental_designation_kind: null,
+          environmental_designation_number: null,
+          property_facts_dataset_id: '64uk-42ks',
+          property_facts_retrieved_at: '2026-07-24T00:00:00Z',
+          ownership_dataset_ids: {
+            master: 'bnx9-e6tj',
+            legals: '8h5j-fqxa',
+            parties: '636b-3b5g',
+          },
+          ownership_features_updated_at: '2026-07-15T00:00:00Z',
+          dossier_generation: '20260724T024329000000Z-e2e000000000',
+          official_links: {
+            zola: 'https://zola.planning.nyc.gov/',
+            acris: 'https://a836-acris.nyc.gov/',
+            dob_bis: 'https://a810-bisweb.nyc.gov/',
+          },
+          interpretation:
+            'Official source facts only. This is not a lead score, title report, appraisal, zoning analysis, seller-intent signal, or beneficial-owner determination.',
+        }),
+      });
+    },
+  );
+
+  await page.route(
     '**/v1/parcel-intel/product-events',
     async (route) => {
       productEvents.push(route.request().postDataJSON());
@@ -1467,6 +1525,48 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
       expected_feed_generated_at: '2026-07-24T02:43:29Z',
     },
   ]);
+
+  await page.getByTestId('parcel-official-dossier-open').click();
+  const rankedDossier = page.getByTestId('ranked-parcel-official-dossier');
+  await expect(rankedDossier).toBeVisible();
+  await expect(page.getByTestId('parcel-official-dossier')).toContainText(
+    '100 E 21 STREET',
+  );
+  await expect(page.getByTestId('parcel-official-dossier')).toContainText(
+    'not a lead score',
+  );
+  await expect(page.getByTestId('parcel-official-dossier')).toContainText(
+    'Owner sources differ — verify title',
+  );
+  await expect(
+    page.getByRole('button', { name: 'Back to parcel workspace' }),
+  ).toBeFocused();
+  await expect
+    .poll(
+      () =>
+        productEvents.filter(
+          (event) =>
+            (event as { event?: string }).event === 'official_dossier_opened',
+        ).length,
+    )
+    .toBe(1);
+  const officialDossierEvent = productEvents.find(
+    (event) =>
+      (event as { event?: string }).event === 'official_dossier_opened',
+  );
+  expect(officialDossierEvent).toEqual({
+    schema_version: 'citylens/parcel-product-event@v1',
+    event: 'official_dossier_opened',
+    source: 'official_dossier',
+  });
+  expect(JSON.stringify(officialDossierEvent)).not.toMatch(
+    /3020960069|100 E 21|pluto owner|acris recorded/i,
+  );
+  await page
+    .getByRole('button', { name: 'Back to parcel workspace' })
+    .click();
+  await expect(rankedDossier).not.toBeVisible();
+
   await page
     .getByRole('button', {
       name: 'Close parcel panel and return to ranked parcels',

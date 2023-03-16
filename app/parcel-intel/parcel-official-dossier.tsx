@@ -36,6 +36,7 @@ type State =
 
 type Props = {
   bbl: string;
+  compact?: boolean;
 };
 
 const LAND_USE: Record<string, string> = {
@@ -142,7 +143,7 @@ function ownerStatus(dossier: ParcelOfficialDossier) {
   }
 }
 
-export function ParcelOfficialDossierPanel({ bbl }: Props) {
+export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
   const [state, setState] = useState<State>({ status: 'loading' });
   const trackedBblsRef = useRef(new Set<string>());
 
@@ -242,7 +243,13 @@ export function ParcelOfficialDossierPanel({ bbl }: Props) {
       className="border-b border-slate-200 bg-[#f8fafc]"
     >
       <div className="bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.22),transparent_38%),linear-gradient(115deg,#07101f,#0f2740_58%,#0c4a6e)] px-5 py-5 text-white md:px-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div
+          className={
+            compact
+              ? 'flex flex-col gap-4'
+              : 'flex flex-col gap-4 md:flex-row md:items-start md:justify-between'
+          }
+        >
           <div className="flex items-start gap-3">
             <span className="rounded-xl border border-white/15 bg-white/10 p-2.5 text-sky-200 shadow-inner">
               <MapPinned className="h-5 w-5" />
@@ -291,7 +298,13 @@ export function ParcelOfficialDossierPanel({ bbl }: Props) {
           data-testid="parcel-dossier-readiness"
           className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
         >
-          <div className="grid gap-0 lg:grid-cols-[1.35fr_0.65fr]">
+          <div
+            className={
+              compact
+                ? 'grid gap-0'
+                : 'grid gap-0 lg:grid-cols-[1.35fr_0.65fr]'
+            }
+          >
             <div className="p-4 md:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -319,7 +332,13 @@ export function ParcelOfficialDossierPanel({ bbl }: Props) {
                   </div>
                 </div>
               </div>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              <div
+                className={
+                  compact
+                    ? 'mt-4 grid gap-2 sm:grid-cols-2'
+                    : 'mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3'
+                }
+              >
                 {readiness.groups.map((group) => (
                   <div
                     key={group.key}
@@ -346,7 +365,11 @@ export function ParcelOfficialDossierPanel({ bbl }: Props) {
               </div>
             </div>
 
-            <aside className="border-t border-slate-200 bg-slate-950 p-4 text-white lg:border-l lg:border-t-0 md:p-5">
+            <aside
+              className={`border-t border-slate-200 bg-slate-950 p-4 text-white md:p-5 ${
+                compact ? '' : 'lg:border-l lg:border-t-0'
+              }`}
+            >
               <div className="flex items-center gap-2">
                 <Route className="h-4 w-4 text-sky-300" />
                 <h4 className="text-xs font-semibold uppercase tracking-[0.12em]">
@@ -382,7 +405,13 @@ export function ParcelOfficialDossierPanel({ bbl }: Props) {
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div
+          className={
+            compact
+              ? 'grid gap-3 sm:grid-cols-2'
+              : 'grid gap-3 sm:grid-cols-2 lg:grid-cols-4'
+          }
+        >
           <Metric
             label="Lot"
             value={number(dossier.lot_area_sqft, ' sqft')}
@@ -416,7 +445,13 @@ export function ParcelOfficialDossierPanel({ bbl }: Props) {
           />
         </div>
 
-        <div className="grid gap-3 lg:grid-cols-[1.15fr_0.85fr]">
+        <div
+          className={
+            compact
+              ? 'grid gap-3'
+              : 'grid gap-3 lg:grid-cols-[1.15fr_0.85fr]'
+          }
+        >
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -497,7 +532,13 @@ export function ParcelOfficialDossierPanel({ bbl }: Props) {
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div
+          className={
+            compact
+              ? 'grid gap-3 sm:grid-cols-2'
+              : 'grid gap-3 sm:grid-cols-2 lg:grid-cols-4'
+          }
+        >
           <Metric
             label="Year built"
             value={number(dossier.year_built)}
@@ -528,7 +569,11 @@ export function ParcelOfficialDossierPanel({ bbl }: Props) {
           />
         </div>
 
-        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-950 px-4 py-3 text-slate-200 md:flex-row md:items-center md:justify-between">
+        <div
+          className={`flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-950 px-4 py-3 text-slate-200 ${
+            compact ? '' : 'md:flex-row md:items-center md:justify-between'
+          }`}
+        >
           <div className="flex items-start gap-2">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
             <p className="max-w-4xl text-[11px] leading-5">

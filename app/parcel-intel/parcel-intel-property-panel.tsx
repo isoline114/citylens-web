@@ -68,6 +68,7 @@ import {
   ParcelDecisionPeers,
   type ParcelDecisionPeer,
 } from './parcel-decision-peers';
+import { ParcelOfficialDossierPanel } from './parcel-official-dossier';
 
 type PanelTab = 'overview' | 'audit' | 'underwrite' | 'workflow';
 
@@ -979,6 +980,7 @@ export function ParcelIntelPropertyPanel({
   const [workflowEntry, setWorkflowEntry] = useState<
     'editor' | 'evidence'
   >('editor');
+  const [officialDossierOpen, setOfficialDossierOpen] = useState(false);
   const activeBblRef = useRef(row.bbl);
   const workflowMutationIdRef = useRef(0);
   const trackedDecisionAuditOpensRef = useRef(new Set<string>());
@@ -1065,11 +1067,16 @@ export function ParcelIntelPropertyPanel({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key !== 'Escape') return;
+      if (officialDossierOpen) {
+        setOfficialDossierOpen(false);
+        return;
+      }
+      onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [officialDossierOpen, onClose]);
 
   useEffect(() => {
     activeBblRef.current = row.bbl;
@@ -1082,6 +1089,7 @@ export function ParcelIntelPropertyPanel({
     setEvidenceIssueBusyKey(null);
     setUnderwritingAdjusted(false);
     setWorkflowEntry('editor');
+    setOfficialDossierOpen(false);
     setWorkflowError(null);
     setWorkflowContextBbl(row.bbl);
     if (auth.status !== 'authenticated') {
@@ -1542,6 +1550,22 @@ export function ParcelIntelPropertyPanel({
               <>
                 <button
                   type="button"
+                  data-testid="parcel-official-dossier-open"
+                  aria-pressed={officialDossierOpen}
+                  onClick={() =>
+                    setOfficialDossierOpen((value) => !value)
+                  }
+                  className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors ${
+                    officialDossierOpen
+                      ? 'border-sky-300 bg-sky-50 text-sky-900'
+                      : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
+                  }`}
+                >
+                  <Database className="h-3.5 w-3.5" />
+                  Official dossier
+                </button>
+                <button
+                  type="button"
                   data-testid="workflow-quick-save"
                   disabled={workflowBusy || effectiveWorkflowLoadState !== 'ready'}
                   onClick={() => {
@@ -1601,6 +1625,7 @@ export function ParcelIntelPropertyPanel({
             key={value}
             type="button"
             onClick={() => {
+              setOfficialDossierOpen(false);
               if (value === 'audit') {
                 openDecisionAudit('audit_tab');
                 return;
@@ -1614,9 +1639,9 @@ export function ParcelIntelPropertyPanel({
               }
               setTab(value);
             }}
-            aria-pressed={tab === value}
+            aria-pressed={!officialDossierOpen && tab === value}
             className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-colors ${
-              tab === value
+              !officialDossierOpen && tab === value
                 ? 'bg-white text-slate-950 shadow-sm ring-1 ring-slate-200'
                 : 'text-slate-500 hover:bg-white/70 hover:text-slate-900'
             }`}
@@ -1628,7 +1653,32 @@ export function ParcelIntelPropertyPanel({
       </nav>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
-        {visibleWorkflowError && (
+        {officialDossierOpen && (
+          <div data-testid="ranked-parcel-official-dossier">
+            <div className="mb-3 flex flex-col gap-2 rounded-xl border border-sky-200 bg-sky-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-xs font-semibold text-sky-950">
+                  Current official-source packet
+                </div>
+                <p className="mt-0.5 text-[11px] leading-4 text-sky-800">
+                  Non-scoring PLUTO and ACRIS evidence for this exact BBL.
+                </p>
+              </div>
+              <button
+                type="button"
+                autoFocus
+                onClick={() => setOfficialDossierOpen(false)}
+                className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-sky-300 bg-white px-3 text-xs font-semibold text-sky-950 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Back to parcel workspace
+              </button>
+            </div>
+            <ParcelOfficialDossierPanel bbl={row.bbl} compact />
+          </div>
+        )}
+
+        {!officialDossierOpen && visibleWorkflowError && (
           <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
             <span>{visibleWorkflowError}</span>
             {effectiveWorkflowLoadState === 'error' && (
@@ -1643,7 +1693,7 @@ export function ParcelIntelPropertyPanel({
           </div>
         )}
 
-        {tab === 'overview' && (
+        {!officialDossierOpen && tab === 'overview' && (
           <div>
             {row.decision_audit?.readiness && (
               <ParcelAcquisitionBrief
@@ -2492,7 +2542,7 @@ export function ParcelIntelPropertyPanel({
           </div>
         )}
 
-        {tab === 'audit' && (
+        {!officialDossierOpen && tab === 'audit' && (
           <ParcelDecisionAuditPanel
             audit={row.decision_audit}
             workflowItem={workflowItem}
@@ -2508,7 +2558,7 @@ export function ParcelIntelPropertyPanel({
           />
         )}
 
-        {tab === 'underwrite' && (
+        {!officialDossierOpen && tab === 'underwrite' && (
           <div>
             <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs leading-5 text-sky-900">
               This is a fast residual-land-value screen, not an appraisal. Verify zoning,
@@ -2583,7 +2633,8 @@ export function ParcelIntelPropertyPanel({
           </div>
         )}
 
-        {tab === 'workflow' &&
+        {!officialDossierOpen &&
+          tab === 'workflow' &&
           (auth.status === 'authenticated' ? (
             effectiveWorkflowLoadState === 'idle' ||
             effectiveWorkflowLoadState === 'loading' ? (
