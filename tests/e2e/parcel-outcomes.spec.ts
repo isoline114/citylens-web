@@ -76,6 +76,37 @@ const historicalBenchmarkReceipt = {
   not_parcel_confidence: true,
 };
 
+const historicalBrooklynCohort = {
+  borough: 'brooklyn',
+  target: 'dob_nb_job_filing',
+  feature_origin: 2024,
+  outcome_window: '2025-2025',
+  evaluation_scope: 'rolling_origin_latest_out_of_time',
+  ranking_scope: 'historical_within_borough_model_order',
+  cohort: {
+    evaluation_rows: 245853,
+    observed_positive_rows: 240,
+    base_rate: 240 / 245853,
+    top_100: {
+      k: 100,
+      evaluated_rows: 100,
+      observed_hits: 10,
+      precision: 0.1,
+      precision_95ci: [0.0552291370606751, 0.17436566150491345],
+    },
+  },
+  interval: {
+    method: 'wilson_score_observed_top_k',
+    confidence_level: 0.95,
+    scope: 'fixed_historical_borough_ranked_list',
+    limitations:
+      'Fixed historical borough list; not current or parcel confidence.',
+  },
+  evidence_status: 'development_exposed',
+  not_current_accuracy: true,
+  not_parcel_confidence: true,
+};
+
 test('authenticated parcel explorer shows maturity-qualified outcome evidence', async ({
   page,
 }) => {
@@ -249,6 +280,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
               precision_at_1000: 0.104,
               base_rate: 0.0012439591,
               historical_benchmark_receipt: historicalBenchmarkReceipt,
+              historical_borough_cohort: historicalBrooklynCohort,
               prospective_validated: false,
               disclaimer:
                 'Historical next-year DOB new-building filing performance is not seller intent, transaction probability, or acquisition conversion.',
@@ -1438,6 +1470,15 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   );
   await expect(page.getByTestId('historical-benchmark-receipt')).toContainText(
     'Development-exposed evidence',
+  );
+  await expect(page.getByTestId('historical-borough-cohort')).toContainText(
+    'Brooklyn historical cohort',
+  );
+  await expect(page.getByTestId('historical-borough-cohort')).toContainText(
+    '10/100',
+  );
+  await expect(page.getByTestId('historical-borough-cohort')).toContainText(
+    'not this parcel’s probability',
   );
   await expect(page.getByTestId('parcel-decision-audit')).toContainText(
     '34/100 hits',

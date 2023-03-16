@@ -522,6 +522,77 @@ export type ParcelHistoricalBenchmarkReceipt = {
   not_parcel_confidence: true;
 };
 
+export type ParcelHistoricalBoroughSlug =
+  | 'manhattan'
+  | 'bronx'
+  | 'brooklyn'
+  | 'queens'
+  | 'staten_island';
+
+export type ParcelHistoricalBoroughCohort = {
+  evaluation_rows: number;
+  observed_positive_rows: number;
+  base_rate: number;
+  top_100: ParcelHistoricalTopKReceipt;
+};
+
+export type ParcelHistoricalBoroughIntervalReceipt = {
+  method: 'wilson_score_observed_top_k';
+  confidence_level: 0.95;
+  scope: 'fixed_historical_borough_ranked_list';
+  limitations: string;
+};
+
+export type ParcelHistoricalBoroughBenchmarkReceipt = {
+  schema: 'citylens_historical_borough_benchmark_receipt@v1';
+  target: string;
+  feature_origin: number;
+  outcome_window: string;
+  evaluation_scope: string;
+  ranking_scope: 'historical_within_borough_model_order';
+  citywide_evaluation_rows: number;
+  citywide_observed_positive_rows: number;
+  boroughs: Record<
+    ParcelHistoricalBoroughSlug,
+    ParcelHistoricalBoroughCohort
+  >;
+  interval: ParcelHistoricalBoroughIntervalReceipt;
+  source_receipt: {
+    schema: 'citylens_borough_benchmark_attachment@v1';
+    report_file_name: string;
+    report_schema: string;
+    report_sha256: string;
+    report_size_bytes: number;
+    source_model_sha256: string;
+    metadata_only_attachment: true;
+  } | null;
+  evidence_status:
+    | 'unexposed'
+    | 'development_exposed'
+    | 'retired'
+    | 'unclassified';
+  not_current_accuracy: true;
+  not_parcel_confidence: true;
+};
+
+export type ParcelHistoricalBoroughCohortEvidence = {
+  borough: ParcelHistoricalBoroughSlug;
+  target: string;
+  feature_origin: number;
+  outcome_window: string;
+  evaluation_scope: string;
+  ranking_scope: 'historical_within_borough_model_order';
+  cohort: ParcelHistoricalBoroughCohort;
+  interval: ParcelHistoricalBoroughIntervalReceipt;
+  evidence_status:
+    | 'unexposed'
+    | 'development_exposed'
+    | 'retired'
+    | 'unclassified';
+  not_current_accuracy: true;
+  not_parcel_confidence: true;
+};
+
 export type ParcelDecisionAudit = {
   schema_version: 'citylens/parcel-decision-audit@v1';
   /** Exact published feed version used to assemble the cited audit checks. */
@@ -541,6 +612,10 @@ export type ParcelDecisionAudit = {
     precision_at_1000: number | null;
     base_rate: number | null;
     historical_benchmark_receipt?: ParcelHistoricalBenchmarkReceipt | null;
+    historical_borough_benchmark_receipt?:
+      | ParcelHistoricalBoroughBenchmarkReceipt
+      | null;
+    historical_borough_cohort?: ParcelHistoricalBoroughCohortEvidence | null;
     prospective_validated: boolean;
     disclaimer: string;
   };

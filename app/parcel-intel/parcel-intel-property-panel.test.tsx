@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   ParcelHistoricalBenchmarkReceipt,
+  ParcelHistoricalBoroughCohortEvidence,
   ParcelIntelRow,
   ParcelWorkflowItem,
 } from '@/lib/api';
@@ -126,6 +127,37 @@ const historicalReceipt: ParcelHistoricalBenchmarkReceipt = {
     scope: 'fixed_historical_ranked_list',
     limitations:
       'Observed outcome uncertainty only; not model selection, spatial dependence, or current outcomes.',
+  },
+  evidence_status: 'development_exposed',
+  not_current_accuracy: true,
+  not_parcel_confidence: true,
+};
+
+const historicalBrooklynCohort: ParcelHistoricalBoroughCohortEvidence = {
+  borough: 'brooklyn',
+  target: 'dob_nb_job_filing',
+  feature_origin: 2024,
+  outcome_window: '2025-2025',
+  evaluation_scope: 'rolling_origin_latest_out_of_time',
+  ranking_scope: 'historical_within_borough_model_order',
+  cohort: {
+    evaluation_rows: 245853,
+    observed_positive_rows: 240,
+    base_rate: 240 / 245853,
+    top_100: {
+      k: 100,
+      evaluated_rows: 100,
+      observed_hits: 10,
+      precision: 0.1,
+      precision_95ci: [0.0552291370606751, 0.17436566150491345],
+    },
+  },
+  interval: {
+    method: 'wilson_score_observed_top_k',
+    confidence_level: 0.95,
+    scope: 'fixed_historical_borough_ranked_list',
+    limitations:
+      'Fixed historical borough list; not current or parcel confidence.',
   },
   evidence_status: 'development_exposed',
   not_current_accuracy: true,
@@ -1166,6 +1198,7 @@ describe('ParcelIntelPropertyPanel', () => {
               precision_at_1000: 0.104,
               base_rate: 0.0012439591,
               historical_benchmark_receipt: historicalReceipt,
+              historical_borough_cohort: historicalBrooklynCohort,
               prospective_validated: false,
               disclaimer:
                 'Historical next-year DOB new-building filing performance is not seller intent, transaction probability, or acquisition conversion.',
@@ -1260,6 +1293,16 @@ describe('ParcelIntelPropertyPanel', () => {
     expect(screen.getByText(/104\/1,000 hits/)).toBeInTheDocument();
     expect(benchmarkReceipt).toHaveTextContent('Development-exposed evidence');
     expect(benchmarkReceipt).toHaveTextContent('spatial dependence');
+    const boroughCohort = screen.getByTestId(
+      'historical-borough-cohort',
+    );
+    expect(boroughCohort).toHaveTextContent('Brooklyn historical cohort');
+    expect(boroughCohort).toHaveTextContent('10/100');
+    expect(boroughCohort).toHaveTextContent('95% 5.5%–17.4%');
+    expect(boroughCohort).toHaveTextContent(
+      'not this parcel’s probability, current accuracy, seller intent, or acquisition outcome',
+    );
+    expect(screen.getByText('Citywide historical filing benchmark')).toBeInTheDocument();
     expect(screen.getByText('Model input')).toBeInTheDocument();
     expect(screen.getByText('Eligibility gate')).toBeInTheDocument();
     expect(screen.getByText('Diligence only · no rank effect')).toBeInTheDocument();

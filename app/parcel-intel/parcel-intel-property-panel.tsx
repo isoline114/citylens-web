@@ -507,6 +507,11 @@ function ParcelDecisionAuditPanel({
   const evidenceVersionCount = reviewableAuditCount(audit);
   const readinessStyle = readiness ? READINESS_STYLES[readiness.status] : '';
   const benchmark = audit.validation.historical_benchmark_receipt ?? null;
+  const boroughCohort =
+    audit.validation.historical_borough_cohort ?? null;
+  const boroughCohortLabel = boroughCohort
+    ? (BOROUGH_LABELS[boroughCohort.borough] ?? boroughCohort.borough)
+    : null;
   const benchmarkCards = benchmark
     ? [
         {
@@ -633,9 +638,56 @@ function ParcelDecisionAuditPanel({
       )}
 
       <section className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+        {boroughCohort && boroughCohortLabel && (
+          <div
+            data-testid="historical-borough-cohort"
+            className="mb-3 overflow-hidden rounded-xl border border-cyan-200 bg-gradient-to-br from-cyan-50 via-white to-sky-50"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-cyan-100 px-3 py-3">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-800">
+                  {boroughCohortLabel} historical cohort
+                </div>
+                <div className="mt-1 flex items-baseline gap-2 text-slate-950">
+                  <span className="text-2xl font-semibold tracking-tight">
+                    {boroughCohort.cohort.top_100.observed_hits}
+                    <span className="text-base text-slate-400">/100</span>
+                  </span>
+                  <span className="text-xs font-medium text-slate-600">
+                    next-year NB filings
+                  </span>
+                </div>
+              </div>
+              <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-[10px] font-semibold text-cyan-900">
+                95%{' '}
+                {formatRate(
+                  boroughCohort.cohort.top_100.precision_95ci[0],
+                )}
+                –
+                {formatRate(
+                  boroughCohort.cohort.top_100.precision_95ci[1],
+                )}
+              </span>
+            </div>
+            <div className="space-y-2 px-3 py-3 text-[11px] leading-5 text-slate-600">
+              <p>
+                In the fixed 2024→2025 evaluation,{' '}
+                {boroughCohort.cohort.top_100.observed_hits} of the model’s
+                historical {boroughCohortLabel} top 100 received a DOB
+                new-building filing in the following year.
+              </p>
+              <p className="rounded-lg bg-white/80 px-2.5 py-2 text-slate-700 ring-1 ring-inset ring-cyan-100">
+                Cohort context only—not this parcel’s probability, current
+                accuracy, seller intent, or acquisition outcome. The live list
+                uses newer records and current project, ZAP, landmark, and
+                completeness gates.
+              </p>
+            </div>
+          </div>
+        )}
         <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-700">
           <Gauge className="h-3.5 w-3.5" />
-          Historical filing benchmark
+          Citywide historical filing benchmark
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           {benchmarkCards.map((card) => (

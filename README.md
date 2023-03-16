@@ -202,7 +202,12 @@ hits (`34/100` and `104/1,000`), eligible cohort/base-rate denominator,
 observed 95% Wilson ranges, and development-exposed status. Its copy states
 that the ranges omit model-selection uncertainty, spatial dependence, dataset
 shift, and current acquisition outcomes; they are not parcel confidence. The
-audit also renders the API-owned decision-readiness state:
+panel leads with the clicked parcel's borough-specific historical top-100
+cohort when that reconciled receipt is available, then shows the citywide
+benchmark separately. Borough context is explicitly labeled as one fixed
+2024→2025 cohort and never as current accuracy, a property probability, owner
+intent, or an acquisition outcome.
+The audit also renders the API-owned decision-readiness state:
 current blockers, items requiring review, checks that passed the current
 screening gates, and one conservative next diligence action. Signed-in users
 can carry that action into the private workflow as an editable draft; it is
