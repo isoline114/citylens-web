@@ -27,6 +27,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { CITYLENS_DATA_ACCESS_READY_EVENT } from '@/lib/auth/dataAccessEvents';
 import {
   advanceParcelWorkflow,
   ApiError,
@@ -210,7 +211,12 @@ function exportIntegrityMessage(reason: ParcelExportIntegrityFailure): string {
   return 'The export scope did not exactly match the visible acquisition ranking. Refresh the workspace and try again.';
 }
 
-const AUTHENTICATED_INVENTORY_RETRY_DELAYS_MS = [1_000, 3_000, 8_000] as const;
+const AUTHENTICATED_INVENTORY_RETRY_DELAYS_MS = [
+  1_000,
+  3_000,
+  8_000,
+  30_000,
+] as const;
 
 function ExplorerMapSkeleton() {
   return (
@@ -546,7 +552,12 @@ export function ParcelIntelExplorer({
   }, [auth.status, fullInventoryReady, inventoryState]);
 
   useEffect(() => {
-    if (auth.status !== 'authenticated') return;
+    if (
+      auth.status !== 'authenticated' ||
+      inventoryState !== 'incomplete'
+    ) {
+      return;
+    }
     const retryIncompleteInventory = () => {
       if (fullInventoryLoaded.current) return;
       automaticInventoryRetryCount.current = 0;
@@ -554,11 +565,19 @@ export function ParcelIntelExplorer({
     };
     window.addEventListener('focus', retryIncompleteInventory);
     window.addEventListener('online', retryIncompleteInventory);
+    window.addEventListener(
+      CITYLENS_DATA_ACCESS_READY_EVENT,
+      retryIncompleteInventory,
+    );
     return () => {
       window.removeEventListener('focus', retryIncompleteInventory);
       window.removeEventListener('online', retryIncompleteInventory);
+      window.removeEventListener(
+        CITYLENS_DATA_ACCESS_READY_EVENT,
+        retryIncompleteInventory,
+      );
     };
-  }, [auth.status]);
+  }, [auth.status, inventoryState]);
 
   // A signed-out browser must not retain authenticated parcel detail in the
   // comparison workspace. Public-preview comparisons remain available.
@@ -1454,6 +1473,10 @@ export function ParcelIntelExplorer({
                 loadState === 'ready'
                   ? inventoryState === 'upgrading'
                     ? `${rows.length.toLocaleString()} preview`
+                    : inventoryState === 'incomplete'
+                      ? `${rows.length.toLocaleString()} ${
+                          inventoryIssue === 'auth' ? 'preview' : 'partial'
+                        }`
                     : rows.length.toLocaleString()
                   : 'Loading…',
               ],
@@ -1462,6 +1485,8 @@ export function ParcelIntelExplorer({
                 loadState === 'ready'
                   ? inventoryState === 'upgrading'
                     ? 'Rechecking…'
+                    : inventoryState === 'incomplete'
+                      ? `${filtered.length.toLocaleString()} partial`
                     : filtered.length.toLocaleString()
                   : 'Loading…',
               ],

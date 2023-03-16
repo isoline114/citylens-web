@@ -10,14 +10,14 @@ type CodeBlockProps = {
 
 export function CodeBlock({ language = 'bash', label, children }: CodeBlockProps) {
   return (
-    <div className="max-w-full overflow-hidden rounded-md border border-slate-200 bg-slate-900">
+    <div className="max-w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-sm">
       {(label || language) && (
-        <div className="flex min-w-0 items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/40 px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400">
+        <div className="flex min-w-0 items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/70 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
           <span className="min-w-0 truncate">{label ?? language}</span>
           <CopyButton value={children} />
         </div>
       )}
-      <pre className="max-w-full overflow-x-auto overscroll-x-contain px-4 py-3 text-[13px] leading-relaxed text-slate-100">
+      <pre className="max-w-full overflow-x-auto overscroll-x-contain px-4 py-4 text-[12px] leading-6 text-slate-100 sm:text-[13px]">
         <code>{children}</code>
       </pre>
     </div>
@@ -67,9 +67,9 @@ export function Endpoint({
   return (
     <section
       id={id}
-      className="scroll-mt-24 rounded-lg border border-slate-200 bg-white shadow-sm"
+      className="scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
     >
-      <header className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-b border-slate-200 px-4 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+      <header className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-b border-slate-200 bg-slate-50/70 px-4 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
         <span
           className={`inline-flex h-6 items-center rounded-md px-2 font-mono text-xs font-semibold ring-1 ring-inset ${methodClass}`}
         >
@@ -82,7 +82,7 @@ export function Endpoint({
           {authBadge.label}
         </span>
       </header>
-      <div className="space-y-3 px-4 py-4">
+      <div className="space-y-4 px-4 py-4">
         <div>
           <div className="text-sm font-medium text-slate-900">{title}</div>
           <div className="mt-1 text-sm text-slate-700">{description}</div>

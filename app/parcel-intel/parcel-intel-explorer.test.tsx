@@ -11,6 +11,7 @@ import {
   type ParcelIntelMapRow,
   type ParcelIntelRow,
 } from '@/lib/api';
+import { CITYLENS_DATA_ACCESS_READY_EVENT } from '@/lib/auth/dataAccessEvents';
 import type { ParcelDecisionPeer } from './parcel-decision-peers';
 
 const mocks = vi.hoisted(() => ({
@@ -769,6 +770,8 @@ describe('ParcelIntelExplorer', () => {
     expect(screen.getByTestId('parcel-inventory-status')).toHaveTextContent(
       'Inventory incomplete · 125 of 5,000 loaded',
     );
+    expect(screen.getByText('125 preview')).toBeInTheDocument();
+    expect(screen.getByText('125 partial')).toBeInTheDocument();
     expect(
       screen.queryByText(/Full inventory verified/i),
     ).not.toBeInTheDocument();
@@ -788,6 +791,15 @@ describe('ParcelIntelExplorer', () => {
     expect(mocks.getParcelIntelMap).not.toHaveBeenCalledWith(1000, {
       includeAuth: false,
     });
+
+    window.dispatchEvent(
+      new Event(CITYLENS_DATA_ACCESS_READY_EVENT),
+    );
+    await waitFor(() =>
+      expect(mocks.getParcelIntelMap.mock.calls.length).toBeGreaterThanOrEqual(
+        3,
+      ),
+    );
   });
 
   it('keeps the public preview and does not request private rows without a refreshed credential', async () => {

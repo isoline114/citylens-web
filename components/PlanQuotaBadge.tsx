@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 
 import { ApiError, getMe, type MeResponse } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { CITYLENS_DATA_ACCESS_READY_EVENT } from '@/lib/auth/dataAccessEvents';
 
 export function PlanQuotaBadge() {
   const auth = useAuth();
@@ -28,6 +29,12 @@ export function PlanQuotaBadge() {
         if (!alive) return;
         setMe(next);
         setCredentialRejected(false);
+        // This request proves that the browser's CityLens API credential is
+        // usable. Wake any product surface that exhausted an earlier token
+        // refresh while Neon was still restoring the browser session.
+        window.dispatchEvent(
+          new Event(CITYLENS_DATA_ACCESS_READY_EVENT),
+        );
       })
       .catch((err: unknown) => {
         if (!alive) return;

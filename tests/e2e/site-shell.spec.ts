@@ -70,10 +70,31 @@ test('shared shell exposes one landmark, active navigation, and a true sticky fo
     await expectNoWcagViolations(page, policy.title);
   }
 
+  await page.goto('/docs');
+  await expect(
+    page.getByRole('heading', {
+      level: 1,
+      name: 'Build acquisition workflows on a source-aware city model.',
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('navigation', { name: 'Developer center sections' }),
+  ).toBeVisible();
+  await expect(page.getByTestId('developer-center-hero')).toBeVisible();
+  await expect(
+    page.getByText(/authenticated_full/),
+  ).toBeVisible();
+  await expectNoWcagViolations(page, 'Developer center');
+
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto('/privacy');
   await expectNoDocumentHorizontalOverflow(
     page,
     'Privacy notice at 400% equivalent zoom',
+  );
+  await page.goto('/docs');
+  await expectNoDocumentHorizontalOverflow(
+    page,
+    'Developer center at 400% equivalent zoom',
   );
 });

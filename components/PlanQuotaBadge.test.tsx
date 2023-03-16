@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '@/lib/api';
+import { CITYLENS_DATA_ACCESS_READY_EVENT } from '@/lib/auth/dataAccessEvents';
 
 const mocks = vi.hoisted(() => ({
   getMe: vi.fn(),
@@ -51,6 +52,11 @@ describe('PlanQuotaBadge', () => {
   });
 
   it('renders the verified plan receipt', async () => {
+    const dataAccessReady = vi.fn();
+    window.addEventListener(
+      CITYLENS_DATA_ACCESS_READY_EVENT,
+      dataAccessReady,
+    );
     mocks.getMe.mockResolvedValue({
       user: {
         user_id: 'user-1',
@@ -71,6 +77,11 @@ describe('PlanQuotaBadge', () => {
 
     expect(await screen.findByTestId('plan-quota-badge')).toHaveTextContent(
       'Free plan: 2/5 runs this month',
+    );
+    expect(dataAccessReady).toHaveBeenCalledOnce();
+    window.removeEventListener(
+      CITYLENS_DATA_ACCESS_READY_EVENT,
+      dataAccessReady,
     );
   });
 
