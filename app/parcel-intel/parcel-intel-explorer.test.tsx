@@ -73,13 +73,25 @@ vi.mock('./parcel-intel-explorer-map', () => ({
   ParcelIntelExplorerMap: ({
     rows,
     overlay,
+    inventoryScope,
+    inventoryLoadedCount,
+    inventoryAvailableCount,
     onViewportRowsChange,
   }: {
     rows: ParcelIntelRow[];
     overlay: string;
+    inventoryScope: 'public_preview' | 'authenticated_full';
+    inventoryLoadedCount: number;
+    inventoryAvailableCount: number;
     onViewportRowsChange?: (bbls: string[]) => void;
   }) => (
-    <div data-testid="citywide-map-stub" data-overlay={overlay}>
+    <div
+      data-testid="citywide-map-stub"
+      data-overlay={overlay}
+      data-inventory-scope={inventoryScope}
+      data-inventory-loaded={inventoryLoadedCount}
+      data-inventory-available={inventoryAvailableCount}
+    >
       {rows.length} mapped rows
       <button
         type="button"
@@ -334,6 +346,14 @@ describe('ParcelIntelExplorer', () => {
       'data-overlay',
       'borough',
     );
+    expect(screen.getByTestId('citywide-map-stub')).toHaveAttribute(
+      'data-inventory-scope',
+      'public_preview',
+    );
+    expect(screen.getByTestId('citywide-map-stub')).toHaveAttribute(
+      'data-inventory-loaded',
+      '2',
+    );
     expect(mocks.getParcelIntelMap).toHaveBeenCalledWith(1000, {
       includeAuth: false,
     });
@@ -412,6 +432,14 @@ describe('ParcelIntelExplorer', () => {
     expect(
       screen.getByTestId('parcel-desktop-access-status'),
     ).toHaveTextContent('AccessFull · verified');
+    expect(screen.getByTestId('citywide-map-stub')).toHaveAttribute(
+      'data-inventory-scope',
+      'authenticated_full',
+    );
+    expect(screen.getByTestId('citywide-map-stub')).toHaveAttribute(
+      'data-inventory-loaded',
+      '2',
+    );
     expect(mocks.getParcelIntelMap).toHaveBeenCalledWith(1000, {
       includeAuth: true,
     });

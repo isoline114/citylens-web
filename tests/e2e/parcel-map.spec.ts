@@ -88,6 +88,9 @@ test('clusters the citywide preview and converges borough URLs on one explorer',
 
   const map = page.getByTestId('parcel-citywide-map');
   await expect(map).toBeVisible();
+  await expect(page.getByTestId('parcel-map-inventory-scope')).toHaveText(
+    'Public preview · 125 of 5,000 loaded',
+  );
   await expect(map.getByText('125 in view')).toBeVisible();
   await expect(map.getByText('125 matches')).toBeVisible();
   await expect(page.locator('.parcel-map-cluster-icon')).toHaveCount(5);

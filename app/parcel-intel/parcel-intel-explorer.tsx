@@ -2566,6 +2566,13 @@ export function ParcelIntelExplorer({
               selectedBbl={selectedBbl}
               selectedRow={selectedDetail}
               overlay={overlay}
+              inventoryScope={
+                fullInventoryReady
+                  ? 'authenticated_full'
+                  : 'public_preview'
+              }
+              inventoryLoadedCount={rows.length}
+              inventoryAvailableCount={totalAvailable}
               onSelect={(bbl) => selectParcel(bbl, 'map')}
               onViewportRowsChange={handleViewportRowsChange}
             />

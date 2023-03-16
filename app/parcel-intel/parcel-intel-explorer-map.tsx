@@ -56,6 +56,9 @@ type Props = {
   selectedBbl: string | null;
   selectedRow?: ParcelIntelRow | null;
   overlay: ExplorerOverlay;
+  inventoryScope: 'public_preview' | 'authenticated_full';
+  inventoryLoadedCount: number;
+  inventoryAvailableCount: number;
   onSelect: (bbl: string) => void;
   onViewportRowsChange?: (bbls: string[]) => void;
 };
@@ -311,6 +314,9 @@ export function ParcelIntelExplorerMap({
   selectedBbl,
   selectedRow = null,
   overlay,
+  inventoryScope,
+  inventoryLoadedCount,
+  inventoryAvailableCount,
   onSelect,
   onViewportRowsChange,
 }: Props) {
@@ -347,6 +353,10 @@ export function ParcelIntelExplorerMap({
     | GeoJsonObject
     | null
     | undefined;
+  const fullInventory = inventoryScope === 'authenticated_full';
+  const inventoryLabel = fullInventory
+    ? `Full inventory · ${inventoryLoadedCount.toLocaleString()} loaded`
+    : `Public preview · ${inventoryLoadedCount.toLocaleString()} of ${inventoryAvailableCount.toLocaleString()} loaded`;
 
   useEffect(() => {
     onViewportRowsChange?.(visibleBbls);
@@ -357,7 +367,11 @@ export function ParcelIntelExplorerMap({
       className="relative h-full min-h-[420px] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-inner sm:min-h-[560px]"
       data-testid="parcel-citywide-map"
       role="region"
-      aria-label={`Interactive citywide map with ${mappable.length.toLocaleString()} mapped ${
+      aria-label={`Interactive citywide map using ${
+        fullInventory
+          ? `the full ${inventoryLoadedCount.toLocaleString()}-parcel inventory`
+          : `a public preview of ${inventoryLoadedCount.toLocaleString()} of ${inventoryAvailableCount.toLocaleString()} parcels`
+      }, with ${mappable.length.toLocaleString()} matching ${
         mappable.length === 1 ? 'parcel' : 'parcels'
       }. Use the acquisition ranking after the map for a keyboard-accessible list.`}
     >
@@ -427,14 +441,27 @@ export function ParcelIntelExplorerMap({
         )}
       </MapContainer>
 
-      <div className="absolute right-3 top-3 z-[400] flex items-center gap-1 rounded-full border border-slate-200 bg-white/95 p-1 pl-3 text-xs text-slate-700 shadow-md backdrop-blur">
-        <span className="font-semibold">
-          {visibleCount.toLocaleString()} in view
+      <div className="absolute right-3 top-3 z-[400] flex max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-end gap-x-1 gap-y-1 rounded-xl border border-slate-200 bg-white/95 p-1 pl-2 text-[11px] text-slate-700 shadow-md backdrop-blur sm:rounded-full sm:pl-3 sm:text-xs">
+        <span
+          data-testid="parcel-map-inventory-scope"
+          className={`rounded-full px-2 py-1 font-semibold ${
+            fullInventory
+              ? 'bg-emerald-50 text-emerald-800'
+              : 'bg-amber-50 text-amber-900'
+          }`}
+        >
+          {inventoryLabel}
         </span>
         <span className="text-slate-400" aria-hidden="true">
-          /
+          ·
         </span>
-        <span>{mappable.length.toLocaleString()} matches</span>
+        <span className="font-semibold">
+          {mappable.length.toLocaleString()} matches
+        </span>
+        <span className="text-slate-400" aria-hidden="true">
+          ·
+        </span>
+        <span>{visibleCount.toLocaleString()} in view</span>
         <button
           type="button"
           onClick={() => {

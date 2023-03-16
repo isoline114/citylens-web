@@ -116,6 +116,9 @@ page.on('response', async (response) => {
 
 async function verifyClusteredMap(expectedFormatted) {
   const map = page.getByTestId('parcel-citywide-map');
+  const inventoryScopeLabel = (
+    await page.getByTestId('parcel-map-inventory-scope').textContent()
+  )?.trim();
   await map
     .getByText(`${expectedFormatted} matches`, { exact: true })
     .waitFor({ timeout: 30_000 });
@@ -135,16 +138,19 @@ async function verifyClusteredMap(expectedFormatted) {
     .isVisible();
   const mappedAriaLabel = await map.getAttribute('aria-label');
   const receipt = {
+    inventory_scope_label: inventoryScopeLabel ?? null,
     in_view_count: positiveFormattedCountWithSuffix(inViewText, 'in view'),
     match_count: positiveFormattedCountWithSuffix(matchText, 'matches'),
     cluster_count: clusterCount,
     fit_control_visible: fitControlVisible,
     mapped_aria_label_matches:
       mappedAriaLabel?.includes(
-        `with ${expectedFormatted} mapped parcels`,
+        `with ${expectedFormatted} matching parcels`,
       ) === true,
   };
   if (
+    receipt.inventory_scope_label !==
+      `Full inventory · ${expectedFormatted} loaded` ||
     receipt.in_view_count !== expectedCount ||
     receipt.match_count !== expectedCount ||
     receipt.cluster_count <= 0 ||
