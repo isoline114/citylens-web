@@ -173,6 +173,9 @@ source-specific ACRIS deed/recorded-owner facts and official NYC links.
 Signed-in users can open the same compact, non-scoring dossier directly from
 any ranked parcel workspace; they no longer need to leave the lead inventory
 or repeat an address lookup to inspect its current official-source packet.
+They can create a bounded verification task from that packet, or return to an
+existing workflow unchanged. Viewing the dossier never marks evidence
+reviewed.
 PLUTO/ACRIS owner disagreement remains visible. The panel explicitly says it
 is not a lead score, title report, appraisal, zoning calculation, feasibility
 study, beneficial-owner determination, or seller-intent signal. The existing

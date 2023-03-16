@@ -1562,10 +1562,19 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   expect(JSON.stringify(officialDossierEvent)).not.toMatch(
     /3020960069|100 E 21|pluto owner|acris recorded/i,
   );
+  await expect(
+    page.getByTestId('official-dossier-workflow-handoff'),
+  ).toContainText('Viewing it never marks evidence reviewed.');
   await page
-    .getByRole('button', { name: 'Back to parcel workspace' })
+    .getByRole('button', { name: 'Open verification workflow' })
     .click();
   await expect(rankedDossier).not.toBeVisible();
+  await expect(
+    page
+      .getByTestId('parcel-workspace-tabs')
+      .getByRole('button', { name: 'Workflow' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('Saved to your pipeline')).toBeVisible();
 
   await page
     .getByRole('button', {

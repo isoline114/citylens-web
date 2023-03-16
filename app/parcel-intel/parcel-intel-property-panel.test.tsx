@@ -662,6 +662,65 @@ describe('ParcelIntelPropertyPanel', () => {
     expect(dossierButton).toHaveAttribute('aria-pressed', 'false');
   });
 
+  it('turns an official dossier into a bounded verification task without copying source facts', async () => {
+    mocks.authStatus = 'authenticated';
+    mocks.saveParcelWorkflow.mockResolvedValue({
+      bbl: parcel.bbl,
+      borough: 'brooklyn',
+      stage: 'reviewing',
+      notes: '',
+      tags: [],
+      assignee: null,
+      watching: true,
+      decision_reason: null,
+      next_action:
+        'Verify recorded ownership, deed history, mapped zoning, and parcel constraints in the cited official sources.',
+      next_action_due_date: null,
+      outcome: 'unknown',
+      snapshot: {} as ParcelWorkflowItem['snapshot'],
+      saved_at: '2026-07-29T18:00:00Z',
+      updated_at: '2026-07-29T18:00:00Z',
+    } satisfies ParcelWorkflowItem);
+
+    render(<ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Official dossier' }),
+    );
+    expect(
+      screen.getByTestId('official-dossier-workflow-handoff'),
+    ).toHaveTextContent('Viewing it never marks evidence reviewed.');
+
+    const saveVerificationTask = await screen.findByRole('button', {
+      name: 'Save verification task',
+    });
+    await waitFor(() => expect(saveVerificationTask).toBeEnabled());
+    fireEvent.click(saveVerificationTask);
+
+    await waitFor(() =>
+      expect(mocks.saveParcelWorkflow).toHaveBeenCalledWith(parcel.bbl, {
+        borough: 'brooklyn',
+        stage: 'reviewing',
+        notes: '',
+        tags: [],
+        assignee: null,
+        watching: true,
+        decision_reason: null,
+        next_action:
+          'Verify recorded ownership, deed history, mapped zoning, and parcel constraints in the cited official sources.',
+        next_action_due_date: null,
+        outcome: 'unknown',
+      }),
+    );
+    const request = mocks.saveParcelWorkflow.mock.calls[0]?.[1];
+    expect(JSON.stringify(request)).not.toMatch(
+      /example owner|224 clarkson|3050660023|pluto|acris|source date/i,
+    );
+    expect(await screen.findByText('Saved to your pipeline')).toBeVisible();
+    expect(
+      screen.queryByTestId('ranked-parcel-official-dossier'),
+    ).not.toBeInTheDocument();
+  });
+
   it('binds workflow evidence review to the exact server citation version', async () => {
     mocks.authStatus = 'authenticated';
     const item = {

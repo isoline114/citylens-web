@@ -1140,6 +1140,7 @@ export function ParcelIntelPropertyPanel({
     draft: WorkflowDraft,
     options?: {
       openAfterSave?: boolean;
+      closeDossierAfterSave?: boolean;
     },
   ) => {
     if (effectiveWorkflowLoadState !== 'ready') return;
@@ -1160,6 +1161,9 @@ export function ParcelIntelPropertyPanel({
         return;
       }
       setWorkflowItem(saved);
+      if (options?.closeDossierAfterSave) {
+        setOfficialDossierOpen(false);
+      }
       if (options?.openAfterSave) {
         setWorkflowEntry('editor');
         setTab('workflow');
@@ -1220,6 +1224,33 @@ export function ParcelIntelPropertyPanel({
         outcome: 'unknown',
       },
       { openAfterSave: true },
+    );
+  };
+
+  const continueOfficialSourceVerification = () => {
+    if (workflowItem) {
+      setOfficialDossierOpen(false);
+      setWorkflowEntry('editor');
+      setTab('workflow');
+      return;
+    }
+    void saveWorkflow(
+      {
+        stage: 'reviewing',
+        notes: '',
+        tags: [],
+        assignee: null,
+        watching: true,
+        decision_reason: null,
+        next_action:
+          'Verify recorded ownership, deed history, mapped zoning, and parcel constraints in the cited official sources.',
+        next_action_due_date: null,
+        outcome: 'unknown',
+      },
+      {
+        openAfterSave: true,
+        closeDossierAfterSave: true,
+      },
     );
   };
 
@@ -1655,7 +1686,10 @@ export function ParcelIntelPropertyPanel({
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
         {officialDossierOpen && (
           <div data-testid="ranked-parcel-official-dossier">
-            <div className="mb-3 flex flex-col gap-2 rounded-xl border border-sky-200 bg-sky-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div
+              className="mb-3 flex flex-col gap-3 rounded-xl border border-sky-200 bg-sky-50 p-3 sm:flex-row sm:items-center sm:justify-between"
+              data-testid="official-dossier-workflow-handoff"
+            >
               <div>
                 <div className="text-xs font-semibold text-sky-950">
                   Current official-source packet
@@ -1663,16 +1697,46 @@ export function ParcelIntelPropertyPanel({
                 <p className="mt-0.5 text-[11px] leading-4 text-sky-800">
                   Non-scoring PLUTO and ACRIS evidence for this exact BBL.
                 </p>
+                <p className="mt-1 text-[10px] leading-4 text-sky-700">
+                  Viewing it never marks evidence reviewed.
+                </p>
               </div>
-              <button
-                type="button"
-                autoFocus
-                onClick={() => setOfficialDossierOpen(false)}
-                className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-sky-300 bg-white px-3 text-xs font-semibold text-sky-950 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                Back to parcel workspace
-              </button>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <button
+                  type="button"
+                  autoFocus
+                  aria-label="Back to parcel workspace"
+                  onClick={() => setOfficialDossierOpen(false)}
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-sky-300 bg-white px-3 text-xs font-semibold text-sky-950 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={continueOfficialSourceVerification}
+                  disabled={
+                    workflowBusy || effectiveWorkflowLoadState !== 'ready'
+                  }
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {workflowBusy ||
+                  effectiveWorkflowLoadState === 'idle' ||
+                  effectiveWorkflowLoadState === 'loading' ? (
+                    <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                  ) : workflowItem ? (
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  ) : (
+                    <BookmarkPlus className="h-3.5 w-3.5" />
+                  )}
+                  {effectiveWorkflowLoadState === 'idle' ||
+                  effectiveWorkflowLoadState === 'loading'
+                    ? 'Checking pipeline…'
+                    : workflowItem
+                      ? 'Open verification workflow'
+                      : 'Save verification task'}
+                </button>
+              </div>
             </div>
             <ParcelOfficialDossierPanel bbl={row.bbl} compact />
           </div>
