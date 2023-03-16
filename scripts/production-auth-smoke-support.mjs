@@ -138,6 +138,62 @@ export function summarizeBrowserErrors(messages) {
   });
 }
 
+export function encryptBrowserDiagnostics(entries, publicKeyBase64) {
+  if (
+    !Array.isArray(entries) ||
+    entries.length === 0 ||
+    typeof publicKeyBase64 !== 'string' ||
+    publicKeyBase64.trim().length === 0
+  ) {
+    return null;
+  }
+
+  const schema = 'citylens/encrypted-browser-diagnostic@v1';
+  const payload = Buffer.from(
+    JSON.stringify({
+      schema,
+      errors: entries.slice(0, 3).map((entry) => ({
+        surface: entry?.surface === 'mobile' ? 'mobile' : 'desktop',
+        checkpoint: browserCheckpoint(entry?.checkpoint),
+        name: String(entry?.name ?? ''),
+        message: String(entry?.message ?? ''),
+        stack: String(entry?.stack ?? ''),
+      })),
+    }),
+    'utf8',
+  );
+  const publicKey = createPublicKey({
+    key: Buffer.from(publicKeyBase64.trim(), 'base64'),
+    format: 'der',
+    type: 'spki',
+  });
+  const key = randomBytes(32);
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  cipher.setAAD(Buffer.from(schema, 'utf8'));
+  const ciphertext = Buffer.concat([
+    cipher.update(payload),
+    cipher.final(),
+  ]);
+
+  return {
+    schema,
+    algorithm: 'RSA-OAEP-256+A256GCM',
+    error_count: Math.min(entries.length, 3),
+    encrypted_key: publicEncrypt(
+      {
+        key: publicKey,
+        oaepHash: 'sha256',
+        padding: constants.RSA_PKCS1_OAEP_PADDING,
+      },
+      key,
+    ).toString('base64'),
+    iv: iv.toString('base64'),
+    auth_tag: cipher.getAuthTag().toString('base64'),
+    ciphertext: ciphertext.toString('base64'),
+  };
+}
+
 function parseCsvRecords(value) {
   if (typeof value !== 'string' || value.length === 0) return [];
   const records = [];
@@ -284,4 +340,11 @@ export function summarizeRunListResponse(status, payload) {
 
   return receipt;
 }
-import { createHash } from 'node:crypto';
+import {
+  constants,
+  createCipheriv,
+  createHash,
+  createPublicKey,
+  publicEncrypt,
+  randomBytes,
+} from 'node:crypto';

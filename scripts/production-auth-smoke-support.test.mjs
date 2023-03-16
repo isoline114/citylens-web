@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import {
+  constants,
+  createDecipheriv,
+  generateKeyPairSync,
+  privateDecrypt,
+} from 'node:crypto';
 
 import {
+  encryptBrowserDiagnostics,
   positiveFormattedCount,
   positiveFormattedCountWithSuffix,
   summarizeParcelCsv,
@@ -91,6 +98,67 @@ describe('production authenticated smoke support', () => {
     expect(JSON.stringify(receipt)).not.toMatch(
       /privatevalue|privatefunction|private\\.js/i,
     );
+  });
+
+  it('encrypts opt-in diagnostics without retaining plaintext in the envelope', () => {
+    const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+    });
+    const publicKeyBase64 = publicKey
+      .export({ format: 'der', type: 'spki' })
+      .toString('base64');
+    const envelope = encryptBrowserDiagnostics(
+      [
+        {
+          surface: 'desktop',
+          checkpoint: 'parcel_workspace',
+          name: 'Error',
+          message: 'private diagnostic sentinel',
+          stack: 'private stack sentinel',
+        },
+      ],
+      publicKeyBase64,
+    );
+
+    expect(envelope).toMatchObject({
+      schema: 'citylens/encrypted-browser-diagnostic@v1',
+      algorithm: 'RSA-OAEP-256+A256GCM',
+      error_count: 1,
+    });
+    expect(JSON.stringify(envelope)).not.toMatch(/private|sentinel|stack/i);
+
+    const key = privateDecrypt(
+      {
+        key: privateKey,
+        oaepHash: 'sha256',
+        padding: constants.RSA_PKCS1_OAEP_PADDING,
+      },
+      Buffer.from(envelope.encrypted_key, 'base64'),
+    );
+    const decipher = createDecipheriv(
+      'aes-256-gcm',
+      key,
+      Buffer.from(envelope.iv, 'base64'),
+    );
+    decipher.setAAD(Buffer.from(envelope.schema, 'utf8'));
+    decipher.setAuthTag(Buffer.from(envelope.auth_tag, 'base64'));
+    const plaintext = Buffer.concat([
+      decipher.update(Buffer.from(envelope.ciphertext, 'base64')),
+      decipher.final(),
+    ]).toString('utf8');
+
+    expect(JSON.parse(plaintext)).toEqual({
+      schema: 'citylens/encrypted-browser-diagnostic@v1',
+      errors: [
+        {
+          surface: 'desktop',
+          checkpoint: 'parcel_workspace',
+          name: 'Error',
+          message: 'private diagnostic sentinel',
+          stack: 'private stack sentinel',
+        },
+      ],
+    });
   });
 
   it('summarizes an RFC 4180 parcel export without retaining identities', () => {

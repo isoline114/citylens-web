@@ -7,6 +7,7 @@ import process from 'node:process';
 import { chromium } from '@playwright/test';
 
 import {
+  encryptBrowserDiagnostics,
   positiveFormattedCount,
   positiveFormattedCountWithSuffix,
   summarizeBrowserErrors,
@@ -20,6 +21,8 @@ const webBase = (
 ).replace(/\/+$/, '');
 const email = process.env.CITYLENS_WEB_SMOKE_EMAIL?.trim();
 const password = process.env.CITYLENS_WEB_SMOKE_PASSWORD;
+const diagnosticPublicKey =
+  process.env.CITYLENS_DIAGNOSTIC_PUBLIC_KEY_B64?.trim();
 const expectedCount = Number(process.env.CITYLENS_EXPECTED_PARCEL_COUNT || 5_000);
 const mobileViewport = { width: 390, height: 844 };
 const outputDir = path.resolve(
@@ -870,5 +873,18 @@ await fs.writeFile(
   `${JSON.stringify(report, null, 2)}\n`,
   'utf8',
 );
+if (diagnosticPublicKey && pageErrors.length > 0) {
+  const encryptedDiagnostic = encryptBrowserDiagnostics(
+    pageErrors,
+    diagnosticPublicKey,
+  );
+  if (encryptedDiagnostic) {
+    await fs.writeFile(
+      path.join(outputDir, 'browser-diagnostic.encrypted.json'),
+      `${JSON.stringify(encryptedDiagnostic, null, 2)}\n`,
+      'utf8',
+    );
+  }
+}
 console.log(JSON.stringify(report, null, 2));
 process.exit(passed ? 0 : 1);

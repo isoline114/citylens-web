@@ -516,6 +516,10 @@ as a boolean without storing the credential or account identity. Browser
 failures retain only a coarse category, exception type, message shape, runtime
 source, action checkpoint, desktop/mobile surface, and truncated SHA-256
 fingerprint—not the raw message or stack. The thesis
+workflow also accepts an optional one-time DER public key on a manual run.
+When supplied, raw browser diagnostics are hybrid-encrypted on the runner and
+uploaded only as ciphertext; the matching private key never enters GitHub or
+the application. Scheduled runs never produce that diagnostic envelope. The thesis
 check requires a reviewed, positive-match
 receipt, the expected visible filters, and an accepted
 `thesis_composer_applied:thesis_composer` API response whose JSON keys are

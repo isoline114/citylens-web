@@ -10,6 +10,10 @@ on:
         required: false
         default: https://www.citylens.dev
         type: string
+      diagnostic_public_key_b64:
+        description: Optional one-time DER public key for encrypted browser diagnostics
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -26,6 +30,7 @@ jobs:
       CITYLENS_WEB_BASE: ${{ inputs.web_base || 'https://www.citylens.dev' }}
       CITYLENS_WEB_SMOKE_EMAIL: ${{ secrets.CITYLENS_WEB_SMOKE_EMAIL }}
       CITYLENS_WEB_SMOKE_PASSWORD: ${{ secrets.CITYLENS_WEB_SMOKE_PASSWORD }}
+      CITYLENS_DIAGNOSTIC_PUBLIC_KEY_B64: ${{ inputs.diagnostic_public_key_b64 }}
     steps:
       - name: Check out verifier
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
