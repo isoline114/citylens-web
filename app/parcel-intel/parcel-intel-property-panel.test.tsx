@@ -317,6 +317,62 @@ describe('ParcelIntelPropertyPanel', () => {
     );
   });
 
+  it('turns an adjusted screen into a bounded diligence workflow without saving financial inputs', async () => {
+    mocks.authStatus = 'authenticated';
+    mocks.saveParcelWorkflow.mockResolvedValue({
+      bbl: parcel.bbl,
+      borough: 'brooklyn',
+      stage: 'reviewing',
+      notes: '',
+      tags: [],
+      assignee: null,
+      watching: true,
+      decision_reason: null,
+      next_action:
+        'Validate current zoning capacity, market evidence, and cost assumptions.',
+      next_action_due_date: null,
+      outcome: 'unknown',
+      snapshot: {} as ParcelWorkflowItem['snapshot'],
+      saved_at: '2026-07-29T14:00:00Z',
+      updated_at: '2026-07-29T14:00:00Z',
+    } satisfies ParcelWorkflowItem);
+
+    render(<ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Underwrite' }));
+    const saveForDiligence = await screen.findByRole('button', {
+      name: 'Save for diligence',
+    });
+    expect(saveForDiligence).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText('Value / sellable SF'), {
+      target: { value: '1000' },
+    });
+    await waitFor(() => expect(saveForDiligence).toBeEnabled());
+    fireEvent.click(saveForDiligence);
+
+    await waitFor(() =>
+      expect(mocks.saveParcelWorkflow).toHaveBeenCalledWith(parcel.bbl, {
+        borough: 'brooklyn',
+        stage: 'reviewing',
+        notes: '',
+        tags: [],
+        assignee: null,
+        watching: true,
+        decision_reason: null,
+        next_action:
+          'Validate current zoning capacity, market evidence, and cost assumptions.',
+        next_action_due_date: null,
+        outcome: 'unknown',
+      }),
+    );
+    const request = mocks.saveParcelWorkflow.mock.calls[0]?.[1];
+    expect(JSON.stringify(request)).not.toMatch(
+      /1000|900|400|value_per|hard_cost|sellable|margin/i,
+    );
+    expect(await screen.findByText('Saved to your pipeline')).toBeVisible();
+  });
+
   it('explains and links acquisition-blocking ZAP entitlement activity', () => {
     render(
       <ParcelIntelPropertyPanel

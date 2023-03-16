@@ -232,6 +232,12 @@ current parcel capacity input across cases, floors negative residuals at zero,
 and lists financing, tax, carrying, affordable-housing, demolition, tenancy,
 environmental, assemblage, and entitlement omissions. It is a screening
 comparison, not an appraisal or valuation.
+After a signed-in user changes an assumption, the parcel panel offers a
+deliberate handoff into the canonical diligence workflow. That handoff stores
+the parcel snapshot and a conservative validation action, while all values,
+costs, efficiencies, margins, and calculated residuals remain session-only.
+An existing workflow is opened unchanged rather than duplicated or silently
+overwritten.
 The methodology disclosure separately renders the exact live production
 cohort's awaiting, collecting, or mature state from the public-safe engine
 contract. Pre-observation nulls are described as unavailable—not `0%`;

@@ -950,6 +950,7 @@ export function ParcelIntelPropertyPanel({
     null,
   );
   const [workflowReloadKey, setWorkflowReloadKey] = useState(0);
+  const [underwritingAdjusted, setUnderwritingAdjusted] = useState(false);
   const activeBblRef = useRef(row.bbl);
   const workflowMutationIdRef = useRef(0);
   const trackedDecisionAuditOpensRef = useRef(new Set<string>());
@@ -1018,6 +1019,7 @@ export function ParcelIntelPropertyPanel({
   };
 
   const trackFirstUnderwritingAdjustment = () => {
+    setUnderwritingAdjusted(true);
     if (
       auth.status !== 'authenticated' ||
       trackedUnderwritingAdjustmentsRef.current.has(row.bbl)
@@ -1050,6 +1052,7 @@ export function ParcelIntelPropertyPanel({
     setWorkflowBusy(false);
     setEvidenceReviewBusyKey(null);
     setEvidenceIssueBusyKey(null);
+    setUnderwritingAdjusted(false);
     setWorkflowError(null);
     setWorkflowContextBbl(row.bbl);
     if (auth.status !== 'authenticated') {
@@ -1154,6 +1157,30 @@ export function ParcelIntelPropertyPanel({
       },
       { openAfterSave: true },
     );
+
+  const continueUnderwritingDiligence = () => {
+    if (workflowItem) {
+      setTab('workflow');
+      return;
+    }
+    void saveWorkflow(
+      {
+        stage: 'reviewing',
+        notes: '',
+        tags: [],
+        assignee: null,
+        watching: true,
+        decision_reason: null,
+        next_action:
+          row.mandatory_inclusionary_housing === true
+            ? 'Validate MIH requirements, current zoning capacity, market evidence, and cost assumptions.'
+            : 'Validate current zoning capacity, market evidence, and cost assumptions.',
+        next_action_due_date: null,
+        outcome: 'unknown',
+      },
+      { openAfterSave: true },
+    );
+  };
 
   const removeWorkflow = async () => {
     const bbl = row.bbl;
@@ -2445,6 +2472,67 @@ export function ParcelIntelPropertyPanel({
               defaultOpen
               onAssumptionsChange={trackFirstUnderwritingAdjustment}
             />
+            <section
+              className="mt-3 rounded-xl border border-slate-200 bg-white p-3"
+              data-testid="underwriting-diligence-handoff"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h4 className="flex items-center gap-1.5 text-xs font-semibold text-slate-950">
+                    <BriefcaseBusiness className="h-3.5 w-3.5 text-sky-700" />
+                    Turn the screen into diligence
+                  </h4>
+                  <p className="mt-1 max-w-md text-xs leading-5 text-slate-600">
+                    {workflowItem
+                      ? 'Continue with the saved evidence snapshot and next action.'
+                      : underwritingAdjusted
+                        ? 'Preserve this parcel and assign validation of capacity, market evidence, and costs.'
+                        : 'Adjust at least one assumption above before advancing this screen.'}
+                  </p>
+                  <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                    Financial inputs stay in this browser session and are never
+                    copied into the workflow.
+                  </p>
+                </div>
+                {auth.status === 'authenticated' ? (
+                  <button
+                    type="button"
+                    onClick={continueUnderwritingDiligence}
+                    disabled={
+                      workflowBusy ||
+                      effectiveWorkflowLoadState !== 'ready' ||
+                      (!workflowItem && !underwritingAdjusted)
+                    }
+                    className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {workflowBusy ||
+                    effectiveWorkflowLoadState === 'idle' ||
+                    effectiveWorkflowLoadState === 'loading' ? (
+                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                    ) : workflowItem ? (
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    ) : (
+                      <BookmarkPlus className="h-3.5 w-3.5" />
+                    )}
+                    {effectiveWorkflowLoadState === 'idle' ||
+                    effectiveWorkflowLoadState === 'loading'
+                      ? 'Checking pipeline…'
+                      : workflowItem
+                        ? 'Continue diligence'
+                        : 'Save for diligence'}
+                  </button>
+                ) : (
+                  <Link
+                    href={`/sign-in?next=${encodeURIComponent(
+                      `/parcel-intel?bbl=${row.bbl}`,
+                    )}`}
+                    className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800"
+                  >
+                    Sign in to save
+                  </Link>
+                )}
+              </div>
+            </section>
           </div>
         )}
 

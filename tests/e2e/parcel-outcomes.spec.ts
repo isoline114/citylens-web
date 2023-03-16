@@ -1276,6 +1276,12 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await page
     .getByLabel('Hard cost / gross SF', { exact: true })
     .fill('425');
+  await expect(
+    page.getByTestId('underwriting-diligence-handoff'),
+  ).toContainText('Financial inputs stay in this browser session');
+  await expect(
+    page.getByRole('button', { name: 'Continue diligence' }),
+  ).toBeVisible();
   await expect
     .poll(() => productEvents)
     .toEqual([

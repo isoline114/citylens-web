@@ -175,7 +175,8 @@ export function MeshViewer({ url }: { url: string }) {
           data-testid="mesh-empty"
         >
           <AlertTriangle className="mr-2 h-4 w-4" />
-          Mesh is empty (0 vertices). This demo run produced placeholder data.
+          Mesh is empty (0 vertices). Regenerate this run before using the 3D
+          output.
         </div>
       );
     }
