@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -17,7 +17,8 @@ describe('ArtifactsPanel', () => {
     delete process.env.NEXT_PUBLIC_CITYLENS_API_BASE;
   });
 
-  it('normalizes named artifacts and renders client-only viewer placeholders', () => {
+  it('normalizes named artifacts and focuses one evidence view at a time', async () => {
+    const user = userEvent.setup();
     render(
       <ArtifactsPanel
         run={{
@@ -33,10 +34,27 @@ describe('ArtifactsPanel', () => {
     );
 
     expect(screen.getByTestId('preview-image')).toHaveTextContent('preview.png:https://example.test/preview.png');
-    expect(screen.getByTestId('artifact-mesh-download')).toBeInTheDocument();
+    expect(screen.getByTestId('artifact-availability-receipt')).toHaveTextContent(
+      '4 of 4 available',
+    );
+    expect(screen.getByRole('tab', { name: /Imagery:/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+
+    screen.getByRole('tab', { name: /Imagery:/ }).focus();
+    await user.keyboard('{ArrowRight}');
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /Change map:/ })).toHaveFocus();
+    });
+    expect(screen.getByRole('tab', { name: /Change map:/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     expect(screen.getByText('Loading change.geojson viewer…')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: /3D massing:/ }));
     expect(screen.getByText('Loading mesh viewer…')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Load' })).toBeInTheDocument();
   });
 
   it('renders summary QA and performance fields after loading', async () => {
@@ -83,7 +101,7 @@ describe('ArtifactsPanel', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Load' }));
+    await user.click(screen.getByRole('tab', { name: /QA receipt:/ }));
 
     expect(await screen.findByText('Reference case')).toBeInTheDocument();
     expect(screen.getByText('100 E 21st St Brooklyn, NY 11226')).toBeInTheDocument();
@@ -114,7 +132,8 @@ describe('ArtifactsPanel', () => {
     );
   });
 
-  it('shows a fallback when a mesh URL is missing', () => {
+  it('shows a focused fallback when a mesh URL is missing', async () => {
+    const user = userEvent.setup();
     render(
       <ArtifactsPanel
         run={{
@@ -129,7 +148,13 @@ describe('ArtifactsPanel', () => {
       />,
     );
 
-    expect(screen.getByText('No artifact URL available for mesh.ply yet.')).toBeInTheDocument();
+    expect(screen.getByTestId('artifact-availability-receipt')).toHaveTextContent(
+      '3 of 4 available',
+    );
+    await user.click(screen.getByRole('tab', { name: /3D massing:/ }));
+    expect(
+      screen.getByText('mesh.ply is not available for this run.'),
+    ).toBeInTheDocument();
   });
 
   it('resolves relative artifact URLs via same-origin in production without an API base', () => {

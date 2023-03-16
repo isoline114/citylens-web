@@ -111,10 +111,18 @@ export function RunSummaryPanel({
             <button
               type="button"
               data-testid="run-summary-load"
-              className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
               onClick={onLoad}
             >
-              Load
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {loading
+                ? 'Loading'
+                : error
+                  ? 'Retry'
+                  : summary || rawText
+                    ? 'Refresh'
+                    : 'Load'}
             </button>
           )}
         </div>

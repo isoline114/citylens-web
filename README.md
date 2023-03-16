@@ -366,6 +366,7 @@ app/
 components/
   RunForm.tsx                 # accepts SSR-prefetched featured demos
   FeaturedDemoCards.tsx       # visual demo grid (server-renderable)
+  ArtifactsPanel.tsx          # focused, keyboard-operable evidence workspace
   ProductPageHeader.tsx       # shared light header for utility/product routes
   PlanQuotaBadge.tsx          # /v1/me usage display
   AuthHeaderControls.tsx      # sign-in / signed-in pill
@@ -412,6 +413,11 @@ Standard artifact filenames the UI renders:
 - `change.geojson` (Leaflet map with added / demolished / modified legend)
 - `mesh.ply` (react-three-fiber 3D viewer + download)
 - `run_summary.json` (QA + performance panel)
+
+Run detail presents these as four views in one evidence workspace rather than
+mounting every heavy renderer in a long page. The selector reports artifact
+availability, supports arrow/Home/End keyboard navigation, and loads map/mesh
+resources only when their view is opened.
 
 ## Privacy-preserving adoption measurement
 

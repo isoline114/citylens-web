@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
 async function expectMeshState(page: Page) {
+  await page.getByTestId('artifact-tab-mesh').click();
   await expect(page.getByTestId('artifact-mesh')).toBeVisible();
   await expect(page.getByTestId('artifact-mesh-download')).toBeVisible();
   const meshStatus = page
@@ -123,9 +124,11 @@ end_header
   await expect(page.getByTestId('artifact-preview-download')).toBeVisible();
   await expectMeshState(page);
 
-  await page.getByTestId('run-summary-load').click();
+  await page.getByTestId('artifact-tab-summary').click();
   await expect(page.getByText('Reference case')).toBeVisible();
   await expect(page.getByText('100 E 21st St Brooklyn, NY 11226').first()).toBeVisible();
+
+  await page.getByTestId('artifact-tab-change').click();
   await expect(page.getByText('Added: 1')).toBeVisible();
   await expect(page.getByText('Demolished: 0')).toBeVisible();
 });

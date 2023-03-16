@@ -1,7 +1,12 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
+import {
+  expectNoDocumentHorizontalOverflow,
+  expectNoWcagViolations,
+} from './accessibility';
 
 async function expectMeshState(page: Page) {
+  await page.getByTestId('artifact-tab-mesh').click();
   await expect(page.getByTestId('artifact-mesh')).toBeVisible();
   await expect(page.getByTestId('artifact-mesh-download')).toBeVisible();
   const meshStatus = page
@@ -147,10 +152,21 @@ end_header
   await expect(page.getByTestId('artifact-preview-download')).toBeVisible();
   await expectMeshState(page);
 
-  await page.getByTestId('run-summary-load').click();
+  await page.getByTestId('artifact-tab-summary').click();
   await expect(page.getByText('Reference case')).toBeVisible();
+
+  await page.getByTestId('artifact-tab-change').click();
   await expect(page.getByText('Added: 1')).toBeVisible();
   await expect(page.getByText('Demolished: 1')).toBeVisible();
+  await expectNoWcagViolations(page, 'Demo evidence workspace');
+
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.reload();
+  await expect(page.getByTestId('artifacts-panel')).toBeVisible();
+  await expectNoDocumentHorizontalOverflow(
+    page,
+    'Demo evidence workspace at 400% equivalent zoom',
+  );
 });
 
 test('shows error message instead of infinite loading when demo API is unreachable', async ({ page }) => {

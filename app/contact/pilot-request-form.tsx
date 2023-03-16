@@ -311,9 +311,8 @@ export function PilotRequestForm({
       </button>
 
       <p className="text-center text-[11px] leading-5 text-slate-500">
-        No payment is collected. Submissions expire after 365 days unless a
-        customer relationship or legal requirement calls for a different
-        retention period.
+        No payment is collected. Requests expire after 365 days unless retained
+        for an active customer or legal obligation.
       </p>
     </form>
   );

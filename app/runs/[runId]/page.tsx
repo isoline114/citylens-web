@@ -154,7 +154,7 @@ export default function RunDetailPage() {
                 </span>
               )}
             </div>
-            <h1 className="mt-3 truncate text-2xl font-semibold tracking-tight sm:text-3xl">
+            <h1 className="mt-3 text-balance break-words text-2xl font-semibold tracking-tight sm:text-3xl">
               {address ?? (isLoading ? 'Loading run…' : 'Processing run')}
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-300">
@@ -187,8 +187,7 @@ export default function RunDetailPage() {
 
       {mode === 'demo' && (
         <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
-          This public example is a completed, precomputed CityLens run. Its
-          artifact downloads are read-only.
+          Completed public example. Outputs are read-only.
         </div>
       )}
 

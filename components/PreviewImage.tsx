@@ -19,7 +19,13 @@ export function PreviewImage({ src, alt }: { src: string; alt: string }) {
           <ImageIcon className="h-4 w-4" />
           <span>{alt}</span>
         </div>
-        <a className="inline-flex items-center gap-1 hover:text-slate-900" href={src} target="_blank" rel="noreferrer">
+        <a
+          className="inline-flex items-center gap-1 hover:text-slate-900"
+          data-testid="artifact-preview-download"
+          href={src}
+          target="_blank"
+          rel="noreferrer"
+        >
           <Download className="h-3.5 w-3.5" /> Download
         </a>
       </div>

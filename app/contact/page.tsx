@@ -33,37 +33,37 @@ export default async function ContactPage({
       </Link>
 
       <div className="mt-6 grid overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_30px_90px_-48px_rgba(15,23,42,0.45)] lg:grid-cols-[0.88fr_1.12fr]">
-        <section className="relative overflow-hidden bg-slate-950 p-7 text-white md:p-10">
+        <section className="relative overflow-hidden bg-slate-950 p-6 text-white sm:p-7 md:p-10">
           <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-sky-500/20 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-emerald-500/15 blur-3xl" />
           <div className="relative">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-300">
               Design-partner intake
             </p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.035em] md:text-5xl">
+            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.035em] sm:text-4xl md:text-5xl">
               Bring one real acquisition workflow.
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-slate-300">
+            <p className="mt-4 max-w-xl text-sm leading-6 text-slate-300 sm:mt-5 sm:text-base sm:leading-7">
               We&apos;ll work from your actual target neighborhoods, screening
               rules, data stack, and live pipeline—not a generic product tour.
             </p>
 
-            <div className="mt-8 space-y-5">
+            <div className="mt-6 space-y-3 sm:mt-8 sm:space-y-5">
               {[
                 {
                   icon: Clock3,
-                  title: 'A focused working session',
-                  body: 'Review your current process, one live opportunity set, and the decisions that slow the team down.',
+                  title: 'Workflow review',
+                  body: 'Review one live opportunity set and the decisions slowing your team.',
                 },
                 {
                   icon: CheckCircle2,
-                  title: 'A concrete pilot scope',
-                  body: 'Agree on users, borough coverage, workflow outcomes, and what success will actually mean.',
+                  title: 'Defined pilot',
+                  body: 'Set users, borough coverage, workflow outcomes, and success criteria.',
                 },
                 {
                   icon: ShieldCheck,
-                  title: 'No automated sales sequence',
-                  body: 'Your request enters a private CityLens queue. It is not sold or added to a third-party marketing list.',
+                  title: 'Private intake',
+                  body: 'Your request stays in a private CityLens queue.',
                 },
               ].map(({ icon: Icon, title, body }) => (
                 <div key={title} className="flex gap-3">
@@ -72,7 +72,7 @@ export default async function ContactPage({
                   </div>
                   <div>
                     <h2 className="text-sm font-semibold">{title}</h2>
-                    <p className="mt-1 text-sm leading-6 text-slate-400">
+                    <p className="mt-1 hidden text-sm leading-6 text-slate-400 sm:block">
                       {body}
                     </p>
                   </div>
@@ -80,7 +80,7 @@ export default async function ContactPage({
               ))}
             </div>
 
-            <p className="mt-9 border-t border-white/10 pt-6 text-xs leading-5 text-slate-400">
+            <p className="mt-6 border-t border-white/10 pt-5 text-xs leading-5 text-slate-400 sm:mt-9 sm:pt-6">
               Prefer email? Write to{' '}
               <a
                 className="font-medium text-sky-300 hover:text-sky-200"

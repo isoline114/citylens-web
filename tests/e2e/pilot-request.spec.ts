@@ -1,4 +1,36 @@
 import { expect, test } from '@playwright/test';
+import {
+  expectNoDocumentHorizontalOverflow,
+  expectNoWcagViolations,
+} from './accessibility';
+
+test('mobile pilot intake reaches the form without a long narrative detour', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/contact?plan=acquisitions');
+
+  await expect(
+    page.getByRole('heading', {
+      name: 'Bring one real acquisition workflow.',
+    }),
+  ).toBeVisible();
+  const formHeading = page.getByRole('heading', {
+    name: 'Tell us enough to make the first call useful.',
+  });
+  await expect(formHeading).toBeVisible();
+  const formHeadingBounds = await formHeading.boundingBox();
+  expect(formHeadingBounds).not.toBeNull();
+  expect(formHeadingBounds?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(844);
+  await expectNoWcagViolations(page, 'Mobile pilot intake');
+
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.reload();
+  await expectNoDocumentHorizontalOverflow(
+    page,
+    'Pilot intake at 400% equivalent zoom',
+  );
+});
 
 test('prospective team can submit a private, retry-safe pilot request', async ({
   page,

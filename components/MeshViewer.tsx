@@ -246,7 +246,7 @@ export function MeshViewer({ url }: { url: string }) {
         </div>
         <a
           className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900"
-          data-testid="mesh-viewer-download"
+          data-testid="artifact-mesh-download"
           href={url}
           target="_blank"
           rel="noreferrer"

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
 import type { Feature, FeatureCollection, Geometry, GeoJsonProperties, GeoJsonObject } from 'geojson';
+import { Download } from 'lucide-react';
 import {
   boundsFromGeojson,
   getGeojsonChangeKindCounts,
@@ -74,7 +75,19 @@ export function GeojsonMap({ url }: { url: string }) {
 
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-      <div className="border-b border-slate-200 px-4 py-3 text-sm font-medium">change.geojson</div>
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+        <div className="text-sm font-medium">change.geojson</div>
+        <a
+          className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900"
+          data-testid="artifact-change-download"
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Download className="h-4 w-4" />
+          Download
+        </a>
+      </div>
       <div className="h-80 w-full">
         {error ? (
           <div className="p-4 text-sm text-rose-700">{error}</div>
