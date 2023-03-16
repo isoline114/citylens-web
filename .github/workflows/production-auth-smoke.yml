@@ -66,6 +66,9 @@ jobs:
           console.log(`- Official address → BBL → screening flow: \`${report?.address_resolution_verified ? 'passed' : 'failed'}\``);
           console.log(`- Governed acquisition-thesis flow: \`${report?.thesis_composer_verified ? 'passed' : 'failed'}\``);
           console.log(`- Value-minimized thesis event: \`${report?.thesis_composer_event_receipt?.value_minimized ? 'passed' : 'failed'}\``);
+          console.log(`- Signed-in run history: \`${report?.run_operations_receipt?.list_api_verified && report?.run_operations_receipt?.summary_counts_match ? `passed · ${report.run_operations_receipt.history_state}` : 'failed'}\``);
+          console.log(`- Owned run detail: \`${report?.run_operations_receipt?.detail_state === 'verified' ? `passed · ${report.run_operations_receipt.detail_output_state}` : report?.run_operations_receipt?.detail_state === 'not_available_empty_history' ? 'not available · empty history' : 'failed'}\``);
+          console.log(`- Value-minimized run receipt: \`${report?.run_operations_receipt?.value_minimized && report?.run_list_receipts?.every((receipt) => receipt.value_minimized) ? 'passed' : 'failed'}\``);
           console.log(`- Browser console errors: \`${report?.console_error_count ?? 'unknown'}\``);
           console.log(`- Browser page errors: \`${report?.page_error_count ?? 'unknown'}\``);
           if (report?.failure) console.log(`- Failure: \`${report.failure}\``);

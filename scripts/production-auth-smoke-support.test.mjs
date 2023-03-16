@@ -5,6 +5,7 @@ import {
   positiveFormattedCountWithSuffix,
   summarizeParcelCsv,
   summarizeProductEvent,
+  summarizeRunListResponse,
 } from './production-auth-smoke-support.mjs';
 
 describe('production authenticated smoke support', () => {
@@ -93,5 +94,69 @@ describe('production authenticated smoke support', () => {
         source: 'thesis_composer',
       }).value_minimized,
     ).toBe(false);
+  });
+
+  it('summarizes run history without retaining customer identities or values', () => {
+    const receipt = summarizeRunListResponse(200, {
+      items: [
+        {
+          run_id: 'private-run-123',
+          address: '12 Private Street',
+          status: 'succeeded',
+          error: { message: 'private backend detail' },
+          artifacts: [{ url: 'https://storage.example/private-object' }],
+        },
+        {
+          run_id: 'private-run-456',
+          address: '14 Private Street',
+          status: 'running',
+        },
+        {
+          run_id: 'private-run-789',
+          status: 'future-state',
+        },
+      ],
+      next_cursor: 'private-cursor-value',
+    });
+
+    expect(receipt).toEqual({
+      status: 200,
+      shape_valid: true,
+      item_count: 3,
+      next_cursor_present: true,
+      status_counts: {
+        failed: 0,
+        queued: 0,
+        running: 1,
+        succeeded: 1,
+        unknown: 1,
+      },
+      value_minimized: true,
+    });
+    expect(JSON.stringify(receipt)).not.toMatch(
+      /private|street|storage|cursor-value|backend/i,
+    );
+  });
+
+  it('rejects malformed run-list shapes while keeping the receipt value-minimized', () => {
+    expect(
+      summarizeRunListResponse(502, {
+        items: 'not-an-array',
+        next_cursor: { private: true },
+      }),
+    ).toEqual({
+      status: 502,
+      shape_valid: false,
+      item_count: 0,
+      next_cursor_present: false,
+      status_counts: {
+        failed: 0,
+        queued: 0,
+        running: 0,
+        succeeded: 0,
+        unknown: 0,
+      },
+      value_minimized: true,
+    });
   });
 });
