@@ -213,10 +213,10 @@ export default function RunsPage() {
       )}
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <SummaryTile label="Loaded" value={rows.length} icon={Database} />
-        <SummaryTile label="Ready" value={succeeded} tone="emerald" icon={CheckCircle2} />
-        <SummaryTile label="Processing" value={active} tone="sky" icon={Loader2} />
-        <SummaryTile label="Needs attention" value={failed} tone="rose" icon={AlertTriangle} />
+        <SummaryTile testId="run-summary-loaded" label="Loaded" value={rows.length} icon={Database} />
+        <SummaryTile testId="run-summary-ready" label="Ready" value={succeeded} tone="emerald" icon={CheckCircle2} />
+        <SummaryTile testId="run-summary-processing" label="Processing" value={active} tone="sky" icon={Loader2} />
+        <SummaryTile testId="run-summary-attention" label="Needs attention" value={failed} tone="rose" icon={AlertTriangle} />
       </section>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_55px_-38px_rgba(15,23,42,0.4)]">
@@ -239,7 +239,10 @@ export default function RunsPage() {
         </div>
         <div className="p-3 sm:p-4">
           {isEmpty && !serverError ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-center">
+            <div
+              className="flex flex-col items-center gap-3 py-12 text-center"
+              data-testid="run-history-empty"
+            >
               <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200">
                 <Sparkles className="h-6 w-6" />
               </span>
@@ -323,11 +326,13 @@ export default function RunsPage() {
 }
 
 function SummaryTile({
+  testId,
   label,
   value,
   tone = 'slate',
   icon: Icon,
 }: {
+  testId: string;
   label: string;
   value: number;
   tone?: 'slate' | 'emerald' | 'sky' | 'rose';
@@ -342,14 +347,20 @@ function SummaryTile({
           ? 'bg-rose-50 text-rose-800 ring-rose-200'
           : 'bg-slate-50 text-slate-800 ring-slate-200';
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div
+      className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+      data-testid={testId}
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           {label}
         </div>
         <Icon className="h-4 w-4 text-slate-400" />
       </div>
-      <div className={`mt-3 inline-flex min-w-12 justify-center rounded-lg px-2 py-1 text-lg font-semibold ring-1 ring-inset ${toneClass}`}>
+      <div
+        className={`mt-3 inline-flex min-w-12 justify-center rounded-lg px-2 py-1 text-lg font-semibold ring-1 ring-inset ${toneClass}`}
+        data-testid={`${testId}-value`}
+      >
         {value.toLocaleString()}
       </div>
     </div>

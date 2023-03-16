@@ -11,6 +11,7 @@ import {
   positiveFormattedCountWithSuffix,
   summarizeParcelCsv,
   summarizeProductEvent,
+  summarizeRunListResponse,
 } from './production-auth-smoke-support.mjs';
 
 const webBase = (
@@ -44,6 +45,7 @@ const context = await browser.newContext({
 const page = await context.newPage();
 const mapReceipts = [];
 const authTokenReceipts = [];
+const runListReceipts = [];
 const consoleErrors = [];
 const pageErrors = [];
 let screeningReceiptVerified = false;
@@ -61,6 +63,8 @@ let initialClusteredMapReceipt = null;
 let returningClusteredMapReceipt = null;
 let citywideExportReceipt = null;
 let mobileWorkspaceReceipt = null;
+let runOperationsReceipt = null;
+let sensitiveSurface = false;
 let passed = false;
 let failure = null;
 
@@ -601,6 +605,162 @@ try {
   }
   thesisComposerVerified = true;
 
+  // Verify account-scoped run operations without persisting customer
+  // identities or values. The receipt keeps only counts and fixed state
+  // categories; it never stores run ids, addresses, cursors, artifact URLs,
+  // backend error text, or exact run timestamps.
+  sensitiveSurface = true;
+  try {
+    const runListResponsePromise = page.waitForResponse(
+      (response) => {
+        try {
+          return (
+            new URL(response.url()).pathname === '/v1/runs' &&
+            response.request().method() === 'GET'
+          );
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 30_000 },
+    );
+    await page.goto(`${webBase}/runs`, { waitUntil: 'networkidle' });
+    const runListResponse = await runListResponsePromise;
+    const runListPayload = await runListResponse
+      .json()
+      .catch(() => null);
+    const runListReceipt = summarizeRunListResponse(
+      runListResponse.status(),
+      runListPayload,
+    );
+    runListReceipts.push(runListReceipt);
+
+    await page
+      .getByRole('heading', { level: 1, name: 'Runs' })
+      .waitFor({ timeout: 15_000 });
+    if (
+      (await page.title()) !== 'Runs — CityLens' ||
+      (await page.getByTestId('private-run-access-gate').count()) !== 0 ||
+      !(await page.getByRole('link', { name: 'New run' }).isVisible()) ||
+      runListReceipt.status !== 200 ||
+      runListReceipt.shape_valid !== true ||
+      runListReceipt.value_minimized !== true
+    ) {
+      throw new Error('history-shell');
+    }
+    await page.waitForFunction(
+      ({ expected }) => {
+        const value = document.querySelector(
+          '[data-testid="run-summary-loaded-value"]',
+        )?.textContent;
+        return (
+          Number((value ?? '').replaceAll(',', '').trim()) === expected
+        );
+      },
+      { expected: runListReceipt.item_count },
+      { timeout: 15_000 },
+    );
+
+    const summaryCounts = {
+      loaded: positiveFormattedCount(
+        await page
+          .getByTestId('run-summary-loaded-value')
+          .textContent(),
+      ) ?? 0,
+      ready: positiveFormattedCount(
+        await page
+          .getByTestId('run-summary-ready-value')
+          .textContent(),
+      ) ?? 0,
+      processing: positiveFormattedCount(
+        await page
+          .getByTestId('run-summary-processing-value')
+          .textContent(),
+      ) ?? 0,
+      attention: positiveFormattedCount(
+        await page
+          .getByTestId('run-summary-attention-value')
+          .textContent(),
+      ) ?? 0,
+    };
+    const historyRows = page.getByTestId('run-history-row');
+    const domRowCount = await historyRows.count();
+    const expectedProcessing =
+      runListReceipt.status_counts.queued +
+      runListReceipt.status_counts.running;
+    const summaryCountsMatch =
+      summaryCounts.loaded === runListReceipt.item_count &&
+      summaryCounts.ready === runListReceipt.status_counts.succeeded &&
+      summaryCounts.processing === expectedProcessing &&
+      summaryCounts.attention === runListReceipt.status_counts.failed &&
+      domRowCount === runListReceipt.item_count;
+
+    if (!summaryCountsMatch) {
+      throw new Error('history-counts');
+    }
+    if (
+      runListReceipt.item_count === 0 &&
+      !(await page.getByTestId('run-history-empty').isVisible())
+    ) {
+      throw new Error('history-empty-state');
+    }
+
+    let detailState = 'not_available_empty_history';
+    let detailOutputState = 'not_available';
+    let detailShellVisible = false;
+    let detailStatusVisible = false;
+    if (domRowCount > 0) {
+      await historyRows.first().click();
+      const detailShell = page.getByTestId('run-detail-shell');
+      await detailShell.waitFor({ timeout: 20_000 });
+      const statusCard = page.getByTestId('run-status-card');
+      await statusCard.waitFor({ timeout: 20_000 });
+      if ((await page.getByTestId('private-run-access-gate').count()) !== 0) {
+        throw new Error('detail-access');
+      }
+      const output = page
+        .locator(
+          '[data-testid="artifacts-panel"], [data-testid="artifacts-pending"], [data-testid="artifacts-unavailable"]',
+        )
+        .first();
+      await output.waitFor({ timeout: 30_000 });
+      detailOutputState = (await page
+        .getByTestId('artifacts-panel')
+        .isVisible()
+        .catch(() => false))
+        ? 'published'
+        : (await page
+              .getByTestId('artifacts-pending')
+              .isVisible()
+              .catch(() => false))
+          ? 'pending'
+          : 'unavailable';
+      detailState = 'verified';
+      detailShellVisible = await detailShell.isVisible();
+      detailStatusVisible = await statusCard.isVisible();
+    }
+
+    runOperationsReceipt = {
+      history_state:
+        runListReceipt.item_count > 0 ? 'populated' : 'empty',
+      list_api_verified: true,
+      item_count: runListReceipt.item_count,
+      next_page_available: runListReceipt.next_cursor_present,
+      status_counts: runListReceipt.status_counts,
+      dom_row_count: domRowCount,
+      summary_counts_match: summaryCountsMatch,
+      detail_state: detailState,
+      detail_output_state: detailOutputState,
+      detail_shell_visible: detailShellVisible,
+      detail_status_visible: detailStatusVisible,
+      value_minimized: true,
+    };
+  } catch {
+    throw new Error(
+      'Authenticated run operations receipt was incomplete.',
+    );
+  }
+
   if (consoleErrors.length > 0 || pageErrors.length > 0) {
     throw new Error(
       `Browser emitted ${consoleErrors.length} console error(s) and ${pageErrors.length} page error(s).`,
@@ -609,12 +769,14 @@ try {
   passed = true;
 } catch (error) {
   failure = error instanceof Error ? error.message : String(error);
-  await page
-    .screenshot({
-      path: path.join(outputDir, 'failure.png'),
-      fullPage: true,
-    })
-    .catch(() => undefined);
+  if (!sensitiveSurface) {
+    await page
+      .screenshot({
+        path: path.join(outputDir, 'failure.png'),
+        fullPage: true,
+      })
+      .catch(() => undefined);
+  }
 } finally {
   await page
     .getByRole('button', { name: 'Sign out' })
@@ -624,7 +786,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v10',
+  schema_version: 'citylens/production-authenticated-parcel-map@v11',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -648,6 +810,8 @@ const report = {
   thesis_composer_positive_match_verified:
     thesisComposerPositiveMatchVerified,
   thesis_composer_event_receipt: thesisComposerEventReceipt,
+  run_list_receipts: runListReceipts,
+  run_operations_receipt: runOperationsReceipt,
   console_error_count: consoleErrors.length,
   page_error_count: pageErrors.length,
 };

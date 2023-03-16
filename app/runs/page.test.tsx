@@ -87,6 +87,8 @@ describe('/runs (signed in, empty)', () => {
     render(<RunsPage />);
 
     await screen.findByText(/Create your first evidence package/i);
+    expect(screen.getByTestId('run-history-empty')).toBeInTheDocument();
+    expect(screen.getByTestId('run-summary-loaded')).toHaveTextContent('0');
     expect(screen.getByRole('link', { name: 'Create a run' })).toBeInTheDocument();
   });
 
@@ -128,6 +130,10 @@ describe('/runs (signed in, with server runs)', () => {
     expect(screen.getAllByText('Untitled processing run')).toHaveLength(2);
     expect(screen.getAllByText('Ready').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Needs attention').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('run-summary-loaded')).toHaveTextContent('2');
+    expect(screen.getByTestId('run-summary-ready')).toHaveTextContent('1');
+    expect(screen.getByTestId('run-summary-processing')).toHaveTextContent('0');
+    expect(screen.getByTestId('run-summary-attention')).toHaveTextContent('1');
     // localStorage orphans must not bleed into the rendered list
     expect(screen.queryByText('leaked-local')).not.toBeInTheDocument();
     // Stage line is only rendered when stage is present (no `source: …` fallback)

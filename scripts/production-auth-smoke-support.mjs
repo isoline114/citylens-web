@@ -3,6 +3,21 @@ const PRODUCT_EVENT_KEYS = [
   'schema_version',
   'source',
 ];
+const RUN_STATUS_KEYS = [
+  'failed',
+  'queued',
+  'running',
+  'succeeded',
+  'unknown',
+];
+const RUN_LIST_RECEIPT_KEYS = [
+  'item_count',
+  'next_cursor_present',
+  'shape_valid',
+  'status',
+  'status_counts',
+  'value_minimized',
+];
 
 export function positiveFormattedCount(value) {
   if (typeof value !== 'string') return null;
@@ -112,4 +127,62 @@ export function summarizeProductEvent(status, payload) {
     payload_keys: payloadKeys,
     value_minimized: valueMinimized,
   };
+}
+
+export function summarizeRunListResponse(status, payload) {
+  const record =
+    payload && typeof payload === 'object' && !Array.isArray(payload)
+      ? payload
+      : {};
+  const items = Array.isArray(record.items) ? record.items : [];
+  const nextCursor = record.next_cursor;
+  const shapeValid =
+    Array.isArray(record.items) &&
+    items.every(
+      (item) =>
+        item !== null &&
+        typeof item === 'object' &&
+        !Array.isArray(item),
+    ) &&
+    (nextCursor === null || typeof nextCursor === 'string');
+  const statusCounts = {
+    failed: 0,
+    queued: 0,
+    running: 0,
+    succeeded: 0,
+    unknown: 0,
+  };
+
+  for (const item of items) {
+    const runStatus =
+      item && typeof item === 'object'
+        ? String(item.status ?? '').toLowerCase()
+        : '';
+    if (RUN_STATUS_KEYS.includes(runStatus) && runStatus !== 'unknown') {
+      statusCounts[runStatus] += 1;
+    } else {
+      statusCounts.unknown += 1;
+    }
+  }
+
+  const receipt = {
+    status,
+    shape_valid: shapeValid,
+    item_count: items.length,
+    next_cursor_present:
+      typeof nextCursor === 'string' && nextCursor.length > 0,
+    status_counts: statusCounts,
+    value_minimized: false,
+  };
+  const receiptKeys = Object.keys(receipt).sort();
+  const statusKeys = Object.keys(statusCounts).sort();
+  receipt.value_minimized =
+    receiptKeys.length === RUN_LIST_RECEIPT_KEYS.length &&
+    receiptKeys.every(
+      (key, index) => key === RUN_LIST_RECEIPT_KEYS[index],
+    ) &&
+    statusKeys.length === RUN_STATUS_KEYS.length &&
+    statusKeys.every((key, index) => key === RUN_STATUS_KEYS[index]);
+
+  return receipt;
 }
