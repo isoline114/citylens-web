@@ -312,6 +312,9 @@ describe('ParcelIntelExplorer', () => {
     expect(screen.getByTestId('parcel-mobile-access-status')).toHaveTextContent(
       'Preview access',
     );
+    expect(
+      screen.getByTestId('parcel-desktop-access-status'),
+    ).toHaveTextContent('AccessPreview · signed out');
     await waitFor(() =>
       expect(
         screen.getByTestId('parcel-public-inventory-notice'),
@@ -406,6 +409,9 @@ describe('ParcelIntelExplorer', () => {
         'Full inventory verified · 2 loaded',
       ),
     );
+    expect(
+      screen.getByTestId('parcel-desktop-access-status'),
+    ).toHaveTextContent('AccessFull · verified');
     expect(mocks.getParcelIntelMap).toHaveBeenCalledWith(1000, {
       includeAuth: true,
     });

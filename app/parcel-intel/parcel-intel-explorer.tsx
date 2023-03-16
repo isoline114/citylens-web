@@ -1477,9 +1477,20 @@ export function ParcelIntelExplorer({
               access
             </span>
           </div>
-          <div className="hidden grid-cols-4 gap-2 sm:grid lg:min-w-[520px]">
+          <div className="hidden grid-cols-4 gap-2 sm:grid lg:min-w-[560px]">
             {[
-              ['Boroughs', boroughs.length.toString()],
+              [
+                'Access',
+                auth.status === 'loading'
+                  ? 'Checking…'
+                  : inventoryState === 'upgrading'
+                    ? 'Verifying…'
+                    : inventoryState === 'full'
+                      ? 'Full · verified'
+                      : inventoryState === 'incomplete'
+                        ? 'Reconnect'
+                        : 'Preview · signed out',
+              ],
               [
                 'Loaded',
                 inventoryState === 'upgrading'
@@ -1504,6 +1515,9 @@ export function ParcelIntelExplorer({
             ].map(([label, value]) => (
               <div
                 key={label}
+                data-testid={
+                  label === 'Access' ? 'parcel-desktop-access-status' : undefined
+                }
                 className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 backdrop-blur"
               >
                 <div className="text-[10px] uppercase tracking-wide text-slate-400">
@@ -1896,7 +1910,7 @@ export function ParcelIntelExplorer({
       {!isAuthenticated && auth.status !== 'loading' && (
         <div
           data-testid="parcel-public-inventory-notice"
-          className="hidden items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-950 sm:flex md:px-7"
+          className="flex flex-col gap-2 border-b border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-950 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:text-sm md:px-7"
         >
           <span className="leading-5">
             <strong>Signed out on this browser:</strong>{' '}
@@ -1907,7 +1921,7 @@ export function ParcelIntelExplorer({
           </span>
           <Link
             href="/sign-in?next=%2Fparcel-intel"
-            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md bg-slate-950 px-3 text-xs font-medium text-white hover:bg-slate-800"
+            className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-md bg-slate-950 px-3 text-xs font-medium text-white hover:bg-slate-800 sm:w-auto"
           >
             Sign in for the full workspace
             <ArrowUpRight className="h-3.5 w-3.5" />
