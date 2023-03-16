@@ -1,0 +1,102 @@
+name: production-run-canary
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Preflight is read-only; submit creates exactly one fixed reference run
+        required: true
+        default: preflight
+        type: choice
+        options:
+          - preflight
+          - submit
+      confirm:
+        description: For submit, enter RUN_ONE_FIXED_REFERENCE_CASE
+        required: false
+        default: ""
+        type: string
+      web_base:
+        description: Web origin to verify
+        required: false
+        default: https://www.citylens.dev
+        type: string
+      api_base:
+        description: API origin to verify
+        required: false
+        default: https://api.citylens.dev
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-run-canary
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CITYLENS_WEB_BASE: ${{ inputs.web_base }}
+      CITYLENS_API_BASE: ${{ inputs.api_base }}
+      CITYLENS_CANARY_ACTION: ${{ inputs.action }}
+      CITYLENS_CANARY_CONFIRM: ${{ inputs.confirm }}
+      CITYLENS_CANARY_TIMEOUT_SECONDS: "2100"
+      CITYLENS_WEB_SMOKE_EMAIL: ${{ secrets.CITYLENS_WEB_SMOKE_EMAIL }}
+      CITYLENS_WEB_SMOKE_PASSWORD: ${{ secrets.CITYLENS_WEB_SMOKE_PASSWORD }}
+    steps:
+      - name: Check out verifier
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 20.19.0
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Verify production run path
+        run: node scripts/verify-production-run-canary.mjs
+
+      - name: Publish canary summary
+        if: always()
+        run: |
+          node - <<'NODE' >> "${GITHUB_STEP_SUMMARY}"
+          const fs = require('node:fs');
+          const path = 'test-results/production-run-canary/report.json';
+          const report = fs.existsSync(path)
+            ? JSON.parse(fs.readFileSync(path, 'utf8'))
+            : null;
+          const passed = Boolean(report?.passed);
+          console.log(`## ${passed ? '✅' : '❌'} Production run canary`);
+          console.log('');
+          console.log(`- Action: \`${report?.action ?? 'unknown'}\``);
+          console.log(`- Fixed case: \`${report?.case_id ?? 'unknown'}\``);
+          console.log(`- Account and quota preflight: \`${report?.account_receipt?.eligible ? 'passed' : 'failed'}\``);
+          console.log(`- No active run before submission: \`${report?.history_receipt?.active_count === 0 ? 'passed' : 'failed'}\``);
+          console.log(`- Dedicated run workspace: \`${report?.workspace_receipt?.form_visible && report?.workspace_receipt?.demo_selector_absent ? 'passed' : 'failed'}\``);
+          console.log(`- Submission attempted: \`${report?.submission_attempted ? 'yes · one fixed case' : 'no · read-only'}\``);
+          if (report?.submission_attempted) {
+            console.log(`- Worker terminal state: \`${report?.terminal_receipt?.run_status ?? 'unavailable'}\``);
+            console.log(`- Artifact metadata: \`${report?.terminal_receipt?.artifact_metadata_valid ? '4/4 passed' : 'failed'}\``);
+            console.log(`- Artifact delivery: \`${report?.artifact_delivery_receipts?.filter((receipt) => receipt.passed).length ?? 0}/4 passed\``);
+            console.log(`- QA and performance summary: \`${report?.summary_receipt?.valid ? 'passed' : 'failed'}\``);
+            console.log(`- Live evidence workspace: \`${report?.ui_terminal_receipt?.availability_receipt ?? 'unavailable'}\``);
+          }
+          console.log(`- Duration: \`${report?.duration_seconds ?? 'unknown'}s\``);
+          console.log(`- Browser errors: \`${(report?.console_error_count ?? 0) + (report?.page_error_count ?? 0)}\``);
+          if (report?.failure) console.log(`- Failure: \`${report.failure}\``);
+          NODE
+
+      - name: Upload sanitized canary receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: production-run-canary
+          path: test-results/production-run-canary/
+          if-no-files-found: warn
+          retention-days: 30

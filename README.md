@@ -526,6 +526,34 @@ Its email and password live only in the
 secrets; reports contain neither value, JWTs, parcel identifiers, nor owner
 data.
 
+The manual-only
+[`production-run-canary.yml`](.github/workflows/production-run-canary.yml)
+closes the separate write-path gap. Run `preflight` first; it signs in through
+the production UI, verifies the dedicated `/runs/new` workspace, checks the
+smoke account's remaining quota, and refuses to proceed while another run is
+active. `submit` requires the exact confirmation phrase
+`RUN_ONE_FIXED_REFERENCE_CASE` and creates one fixed, public Brooklyn
+reference run. It then waits for the deployed worker, requires terminal
+success, validates all four artifact integrity/type/size receipts, probes
+PNG/GeoJSON/PLY/summary structure, and reloads the live evidence workspace.
+The workflow is deliberately not scheduled. Its report omits the account,
+address, run ID, token, artifact URLs, GCS object names, and backend messages.
+
+```bash
+# Read-only eligibility check
+gh workflow run production-run-canary.yml \
+  -f action=preflight \
+  -f web_base=https://www.citylens.dev \
+  -f api_base=https://api.citylens.dev
+
+# Exactly one fixed reference submission
+gh workflow run production-run-canary.yml \
+  -f action=submit \
+  -f confirm=RUN_ONE_FIXED_REFERENCE_CASE \
+  -f web_base=https://www.citylens.dev \
+  -f api_base=https://api.citylens.dev
+```
+
 `@neondatabase/auth` currently pins an older Better Auth line internally.
 `package.json` intentionally overrides Better Auth and its passkey/core
 packages to the reviewed patched `1.6.25` release. Do not remove those
