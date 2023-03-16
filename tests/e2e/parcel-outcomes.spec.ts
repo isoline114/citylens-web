@@ -1409,7 +1409,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     'not a purchase recommendation',
   );
   await page
-    .getByRole('button', { name: 'Review workflow' })
+    .getByRole('button', { name: 'Review 3 source versions' })
     .click();
   await expect(
     page.getByRole('textbox', { name: 'Next action', exact: true }),
@@ -1417,7 +1417,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(page.getByTestId('evidence-review-checklist')).toContainText(
     '0/3 current',
   );
-  await page.getByTestId('evidence-review-toggle').click();
+  await expect(page.getByTestId('evidence-review-toggle')).toBeFocused();
+  await expect(page.getByTestId('evidence-review-toggle')).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
   await page
     .getByRole('button', {
       name: 'Mark Current diligence overlays version reviewed',

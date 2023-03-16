@@ -53,6 +53,7 @@ import {
   EvidenceReviewChecklist,
   LandBasisCalculator,
   ParcelBriefActions,
+  REVIEWABLE_EVIDENCE_KEYS,
   WorkflowEditor,
   type WorkflowDraft,
 } from './[borough]/parcel-acquisition-tools';
@@ -98,6 +99,17 @@ const BRIEF_SOURCE_LABELS: Record<string, string> = {
   'accepted_model_bundle.rolling_validation':
     'CityLens rolling-origin validation using NYC PLUTO and DOB filings',
 };
+
+const REVIEWABLE_AUDIT_KEYS = new Set<string>(REVIEWABLE_EVIDENCE_KEYS);
+
+function reviewableAuditCount(
+  audit: ParcelDecisionAudit | undefined,
+): number {
+  return (
+    audit?.checks.filter((check) => REVIEWABLE_AUDIT_KEYS.has(check.key))
+      .length ?? 0
+  );
+}
 
 export type ParcelDecisionBrief = {
   label: string;
@@ -491,6 +503,7 @@ function ParcelDecisionAuditPanel({
     incomplete: 'border-slate-300 bg-slate-100 text-slate-950',
   }[audit.overall_status];
   const readiness = audit.readiness;
+  const evidenceVersionCount = reviewableAuditCount(audit);
   const readinessStyle = readiness ? READINESS_STYLES[readiness.status] : '';
   const benchmark = audit.validation.historical_benchmark_receipt ?? null;
   const benchmarkCards = benchmark
@@ -596,9 +609,21 @@ function ParcelDecisionAuditPanel({
               onClick={onOpenWorkflow}
               className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-medium text-white hover:bg-slate-800"
             >
-              <BriefcaseBusiness className="h-3.5 w-3.5" />
-              {workflowItem ? 'Review workflow' : 'Use this as the first action'}
+              <ShieldCheck className="h-3.5 w-3.5" />
+              {evidenceVersionCount > 0
+                ? workflowItem
+                  ? `Review ${evidenceVersionCount} source ${evidenceVersionCount === 1 ? 'version' : 'versions'}`
+                  : `Save to review ${evidenceVersionCount} ${evidenceVersionCount === 1 ? 'source' : 'sources'}`
+                : workflowItem
+                  ? 'Open workflow'
+                  : 'Plan next action'}
             </button>
+          )}
+          {signedIn && evidenceVersionCount > 0 && (
+            <p className="mt-2 text-[10px] leading-4 opacity-75">
+              Records the exact cited source and date you considered. It never
+              clears diligence risk.
+            </p>
           )}
           <p className="mt-3 text-[10px] leading-4 opacity-70">
             {readiness.disclaimer}
@@ -951,6 +976,9 @@ export function ParcelIntelPropertyPanel({
   );
   const [workflowReloadKey, setWorkflowReloadKey] = useState(0);
   const [underwritingAdjusted, setUnderwritingAdjusted] = useState(false);
+  const [workflowEntry, setWorkflowEntry] = useState<
+    'editor' | 'evidence'
+  >('editor');
   const activeBblRef = useRef(row.bbl);
   const workflowMutationIdRef = useRef(0);
   const trackedDecisionAuditOpensRef = useRef(new Set<string>());
@@ -1053,6 +1081,7 @@ export function ParcelIntelPropertyPanel({
     setEvidenceReviewBusyKey(null);
     setEvidenceIssueBusyKey(null);
     setUnderwritingAdjusted(false);
+    setWorkflowEntry('editor');
     setWorkflowError(null);
     setWorkflowContextBbl(row.bbl);
     if (auth.status !== 'authenticated') {
@@ -1123,7 +1152,10 @@ export function ParcelIntelPropertyPanel({
         return;
       }
       setWorkflowItem(saved);
-      if (options?.openAfterSave) setTab('workflow');
+      if (options?.openAfterSave) {
+        setWorkflowEntry('editor');
+        setTab('workflow');
+      }
       window.dispatchEvent(new Event('citylens:workflow-updated'));
     } catch {
       if (
@@ -1160,6 +1192,7 @@ export function ParcelIntelPropertyPanel({
 
   const continueUnderwritingDiligence = () => {
     if (workflowItem) {
+      setWorkflowEntry('editor');
       setTab('workflow');
       return;
     }
@@ -1513,6 +1546,7 @@ export function ParcelIntelPropertyPanel({
                   disabled={workflowBusy || effectiveWorkflowLoadState !== 'ready'}
                   onClick={() => {
                     if (workflowItem) {
+                      setWorkflowEntry('editor');
                       setTab('workflow');
                       return;
                     }
@@ -1575,6 +1609,9 @@ export function ParcelIntelPropertyPanel({
                 openUnderwriting();
                 return;
               }
+              if (value === 'workflow') {
+                setWorkflowEntry('editor');
+              }
               setTab(value);
             }}
             aria-pressed={tab === value}
@@ -1614,7 +1651,10 @@ export function ParcelIntelPropertyPanel({
                 audit={row.decision_audit}
                 isAuthenticated={auth.status === 'authenticated'}
                 onOpenAudit={() => openDecisionAudit('decision_posture')}
-                onOpenWorkflow={() => setTab('workflow')}
+                onOpenWorkflow={() => {
+                  setWorkflowEntry('editor');
+                  setTab('workflow');
+                }}
               />
             )}
             {row.acquisition_status === 'active_project' && (
@@ -2457,7 +2497,14 @@ export function ParcelIntelPropertyPanel({
             audit={row.decision_audit}
             workflowItem={workflowItem}
             signedIn={auth.status === 'authenticated'}
-            onOpenWorkflow={() => setTab('workflow')}
+            onOpenWorkflow={() => {
+              setWorkflowEntry(
+                reviewableAuditCount(row.decision_audit) > 0
+                  ? 'evidence'
+                  : 'editor',
+              );
+              setTab('workflow');
+            }}
           />
         )}
 
@@ -2569,6 +2616,7 @@ export function ParcelIntelPropertyPanel({
                     item={workflowItem}
                     busyKey={evidenceReviewBusyKey}
                     issueBusyKey={evidenceIssueBusyKey}
+                    focusOnMount={workflowEntry === 'evidence'}
                     onReview={reviewEvidence}
                     onClear={clearEvidenceReview}
                     onReportIssue={reportEvidenceIssue}

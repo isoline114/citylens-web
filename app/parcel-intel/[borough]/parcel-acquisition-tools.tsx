@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -279,7 +279,7 @@ export function WorkflowEditor({
   );
 }
 
-const REVIEWABLE_EVIDENCE_KEYS: ParcelWorkflowEvidenceReviewKey[] = [
+export const REVIEWABLE_EVIDENCE_KEYS: ParcelWorkflowEvidenceReviewKey[] = [
   'acquisition_eligibility',
   'current_project_clearance',
   'property_facts',
@@ -353,6 +353,7 @@ export function EvidenceReviewChecklist({
   item,
   busyKey,
   issueBusyKey,
+  focusOnMount = false,
   onReview,
   onClear,
   onReportIssue,
@@ -362,6 +363,7 @@ export function EvidenceReviewChecklist({
   item: ParcelWorkflowItem;
   busyKey: ParcelWorkflowEvidenceReviewKey | null;
   issueBusyKey: ParcelWorkflowEvidenceReviewKey | null;
+  focusOnMount?: boolean;
   onReview: (
     checkKey: ParcelWorkflowEvidenceReviewKey,
     check: ParcelDecisionAuditCheck,
@@ -407,7 +409,10 @@ export function EvidenceReviewChecklist({
   const isTerminal =
     item.stage === 'pass' ||
     ['closed', 'rejected', 'lost'].includes(item.outcome);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(
+    focusOnMount || staleCount > 0,
+  );
+  const toggleRef = useRef<HTMLButtonElement>(null);
   const [issueFormKey, setIssueFormKey] =
     useState<ParcelWorkflowEvidenceReviewKey | null>(null);
   const [issueType, setIssueType] =
@@ -423,6 +428,12 @@ export function EvidenceReviewChecklist({
     if (staleCount > 0) setExpanded(true);
   }, [staleCount]);
 
+  useEffect(() => {
+    if (!focusOnMount) return;
+    setExpanded(true);
+    toggleRef.current?.focus();
+  }, [focusOnMount]);
+
   if (checks.length === 0) return null;
 
   return (
@@ -432,6 +443,7 @@ export function EvidenceReviewChecklist({
     >
       <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-sky-950 px-3 py-3 text-white">
         <button
+          ref={toggleRef}
           type="button"
           onClick={() => setExpanded((value) => !value)}
           aria-expanded={expanded}

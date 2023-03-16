@@ -738,8 +738,15 @@ describe('ParcelIntelPropertyPanel', () => {
     await waitFor(() =>
       expect(mocks.getParcelWorkflow).toHaveBeenCalledWith(parcel.bbl),
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Workflow' }));
-    fireEvent.click(screen.getByTestId('evidence-review-toggle'));
+    fireEvent.click(screen.getByRole('button', { name: 'Audit' }));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Review 1 source version',
+      }),
+    );
+    const evidenceToggle = screen.getByTestId('evidence-review-toggle');
+    await waitFor(() => expect(evidenceToggle).toHaveFocus());
+    expect(evidenceToggle).toHaveAttribute('aria-expanded', 'true');
     fireEvent.click(
       screen.getByRole('button', {
         name: 'Mark Current property facts version reviewed',

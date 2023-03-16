@@ -201,6 +201,10 @@ current blockers, items requiring review, checks that passed the current
 screening gates, and one conservative next diligence action. Signed-in users
 can carry that action into the private workflow as an editable draft; it is
 never saved automatically and does not alter model rank.
+The audit also links directly to the source-version ledger. Existing workflow
+records open with that ledger expanded and keyboard-focused; a new record must
+still be saved first, after which the ledger appears automatically. The
+handoff never describes review as risk clearance.
 The Overview tab synthesizes that same immutable audit contract into a compact
 acquisition decision brief: why the parcel surfaced, why it survived current
 gates, what evidence remains unresolved, and the next decision. Each lane

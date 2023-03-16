@@ -111,6 +111,31 @@ describe('EvidenceReviewChecklist', () => {
     evidence_reviews: {},
   } as ParcelWorkflowItem;
 
+  it('opens and focuses the source ledger when entered from the parcel audit', async () => {
+    render(
+      <EvidenceReviewChecklist
+        audit={audit}
+        item={baseItem}
+        busyKey={null}
+        issueBusyKey={null}
+        focusOnMount
+        onReview={vi.fn()}
+        onClear={vi.fn()}
+        onReportIssue={vi.fn().mockResolvedValue(true)}
+        onWithdrawIssue={vi.fn()}
+      />,
+    );
+
+    const toggle = screen.getByTestId('evidence-review-toggle');
+    await waitFor(() => expect(toggle).toHaveFocus());
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      screen.getByRole('button', {
+        name: 'Mark Current property facts version reviewed',
+      }),
+    ).toBeVisible();
+  });
+
   it('records exact-version intent and never describes diligence as cleared', () => {
     const onReview = vi.fn().mockResolvedValue(undefined);
     const onClear = vi.fn().mockResolvedValue(undefined);
