@@ -1,5 +1,7 @@
 'use client';
 
+import { TriangleAlert } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { ApiError, getMe, type MeResponse } from '@/lib/api';
@@ -7,39 +9,68 @@ import { useAuth } from '@/lib/auth';
 
 export function PlanQuotaBadge() {
   const auth = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
   const [me, setMe] = useState<MeResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [credentialRejected, setCredentialRejected] = useState(false);
 
   useEffect(() => {
     let alive = true;
     if (auth.status !== 'authenticated') {
       setMe(null);
-      setError(null);
+      setCredentialRejected(false);
       return;
     }
 
-    setError(null);
+    setCredentialRejected(false);
     getMe()
       .then((next) => {
-        if (alive) setMe(next);
+        if (!alive) return;
+        setMe(next);
+        setCredentialRejected(false);
       })
       .catch((err: unknown) => {
         if (!alive) return;
         const status = err instanceof ApiError ? err.status : undefined;
         if (status === 401) {
-          setError(null);
           setMe(null);
+          setCredentialRejected(true);
           return;
         }
-        setError(err instanceof Error ? err.message : 'Failed to load plan info');
+        // A quota-service or network error is not proof that the browser
+        // credential is invalid. Keep that failure quiet and let the
+        // authenticated product surfaces own their retry states.
+        setMe(null);
       });
     return () => {
       alive = false;
     };
   }, [auth.status, auth.user?.id]);
 
-  if (auth.status !== 'authenticated' || !me) return null;
-  if (error) return null;
+  if (auth.status !== 'authenticated') return null;
+
+  if (credentialRejected) {
+    return (
+      <button
+        type="button"
+        data-testid="account-data-reconnect"
+        onClick={async () => {
+          await auth.signOut();
+          const next =
+            pathname && pathname.startsWith('/') ? pathname : '/parcel-intel';
+          router.push(`/sign-in?next=${encodeURIComponent(next)}`);
+        }}
+        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 text-xs font-semibold text-amber-950 hover:bg-amber-100"
+        title="Your account is visible, but its API credential expired. Sign in again to restore full data access."
+      >
+        <TriangleAlert className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Reconnect data</span>
+        <span className="sm:hidden">Reconnect</span>
+      </button>
+    );
+  }
+
+  if (!me) return null;
 
   const { plan_type, is_admin } = me.user;
   if (is_admin || me.quota.unlimited) {
