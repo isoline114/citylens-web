@@ -1,7 +1,14 @@
 'use client';
 
 import { createAuthClient } from '@neondatabase/auth/next';
-import { createContext, useCallback, useContext, useMemo, useRef } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+} from 'react';
 import type { ReactNode } from 'react';
 
 import { withSiteBasePath } from '@/lib/site';
@@ -13,6 +20,9 @@ import type { AuthContextValue, AuthUser } from './types';
 const authClient = createAuthClient();
 
 const NeonAuthContext = createContext<AuthContextValue | null>(null);
+const subscribeToHydration = () => () => undefined;
+const clientHydrationSnapshot = () => true;
+const serverHydrationSnapshot = () => false;
 
 export function NeonAuthProvider({ children }: { children: ReactNode }) {
   // useSession is provided by the Neon Auth client.
@@ -32,6 +42,17 @@ export function NeonAuthProvider({ children }: { children: ReactNode }) {
   }).useSession();
   const sessionData = session.data;
   const refetchSession = session.refetch;
+  // The auth SDK owns a client-side external store. A warm store may already
+  // contain a session while the server can only render its pending snapshot,
+  // especially immediately after sign-in or during client navigation. Keep
+  // the first browser render on the same pending branch as SSR, then reveal
+  // the SDK state after hydration. This prevents signed-in header/workspace
+  // markup from replacing signed-out HTML during hydration.
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    clientHydrationSnapshot,
+    serverHydrationSnapshot,
+  );
 
   // Cache the most-recently-fetched JWT so successive API calls don't refetch.
   // Bind it to the opaque Neon session token so switching accounts can never
@@ -159,7 +180,7 @@ export function NeonAuthProvider({ children }: { children: ReactNode }) {
   }, [sessionData, refetchSession]);
 
   const value = useMemo<AuthContextValue>(() => {
-    if (session.isPending) {
+    if (!hydrated || session.isPending) {
       return { status: 'loading', user: null, signIn, signOut, getAccessToken };
     }
     const data = sessionData;
@@ -172,7 +193,14 @@ export function NeonAuthProvider({ children }: { children: ReactNode }) {
       displayName: data.user.name ?? data.user.email ?? data.user.id,
     };
     return { status: 'authenticated', user, signIn, signOut, getAccessToken };
-  }, [session.isPending, sessionData, signIn, signOut, getAccessToken]);
+  }, [
+    hydrated,
+    session.isPending,
+    sessionData,
+    signIn,
+    signOut,
+    getAccessToken,
+  ]);
 
   return <NeonAuthContext.Provider value={value}>{children}</NeonAuthContext.Provider>;
 }

@@ -1,5 +1,7 @@
 import { act, render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { hydrateRoot } from 'react-dom/client';
+import { renderToString } from 'react-dom/server';
 
 const mocks = vi.hoisted(() => ({
   token: vi.fn(),
@@ -45,6 +47,10 @@ function Probe({
   return null;
 }
 
+function StatusProbe() {
+  return <span>{useNeonAuth().status}</span>;
+}
+
 describe('NeonAuthProvider access token recovery', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -52,6 +58,37 @@ describe('NeonAuthProvider access token recovery', () => {
     mocks.refetch.mockReset();
     mocks.signOut.mockReset();
     mocks.refetch.mockResolvedValue(undefined);
+  });
+
+  it('keeps the server and first client auth render hydration-safe', async () => {
+    const markup = renderToString(
+      <NeonAuthProvider>
+        <StatusProbe />
+      </NeonAuthProvider>,
+    );
+    expect(markup).toContain('loading');
+
+    const container = document.createElement('div');
+    container.innerHTML = markup;
+    const recoverableErrors: unknown[] = [];
+    let root: ReturnType<typeof hydrateRoot> | null = null;
+    await act(async () => {
+      root = hydrateRoot(
+        container,
+        <NeonAuthProvider>
+          <StatusProbe />
+        </NeonAuthProvider>,
+        {
+          onRecoverableError: (error) => recoverableErrors.push(error),
+        },
+      );
+    });
+
+    expect(recoverableErrors).toEqual([]);
+    expect(container).toHaveTextContent('authenticated');
+    await act(async () => {
+      root?.unmount();
+    });
   });
 
   it('uses the same-origin auth endpoint and caches the minted JWT', async () => {
