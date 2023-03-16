@@ -49,6 +49,8 @@ const authTokenReceipts = [];
 const runListReceipts = [];
 const consoleErrors = [];
 const pageErrors = [];
+let desktopCheckpoint = 'startup';
+let mobileCheckpoint = 'mobile_startup';
 let screeningReceiptVerified = false;
 let addressResolutionVerified = false;
 let officialDossierVerified = false;
@@ -73,7 +75,15 @@ let failure = null;
 page.on('console', (message) => {
   if (message.type() === 'error') consoleErrors.push(message.text());
 });
-page.on('pageerror', (error) => pageErrors.push(error.message));
+page.on('pageerror', (error) =>
+  pageErrors.push({
+    surface: 'desktop',
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+    checkpoint: desktopCheckpoint,
+  }),
+);
 page.on('response', async (response) => {
   if (response.url().includes('/api/auth/token')) {
     try {
@@ -166,6 +176,7 @@ async function verifyClusteredMap(expectedFormatted) {
 }
 
 try {
+  desktopCheckpoint = 'sign_in_navigation';
   await page.goto(
     `${webBase}/sign-in?next=${encodeURIComponent('/parcel-intel')}`,
     { waitUntil: 'networkidle' },
@@ -175,6 +186,7 @@ try {
   await page.getByRole('button', { name: 'Sign in' }).click();
   await page.waitForURL('**/parcel-intel', { timeout: 20_000 });
 
+  desktopCheckpoint = 'parcel_workspace';
   await page.waitForFunction(
     ({ count }) =>
       document
@@ -239,6 +251,7 @@ try {
       receipt.inventory_complete === true &&
       receipt.row_count === expectedCount,
   ).length;
+  desktopCheckpoint = 'parcel_reload';
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForFunction(
     ({ count }) =>
@@ -290,6 +303,7 @@ try {
   const exportDownloadPromise = page.waitForEvent('download', {
     timeout: 60_000,
   });
+  desktopCheckpoint = 'parcel_export';
   const exportStartedAt = Date.now();
   await exportButton.click();
   const exportDownload = await exportDownloadPromise;
@@ -330,9 +344,16 @@ try {
     }
   });
   mobilePage.on('pageerror', (error) =>
-    pageErrors.push(`[mobile] ${error.message}`),
+    pageErrors.push({
+      surface: 'mobile',
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      checkpoint: mobileCheckpoint,
+    }),
   );
   await mobilePage.setViewportSize(mobileViewport);
+  mobileCheckpoint = 'mobile_workspace';
   await mobilePage.goto(`${webBase}/parcel-intel`, {
     waitUntil: 'networkidle',
   });
@@ -627,6 +648,7 @@ try {
   // backend error text, or exact run timestamps.
   sensitiveSurface = true;
   try {
+    desktopCheckpoint = 'run_history_navigation';
     const runListResponsePromise = page.waitForResponse(
       (response) => {
         try {
@@ -726,6 +748,7 @@ try {
     let detailShellVisible = false;
     let detailStatusVisible = false;
     if (domRowCount > 0) {
+      desktopCheckpoint = 'run_detail_navigation';
       await historyRows.first().click();
       const detailShell = page.getByTestId('run-detail-shell');
       await detailShell.waitFor({ timeout: 20_000 });
@@ -754,6 +777,7 @@ try {
       detailState = 'verified';
       detailShellVisible = await detailShell.isVisible();
       detailStatusVisible = await statusCard.isVisible();
+      desktopCheckpoint = 'run_detail_complete';
     }
 
     runOperationsReceipt = {
@@ -786,6 +810,7 @@ try {
       `Browser emitted ${consoleErrors.length} console error(s) and ${pageErrors.length} page error(s): ${JSON.stringify(errorReceipt)}.`,
     );
   }
+  desktopCheckpoint = 'verification_complete';
   passed = true;
 } catch (error) {
   failure = error instanceof Error ? error.message : String(error);
@@ -806,7 +831,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v13',
+  schema_version: 'citylens/production-authenticated-parcel-map@v14',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,

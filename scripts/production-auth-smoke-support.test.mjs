@@ -43,16 +43,53 @@ describe('production authenticated smoke support', () => {
       {
         surface: 'mobile',
         category: 'resize_observer',
+        exception_type: 'Other',
+        message_shape: 'other',
+        runtime_source: 'unknown',
+        checkpoint: 'unknown',
         fingerprint: expect.stringMatching(/^[a-f0-9]{12}$/),
       },
       {
         surface: 'desktop',
         category: 'chunk_load',
+        exception_type: 'Other',
+        message_shape: 'resource_load',
+        runtime_source: 'unknown',
+        checkpoint: 'unknown',
         fingerprint: expect.stringMatching(/^[a-f0-9]{12}$/),
       },
     ]);
     expect(JSON.stringify(receipt)).not.toMatch(
       /private|example|resizeobserver|loading chunk/i,
+    );
+  });
+
+  it('classifies structured page errors without retaining messages or stacks', () => {
+    const receipt = summarizeBrowserErrors([
+      {
+        surface: 'desktop',
+        name: 'TypeError',
+        message:
+          "Cannot read properties of undefined (reading 'privateValue')",
+        stack:
+          'TypeError at privateFunction (https://citylens.dev/_next/static/chunks/private.js:1:2)',
+        checkpoint: 'run_history_navigation',
+      },
+    ]);
+
+    expect(receipt).toEqual([
+      {
+        surface: 'desktop',
+        category: 'unclassified',
+        exception_type: 'TypeError',
+        message_shape: 'property_read',
+        runtime_source: 'framework',
+        checkpoint: 'run_history_navigation',
+        fingerprint: expect.stringMatching(/^[a-f0-9]{12}$/),
+      },
+    ]);
+    expect(JSON.stringify(receipt)).not.toMatch(
+      /privatevalue|privatefunction|private\\.js/i,
     );
   });
 

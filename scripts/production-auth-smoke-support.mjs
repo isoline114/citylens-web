@@ -40,8 +40,8 @@ export function positiveFormattedCountWithSuffix(value, suffix) {
   );
 }
 
-function browserErrorCategory(message) {
-  const value = String(message ?? '');
+function browserErrorCategory(message, stack = '') {
+  const value = `${String(message ?? '')}\n${String(stack ?? '')}`;
   if (/resizeobserver/i.test(value)) return 'resize_observer';
   if (/hydration|hydrating|server rendered html/i.test(value)) {
     return 'react_hydration';
@@ -57,18 +57,79 @@ function browserErrorCategory(message) {
   return 'unclassified';
 }
 
+function browserErrorShape(message) {
+  const value = String(message ?? '');
+  if (/cannot read propert(?:y|ies).*reading/i.test(value)) {
+    return 'property_read';
+  }
+  if (/cannot set propert(?:y|ies)|assignment to/i.test(value)) {
+    return 'property_write';
+  }
+  if (/is not a function/i.test(value)) return 'not_callable';
+  if (/is not defined/i.test(value)) return 'not_defined';
+  if (/failed to execute/i.test(value)) return 'dom_operation';
+  if (/network|fetch|load/i.test(value)) return 'resource_load';
+  if (/abort/i.test(value)) return 'aborted';
+  return 'other';
+}
+
+function browserRuntimeSource(message, stack) {
+  const value = `${String(message ?? '')}\n${String(stack ?? '')}`;
+  if (/leaflet|markercluster|supercluster/i.test(value)) return 'map';
+  if (/three(?:\.module)?|webgl|canvas/i.test(value)) return 'viewer';
+  if (/better-auth|neon|firebase|auth\/token/i.test(value)) return 'auth';
+  if (/react-dom|react-server|next\/dist|_next\/static/i.test(value)) {
+    return 'framework';
+  }
+  return 'unknown';
+}
+
+function browserExceptionType(value) {
+  const normalized = String(value ?? '');
+  return [
+    'DOMException',
+    'Error',
+    'RangeError',
+    'ReferenceError',
+    'SyntaxError',
+    'TypeError',
+  ].includes(normalized)
+    ? normalized
+    : 'Other';
+}
+
+function browserCheckpoint(value) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return /^[a-z0-9_-]{1,48}$/.test(normalized)
+    ? normalized
+    : 'unknown';
+}
+
 export function summarizeBrowserErrors(messages) {
   if (!Array.isArray(messages)) return [];
-  return messages.slice(0, 3).map((message) => {
-    const normalized = String(message ?? '')
+  return messages.slice(0, 3).map((entry) => {
+    const structured =
+      entry && typeof entry === 'object' && !Array.isArray(entry)
+        ? entry
+        : {};
+    const rawMessage =
+      typeof entry === 'string' ? entry : String(structured.message ?? '');
+    const stack = String(structured.stack ?? '');
+    const normalized = rawMessage
       .replace(/^\[mobile\]\s*/i, '')
       .replace(/\s+/g, ' ')
       .trim();
     return {
-      surface: /^\[mobile\]/i.test(String(message ?? ''))
-        ? 'mobile'
-        : 'desktop',
-      category: browserErrorCategory(normalized),
+      surface:
+        structured.surface === 'mobile' ||
+        /^\[mobile\]/i.test(rawMessage)
+          ? 'mobile'
+          : 'desktop',
+      category: browserErrorCategory(normalized, stack),
+      exception_type: browserExceptionType(structured.name),
+      message_shape: browserErrorShape(normalized),
+      runtime_source: browserRuntimeSource(normalized, stack),
+      checkpoint: browserCheckpoint(structured.checkpoint),
       fingerprint: createHash('sha256')
         .update(normalized)
         .digest('hex')

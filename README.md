@@ -511,14 +511,15 @@ cannot pass by rendering the 125-row public preview. It also
 verifies the auditable historical benchmark receipt and its limitations, the
 live Ovington exact-BBL dossier, source-grounded evidence readiness,
 official-address resolution, current screening receipt, and the governed
-acquisition-thesis flow. The v13 receipt records the returning-session result
+acquisition-thesis flow. The v14 receipt records the returning-session result
 as a boolean without storing the credential or account identity. Browser
-failures retain only a coarse category, desktop/mobile surface, and truncated
-SHA-256 fingerprint—not the raw message. The thesis
+failures retain only a coarse category, exception type, message shape, runtime
+source, action checkpoint, desktop/mobile surface, and truncated SHA-256
+fingerprint—not the raw message or stack. The thesis
 check requires a reviewed, positive-match
 receipt, the expected visible filters, and an accepted
 `thesis_composer_applied:thesis_composer` API response whose JSON keys are
-exactly `event`, `schema_version`, and `source`. Its v13 report stores only
+exactly `event`, `schema_version`, and `source`. Its v14 report stores only
 booleans plus that response status/event/source/key receipt—never the thesis,
 parsed criteria, thresholds, geography, match count, or parcel identity.
 Its email and password live only in the
