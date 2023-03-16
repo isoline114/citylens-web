@@ -729,7 +729,7 @@ describe('ParcelIntelExplorer', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('never labels a cached public preview as the signed-in inventory', async () => {
+  it('never renders a cached public preview inside the signed-in workspace', async () => {
     mocks.authStatus = 'authenticated';
     const fiveBoroughs = [
       { slug: 'manhattan', display_name: 'Manhattan', count: 1000, top_score: 1 },
@@ -759,7 +759,9 @@ describe('ParcelIntelExplorer', () => {
     render(<ParcelIntelExplorer boroughs={fiveBoroughs} />);
 
     const alert = await screen.findByTestId('parcel-inventory-incomplete');
-    expect(alert).toHaveTextContent('125 loaded parcels');
+    expect(alert).toHaveTextContent(
+      'The public 125-row preview is hidden here',
+    );
     expect(alert).toHaveTextContent('5,000-parcel workspace');
     expect(alert).toHaveTextContent(
       'account session is visible, but its data-access credential could not be refreshed',
@@ -768,10 +770,9 @@ describe('ParcelIntelExplorer', () => {
       screen.getByRole('button', { name: 'Reconnect account' }),
     ).toBeInTheDocument();
     expect(screen.getByTestId('parcel-inventory-status')).toHaveTextContent(
-      'Inventory incomplete · 125 of 5,000 loaded',
+      'Inventory incomplete · 0 of 5,000 loaded',
     );
-    expect(screen.getByText('125 preview')).toBeInTheDocument();
-    expect(screen.getByText('125 partial')).toBeInTheDocument();
+    expect(screen.queryByTestId('citywide-map-stub')).not.toBeInTheDocument();
     expect(
       screen.queryByText(/Full inventory verified/i),
     ).not.toBeInTheDocument();
@@ -802,7 +803,7 @@ describe('ParcelIntelExplorer', () => {
     );
   });
 
-  it('keeps the public preview and does not request private rows without a refreshed credential', async () => {
+  it('does not request or render public rows when a signed-in credential cannot refresh', async () => {
     mocks.authStatus = 'authenticated';
     mocks.getAccessToken.mockResolvedValue(null);
 
@@ -812,13 +813,14 @@ describe('ParcelIntelExplorer', () => {
     expect(alert).toHaveTextContent(
       'account session is visible, but its data-access credential could not be refreshed',
     );
+    expect(alert).toHaveTextContent(
+      'The public 125-row preview is hidden here',
+    );
     expect(mocks.getAccessToken).toHaveBeenCalledWith({
       forceRefresh: true,
     });
-    expect(mocks.getParcelIntelMap).toHaveBeenCalledTimes(1);
-    expect(mocks.getParcelIntelMap).toHaveBeenCalledWith(1000, {
-      includeAuth: false,
-    });
+    expect(mocks.getParcelIntelMap).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('citywide-map-stub')).not.toBeInTheDocument();
   });
 
   it('automatically recovers when a signed-in session briefly receives the public preview', async () => {
@@ -954,7 +956,7 @@ describe('ParcelIntelExplorer', () => {
     );
   });
 
-  it('keeps the preview and exposes account recovery when JWT access fails', async () => {
+  it('withholds the preview and exposes account recovery when JWT access fails', async () => {
     mocks.authStatus = 'authenticated';
     const previewRows = [
       row('1000010001', 'manhattan'),
@@ -986,13 +988,13 @@ describe('ParcelIntelExplorer', () => {
     expect(alert).toHaveTextContent(
       'account session is visible, but its data-access credential could not be refreshed',
     );
-    expect(alert).toHaveTextContent('2 loaded parcels');
+    expect(alert).toHaveTextContent(
+      'The public 125-row preview is hidden here',
+    );
     expect(
       screen.getByRole('button', { name: 'Reconnect account' }),
     ).toBeInTheDocument();
-    expect(screen.getByTestId('citywide-map-stub')).toHaveTextContent(
-      '2 mapped rows',
-    );
+    expect(screen.queryByTestId('citywide-map-stub')).not.toBeInTheDocument();
   });
 
   it('applies an evidence recipe and explains the resulting intersection', async () => {

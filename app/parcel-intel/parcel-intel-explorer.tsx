@@ -427,12 +427,30 @@ export function ParcelIntelExplorer({
       // reuses a public response—never accept 125 preview rows as the signed-in
       // inventory. The authenticated borough feeds provide a recovery path.
       const legacyResult = await loadLegacySweeps(true);
-      return legacyResult.fullInventoryVerified ? legacyResult : mapResult;
+      if (legacyResult.fullInventoryVerified) return legacyResult;
+
+      // A signed-in workspace must never render the public 125-row preview as
+      // though it were the user's parcel inventory. Preserve the failure
+      // receipt, but withhold preview rows until the authenticated 5,000-row
+      // inventory can be verified.
+      return {
+        ...mapResult,
+        rows: [],
+        failures: legacyResult.failures,
+        issue: mapResult.issue ?? legacyResult.issue ?? 'response',
+      };
     } catch (error) {
       // Backwards-compatible during the coordinated engine/web rollout.
       const legacy = await loadLegacySweeps(includeAuth);
+      const fullInventoryVerified =
+        includeAuth && legacy.fullInventoryVerified;
       return {
         ...legacy,
+        rows:
+          includeAuth && !fullInventoryVerified
+            ? []
+            : legacy.rows,
+        fullInventoryVerified,
         issue:
           includeAuth && error instanceof ApiError && error.status === 401
             ? 'auth'
@@ -475,15 +493,7 @@ export function ParcelIntelExplorer({
     setInventoryState(includeAuth ? 'upgrading' : 'preview');
     setInventoryIssue(null);
     void (async () => {
-      let result = await loadExplorerRows(includeAuth);
-      if (includeAuth && result.rows.length === 0) {
-        const preview = await loadExplorerRows(false);
-        result = {
-          ...preview,
-          fullInventoryVerified: false,
-          issue: result.issue ?? 'network',
-        };
-      }
+      const result = await loadExplorerRows(includeAuth);
       if (cancelled) return;
       const unique = new Map(result.rows.map((row) => [row.bbl, row]));
       const fullInventoryVerified =
@@ -495,11 +505,10 @@ export function ParcelIntelExplorer({
       if (fullInventoryVerified) {
         automaticInventoryRetryCount.current = 0;
       }
-      // Do not erase a useful public preview when the signed-in upgrade
-      // cannot obtain a credential or inventory response.
-      setRows((current) =>
-        unique.size > 0 ? [...unique.values()] : current,
-      );
+      setRows((current) => {
+        if (includeAuth && !fullInventoryVerified) return [];
+        return unique.size > 0 ? [...unique.values()] : current;
+      });
       // A legacy sweep recovery has no immutable generation receipt. Clear
       // any earlier public-preview value instead of letting saved views bind
       // a full inventory to an unverified generation.
@@ -1424,21 +1433,24 @@ export function ParcelIntelExplorer({
           <div className="grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] text-slate-300 sm:hidden">
             <span>
               <strong className="text-sm text-white">
-                {loadState === 'ready'
-                  ? inventoryState === 'upgrading'
-                    ? `${rows.length.toLocaleString()} preview`
-                    : rows.length.toLocaleString()
-                  : '…'}
+                {inventoryState === 'upgrading'
+                  ? '…'
+                  : inventoryState === 'incomplete'
+                    ? '—'
+                    : loadState === 'ready'
+                      ? rows.length.toLocaleString()
+                      : '…'}
               </strong>{' '}
               loaded
             </span>
             <span>
               <strong className="text-sm text-white">
-                {loadState === 'ready'
-                  ? inventoryState === 'upgrading'
-                    ? '…'
-                    : filtered.length.toLocaleString()
-                  : '…'}
+                {inventoryState === 'upgrading' ||
+                inventoryState === 'incomplete'
+                  ? '…'
+                  : loadState === 'ready'
+                    ? filtered.length.toLocaleString()
+                    : '…'}
               </strong>{' '}
               matches
             </span>
@@ -1470,25 +1482,23 @@ export function ParcelIntelExplorer({
               ['Boroughs', boroughs.length.toString()],
               [
                 'Loaded',
-                loadState === 'ready'
-                  ? inventoryState === 'upgrading'
-                    ? `${rows.length.toLocaleString()} preview`
-                    : inventoryState === 'incomplete'
-                      ? `${rows.length.toLocaleString()} ${
-                          inventoryIssue === 'auth' ? 'preview' : 'partial'
-                        }`
-                    : rows.length.toLocaleString()
-                  : 'Loading…',
+                inventoryState === 'upgrading'
+                  ? 'Verifying…'
+                  : inventoryState === 'incomplete'
+                    ? 'Withheld'
+                    : loadState === 'ready'
+                      ? rows.length.toLocaleString()
+                      : 'Loading…',
               ],
               [
                 'Matches',
-                loadState === 'ready'
-                  ? inventoryState === 'upgrading'
-                    ? 'Rechecking…'
-                    : inventoryState === 'incomplete'
-                      ? `${filtered.length.toLocaleString()} partial`
-                    : filtered.length.toLocaleString()
-                  : 'Loading…',
+                inventoryState === 'upgrading'
+                  ? 'Rechecking…'
+                  : inventoryState === 'incomplete'
+                    ? 'Awaiting access'
+                    : loadState === 'ready'
+                      ? filtered.length.toLocaleString()
+                      : 'Loading…',
               ],
               ['Available', totalAvailable.toLocaleString()],
             ].map(([label, value]) => (
@@ -1693,8 +1703,8 @@ export function ParcelIntelExplorer({
               {inventoryIssue === 'auth'
                 ? 'Your account session is visible, but its data-access credential could not be refreshed. '
                 : 'The signed-in inventory response was incomplete. '}
-              The map is showing {rows.length.toLocaleString()} loaded parcels,
-              not claiming the {totalAvailable.toLocaleString()}-parcel workspace.
+              The public 125-row preview is hidden here. Retry or reconnect to
+              load the verified {totalAvailable.toLocaleString()}-parcel workspace.
             </span>
           </span>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
