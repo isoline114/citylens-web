@@ -132,9 +132,11 @@ The same center keeps private correction and suppression-review requests
 visible while they await CityLens governance review. A request is attached to
 one exact status/source/source-date/feed citation and never implies that the
 underlying official value was edited or hidden.
-The explorer renders its public preview immediately, upgrades authenticated
-users with one compact 5,000-row citywide request, and fetches polygon,
-explanation, provenance, and underwriting detail only when a parcel is opened.
+The explorer resolves the browser session before selecting an inventory tier.
+Signed-out users receive one public 125-row request; authenticated users receive
+one compact 5,000-row citywide request without first racing the public preview.
+It fetches polygon, explanation, provenance, and underwriting detail only when
+a parcel is opened.
 The upgrade is fail-closed: authenticated map reads bypass the public HTTP
 cache and must carry an internally consistent full-inventory receipt from the
 API. Until that receipt is verified, the interface labels the loaded count as

@@ -384,17 +384,31 @@ describe('ParcelIntelExplorer', () => {
     ).toBeInTheDocument();
   });
 
-  it('does not hold the public map behind auth initialization', async () => {
+  it('waits for auth resolution before choosing the inventory tier', () => {
     mocks.authStatus = 'loading';
 
     render(<ParcelIntelExplorer boroughs={boroughs} />);
 
+    expect(
+      screen.getByLabelText('Loading citywide parcel map'),
+    ).toBeInTheDocument();
+    expect(mocks.getParcelIntelMap).not.toHaveBeenCalled();
+  });
+
+  it('never requests the public preview for an authenticated session', async () => {
+    mocks.authStatus = 'authenticated';
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
     await waitFor(() =>
-      expect(screen.getByTestId('citywide-map-stub')).toHaveTextContent(
-        '2 mapped rows',
+      expect(screen.getByTestId('parcel-inventory-status')).toHaveTextContent(
+        'Full inventory verified · 2 loaded',
       ),
     );
     expect(mocks.getParcelIntelMap).toHaveBeenCalledWith(1000, {
+      includeAuth: true,
+    });
+    expect(mocks.getParcelIntelMap).not.toHaveBeenCalledWith(1000, {
       includeAuth: false,
     });
   });
@@ -768,9 +782,12 @@ describe('ParcelIntelExplorer', () => {
     );
     await waitFor(() =>
       expect(mocks.getParcelIntelMap.mock.calls.length).toBeGreaterThanOrEqual(
-        3,
+        2,
       ),
     );
+    expect(mocks.getParcelIntelMap).not.toHaveBeenCalledWith(1000, {
+      includeAuth: false,
+    });
   });
 
   it('keeps the public preview and does not request private rows without a refreshed credential', async () => {

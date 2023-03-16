@@ -435,46 +435,49 @@ export function ParcelIntelExplorer({
     }
   };
 
-  // Render the public citywide preview immediately; auth initialization no
-  // longer holds the map behind a full-page skeleton.
-  useEffect(() => {
-    if (boroughs.length === 0) return;
-    let cancelled = false;
-    setLoadState('loading');
-    setFailedBoroughs([]);
-    void loadExplorerRows(false).then((result) => {
-      if (cancelled || fullInventoryLoaded.current) return;
-      const unique = new Map(result.rows.map((row) => [row.bbl, row]));
-      setRows([...unique.values()]);
-      setInventoryFeedGeneration(result.feedGeneration);
-      setInventoryGeneratedAt(result.generatedAt);
-      setFailedBoroughs(result.failures);
-      setLoadState(unique.size > 0 ? 'ready' : 'error');
-      setInventoryState('preview');
-      setInventoryIssue(null);
-    });
-    return () => {
-      cancelled = true;
-    };
-    // Borough metadata changes only when the page is regenerated.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boroughs]);
-
-  // Authenticated users upgrade the already-visible preview to the compact
-  // 5,000-row inventory in one request. Signing out immediately downgrades
-  // the in-memory inventory so premium owner data never lingers in the UI.
+  // Resolve the browser session before choosing an inventory tier. Starting
+  // the public 125-row request and the authenticated 5,000-row request
+  // together created a visible preview flash and allowed a late public
+  // response to compete with the verified inventory in real browsers.
+  // Authenticated sessions now issue only the private request. Signed-out
+  // sessions issue only the public request. If credential recovery fails,
+  // load the public rows afterwards and label them as incomplete.
   useEffect(() => {
     if (auth.status === 'loading' || boroughs.length === 0) return;
     const includeAuth = auth.status === 'authenticated';
-    if (!includeAuth && !fullInventoryLoaded.current) {
+    const hadFullInventory = fullInventoryLoaded.current;
+    if (!includeAuth) {
       automaticInventoryRetryCount.current = 0;
-      return;
+      fullInventoryLoaded.current = false;
+      if (hadFullInventory) {
+        // Never leave private fields in memory while the public request is in
+        // flight after sign-out.
+        setRows([]);
+        setLoadState('loading');
+      }
+    } else if (!fullInventoryLoaded.current && rows.length > 0) {
+      // A session can become authenticated while the public explorer is
+      // already open. Remove that preview before requesting private data so
+      // the signed-in state never appears to contain only 125 leads.
+      setRows([]);
+      setLoadState('loading');
     }
     let cancelled = false;
+    if (rows.length === 0) setLoadState('loading');
+    setFailedBoroughs([]);
     setFullInventoryReady(false);
     setInventoryState(includeAuth ? 'upgrading' : 'preview');
     setInventoryIssue(null);
-    void loadExplorerRows(includeAuth).then((result) => {
+    void (async () => {
+      let result = await loadExplorerRows(includeAuth);
+      if (includeAuth && result.rows.length === 0) {
+        const preview = await loadExplorerRows(false);
+        result = {
+          ...preview,
+          fullInventoryVerified: false,
+          issue: result.issue ?? 'network',
+        };
+      }
       if (cancelled) return;
       const unique = new Map(result.rows.map((row) => [row.bbl, row]));
       const fullInventoryVerified =
@@ -509,7 +512,7 @@ export function ParcelIntelExplorer({
             : 'incomplete'
           : 'preview',
       );
-    });
+    })();
     return () => {
       cancelled = true;
     };

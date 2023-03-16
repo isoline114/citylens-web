@@ -59,6 +59,7 @@ let thesisComposerFiltersVerified = false;
 let thesisComposerPositiveMatchVerified = false;
 let thesisComposerEventReceipt = null;
 let returningSessionReloadVerified = false;
+let authenticatedPublicPreviewReceiptCount = null;
 let initialClusteredMapReceipt = null;
 let returningClusteredMapReceipt = null;
 let citywideExportReceipt = null;
@@ -263,6 +264,14 @@ try {
     );
   }
   returningSessionReloadVerified = true;
+  authenticatedPublicPreviewReceiptCount = mapReceipts.filter(
+    (receipt) => receipt.access_scope === 'public_preview',
+  ).length;
+  if (authenticatedPublicPreviewReceiptCount !== 0) {
+    throw new Error(
+      `Authenticated explorer requested ${authenticatedPublicPreviewReceiptCount} public preview response(s) before loading the full inventory.`,
+    );
+  }
 
   const exportButton = page.getByRole('button', { name: 'CSV' });
   const exportTitle = await exportButton.getAttribute('title');
@@ -786,7 +795,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v11',
+  schema_version: 'citylens/production-authenticated-parcel-map@v12',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -797,6 +806,8 @@ const report = {
   initial_clustered_map_receipt: initialClusteredMapReceipt,
   returning_clustered_map_receipt: returningClusteredMapReceipt,
   returning_session_reload_verified: returningSessionReloadVerified,
+  authenticated_public_preview_receipt_count:
+    authenticatedPublicPreviewReceiptCount,
   citywide_export_receipt: citywideExportReceipt,
   mobile_workspace_receipt: mobileWorkspaceReceipt,
   screening_receipt_verified: screeningReceiptVerified,
