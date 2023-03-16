@@ -125,7 +125,16 @@ export default function SignInPage() {
                 );
                 return;
               }
-              router.push(requestedDestination());
+              // Neon has accepted the credentials and written the
+              // authoritative HttpOnly session cookie, but the client-side
+              // session hook can still hold its pre-sign-in anonymous value
+              // for one render. A full navigation forces both the server and
+              // browser auth clients to rehydrate from that cookie before a
+              // protected surface chooses its data tier. Without this
+              // boundary, Parcel Intelligence can briefly start its
+              // 125-parcel public request after a successful sign-in.
+              window.location.assign(requestedDestination());
+              return;
             } else {
               await auth.signIn(email.trim() || undefined);
               router.push(requestedDestination());
