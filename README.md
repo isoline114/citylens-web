@@ -207,6 +207,12 @@ cohort when that reconciled receipt is available, then shows the citywide
 benchmark separately. Borough context is explicitly labeled as one fixed
 2024→2025 cohort and never as current accuracy, a property probability, owner
 intent, or an acquisition outcome.
+The parcel methodology disclosure also renders the accepted temporal lineage
+as a compact receipt: archived 2018/2020/2022 feature origins fit the ranking
+estimator, the 2024→2025 cohort calibrates the final output, and current
+official records are scored at inference. The production browser monitor
+fails if that lineage becomes incomplete or if the current prospective cohort
+loses its maturity-safe claim boundary.
 The audit also renders the API-owned decision-readiness state:
 current blockers, items requiring review, checks that passed the current
 screening gates, and one conservative next diligence action. Signed-in users
