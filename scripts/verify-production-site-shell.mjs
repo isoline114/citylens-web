@@ -29,7 +29,12 @@ const routes = [
     requiredTestId: 'new-run-access-gate',
   },
   { name: 'pricing', path: '/pricing', current: 'Pricing' },
-  { name: 'docs', path: '/docs', current: 'Docs' },
+  {
+    name: 'docs',
+    path: '/docs',
+    current: 'Docs',
+    requiredTestId: 'developer-center-hero',
+  },
   { name: 'contact', path: '/contact', current: null },
   {
     name: 'sign-in',
@@ -134,6 +139,17 @@ try {
         height: document.body.scrollHeight,
         width: document.body.scrollWidth,
       }));
+      const docsDisclosureReceipt =
+        route.name === 'docs'
+          ? await page.evaluate(() => ({
+              section_count: document.querySelectorAll(
+                'details[data-testid^="docs-section-"]',
+              ).length,
+              open_section_count: document.querySelectorAll(
+                'details[open][data-testid^="docs-section-"]',
+              ).length,
+            }))
+          : null;
       const receipt = {
         route: route.name,
         path: route.path,
@@ -148,6 +164,9 @@ try {
         required_surface_count: requiredSurfaceCount,
         body_height_px: bodyDimensions.height,
         body_width_px: bodyDimensions.width,
+        docs_section_count: docsDisclosureReceipt?.section_count ?? null,
+        docs_open_section_count:
+          docsDisclosureReceipt?.open_section_count ?? null,
         footer_bottom_px: footerBounds
           ? Math.round(footerBounds.y + footerBounds.height)
           : null,
@@ -178,6 +197,12 @@ try {
           (viewport.name === 'desktop'
             ? receipt.body_height_px <= 3_800
             : receipt.body_height_px <= 7_000)) &&
+        (route.name !== 'docs' ||
+          (receipt.docs_section_count === 6 &&
+            receipt.docs_open_section_count === 1 &&
+            (viewport.name === 'desktop'
+              ? receipt.body_height_px <= 3_200
+              : receipt.body_height_px <= 4_800))) &&
         (route.name !== 'parcels' ||
           viewport.name !== 'desktop' ||
           (receipt.main_width_px !== null &&
@@ -236,7 +261,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-site-shell@v3',
+  schema_version: 'citylens/production-site-shell@v4',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   passed: failure === null,

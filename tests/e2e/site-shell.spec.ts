@@ -102,9 +102,20 @@ test('shared shell exposes one landmark, active navigation, and a true sticky fo
     page.getByRole('navigation', { name: 'Developer center sections' }),
   ).toBeVisible();
   await expect(page.getByTestId('developer-center-hero')).toBeVisible();
+  await page
+    .getByRole('link', { name: 'Parcel intelligence', exact: true })
+    .click();
+  await expect(
+    page.getByTestId('docs-section-parcel-intelligence'),
+  ).toHaveAttribute('open', '');
   await expect(
     page.getByText(/authenticated_full/),
   ).toBeVisible();
+  await page.goto('/docs#errors');
+  await expect(page.getByTestId('docs-section-errors')).toHaveAttribute(
+    'open',
+    '',
+  );
   await expectNoWcagViolations(page, 'Developer center');
 
   await page.setViewportSize({ width: 320, height: 800 });
@@ -118,6 +129,11 @@ test('shared shell exposes one landmark, active navigation, and a true sticky fo
     page,
     'Developer center at 400% equivalent zoom',
   );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/docs');
+  expect(
+    await page.evaluate(() => document.body.scrollHeight),
+  ).toBeLessThanOrEqual(4_800);
   await page.goto('/pricing');
   await expectNoDocumentHorizontalOverflow(
     page,
