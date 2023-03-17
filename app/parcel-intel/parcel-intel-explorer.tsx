@@ -22,6 +22,7 @@ import {
   Ruler,
   Search,
   Sparkles,
+  Target,
   TrendingUp,
   TriangleAlert,
   X,
@@ -81,6 +82,7 @@ import { ParcelWorkflowInsights } from './parcel-workflow-insights';
 import { ParcelWorkflowAlertsPanel } from './parcel-workflow-alerts';
 import { ParcelWorkflowActionsPanel } from './parcel-workflow-actions';
 import { ParcelSavedViewsPanel } from './parcel-saved-views';
+import { ParcelLeadReviewWorkspace } from './parcel-lead-review-workspace';
 import { ParcelScreenAudit } from './parcel-screen-audit';
 import { ParcelThesisComposer } from './parcel-thesis-composer';
 import {
@@ -170,7 +172,7 @@ type Props = {
   initialBbl?: string | null;
 };
 
-type ToolPanelKey = 'actions' | 'alerts' | 'insights' | 'saved';
+type ToolPanelKey = 'actions' | 'alerts' | 'insights' | 'reviews' | 'saved';
 
 function isWorkflowBorough(value: string | null | undefined): value is WorkflowBorough {
   return WORKFLOW_BOROUGHS.some((borough) => borough === value);
@@ -283,6 +285,7 @@ export function ParcelIntelExplorer({
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [savedViewsOpen, setSavedViewsOpen] = useState(false);
+  const [leadReviewsOpen, setLeadReviewsOpen] = useState(false);
   const [savedViewsEntry, setSavedViewsEntry] = useState<
     'browse' | 'create'
   >('browse');
@@ -1373,6 +1376,7 @@ export function ParcelIntelExplorer({
     setAlertsOpen(false);
     setInsightsOpen(false);
     setSavedViewsOpen(false);
+    setLeadReviewsOpen(false);
   };
 
   const openSavedViews = (entry: 'browse' | 'create' = 'browse') => {
@@ -1384,6 +1388,18 @@ export function ParcelIntelExplorer({
     setActionsOpen(false);
     setAlertsOpen(false);
     setInsightsOpen(false);
+    setLeadReviewsOpen(false);
+  };
+
+  const openLeadReviews = () => {
+    if (!leadReviewsOpen) {
+      rememberToolPanelOpener();
+    }
+    setLeadReviewsOpen(true);
+    setActionsOpen(false);
+    setAlertsOpen(false);
+    setInsightsOpen(false);
+    setSavedViewsOpen(false);
   };
 
   const applySavedView = (view: ParcelSavedSearch) => {
@@ -1651,7 +1667,7 @@ export function ParcelIntelExplorer({
               <span className="font-medium text-slate-300">
                 {workflowActions && workflowActions.attention_count > 0
                   ? `${workflowActions.attention_count} need attention`
-                  : 'Views · actions · evidence'}
+                  : 'Views · reviews · actions'}
               </span>
             </button>
           )}
@@ -1691,6 +1707,28 @@ export function ParcelIntelExplorer({
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Retry inventory
+              </button>
+            )}
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (leadReviewsOpen) {
+                    setLeadReviewsOpen(false);
+                  } else {
+                    openLeadReviews();
+                  }
+                }}
+                disabled={
+                  inventoryState !== 'full' || !inventoryFeedGeneration
+                }
+                aria-expanded={leadReviewsOpen}
+                aria-controls="parcel-lead-review-workspace"
+                data-tool-panel-trigger="reviews"
+                className="inline-flex h-11 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Target className="h-3.5 w-3.5 text-emerald-300" />
+                Lead reviews
               </button>
             )}
             {isAuthenticated && (
@@ -1759,6 +1797,7 @@ export function ParcelIntelExplorer({
                   setInsightsOpen(false);
                   setActionsOpen(false);
                   setSavedViewsOpen(false);
+                  setLeadReviewsOpen(false);
                 }}
                 aria-expanded={alertsOpen}
                 aria-controls="parcel-evidence-changes"
@@ -1780,6 +1819,7 @@ export function ParcelIntelExplorer({
                   setAlertsOpen(false);
                   setActionsOpen(false);
                   setSavedViewsOpen(false);
+                  setLeadReviewsOpen(false);
                 }}
                 aria-expanded={insightsOpen}
                 aria-controls="parcel-outcome-insights"
@@ -1846,6 +1886,22 @@ export function ParcelIntelExplorer({
           }
         />
       )}
+      {isAuthenticated &&
+        leadReviewsOpen &&
+        inventoryState === 'full' &&
+        inventoryFeedGeneration && (
+          <ParcelLeadReviewWorkspace
+            feedGeneration={inventoryFeedGeneration}
+            inventoryRows={rows}
+            onClose={() =>
+              closeToolPanel('reviews', () => setLeadReviewsOpen(false))
+            }
+            onSelectParcel={(bbl) => {
+              setLeadReviewsOpen(false);
+              selectParcel(bbl, 'lead_reviews');
+            }}
+          />
+        )}
       {isAuthenticated && savedViewsOpen && (
         <ParcelSavedViewsPanel
           currentView={{
@@ -1919,6 +1975,7 @@ export function ParcelIntelExplorer({
         !actionsOpen &&
         !alertsOpen &&
         !insightsOpen &&
+        !leadReviewsOpen &&
         !savedViewsOpen &&
         ((workflowActions.total_records === 0 && savedViewCount === 0) ||
           workflowActions.attention_count > 0) && (

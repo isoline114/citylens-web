@@ -75,6 +75,7 @@ jobs:
           console.log(`- Any-NYC-lot official dossier: \`${report?.official_dossier_verified ? 'passed' : 'failed'}\``);
           console.log(`- Source-grounded dossier readiness: \`${report?.dossier_readiness_verified ? 'passed' : 'failed'}\``);
           console.log(`- Official comparable-sale screen: \`${report?.sales_comparables_verified ? 'passed' : 'failed'}\``);
+          console.log(`- Systematic private lead-review workspace: \`${report?.lead_review_workspace_receipt?.status === 200 && report?.lead_review_workspace_receipt?.available_count === 5000 && report?.lead_review_workspace_receipt?.counts_reconcile && report?.lead_review_workspace_receipt?.mutation_requested === false ? `passed · ${report.lead_review_workspace_receipt.reviewed_count.toLocaleString()} reviewed` : 'failed'}\``);
           console.log(`- Private generation-bound lead review: \`${report?.lead_review_contract_receipt?.status === 200 && report?.lead_review_contract_receipt?.card_state === 'ready' && report?.lead_review_contract_receipt?.mutation_requested === false ? 'passed · read-only smoke' : 'failed'}\``);
           console.log(`- Official address → BBL → screening flow: \`${report?.address_resolution_verified ? 'passed' : 'failed'}\``);
           console.log(`- Governed acquisition-thesis flow: \`${report?.thesis_composer_verified ? 'passed' : 'failed'}\``);

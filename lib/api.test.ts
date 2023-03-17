@@ -11,6 +11,7 @@ import {
   getParcelIntelMap,
   getParcelIntelParcel,
   getParcelLeadReview,
+  getParcelLeadReviewIndex,
   getParcelOfficialDossier,
   getParcelSalesComparables,
   getParcelScreeningStatus,
@@ -1009,6 +1010,28 @@ describe('parcel intelligence progressive reads', () => {
       verdict: 'pass',
       reason_codes: ['active_or_completed_project'],
     });
+  });
+
+  it('loads the private current-generation lead review index', async () => {
+    setAuthTokenGetter(async () => 'tok-abc');
+    const mockFetch = stubFetch({
+      schema_version: 'citylens/parcel-lead-review-index@v1',
+      current_feed_generation: '20260730T092749819158Z-daf06394d35b',
+      available_count: 5_000,
+      reviewed_count: 0,
+      unreviewed_count: 5_000,
+      verdict_counts: { pursue: 0, watch: 0, pass: 0, unclear: 0 },
+      items: [],
+    });
+
+    await getParcelLeadReviewIndex();
+
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/v1/parcel-intel/lead-reviews');
+    expect(init.cache).toBe('no-store');
+    expect(new Headers(init.headers).get('Authorization')).toBe(
+      'Bearer tok-abc',
+    );
   });
 
   it('loads an exact screening receipt privately with the user token', async () => {

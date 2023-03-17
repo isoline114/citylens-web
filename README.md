@@ -205,8 +205,12 @@ Authenticated ranked-parcel overviews also provide a private **Your lead
 call** control. A practitioner can mark the current generation `Pursue`,
 `Watch`, `Pass`, or `Unclear` with one controlled reason. The server binds the
 review to the immutable ranking generation and current rank snapshot; the
-review never changes rank or silently creates workflow state. This is selected
-practitioner relevance evidence, not model accuracy or a realized outcome.
+review never changes rank or silently creates workflow state. The private
+**Lead reviews** workspace reports current-generation coverage, verdict
+counts, and the highest-ranked unreviewed parcel so practitioners can work the
+inventory systematically instead of reviewing only interesting clicks.
+Coverage is practitioner relevance evidence, not model accuracy or a realized
+outcome.
 The selected-parcel panel also has a Decision Audit tab. It separates the
 historical next-year DOB filing signal from current acquisition gates,
 post-score diligence overlays, source dates, and user-entered workflow
@@ -430,6 +434,9 @@ This frontend aligns to the CityLens API contract served by `citylens-engine`:
 - `GET|PUT /v1/parcel-intel/lead-reviews/{bbl}` — Bearer-authenticated,
   private/no-store practitioner relevance review for the current immutable
   ranking generation; separate from rank, workflow, and outcome evidence
+- `GET /v1/parcel-intel/lead-reviews` — Bearer-authenticated,
+  private/no-store current-generation review coverage and operator-scoped
+  review index; never exposes another user's calls
 - `GET  /v1/demo/featured`, `GET /v1/demo/runs/{run_id}` — public demo endpoints
 - `POST /v1/runs` — Bearer auth required (the engine narrowly validates the public
   request shape; sam2/aoi defaults are server-injected)

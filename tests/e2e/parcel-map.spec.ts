@@ -283,6 +283,29 @@ test('lets a first-session user watch the verified citywide screen', async ({
     },
   );
   await page.route(
+    /\/v1\/parcel-intel\/lead-reviews$/,
+    async (route) => {
+      const items = leadReview ? [leadReview] : [];
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          schema_version: 'citylens/parcel-lead-review-index@v1',
+          current_feed_generation: feedGeneration,
+          available_count: rows.length,
+          reviewed_count: items.length,
+          unreviewed_count: rows.length - items.length,
+          verdict_counts: {
+            pursue: 0,
+            watch: 0,
+            pass: leadReview?.verdict === 'pass' ? 1 : 0,
+            unclear: 0,
+          },
+          items,
+        }),
+      });
+    },
+  );
+  await page.route(
     /\/v1\/parcel-intel\/workflow\/\d+$/,
     async (route) => {
       await route.fulfill({
@@ -369,7 +392,12 @@ test('lets a first-session user watch the verified citywide screen', async ({
   await page.getByRole('button', { name: 'Close saved views' }).click();
   await expect(page.getByTestId('activation-guide-empty')).toHaveCount(0);
 
-  await page.locator('[data-parcel-ranking-bbl]').first().click();
+  await page.getByRole('button', { name: 'Lead reviews' }).click();
+  const reviewWorkspace = page.getByTestId('lead-review-workspace');
+  await expect(reviewWorkspace).toHaveAttribute('data-state', 'ready');
+  await expect(reviewWorkspace).toContainText('0 / 5,000');
+  await expect(reviewWorkspace).toContainText('Coverage—not accuracy');
+  await reviewWorkspace.getByTestId('review-next-unreviewed').click();
   const leadReviewCard = page.getByTestId('parcel-lead-review');
   await expect(leadReviewCard).toBeVisible();
   await leadReviewCard.getByRole('button', { name: 'Pass' }).click();

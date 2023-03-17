@@ -78,6 +78,7 @@ let citywideExportReceipt = null;
 let mobileWorkspaceReceipt = null;
 let savedScreenReceipt = null;
 let runOperationsReceipt = null;
+let leadReviewWorkspaceReceipt = null;
 let leadReviewContractReceipt = null;
 let sensitiveSurface = false;
 let passed = false;
@@ -528,6 +529,104 @@ try {
       `Unexpected citywide CSV receipt: ${JSON.stringify(citywideExportReceipt)}.`,
     );
   }
+
+  // Read the current-generation review index before opening one parcel. This
+  // proves that the signed-in browser has the complete 5,000-row inventory
+  // and a private, non-mutating way to review it systematically.
+  desktopCheckpoint = 'lead_review_workspace';
+  const leadReviewIndexResponsePromise = page.waitForResponse(
+    (response) => {
+      try {
+        return (
+          response.request().method() === 'GET' &&
+          new URL(response.url()).pathname ===
+            '/v1/parcel-intel/lead-reviews'
+        );
+      } catch {
+        return false;
+      }
+    },
+    { timeout: 20_000 },
+  );
+  await page.getByRole('button', { name: 'Lead reviews' }).click();
+  const leadReviewIndexResponse = await leadReviewIndexResponsePromise;
+  const leadReviewIndexPayload = await leadReviewIndexResponse
+    .json()
+    .catch(() => null);
+  const leadReviewWorkspace = page.getByTestId('lead-review-workspace');
+  await leadReviewWorkspace.waitFor({ timeout: 20_000 });
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector('[data-testid="lead-review-workspace"]')
+        ?.getAttribute('data-state') === 'ready',
+    undefined,
+    { timeout: 20_000 },
+  );
+  const reviewItems =
+    leadReviewIndexPayload &&
+    typeof leadReviewIndexPayload === 'object' &&
+    Array.isArray(leadReviewIndexPayload.items)
+      ? leadReviewIndexPayload.items
+      : [];
+  const reviewCounts =
+    leadReviewIndexPayload &&
+    typeof leadReviewIndexPayload === 'object' &&
+    leadReviewIndexPayload.verdict_counts &&
+    typeof leadReviewIndexPayload.verdict_counts === 'object'
+      ? leadReviewIndexPayload.verdict_counts
+      : {};
+  const reviewedCount = Number(leadReviewIndexPayload?.reviewed_count);
+  const unreviewedCount = Number(leadReviewIndexPayload?.unreviewed_count);
+  const availableCount = Number(leadReviewIndexPayload?.available_count);
+  const verdictCountSum = ['pursue', 'watch', 'pass', 'unclear'].reduce(
+    (sum, key) => sum + Number(reviewCounts[key] ?? Number.NaN),
+    0,
+  );
+  leadReviewWorkspaceReceipt = {
+    status: leadReviewIndexResponse.status(),
+    schema: leadReviewIndexPayload?.schema_version ?? null,
+    generation_shape_valid:
+      typeof leadReviewIndexPayload?.current_feed_generation === 'string' &&
+      /^[0-9]{8}T[0-9]{12}Z-[0-9a-f]{12}$/.test(
+        leadReviewIndexPayload.current_feed_generation,
+      ),
+    available_count: availableCount,
+    reviewed_count: reviewedCount,
+    unreviewed_count: unreviewedCount,
+    item_count: reviewItems.length,
+    verdict_count_sum: verdictCountSum,
+    counts_reconcile:
+      reviewedCount + unreviewedCount === availableCount &&
+      reviewItems.length === reviewedCount &&
+      verdictCountSum === reviewedCount,
+    workspace_state: await leadReviewWorkspace.getAttribute('data-state'),
+    evidence_boundary_visible: await leadReviewWorkspace
+      .getByText(/Coverage—not accuracy/i)
+      .isVisible(),
+    review_next_visible: await leadReviewWorkspace
+      .getByTestId('review-next-unreviewed')
+      .isVisible(),
+    mutation_requested: false,
+  };
+  if (
+    leadReviewWorkspaceReceipt.status !== 200 ||
+    leadReviewWorkspaceReceipt.schema !==
+      'citylens/parcel-lead-review-index@v1' ||
+    leadReviewWorkspaceReceipt.generation_shape_valid !== true ||
+    leadReviewWorkspaceReceipt.available_count !== expectedCount ||
+    leadReviewWorkspaceReceipt.counts_reconcile !== true ||
+    leadReviewWorkspaceReceipt.workspace_state !== 'ready' ||
+    leadReviewWorkspaceReceipt.evidence_boundary_visible !== true ||
+    leadReviewWorkspaceReceipt.review_next_visible !== true
+  ) {
+    throw new Error(
+      `The lead-review workspace receipt was incomplete: ${JSON.stringify(leadReviewWorkspaceReceipt)}.`,
+    );
+  }
+  await page
+    .getByRole('button', { name: 'Close lead review workspace' })
+    .click();
 
   // Verify the private, generation-bound relevance-review surface without
   // submitting synthetic practitioner feedback. A monitor must never pollute
@@ -1343,7 +1442,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v21',
+  schema_version: 'citylens/production-authenticated-parcel-map@v22',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -1365,6 +1464,7 @@ const report = {
   official_dossier_verified: officialDossierVerified,
   dossier_readiness_verified: dossierReadinessVerified,
   sales_comparables_verified: salesComparablesVerified,
+  lead_review_workspace_receipt: leadReviewWorkspaceReceipt,
   lead_review_contract_receipt: leadReviewContractReceipt,
   historical_benchmark_receipt_verified: historicalBenchmarkReceiptVerified,
   model_lineage_receipt_verified: modelLineageReceiptVerified,

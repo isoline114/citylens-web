@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   getParcelIntelMap: vi.fn(),
   getParcelIntelParcel: vi.fn(),
   getParcelIntelSweep: vi.fn(),
+  getParcelLeadReviewIndex: vi.fn(),
   getParcelWorkflowActions: vi.fn(),
   listParcelSavedSearches: vi.fn(),
   saveParcelSearch: vi.fn(),
@@ -56,6 +57,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
     getParcelIntelMap: mocks.getParcelIntelMap,
     getParcelIntelParcel: mocks.getParcelIntelParcel,
     getParcelIntelSweep: mocks.getParcelIntelSweep,
+    getParcelLeadReviewIndex: mocks.getParcelLeadReviewIndex,
     getParcelWorkflowActions: mocks.getParcelWorkflowActions,
     listParcelSavedSearches: mocks.listParcelSavedSearches,
     saveParcelSearch: mocks.saveParcelSearch,
@@ -227,6 +229,7 @@ beforeEach(() => {
   mocks.getParcelIntelMap.mockReset();
   mocks.getParcelIntelParcel.mockReset();
   mocks.getParcelIntelSweep.mockReset();
+  mocks.getParcelLeadReviewIndex.mockReset();
   mocks.getParcelWorkflowActions.mockReset();
   mocks.listParcelSavedSearches.mockReset();
   mocks.saveParcelSearch.mockReset();
@@ -252,6 +255,7 @@ beforeEach(() => {
       return {
         rows,
         generated_at: '2026-07-19T00:00:00Z',
+        feed_generation: '20260719T000000000000Z-feed',
         access_scope: includeAuth
           ? ('authenticated_full' as const)
           : ('public_preview' as const),
@@ -297,6 +301,15 @@ beforeEach(() => {
     assignee_coverage_rate: 1,
     outcome_current_count: 1,
     outcome_current_rate: 0.5,
+    items: [],
+  });
+  mocks.getParcelLeadReviewIndex.mockResolvedValue({
+    schema_version: 'citylens/parcel-lead-review-index@v1',
+    current_feed_generation: '20260719T000000000000Z-feed',
+    available_count: 2,
+    reviewed_count: 0,
+    unreviewed_count: 2,
+    verdict_counts: { pursue: 0, watch: 0, pass: 0, unclear: 0 },
     items: [],
   });
   mocks.listParcelSavedSearches.mockResolvedValue([]);
@@ -462,6 +475,38 @@ describe('ParcelIntelExplorer', () => {
     expect(
       JSON.stringify(mocks.recordParcelProductEvent.mock.calls),
     ).not.toMatch(/1000010001|3000010001|manhattan|brooklyn|5000/i);
+  });
+
+  it('opens a review queue only after the full inventory is verified', async () => {
+    mocks.authStatus = 'authenticated';
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    await screen.findByText('Full inventory verified · 2 loaded');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Lead reviews' }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('lead-review-workspace')).toHaveAttribute(
+        'data-state',
+        'ready',
+      ),
+    );
+    expect(screen.getByText(/Coverage—not accuracy/i)).toBeInTheDocument();
+    expect(mocks.getParcelLeadReviewIndex).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByTestId('review-next-unreviewed'));
+    await waitFor(() =>
+      expect(mocks.getParcelIntelParcel).toHaveBeenCalledWith(
+        '1000010001',
+        { includeAuth: true },
+      ),
+    );
+    expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+      'parcel_opened',
+      'lead_reviews',
+    );
   });
 
   it('ranks and exports only the explicitly selected map extent', async () => {

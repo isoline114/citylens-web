@@ -111,6 +111,7 @@ export type ParcelProductEventSource =
   | 'watchlist'
   | 'comparison'
   | 'saved_views'
+  | 'lead_reviews'
   | 'decision_posture'
   | 'audit_tab'
   | 'underwrite_tab'
@@ -1036,6 +1037,21 @@ export type ParcelLeadReviewState = {
   review: ParcelLeadReview | null;
 };
 
+export type ParcelLeadReviewIndex = {
+  schema_version: 'citylens/parcel-lead-review-index@v1';
+  current_feed_generation: string;
+  available_count: number;
+  reviewed_count: number;
+  unreviewed_count: number;
+  verdict_counts: {
+    pursue: number;
+    watch: number;
+    pass: number;
+    unclear: number;
+  };
+  items: ParcelLeadReview[];
+};
+
 export type ParcelScreeningStatus = {
   schema_version: 'citylens/parcel-screening-status@v1';
   bbl: string;
@@ -1794,6 +1810,13 @@ export async function getParcelLeadReview(
 ): Promise<ParcelLeadReviewState> {
   return requestJson<ParcelLeadReviewState>(
     `/v1/parcel-intel/lead-reviews/${encodeURIComponent(bbl)}`,
+    { cache: 'no-store' },
+  );
+}
+
+export async function getParcelLeadReviewIndex(): Promise<ParcelLeadReviewIndex> {
+  return requestJson<ParcelLeadReviewIndex>(
+    '/v1/parcel-intel/lead-reviews',
     { cache: 'no-store' },
   );
 }
