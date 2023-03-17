@@ -74,6 +74,7 @@ let initialClusteredMapReceipt = null;
 let returningClusteredMapReceipt = null;
 let citywideExportReceipt = null;
 let mobileWorkspaceReceipt = null;
+let savedScreenReceipt = null;
 let runOperationsReceipt = null;
 let sensitiveSurface = false;
 let passed = false;
@@ -297,6 +298,138 @@ try {
   if (authenticatedPublicPreviewReceiptCount !== 0) {
     throw new Error(
       `Authenticated explorer requested ${authenticatedPublicPreviewReceiptCount} public preview response(s) before loading the full inventory.`,
+    );
+  }
+
+  // Exercise the real private persistence path without leaving synthetic
+  // workspace state behind. This proves the toolbar count and API-backed
+  // create/delete loop against production while restoring the smoke account
+  // to its exact starting count.
+  desktopCheckpoint = 'saved_screen_persistence';
+  const savedViewsTrigger = page.getByRole('button', {
+    name: 'Saved views',
+    exact: true,
+  });
+  await savedViewsTrigger.click();
+  const savedViewsPanel = page.getByTestId('saved-views-panel');
+  await savedViewsPanel.waitFor({ timeout: 20_000 });
+  await savedViewsPanel
+    .getByText('Loading saved views…', { exact: true })
+    .waitFor({ state: 'hidden', timeout: 20_000 });
+  const savedViewDeleteButtons = savedViewsPanel.locator(
+    'button[aria-label^="Delete saved view "]',
+  );
+  const initialSavedViewCount = await savedViewDeleteButtons.count();
+  const closeButton = savedViewsPanel.getByRole('button', {
+    name: 'Close saved views',
+  });
+  const browseFocusVerified = await closeButton.evaluate(
+    (element) => element === document.activeElement,
+  );
+  const smokeViewName = `Production smoke ${Date.now()}`;
+  const smokeDeleteButton = savedViewsPanel.getByRole('button', {
+    name: `Delete saved view ${smokeViewName}`,
+    exact: true,
+  });
+  let createdSavedViewCount = null;
+  let restoredSavedViewCount = null;
+  let headerCountAfterCreate = null;
+  let headerCountAfterCleanup = null;
+  let cleanupVerified = false;
+  let createdSavedViewUrl = null;
+  let createdSavedViewAuthorization = null;
+  try {
+    await savedViewsPanel.getByLabel('View name').fill(smokeViewName);
+    const savedViewCreateResponsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'PUT' &&
+        /\/v1\/parcel-intel\/saved-searches\/[^/]+$/.test(
+          new URL(response.url()).pathname,
+        ),
+      { timeout: 20_000 },
+    );
+    await savedViewsPanel.getByTestId('saved-view-save').click();
+    const savedViewCreateResponse = await savedViewCreateResponsePromise;
+    createdSavedViewUrl = savedViewCreateResponse.url();
+    createdSavedViewAuthorization =
+      (await savedViewCreateResponse.request().allHeaders()).authorization ??
+      null;
+    if (!savedViewCreateResponse.ok()) {
+      throw new Error(
+        `Saved-screen create returned HTTP ${savedViewCreateResponse.status()}.`,
+      );
+    }
+    await smokeDeleteButton.waitFor({ timeout: 20_000 });
+    createdSavedViewCount = await savedViewDeleteButtons.count();
+    const savedViewCountBadge = page.getByTestId('saved-view-count');
+    await page.waitForFunction(
+      ({ count }) =>
+        document
+          .querySelector('[data-testid="saved-view-count"]')
+          ?.textContent?.trim() === String(count),
+      { count: initialSavedViewCount + 1 },
+      { timeout: 20_000 },
+    );
+    headerCountAfterCreate = Number(
+      (await savedViewCountBadge.textContent())?.trim(),
+    );
+  } finally {
+    if ((await smokeDeleteButton.count()) > 0) {
+      await smokeDeleteButton.click({ timeout: 20_000 });
+      await smokeDeleteButton.waitFor({ state: 'detached', timeout: 20_000 });
+    } else if (createdSavedViewUrl && createdSavedViewAuthorization) {
+      const cleanupResponse = await page.request.delete(createdSavedViewUrl, {
+        headers: { authorization: createdSavedViewAuthorization },
+      });
+      if (!cleanupResponse.ok() && cleanupResponse.status() !== 404) {
+        throw new Error(
+          `Saved-screen cleanup returned HTTP ${cleanupResponse.status()}.`,
+        );
+      }
+    }
+    restoredSavedViewCount = await savedViewDeleteButtons.count();
+    if (initialSavedViewCount === 0) {
+      await page
+        .getByTestId('saved-view-count')
+        .waitFor({ state: 'detached', timeout: 20_000 });
+    } else {
+      await page.waitForFunction(
+        ({ count }) =>
+          document
+            .querySelector('[data-testid="saved-view-count"]')
+            ?.textContent?.trim() === String(count),
+        { count: initialSavedViewCount },
+        { timeout: 20_000 },
+      );
+      headerCountAfterCleanup = Number(
+        (await page.getByTestId('saved-view-count').textContent())?.trim(),
+      );
+    }
+    cleanupVerified =
+      restoredSavedViewCount === initialSavedViewCount &&
+      (initialSavedViewCount === 0
+        ? headerCountAfterCleanup === null
+        : headerCountAfterCleanup === initialSavedViewCount);
+    await closeButton.click();
+    await savedViewsPanel.waitFor({ state: 'detached', timeout: 20_000 });
+  }
+  savedScreenReceipt = {
+    initial_count: initialSavedViewCount,
+    created_count: createdSavedViewCount,
+    header_count_after_create: headerCountAfterCreate,
+    header_count_after_cleanup: headerCountAfterCleanup,
+    restored_count: restoredSavedViewCount,
+    browse_focus_verified: browseFocusVerified,
+    cleanup_verified: cleanupVerified,
+  };
+  if (
+    createdSavedViewCount !== initialSavedViewCount + 1 ||
+    headerCountAfterCreate !== initialSavedViewCount + 1 ||
+    browseFocusVerified !== true ||
+    cleanupVerified !== true
+  ) {
+    throw new Error(
+      `Unexpected saved-screen receipt: ${JSON.stringify(savedScreenReceipt)}.`,
     );
   }
 
@@ -1013,7 +1146,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v16',
+  schema_version: 'citylens/production-authenticated-parcel-map@v17',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -1028,6 +1161,7 @@ const report = {
     authenticatedPublicPreviewReceiptCount,
   citywide_export_receipt: citywideExportReceipt,
   mobile_workspace_receipt: mobileWorkspaceReceipt,
+  saved_screen_receipt: savedScreenReceipt,
   screening_receipt_verified: screeningReceiptVerified,
   address_resolution_verified: addressResolutionVerified,
   official_dossier_verified: officialDossierVerified,
