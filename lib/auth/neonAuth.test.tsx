@@ -19,7 +19,18 @@ const mocks = vi.hoisted(() => ({
         token: 'opaque-session-1',
         expiresAt: new Date('2030-01-01T00:00:00Z'),
       },
-    },
+    } as {
+      user: {
+        id: string;
+        email: string;
+        emailVerified: boolean;
+        name: string;
+      };
+      session: {
+        token: string;
+        expiresAt: Date;
+      };
+    } | null,
     isPending: false,
   },
 }));
@@ -58,6 +69,19 @@ describe('NeonAuthProvider access token recovery', () => {
     mocks.refetch.mockReset();
     mocks.signOut.mockReset();
     mocks.refetch.mockResolvedValue(undefined);
+    mocks.session.data = {
+      user: {
+        id: 'user-1',
+        email: 'user@example.com',
+        emailVerified: true,
+        name: 'User One',
+      },
+      session: {
+        token: 'opaque-session-1',
+        expiresAt: new Date('2030-01-01T00:00:00Z'),
+      },
+    };
+    mocks.session.isPending = false;
   });
 
   it('keeps the server and first client auth render hydration-safe', async () => {
@@ -201,5 +225,42 @@ describe('NeonAuthProvider access token recovery', () => {
     });
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(mocks.token).toHaveBeenCalledTimes(1);
+  });
+
+  it('revalidates a cached anonymous snapshot after hydration', async () => {
+    mocks.session.data = null;
+
+    render(
+      <NeonAuthProvider>
+        <StatusProbe />
+      </NeonAuthProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mocks.refetch).toHaveBeenCalledOnce();
+    expect(mocks.refetch).toHaveBeenCalledWith({
+      query: { disableCookieCache: true },
+    });
+  });
+
+  it('revalidates the browser session when the user returns to the tab', async () => {
+    render(
+      <NeonAuthProvider>
+        <StatusProbe />
+      </NeonAuthProvider>,
+    );
+
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+      await Promise.resolve();
+    });
+
+    expect(mocks.refetch).toHaveBeenCalledOnce();
+    expect(mocks.refetch).toHaveBeenCalledWith({
+      query: { disableCookieCache: true },
+    });
   });
 });

@@ -5,6 +5,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useSyncExternalStore,
@@ -53,6 +54,65 @@ export function NeonAuthProvider({ children }: { children: ReactNode }) {
     clientHydrationSnapshot,
     serverHydrationSnapshot,
   );
+  const sessionRefreshInFlight = useRef(false);
+  const lastSessionRefreshAt = useRef(0);
+  const anonymousSnapshotValidated = useRef(false);
+
+  // Neon owns the authoritative HttpOnly session cookie, while useSession()
+  // keeps a browser-local snapshot. An already-open Parcel Intelligence tab
+  // can therefore remain on its anonymous snapshot after the user signs in
+  // in another tab. Revalidate a cached anonymous snapshot once after
+  // hydration, and revalidate whenever the user returns to the tab. This
+  // keeps the 125-row public preview from surviving a real account session.
+  useEffect(() => {
+    if (!hydrated || session.isPending) return;
+
+    const refreshSession = () => {
+      if (
+        sessionRefreshInFlight.current ||
+        (typeof document !== 'undefined' &&
+          document.visibilityState === 'hidden')
+      ) {
+        return;
+      }
+      const now = Date.now();
+      if (now - lastSessionRefreshAt.current < 2_000) return;
+      lastSessionRefreshAt.current = now;
+      sessionRefreshInFlight.current = true;
+      void refetchSession({
+        query: { disableCookieCache: true },
+      })
+        .catch(() => {
+          // The existing snapshot remains authoritative if the network is
+          // unavailable. Parcel Intelligence owns its explicit retry state.
+        })
+        .finally(() => {
+          sessionRefreshInFlight.current = false;
+        });
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refreshSession();
+    };
+
+    window.addEventListener('focus', refreshSession);
+    window.addEventListener('pageshow', refreshSession);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    if (sessionData) {
+      anonymousSnapshotValidated.current = false;
+    } else if (!anonymousSnapshotValidated.current) {
+      // Keep this recovery bounded when Neon confirms a genuinely anonymous
+      // session. Refetch can toggle its pending state and rerender the
+      // provider without creating an anonymous-session request loop.
+      anonymousSnapshotValidated.current = true;
+      refreshSession();
+    }
+
+    return () => {
+      window.removeEventListener('focus', refreshSession);
+      window.removeEventListener('pageshow', refreshSession);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [hydrated, refetchSession, session.isPending, sessionData]);
 
   // Cache the most-recently-fetched JWT so successive API calls don't refetch.
   // Bind it to the opaque Neon session token so switching accounts can never
