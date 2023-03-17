@@ -355,7 +355,7 @@ describe('ParcelIntelPropertyPanel', () => {
     );
   });
 
-  it('turns an adjusted screen into a bounded diligence workflow without saving financial inputs', async () => {
+  it('lets an illustrative base screen start bounded diligence without forcing or saving an edit', async () => {
     mocks.authStatus = 'authenticated';
     mocks.saveParcelWorkflow.mockResolvedValue({
       bbl: parcel.bbl,
@@ -381,17 +381,13 @@ describe('ParcelIntelPropertyPanel', () => {
     const saveForDiligence = await screen.findByRole('button', {
       name: 'Save for diligence',
     });
-    expect(saveForDiligence).toBeDisabled();
-
-    fireEvent.change(screen.getByLabelText('Value / sellable SF'), {
-      target: { value: '1000' },
-    });
-    await waitFor(() => expect(saveForDiligence).toBeEnabled());
+    expect(saveForDiligence).toBeEnabled();
     fireEvent.click(saveForDiligence);
 
     await waitFor(() =>
       expect(mocks.saveParcelWorkflow).toHaveBeenCalledWith(parcel.bbl, {
         borough: 'brooklyn',
+        entry_source: 'underwriting',
         stage: 'reviewing',
         notes: '',
         tags: [],
@@ -406,7 +402,11 @@ describe('ParcelIntelPropertyPanel', () => {
     );
     const request = mocks.saveParcelWorkflow.mock.calls[0]?.[1];
     expect(JSON.stringify(request)).not.toMatch(
-      /1000|900|400|value_per|hard_cost|sellable|margin/i,
+      /900|400|value_per|hard_cost|sellable|margin/i,
+    );
+    expect(mocks.recordParcelProductEvent).not.toHaveBeenCalledWith(
+      'underwriting_assumptions_changed',
+      'base_assumptions',
     );
     expect(await screen.findByText('Saved to your pipeline')).toBeVisible();
   });

@@ -1193,6 +1193,7 @@ export function ParcelIntelPropertyPanel({
     options?: {
       openAfterSave?: boolean;
       closeDossierAfterSave?: boolean;
+      entrySource?: 'parcel' | 'underwriting';
     },
   ) => {
     if (effectiveWorkflowLoadState !== 'ready') return;
@@ -1205,6 +1206,9 @@ export function ParcelIntelPropertyPanel({
       const saved = await saveParcelWorkflow(bbl, {
         borough: row.borough ?? 'unknown',
         ...draft,
+        ...(options?.entrySource
+          ? { entry_source: options.entrySource }
+          : {}),
       });
       if (
         workflowMutationIdRef.current !== mutationId ||
@@ -1275,7 +1279,7 @@ export function ParcelIntelPropertyPanel({
         next_action_due_date: null,
         outcome: 'unknown',
       },
-      { openAfterSave: true },
+      { openAfterSave: true, entrySource: 'underwriting' },
     );
   };
 
@@ -2700,7 +2704,7 @@ export function ParcelIntelPropertyPanel({
                       ? 'Continue with the saved evidence snapshot and next action.'
                       : underwritingAdjusted
                         ? 'Preserve this parcel and assign validation of capacity, market evidence, and costs.'
-                        : 'Adjust at least one assumption above before advancing this screen.'}
+                        : 'Save the base screen now, or refine an assumption first. Either path starts with validation.'}
                   </p>
                   <p className="mt-1 text-[10px] leading-4 text-slate-500">
                     Financial inputs stay in this browser session and are never
@@ -2713,8 +2717,7 @@ export function ParcelIntelPropertyPanel({
                     onClick={continueUnderwritingDiligence}
                     disabled={
                       workflowBusy ||
-                      effectiveWorkflowLoadState !== 'ready' ||
-                      (!workflowItem && !underwritingAdjusted)
+                      effectiveWorkflowLoadState !== 'ready'
                     }
                     className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >

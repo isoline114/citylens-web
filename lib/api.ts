@@ -1792,7 +1792,9 @@ export async function saveParcelWorkflow(
   item: Omit<
     ParcelWorkflowItem,
     'bbl' | 'saved_at' | 'updated_at' | 'snapshot' | 'evidence_reviews'
-  >,
+  > & {
+    entry_source?: 'parcel' | 'underwriting';
+  },
 ): Promise<ParcelWorkflowItem> {
   return requestJson<ParcelWorkflowItem>(
     `/v1/parcel-intel/workflow/${encodeURIComponent(bbl)}`,

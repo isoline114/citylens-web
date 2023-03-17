@@ -1348,6 +1348,23 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(page.getByTestId('land-basis-scenario-downside')).toBeVisible();
   await expect(page.getByTestId('land-basis-scenario-base')).toBeVisible();
   await expect(page.getByTestId('land-basis-scenario-upside')).toBeVisible();
+  await expect(
+    page.getByTestId('underwriting-assumption-state'),
+  ).toHaveText('Illustrative defaults');
+  await expect(
+    page.getByTestId('underwriting-assumption-editor'),
+  ).toContainText('not current comps or bids');
+  const underwritingBlockOrder = await page
+    .locator(
+      '[data-testid="underwriting-assumption-editor"], [data-testid="land-basis-scenario-base"]',
+    )
+    .evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute('data-testid')),
+    );
+  expect(underwritingBlockOrder).toEqual([
+    'underwriting-assumption-editor',
+    'land-basis-scenario-base',
+  ]);
   await page
     .getByLabel('Value / sellable SF', { exact: true })
     .fill('1000');

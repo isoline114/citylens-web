@@ -442,26 +442,42 @@ describe('LandBasisCalculator', () => {
       'Value −15%',
     );
     expect(screen.getByTestId('land-basis-scenario-base')).toHaveTextContent(
-      'Uses the editable assumptions below',
+      'Uses your editable base assumptions',
     );
-    expect(screen.getByTestId('land-basis-scenario-base')).toHaveTextContent(
-      /Soft costs\s*20%/,
-    );
-    expect(screen.getByTestId('land-basis-scenario-base')).toHaveTextContent(
-      /Target margin\s*15%/,
+    expect(
+      screen.getByTestId('underwriting-assumption-editor'),
+    ).toHaveTextContent(
+      'Defaults are illustrative—not current comps or bids',
     );
     expect(screen.getByTestId('land-basis-scenario-upside')).toHaveTextContent(
       'Value +10%',
     );
+    expect(
+      screen.getByTestId('underwriting-assumption-editor').compareDocumentPosition(
+        screen.getByTestId('land-basis-scenario-base'),
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId('underwriting-assumption-state'),
+    ).toHaveTextContent('Illustrative defaults');
     expect(screen.getByText('Formula, scope, and omissions')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Value / sellable SF'), {
       target: { value: '1000' },
     });
+    expect(
+      screen.getByTestId('underwriting-assumption-state'),
+    ).toHaveTextContent('Adjusted in this session');
     expect(screen.getByTestId('land-basis-scenario-base')).toHaveTextContent(
       '$2,000,000',
     );
     expect(onAssumptionsChange).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(screen.getByLabelText('Value / sellable SF')).toHaveValue(900);
+    expect(
+      screen.getByTestId('underwriting-assumption-state'),
+    ).toHaveTextContent('Illustrative defaults');
   });
 
   it('warns that a mapped MIH parcel needs an affordability scenario', () => {

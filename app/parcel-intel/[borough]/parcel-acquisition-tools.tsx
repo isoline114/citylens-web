@@ -866,6 +866,14 @@ export type LandBasisScenario = {
   landBasisPerGrossSqft: number | null;
 };
 
+const DEFAULT_LAND_BASIS_ASSUMPTIONS: LandBasisAssumptions = {
+  valuePerSellableSqft: 900,
+  hardCostPerGrossSqft: 400,
+  efficiencyPct: 80,
+  softCostPct: 20,
+  profitMarginPct: 15,
+};
+
 function clamp(value: number, minimum: number, maximum: number): number {
   if (!Number.isFinite(value)) return minimum;
   return Math.min(Math.max(value, minimum), maximum);
@@ -971,7 +979,7 @@ export function buildLandBasisScenarios({
     calculateLandBasisScenario({
       key: 'base',
       label: 'Base',
-      assumptionSummary: 'Uses the editable assumptions below',
+      assumptionSummary: 'Uses your editable base assumptions',
       grossSqft,
       lotSqft,
       assumptions: base,
@@ -1004,11 +1012,21 @@ export function LandBasisCalculator({
   onAssumptionsChange?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const [valuePerSqft, setValuePerSqft] = useState(900);
-  const [hardCostPerSqft, setHardCostPerSqft] = useState(400);
-  const [efficiencyPct, setEfficiencyPct] = useState(80);
-  const [softCostPct, setSoftCostPct] = useState(20);
-  const [profitMarginPct, setProfitMarginPct] = useState(15);
+  const [valuePerSqft, setValuePerSqft] = useState(
+    DEFAULT_LAND_BASIS_ASSUMPTIONS.valuePerSellableSqft,
+  );
+  const [hardCostPerSqft, setHardCostPerSqft] = useState(
+    DEFAULT_LAND_BASIS_ASSUMPTIONS.hardCostPerGrossSqft,
+  );
+  const [efficiencyPct, setEfficiencyPct] = useState(
+    DEFAULT_LAND_BASIS_ASSUMPTIONS.efficiencyPct,
+  );
+  const [softCostPct, setSoftCostPct] = useState(
+    DEFAULT_LAND_BASIS_ASSUMPTIONS.softCostPct,
+  );
+  const [profitMarginPct, setProfitMarginPct] = useState(
+    DEFAULT_LAND_BASIS_ASSUMPTIONS.profitMarginPct,
+  );
   const grossSqft = Math.max(row.max_floor_area_sqft ?? 0, 0);
   const lotSqft = Math.max(row.lot_area_sqft ?? 0, 0);
   const scenarios = useMemo(
@@ -1037,6 +1055,25 @@ export function LandBasisCalculator({
   const baseScenario = scenarios[1];
   const rangeLow = Math.min(...scenarios.map((scenario) => scenario.landBasis));
   const rangeHigh = Math.max(...scenarios.map((scenario) => scenario.landBasis));
+  const assumptionsAdjusted =
+    valuePerSqft !==
+      DEFAULT_LAND_BASIS_ASSUMPTIONS.valuePerSellableSqft ||
+    hardCostPerSqft !==
+      DEFAULT_LAND_BASIS_ASSUMPTIONS.hardCostPerGrossSqft ||
+    efficiencyPct !== DEFAULT_LAND_BASIS_ASSUMPTIONS.efficiencyPct ||
+    softCostPct !== DEFAULT_LAND_BASIS_ASSUMPTIONS.softCostPct ||
+    profitMarginPct !== DEFAULT_LAND_BASIS_ASSUMPTIONS.profitMarginPct;
+  const resetAssumptions = () => {
+    setValuePerSqft(
+      DEFAULT_LAND_BASIS_ASSUMPTIONS.valuePerSellableSqft,
+    );
+    setHardCostPerSqft(
+      DEFAULT_LAND_BASIS_ASSUMPTIONS.hardCostPerGrossSqft,
+    );
+    setEfficiencyPct(DEFAULT_LAND_BASIS_ASSUMPTIONS.efficiencyPct);
+    setSoftCostPct(DEFAULT_LAND_BASIS_ASSUMPTIONS.softCostPct);
+    setProfitMarginPct(DEFAULT_LAND_BASIS_ASSUMPTIONS.profitMarginPct);
+  };
   const scenarioStyles: Record<
     LandBasisScenario['key'],
     {
@@ -1116,11 +1153,151 @@ export function LandBasisCalculator({
                   </div>
                   <p className="mt-2 max-w-xl text-[11px] leading-4 text-slate-300">
                     A sensitivity range, not a valuation. The three cases use the
-                    same current zoning-capacity input and the explicit assumption
-                    changes shown below.
+                    same current zoning-capacity input and your explicit base
+                    assumptions.
                   </p>
                 </div>
               </div>
+
+              <section
+                className="mt-3 rounded-xl border border-sky-200 bg-white p-3 shadow-sm"
+                data-testid="underwriting-assumption-editor"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-900">
+                      Test your base case
+                    </h5>
+                    <p className="mt-0.5 max-w-lg text-[11px] leading-4 text-slate-600">
+                      Start with the market value or construction cost you know
+                      best. Defaults are illustrative—not current comps or bids.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
+                        assumptionsAdjusted
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
+                      data-testid="underwriting-assumption-state"
+                    >
+                      {assumptionsAdjusted
+                        ? 'Adjusted in this session'
+                        : 'Illustrative defaults'}
+                    </span>
+                    {assumptionsAdjusted && (
+                      <button
+                        type="button"
+                        onClick={resetAssumptions}
+                        className={`inline-flex h-7 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-700 hover:bg-slate-50 ${FOCUS_RING}`}
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {[
+                    [
+                      'Value / sellable SF',
+                      valuePerSqft,
+                      setValuePerSqft,
+                      0,
+                      undefined,
+                      25,
+                    ],
+                    [
+                      'Hard cost / gross SF',
+                      hardCostPerSqft,
+                      setHardCostPerSqft,
+                      0,
+                      undefined,
+                      25,
+                    ],
+                    [
+                      'Sellable efficiency %',
+                      efficiencyPct,
+                      setEfficiencyPct,
+                      0,
+                      100,
+                      1,
+                    ],
+                    [
+                      'Soft costs %',
+                      softCostPct,
+                      setSoftCostPct,
+                      0,
+                      100,
+                      1,
+                    ],
+                    [
+                      'Target margin %',
+                      profitMarginPct,
+                      setProfitMarginPct,
+                      0,
+                      100,
+                      1,
+                    ],
+                  ].map(
+                    ([
+                      label,
+                      value,
+                      setter,
+                      minimum,
+                      maximum,
+                      step,
+                    ]) => (
+                      <label
+                        key={String(label)}
+                        className="text-xs font-medium text-slate-700"
+                      >
+                        {String(label)}
+                        <input
+                          type="number"
+                          min={Number(minimum)}
+                          max={
+                            maximum === undefined
+                              ? undefined
+                              : Number(maximum)
+                          }
+                          step={Number(step)}
+                          value={Number(value)}
+                          onChange={(event) => {
+                            (setter as (next: number) => void)(
+                              Number(event.target.value),
+                            );
+                            onAssumptionsChange?.();
+                          }}
+                          className={`mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-950 ${FOCUS_RING}`}
+                        />
+                      </label>
+                    ),
+                  )}
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-end justify-between gap-2 rounded-lg bg-sky-50 p-3 ring-1 ring-inset ring-sky-100">
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">
+                      Indicative maximum land basis · base case
+                    </div>
+                    <div className="mt-0.5 text-xl font-semibold text-slate-950">
+                      {currency(baseScenario.landBasis)}
+                    </div>
+                  </div>
+                  <div className="text-right text-[10px] leading-4 text-slate-600">
+                    <div>{grossSqft.toLocaleString()} gross buildable SF</div>
+                    <div>
+                      {baseScenario.sellableSqft.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}{' '}
+                      sellable SF
+                    </div>
+                  </div>
+                </div>
+              </section>
 
               <div className="mt-3 grid gap-2 sm:grid-cols-3">
                 {scenarios.map((scenario) => {
@@ -1152,43 +1329,7 @@ export function LandBasisCalculator({
                           ? 'capacity basis unavailable'
                           : `${currency(scenario.landBasisPerGrossSqft)} / gross SF`}
                       </div>
-                      <dl className="mt-3 space-y-1 border-t border-slate-900/10 pt-2 text-[10px] text-slate-600">
-                        <div className="flex justify-between gap-2">
-                          <dt>Value / sellable SF</dt>
-                          <dd className="font-medium text-slate-900">
-                            {currency(
-                              scenario.assumptions.valuePerSellableSqft,
-                            )}
-                          </dd>
-                        </div>
-                        <div className="flex justify-between gap-2">
-                          <dt>Hard cost / gross SF</dt>
-                          <dd className="font-medium text-slate-900">
-                            {currency(
-                              scenario.assumptions.hardCostPerGrossSqft,
-                            )}
-                          </dd>
-                        </div>
-                        <div className="flex justify-between gap-2">
-                          <dt>Efficiency</dt>
-                          <dd className="font-medium text-slate-900">
-                            {scenario.assumptions.efficiencyPct.toFixed(0)}%
-                          </dd>
-                        </div>
-                        <div className="flex justify-between gap-2">
-                          <dt>Soft costs</dt>
-                          <dd className="font-medium text-slate-900">
-                            {scenario.assumptions.softCostPct.toFixed(0)}%
-                          </dd>
-                        </div>
-                        <div className="flex justify-between gap-2">
-                          <dt>Target margin</dt>
-                          <dd className="font-medium text-slate-900">
-                            {scenario.assumptions.profitMarginPct.toFixed(0)}%
-                          </dd>
-                        </div>
-                      </dl>
-                      <p className="mt-2 text-[10px] leading-4 text-slate-500">
+                      <p className="mt-2 border-t border-slate-900/10 pt-2 text-[10px] leading-4 text-slate-600">
                         {scenario.assumptionSummary}
                       </p>
                     </section>
@@ -1200,67 +1341,6 @@ export function LandBasisCalculator({
             <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
               Current mapped development capacity is unavailable. Verify zoning
               and lot geometry before running a land-basis sensitivity.
-            </div>
-          )}
-
-          <div className="mt-4 flex items-start justify-between gap-3">
-            <div>
-              <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-800">
-                Base assumptions
-              </h5>
-              <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
-                Edit the base case; downside and upside deltas recalculate
-                automatically.
-              </p>
-            </div>
-            <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-medium text-slate-600 ring-1 ring-slate-200">
-              Session only
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              ['Value / sellable SF', valuePerSqft, setValuePerSqft, 0, undefined],
-              ['Hard cost / gross SF', hardCostPerSqft, setHardCostPerSqft, 0, undefined],
-              ['Sellable efficiency %', efficiencyPct, setEfficiencyPct, 0, 100],
-              ['Soft costs %', softCostPct, setSoftCostPct, 0, 100],
-              ['Target margin %', profitMarginPct, setProfitMarginPct, 0, 100],
-            ].map(([label, value, setter, minimum, maximum]) => (
-              <label key={String(label)} className="mt-2 text-xs text-slate-600">
-                {String(label)}
-                <input
-                  type="number"
-                  min={Number(minimum)}
-                  max={
-                    maximum === undefined ? undefined : Number(maximum)
-                  }
-                  value={Number(value)}
-                  onChange={(event) => {
-                    (setter as (next: number) => void)(
-                      Number(event.target.value),
-                    );
-                    onAssumptionsChange?.();
-                  }}
-                  className={`mt-1 h-8 w-full rounded border border-slate-300 bg-white px-2 text-sm ${FOCUS_RING}`}
-                />
-              </label>
-            ))}
-          </div>
-
-          {baseScenario && (
-            <div className="mt-3 rounded-lg bg-white p-3 ring-1 ring-inset ring-slate-200">
-              <div className="text-xs text-slate-500">
-                Indicative maximum land basis · base case
-              </div>
-              <div className="mt-0.5 text-xl font-semibold text-slate-950">
-                {currency(baseScenario.landBasis)}
-              </div>
-              <div className="mt-1 text-xs leading-5 text-slate-500">
-                Uses {grossSqft.toLocaleString()} gross buildable SF and{' '}
-                {baseScenario.sellableSqft.toLocaleString(undefined, {
-                  maximumFractionDigits: 0,
-                })}{' '}
-                sellable SF.
-              </div>
             </div>
           )}
 
