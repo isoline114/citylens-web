@@ -14,6 +14,9 @@ not five separate borough workspaces. Borough and eligibility filters update the
 same map/list, and selecting a lot opens its overview, underwriting, workflow,
 official-source links, provenance, and model explanation in an in-place parcel
 panel. Legacy `/parcel-intel/<borough>` links redirect into the citywide route.
+The map and CSV remain tax-lot complete, while the ranked decision list groups
+publisher-identified adjacent assemblage members into one acquisition site and
+shows combined lot/buildable-area context with the best member rank.
 The selected-parcel header exposes address identity honestly: numbered NYC PAD
 addresses are labeled as BBL-matched enrichment, while street-only records are
 marked as unnumbered tax lots. Address provenance never implies a rank or
@@ -147,7 +150,9 @@ treated as data authorization: the production receipt separately proves that
 the session minted a JWT and that the API returned the complete 5,000-row
 inventory. A bounded recovery loop retries a transient session/JWT race and
 rechecks when the browser returns online or regains focus, so one early public
-response cannot strand a valid signed-in user at 125 rows.
+response cannot strand a valid signed-in user at 125 rows. The auth provider
+also revalidates its browser-local session snapshot after hydration and when an
+already-open tab regains focus, covering sign-in completed in another tab.
 For a canonical 10-digit BBL that is absent after that full inventory receipt
 is verified, the signed-in explorer offers an explicit screening lookup
 instead of silently returning zero results. The resulting private receipt

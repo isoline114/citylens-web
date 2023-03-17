@@ -49,6 +49,7 @@ import {
   BOROUGH_SHORT_LABELS,
   EXPLORER_SCREEN_RECIPES,
   buildExplorerScreenAudit,
+  collapseExplorerSites,
   explorerRowColor,
   filterExplorerRows,
   isScreenRecipeActive,
@@ -719,7 +720,13 @@ export function ParcelIntelExplorer({
     () => ranked.filter((row) => viewportBblSet.has(row.bbl)),
     [ranked, viewportBblSet],
   );
-  const rankingRows = rankMapView ? rankedInViewport : ranked;
+  const rankedSites = useMemo(() => collapseExplorerSites(ranked), [ranked]);
+  const rankedSitesInViewport = useMemo(
+    () => collapseExplorerSites(rankedInViewport),
+    [rankedInViewport],
+  );
+  const rankingParcels = rankMapView ? rankedInViewport : ranked;
+  const rankingRows = rankMapView ? rankedSitesInViewport : rankedSites;
   const handleViewportRowsChange = useCallback((bbls: string[]) => {
     setViewportBbls(bbls);
   }, []);
@@ -931,14 +938,20 @@ export function ParcelIntelExplorer({
     const timeout = window.setTimeout(() => {
       setScreenAnnouncement(
         rankMapView
-          ? `${rankingRows.length.toLocaleString()} ${
-              rankingRows.length === 1 ? 'parcel is' : 'parcels are'
-            } inside the current map view; ${ranked.length.toLocaleString()} ${
-              ranked.length === 1 ? 'parcel matches' : 'parcels match'
-            } the full screen in ${boroughLabel}.`
-          : `${ranked.length.toLocaleString()} ${
-              ranked.length === 1 ? 'parcel matches' : 'parcels match'
-            } the current screen in ${boroughLabel}.`,
+          ? `${rankingRows.length.toLocaleString()} acquisition ${
+              rankingRows.length === 1 ? 'site' : 'sites'
+            } across ${rankingParcels.length.toLocaleString()} ${
+              rankingParcels.length === 1 ? 'parcel' : 'parcels'
+            } ${rankingRows.length === 1 ? 'is' : 'are'} inside the current map view; ${rankedSites.length.toLocaleString()} ${
+              rankedSites.length === 1 ? 'site' : 'sites'
+            } across ${ranked.length.toLocaleString()} ${
+              ranked.length === 1 ? 'parcel' : 'parcels'
+            } ${rankedSites.length === 1 ? 'matches' : 'match'} the full screen in ${boroughLabel}.`
+          : `${rankedSites.length.toLocaleString()} acquisition ${
+              rankedSites.length === 1 ? 'site' : 'sites'
+            } across ${ranked.length.toLocaleString()} ${
+              ranked.length === 1 ? 'parcel' : 'parcels'
+            } ${rankedSites.length === 1 ? 'matches' : 'match'} the current screen in ${boroughLabel}.`,
       );
     }, 250);
     return () => window.clearTimeout(timeout);
@@ -946,6 +959,8 @@ export function ParcelIntelExplorer({
     filters,
     loadState,
     ranked.length,
+    rankedSites.length,
+    rankingParcels.length,
     rankingRows.length,
     rankMapView,
   ]);
@@ -1274,7 +1289,7 @@ export function ParcelIntelExplorer({
       const integrity = checkParcelExportIntegrity({
         loadedGeneratedAt: inventoryGeneratedAt,
         sweepGeneratedAt: results.map((result) => result.generatedAt),
-        expectedBbls: rankingRows.map((row) => row.bbl),
+        expectedBbls: rankingParcels.map((row) => row.bbl),
         exportRows,
       });
       if (!integrity.ok) {
@@ -2175,13 +2190,13 @@ export function ParcelIntelExplorer({
             )}
             <button
               type="button"
-              disabled={rankingRows.length === 0 || exporting}
+              disabled={rankingParcels.length === 0 || exporting}
               onClick={() => void exportFilteredRows()}
               className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
               title={
                 rankMapView
-                  ? `Export ${rankingRows.length.toLocaleString()} parcels from the current map view`
-                  : `Export ${rankingRows.length.toLocaleString()} filtered parcels`
+                  ? `Export ${rankingParcels.length.toLocaleString()} parcels from the current map view`
+                  : `Export ${rankingParcels.length.toLocaleString()} filtered parcels`
               }
             >
               {exporting ? (
@@ -2777,7 +2792,7 @@ export function ParcelIntelExplorer({
               }`}
             >
               <div className="text-[11px] uppercase tracking-wide text-emerald-700">
-                Qualified leads
+                Qualified parcels
               </div>
               <div className="text-lg font-semibold text-emerald-950">
                 {uncommittedCount.toLocaleString()}
@@ -2939,11 +2954,21 @@ export function ParcelIntelExplorer({
 
           <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-slate-950">Acquisition ranking</h3>
+              <h3 className="text-sm font-semibold text-slate-950">
+                Acquisition sites
+              </h3>
               <p className="text-xs text-slate-500">
                 {rankMapView
-                  ? 'Only mapped parcels inside the current extent · unsaved scope'
-                  : 'Current-project screened and ranked for pursuit'}
+                  ? `${rankingRows.length.toLocaleString()} ${
+                      rankingRows.length === 1 ? 'site' : 'sites'
+                    } across ${rankingParcels.length.toLocaleString()} mapped ${
+                      rankingParcels.length === 1 ? 'parcel' : 'parcels'
+                    } · unsaved scope`
+                  : `${rankingRows.length.toLocaleString()} ${
+                      rankingRows.length === 1 ? 'site' : 'sites'
+                    } across ${rankingParcels.length.toLocaleString()} matching ${
+                      rankingParcels.length === 1 ? 'parcel' : 'parcels'
+                    } · best matching parcel rank retained`}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -2965,11 +2990,19 @@ export function ParcelIntelExplorer({
               >
                 <MapPinned className="h-3.5 w-3.5" />
                 {rankMapView
-                  ? `Show all matches · ${ranked.length.toLocaleString()}`
-                  : `Rank this view · ${rankedInViewport.length.toLocaleString()}`}
+                  ? `Show all sites · ${rankedSites.length.toLocaleString()}`
+                  : `Rank this view · ${rankedSitesInViewport.length.toLocaleString()} ${
+                      rankedSitesInViewport.length === 1 ? 'site' : 'sites'
+                    }`}
               </button>
-              <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
-                {rankingRows.length.toLocaleString()}
+              <span
+                className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600"
+                data-testid="parcel-site-ranking-count"
+                data-site-count={rankingRows.length}
+                data-parcel-count={rankingParcels.length}
+              >
+                {rankingRows.length.toLocaleString()}{' '}
+                {rankingRows.length === 1 ? 'site' : 'sites'}
               </span>
             </div>
           </div>
@@ -2980,8 +3013,8 @@ export function ParcelIntelExplorer({
             {rankingRows.length === 0 ? (
               <div className="p-6 text-center text-sm text-slate-500">
                 {rankMapView
-                  ? 'No mapped parcels are inside this view. Pan, zoom out, or choose Show all matches.'
-                  : 'No parcels match these filters.'}
+                  ? 'No acquisition sites are inside this view. Pan, zoom out, or choose Show all sites.'
+                  : 'No acquisition sites match these filters.'}
               </div>
             ) : (
               rankingRows.slice(0, leadLimit).map((row, index) => (
@@ -3015,11 +3048,30 @@ export function ParcelIntelExplorer({
                           {BOROUGH_LABELS[row.borough ?? ''] ?? row.borough} ·{' '}
                           {opportunityLabel(row.opportunity_category)}
                         </div>
+                        {(row.assemblage_lot_count ?? 0) >= 2 && (
+                          <div className="mt-1 text-[11px] font-medium text-violet-700">
+                            {row.assemblage_lot_count?.toLocaleString()} parcels
+                            {row.assemblage_combined_lot_area_sqft
+                              ? ` · ${formatCompactSqft(
+                                  row.assemblage_combined_lot_area_sqft,
+                                )} combined site`
+                              : ''}
+                            {row.assemblage_combined_buildable_sqft
+                              ? ` · ${formatCompactSqft(
+                                  row.assemblage_combined_buildable_sqft,
+                                )} buildable envelope`
+                              : ''}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <span
                       className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700"
-                      title={`${BOROUGH_LABELS[row.borough ?? ''] ?? 'Borough'} priority rank`}
+                      title={
+                        (row.assemblage_lot_count ?? 0) >= 2
+                          ? `Best matching parcel rank within this ${row.assemblage_lot_count}-parcel site`
+                          : `${BOROUGH_LABELS[row.borough ?? ''] ?? 'Borough'} priority rank`
+                      }
                     >
                       {filters.borough === 'all' && row.citywide_rank
                         ? `NYC #${row.citywide_rank}`

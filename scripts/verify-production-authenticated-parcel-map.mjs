@@ -72,6 +72,7 @@ let returningSessionReloadVerified = false;
 let authenticatedPublicPreviewReceiptCount = null;
 let initialClusteredMapReceipt = null;
 let returningClusteredMapReceipt = null;
+let siteRankingReceipt = null;
 let citywideExportReceipt = null;
 let mobileWorkspaceReceipt = null;
 let savedScreenReceipt = null;
@@ -113,13 +114,29 @@ page.on('response', async (response) => {
   if (!response.url().includes('/v1/parcel-intel/map?')) return;
   try {
     const payload = await response.json();
+    const rows = Array.isArray(payload.rows) ? payload.rows : [];
+    const siteKeys = new Set(
+      rows.map((row) => {
+        const siteId =
+          typeof row?.assemblage_id === 'string'
+            ? row.assemblage_id.trim()
+            : '';
+        return siteId ? `site:${siteId}` : `parcel:${row?.bbl ?? ''}`;
+      }),
+    );
     mapReceipts.push({
       status: response.status(),
       access_scope: payload.access_scope ?? null,
       returned_count: payload.returned_count ?? null,
       available_count: payload.available_count ?? null,
       inventory_complete: payload.inventory_complete ?? null,
-      row_count: Array.isArray(payload.rows) ? payload.rows.length : null,
+      row_count: rows.length,
+      acquisition_site_count: siteKeys.size,
+      assemblage_member_row_count: rows.filter(
+        (row) =>
+          typeof row?.assemblage_id === 'string' &&
+          row.assemblage_id.trim().length > 0,
+      ).length,
     });
   } catch {
     mapReceipts.push({
@@ -244,6 +261,39 @@ try {
       'No complete authenticated Parcel Intelligence map response was observed.',
     );
   }
+  const completeMapReceipt = mapReceipts.find(
+    (receipt) =>
+      receipt.status === 200 &&
+      receipt.access_scope === 'authenticated_full' &&
+      receipt.returned_count === expectedCount &&
+      receipt.available_count === expectedCount &&
+      receipt.inventory_complete === true &&
+      receipt.row_count === expectedCount,
+  );
+  const siteRankingCount = page.getByTestId('parcel-site-ranking-count');
+  await siteRankingCount.waitFor({ timeout: 20_000 });
+  siteRankingReceipt = {
+    site_count: Number(await siteRankingCount.getAttribute('data-site-count')),
+    parcel_count: Number(
+      await siteRankingCount.getAttribute('data-parcel-count'),
+    ),
+    api_site_count: completeMapReceipt?.acquisition_site_count ?? null,
+    assemblage_member_row_count:
+      completeMapReceipt?.assemblage_member_row_count ?? null,
+  };
+  if (
+    !Number.isSafeInteger(siteRankingReceipt.site_count) ||
+    siteRankingReceipt.site_count <= 0 ||
+    siteRankingReceipt.site_count > expectedCount ||
+    siteRankingReceipt.parcel_count !== expectedCount ||
+    siteRankingReceipt.api_site_count !== siteRankingReceipt.site_count
+  ) {
+    throw new Error(
+      `Unexpected acquisition-site ranking receipt: ${JSON.stringify(siteRankingReceipt)}.`,
+    );
+  }
+  siteRankingReceipt.collapsed_duplicate_slots =
+    siteRankingReceipt.parcel_count - siteRankingReceipt.site_count;
 
   // A fresh sign-in alone is not enough evidence. Real users commonly return
   // to an already-authenticated tab or reload the explorer later. Require a
@@ -1146,7 +1196,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v17',
+  schema_version: 'citylens/production-authenticated-parcel-map@v18',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -1156,6 +1206,7 @@ const report = {
   map_receipts: mapReceipts,
   initial_clustered_map_receipt: initialClusteredMapReceipt,
   returning_clustered_map_receipt: returningClusteredMapReceipt,
+  site_ranking_receipt: siteRankingReceipt,
   returning_session_reload_verified: returningSessionReloadVerified,
   authenticated_public_preview_receipt_count:
     authenticatedPublicPreviewReceiptCount,

@@ -5,6 +5,7 @@ import {
   buildExplorerScreenAudit,
   buildExplorerScreenComparison,
   buildSavedViewMonitor,
+  collapseExplorerSites,
   explorerFiltersFromSavedSearch,
   filterExplorerRows,
   explorerRowColor,
@@ -63,6 +64,39 @@ const filters: ExplorerFilters = {
 };
 
 describe('parcel citywide explorer support', () => {
+  it('collapses repeated assemblage members into one ranked acquisition site', () => {
+    const ranked = [
+      row({
+        bbl: '4000010001',
+        citywide_rank: 1,
+        assemblage_id: 'site-a',
+        assemblage_lot_count: 2,
+      }),
+      row({
+        bbl: '4000010002',
+        citywide_rank: 2,
+        assemblage_id: 'site-a',
+        assemblage_lot_count: 2,
+      }),
+      row({
+        bbl: '3000010003',
+        citywide_rank: 3,
+        assemblage_id: null,
+      }),
+      row({
+        bbl: '3000010004',
+        citywide_rank: 4,
+        assemblage_id: null,
+      }),
+    ];
+
+    expect(collapseExplorerSites(ranked).map((item) => item.bbl)).toEqual([
+      '4000010001',
+      '3000010003',
+      '3000010004',
+    ]);
+  });
+
   it('combines borough, priority, site type, and search filters', () => {
     const rows = [
       row({ bbl: '3000010001' }),

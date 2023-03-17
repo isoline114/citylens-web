@@ -78,6 +78,25 @@ export type ExplorerFilters = {
 
 export type ParcelExplorerRow = ParcelIntelMapRow;
 
+/**
+ * Turn a parcel-ranked result set into a site-ranked decision list without
+ * changing the published parcel universe. The first row is the site's
+ * highest-ranked parcel because callers pass the already-sorted ranking.
+ * Rows without a publisher-issued assemblage ID remain independent tax lots.
+ */
+export function collapseExplorerSites(
+  rankedRows: ParcelExplorerRow[],
+): ParcelExplorerRow[] {
+  const seenSiteIds = new Set<string>();
+  return rankedRows.filter((row) => {
+    const siteId = row.assemblage_id?.trim();
+    if (!siteId) return true;
+    if (seenSiteIds.has(siteId)) return false;
+    seenSiteIds.add(siteId);
+    return true;
+  });
+}
+
 export type ExplorerScreenRecipe = {
   id:
     | 'assemblage_scan'

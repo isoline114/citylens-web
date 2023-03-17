@@ -61,6 +61,7 @@ jobs:
           console.log('');
           console.log(`- Signed-in API credential: \`${report?.auth_token_receipts?.some((receipt) => receipt.status === 200 && receipt.jwt_shape === true) ? 'passed' : 'failed'}\``);
           console.log(`- Signed-in 5,000-parcel clustered map: \`${report?.initial_clustered_map_receipt?.match_count === 5000 && report?.initial_clustered_map_receipt?.cluster_count > 0 ? 'passed' : 'failed'}\``);
+          console.log(`- Site-ranked decision list: \`${report?.site_ranking_receipt?.parcel_count === 5000 && report?.site_ranking_receipt?.site_count === report?.site_ranking_receipt?.api_site_count ? `passed · ${report.site_ranking_receipt.site_count.toLocaleString()} sites across 5,000 parcels` : 'failed'}\``);
           console.log(`- Authenticated preview race: \`${report?.authenticated_public_preview_receipt_count === 0 ? 'absent' : 'detected'}\``);
           console.log(`- Mobile full-access, map-first workspace: \`${report?.mobile_workspace_receipt?.access_status === 'Full access' && report?.mobile_workspace_receipt?.match_count === 5000 && report?.mobile_workspace_receipt?.market_filters_collapsed === true && report?.mobile_workspace_receipt?.workspace_tools_collapsed === true && report?.mobile_workspace_receipt?.map_within_first_viewport === true ? `passed · map starts at ${report.mobile_workspace_receipt.map_top_px}px` : 'failed'}\``);
           console.log(`- Returning-session 5,000-parcel reload: \`${report?.returning_session_reload_verified ? 'passed' : 'failed'}\``);

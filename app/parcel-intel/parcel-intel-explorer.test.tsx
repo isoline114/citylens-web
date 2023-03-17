@@ -471,18 +471,18 @@ describe('ParcelIntelExplorer', () => {
     );
 
     const rankView = await screen.findByRole('button', {
-      name: 'Rank this view · 1',
+      name: 'Rank this view · 1 site',
     });
     fireEvent.click(rankView);
 
     await waitFor(() =>
       expect(screen.getByTestId('parcel-screen-announcer')).toHaveTextContent(
-        '1 parcel is inside the current map view; 2 parcels match the full screen',
+        '1 acquisition site across 1 parcel is inside the current map view; 2 sites across 2 parcels match the full screen',
       ),
     );
     expect(
       screen.getByText(
-        'Only mapped parcels inside the current extent · unsaved scope',
+        '1 site across 1 mapped parcel · unsaved scope',
       ),
     ).toBeInTheDocument();
     expect(
@@ -513,11 +513,62 @@ describe('ParcelIntelExplorer', () => {
     );
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Show all matches · 2' }),
+      screen.getByRole('button', { name: 'Show all sites · 2' }),
     );
     expect(
       screen.getByRole('button', { name: /brooklyn test site/i }),
     ).toBeInTheDocument();
+  });
+
+  it('maps every parcel while ranking one representative per acquisition site', async () => {
+    const rows = [
+      row('4000010001', 'queens', {
+        address: '10 Assembly Avenue',
+        citywide_rank: 1,
+        assemblage_id: 'site-a',
+        assemblage_lot_count: 2,
+        assemblage_combined_lot_area_sqft: 12_500,
+        assemblage_combined_buildable_sqft: 50_000,
+      }),
+      row('4000010002', 'queens', {
+        address: '12 Assembly Avenue',
+        citywide_rank: 2,
+        assemblage_id: 'site-a',
+        assemblage_lot_count: 2,
+        assemblage_combined_lot_area_sqft: 12_500,
+        assemblage_combined_buildable_sqft: 50_000,
+      }),
+      row('3000010003', 'brooklyn', {
+        address: '30 Independent Street',
+        citywide_rank: 3,
+      }),
+    ];
+    mocks.getParcelIntelMap.mockResolvedValue({
+      rows,
+      generated_at: '2026-07-19T00:00:00Z',
+      access_scope: 'public_preview',
+      requested_top_per_borough: 1000,
+      returned_count: rows.length,
+      available_count: rows.length,
+      inventory_complete: true,
+    });
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    await screen.findByText('3 mapped rows');
+    expect(
+      screen.getByText(
+        '2 sites across 3 matching parcels · best matching parcel rank retained',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /10 Assembly Avenue/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /12 Assembly Avenue/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/2 parcels · 13k sf combined site/i)).toBeInTheDocument();
+    expect(screen.getByText(/50k sf buildable envelope/i)).toBeInTheDocument();
   });
 
   it('fails closed when export feeds do not match the loaded map generation', async () => {

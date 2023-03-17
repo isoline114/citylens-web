@@ -958,7 +958,10 @@ export type ParcelIntelMapRow = Pick<
   | 'owner_portfolio_candidate_count'
   | 'recent_change'
   | 'opportunity_category'
+  | 'assemblage_id'
   | 'assemblage_lot_count'
+  | 'assemblage_combined_lot_area_sqft'
+  | 'assemblage_combined_buildable_sqft'
 >;
 
 export type ParcelIntelMapResponse = {
