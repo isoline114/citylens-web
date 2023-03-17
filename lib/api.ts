@@ -161,6 +161,14 @@ function getBaseUrl(): string {
   return 'http://localhost:8000';
 }
 
+function getAuthenticatedBaseUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_CITYLENS_API_BASE;
+  if (configured && configured.trim().length > 0) {
+    return configured.replace(/\/+$/, '');
+  }
+  return getBaseUrl();
+}
+
 function isAbsoluteUrl(value: string): boolean {
   return /^[a-z][a-z0-9+.-]*:\/\//i.test(value);
 }
@@ -204,10 +212,17 @@ export function resolveApiUrl(value: string | null | undefined): string | null {
 async function requestJson<T>(
   path: string,
   init?: RequestInit,
-  opts?: { includeAuth?: boolean },
+  opts?: { includeAuth?: boolean; directApi?: boolean },
 ): Promise<T> {
-  const url = joinApiUrl(getBaseUrl(), path);
   const includeAuth = opts?.includeAuth ?? true;
+  // Most browser calls remain same-origin. Endpoints with both a cacheable
+  // public representation and a private representation can explicitly bypass
+  // that cache boundary so bearer-authenticated inventory reads reach the
+  // CityLens API directly.
+  const url = joinApiUrl(
+    opts?.directApi ? getAuthenticatedBaseUrl() : getBaseUrl(),
+    path,
+  );
 
   const headers = new Headers(init?.headers);
   headers.set('Accept', 'application/json');
@@ -1629,7 +1644,7 @@ export async function getParcelIntelSweep(
   return requestJson<ParcelIntelSweepResponse>(
     `/v1/parcel-intel/sweep?${params.toString()}`,
     includeAuth ? { cache: 'no-store' } : undefined,
-    { includeAuth },
+    { includeAuth, directApi: includeAuth },
   );
 }
 
@@ -1644,7 +1659,7 @@ export async function getParcelIntelMap(
   return requestJson<ParcelIntelMapResponse>(
     `/v1/parcel-intel/map?${params.toString()}`,
     includeAuth ? { cache: 'no-store' } : undefined,
-    { includeAuth },
+    { includeAuth, directApi: includeAuth },
   );
 }
 

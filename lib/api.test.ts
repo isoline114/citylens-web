@@ -886,6 +886,11 @@ describe('parcel intelligence progressive reads', () => {
 
   it('bypasses the public HTTP cache for the authenticated citywide map', async () => {
     setAuthTokenGetter(async () => 'tok-abc');
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv(
+      'NEXT_PUBLIC_CITYLENS_API_BASE',
+      'https://api.citylens.dev',
+    );
     const mockFetch = stubFetch({
       rows: [],
       generated_at: null,
@@ -899,7 +904,10 @@ describe('parcel intelligence progressive reads', () => {
 
     const result = await getParcelIntelMap(1000, { includeAuth: true });
 
-    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      'https://api.citylens.dev/v1/parcel-intel/map?top_per_borough=1000',
+    );
     expect(new Headers(init.headers).get('Authorization')).toBe(
       'Bearer tok-abc',
     );
@@ -907,6 +915,21 @@ describe('parcel intelligence progressive reads', () => {
     expect(result.feed_generation).toBe(
       '20260727T030301358307Z-a32b245a82db',
     );
+  });
+
+  it('keeps the anonymous citywide preview same-origin in production', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv(
+      'NEXT_PUBLIC_CITYLENS_API_BASE',
+      'https://api.citylens.dev',
+    );
+    const mockFetch = stubFetch({ rows: [], generated_at: null });
+
+    await getParcelIntelMap(1000, { includeAuth: false });
+
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/v1/parcel-intel/map?top_per_borough=1000');
+    expect(new Headers(init.headers).has('Authorization')).toBe(false);
   });
 
   it('loads full selected-parcel detail with the user token', async () => {
