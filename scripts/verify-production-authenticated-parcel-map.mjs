@@ -59,6 +59,7 @@ let screeningReceiptVerified = false;
 let addressResolutionVerified = false;
 let officialDossierVerified = false;
 let dossierReadinessVerified = false;
+let salesComparablesVerified = false;
 let historicalBenchmarkReceiptVerified = false;
 let modelLineageReceiptVerified = false;
 let prospectiveValidationReceipt = null;
@@ -879,6 +880,37 @@ try {
     );
   }
   dossierReadinessVerified = true;
+  const salesComparables = officialDossier.getByTestId(
+    'parcel-sales-comparables',
+  );
+  await salesComparables
+    .getByRole('button', { name: 'Load sale context' })
+    .click();
+  const salesComparablesReady = salesComparables.getByTestId(
+    'parcel-sales-comparables-ready',
+  );
+  await salesComparablesReady.waitFor({ timeout: 20_000 });
+  const comparableSaleCount = await salesComparablesReady
+    .getByTestId('parcel-comparable-sale')
+    .count();
+  if (
+    comparableSaleCount < 1 ||
+    comparableSaleCount > 5 ||
+    !(await salesComparablesReady
+      .getByText('Median sale', { exact: true })
+      .isVisible()) ||
+    !(await salesComparablesReady
+      .getByRole('link', { name: 'DOF source', exact: true })
+      .isVisible()) ||
+    !(await salesComparablesReady
+      .getByText(/not an appraisal/i)
+      .isVisible())
+  ) {
+    throw new Error(
+      'The official comparable-sale screen was incomplete or misleading.',
+    );
+  }
+  salesComparablesVerified = true;
   await page
     .getByRole('button', { name: 'Check current screening' })
     .click();
@@ -1222,7 +1254,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v19',
+  schema_version: 'citylens/production-authenticated-parcel-map@v20',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -1243,6 +1275,7 @@ const report = {
   address_resolution_verified: addressResolutionVerified,
   official_dossier_verified: officialDossierVerified,
   dossier_readiness_verified: dossierReadinessVerified,
+  sales_comparables_verified: salesComparablesVerified,
   historical_benchmark_receipt_verified: historicalBenchmarkReceiptVerified,
   model_lineage_receipt_verified: modelLineageReceiptVerified,
   prospective_validation_receipt: prospectiveValidationReceipt,
