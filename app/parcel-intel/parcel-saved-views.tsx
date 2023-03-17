@@ -322,6 +322,7 @@ export function ParcelSavedViewsPanel({
   onComparisonOpened,
   onChangesOpened,
   onClose,
+  initialFocus = 'close',
 }: {
   currentView: SavedViewDraft;
   inventoryRows: ParcelExplorerRow[];
@@ -334,6 +335,7 @@ export function ParcelSavedViewsPanel({
   onComparisonOpened?: () => void;
   onChangesOpened?: (searchId: string) => void;
   onClose: () => void;
+  initialFocus?: 'close' | 'name';
 }) {
   const [views, setViews] = useState<ParcelSavedSearch[]>([]);
   const [name, setName] = useState(() => suggestedName(currentView));
@@ -461,6 +463,7 @@ export function ParcelSavedViewsPanel({
       });
       setViews((current) => [created, ...current]);
       setSaved(true);
+      window.dispatchEvent(new Event('citylens:saved-views-updated'));
     } catch {
       setError('This view could not be saved. Try again.');
     } finally {
@@ -516,6 +519,7 @@ export function ParcelSavedViewsPanel({
       setComparisonViewId((current) =>
         current === searchId ? null : current,
       );
+      window.dispatchEvent(new Event('citylens:saved-views-updated'));
     } catch {
       setError('This saved view could not be deleted. Try again.');
     } finally {
@@ -547,7 +551,7 @@ export function ParcelSavedViewsPanel({
         </div>
         <button
           type="button"
-          autoFocus
+          autoFocus={initialFocus === 'close'}
           onClick={onClose}
           aria-label="Close saved views"
           className="self-end rounded-lg border border-white/10 p-2 text-slate-300 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 sm:self-auto"
@@ -563,6 +567,7 @@ export function ParcelSavedViewsPanel({
           </label>
           <input
             id="saved-view-name"
+            autoFocus={initialFocus === 'name'}
             value={name}
             maxLength={100}
             onChange={(event) => {

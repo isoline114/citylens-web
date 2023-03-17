@@ -1289,6 +1289,7 @@ describe('ParcelIntelExplorer', () => {
       screen.getByRole('button', { name: 'Watch this screen' }),
     );
     expect(await screen.findByTestId('saved-views-panel')).toBeInTheDocument();
+    expect(screen.getByLabelText('View name')).toHaveFocus();
     fireEvent.click(
       screen.getByRole('button', { name: 'Close saved views' }),
     );
@@ -1306,6 +1307,59 @@ describe('ParcelIntelExplorer', () => {
       '/parcel-intel?bbl=1000010001',
       { scroll: false },
     );
+  });
+
+  it('does not onboard a returning user who already has a saved screen', async () => {
+    mocks.authStatus = 'authenticated';
+    mocks.getParcelWorkflowActions.mockResolvedValue({
+      schema_version: 'citylens/parcel-workflow-actions@v1',
+      generated_at: '2026-07-24T14:00:00Z',
+      total_records: 0,
+      open_records: 0,
+      completed_records: 0,
+      overdue_count: 0,
+      due_today_count: 0,
+      due_soon_count: 0,
+      scheduled_count: 0,
+      unscheduled_count: 0,
+      unassigned_count: 0,
+      outcome_update_due_count: 0,
+      attention_count: 0,
+      snoozed_count: 0,
+      complete_plan_count: 0,
+      plan_coverage_rate: null,
+      assigned_count: 0,
+      assignee_coverage_rate: null,
+      outcome_current_count: 0,
+      outcome_current_rate: null,
+      items: [],
+    });
+    mocks.listParcelSavedSearches.mockResolvedValue([
+      {
+        schema_version: 'citylens/parcel-saved-view@v2',
+        search_id: 'view-returning',
+        name: 'All NYC candidates',
+        borough: 'all',
+        filters: {
+          query: '',
+          priority: 'all',
+          opportunity: 'all',
+          owner_portfolio_id: null,
+          overlay: 'borough',
+        },
+        alert_frequency: 'off',
+        created_at: '2026-07-24T12:00:00Z',
+        updated_at: '2026-07-24T12:00:00Z',
+      },
+    ]);
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    expect(await screen.findByTestId('saved-view-count')).toHaveTextContent('1');
+    expect(screen.queryByTestId('activation-guide-empty')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('activation-guide-attention'),
+    ).not.toBeInTheDocument();
   });
 
   it('restores the full explorer state from a private saved view', async () => {

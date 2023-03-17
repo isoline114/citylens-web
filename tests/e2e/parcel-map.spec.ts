@@ -197,6 +197,7 @@ test('lets a first-session user watch the verified citywide screen', async ({
   page,
 }) => {
   const rows = authenticatedMapRows();
+  const savedViews: Record<string, unknown>[] = [];
   await page.addInitScript(() => {
     sessionStorage.setItem(
       'citylens_mock_auth_user',
@@ -253,7 +254,24 @@ test('lets a first-session user watch the verified citywide screen', async ({
   await page.route('**/v1/parcel-intel/saved-searches', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
-      body: '[]',
+      body: JSON.stringify(savedViews),
+    });
+  });
+  await page.route('**/v1/parcel-intel/saved-searches/*', async (route) => {
+    const request = route.request();
+    const payload = request.postDataJSON() as Record<string, unknown>;
+    const searchId = new URL(request.url()).pathname.split('/').at(-1);
+    const savedView = {
+      schema_version: 'citylens/parcel-saved-view@v3',
+      search_id: searchId,
+      ...payload,
+      created_at: '2026-07-30T01:05:00Z',
+      updated_at: '2026-07-30T01:05:00Z',
+    };
+    savedViews.unshift(savedView);
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify(savedView),
     });
   });
   await page.route('**/v1/parcel-intel/product-events', async (route) => {
@@ -274,6 +292,12 @@ test('lets a first-session user watch the verified citywide screen', async ({
   );
   await guide.getByRole('button', { name: 'Watch this screen' }).click();
   await expect(page.getByTestId('saved-views-panel')).toBeVisible();
+  await expect(page.getByLabel('View name')).toBeFocused();
   await expect(page.getByTestId('saved-view-save')).toBeEnabled();
   await expect(page.getByText('No saved views yet.')).toBeVisible();
+  await page.getByTestId('saved-view-save').click();
+  await expect(page.getByTestId('saved-view-save')).toHaveText('Saved');
+  await expect(page.getByTestId('saved-view-count')).toHaveText('1');
+  await page.getByRole('button', { name: 'Close saved views' }).click();
+  await expect(page.getByTestId('activation-guide-empty')).toHaveCount(0);
 });

@@ -35,6 +35,7 @@ import {
   getParcelIntelParcel,
   getParcelIntelSweep,
   getParcelWorkflowActions,
+  listParcelSavedSearches,
   recordParcelProductEvent,
   type ParcelIntelBorough,
   type ParcelIntelMapRow,
@@ -281,6 +282,9 @@ export function ParcelIntelExplorer({
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [savedViewsOpen, setSavedViewsOpen] = useState(false);
+  const [savedViewsEntry, setSavedViewsEntry] = useState<
+    'browse' | 'create'
+  >('browse');
   const [signalFiltersOpen, setSignalFiltersOpen] = useState(false);
   const [siteCriteriaOpen, setSiteCriteriaOpen] = useState(false);
   const [mobileMarketFiltersOpen, setMobileMarketFiltersOpen] = useState(false);
@@ -290,6 +294,7 @@ export function ParcelIntelExplorer({
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [workflowActions, setWorkflowActions] =
     useState<ParcelWorkflowActions | null>(null);
+  const [savedViewCount, setSavedViewCount] = useState<number | null>(null);
   const parcelOpenSourceRef = useRef<ParcelProductEventSource>('direct');
   const screenAuditOpenTrackedRef = useRef(false);
   const savedViewComparisonOpenTrackedRef = useRef(false);
@@ -661,6 +666,30 @@ export function ParcelIntelExplorer({
     return () => {
       cancelled = true;
       window.removeEventListener('citylens:workflow-updated', refresh);
+    };
+  }, [auth.status]);
+
+  useEffect(() => {
+    if (auth.status !== 'authenticated') {
+      setSavedViewCount(null);
+      return;
+    }
+    let cancelled = false;
+    const refresh = () => {
+      void listParcelSavedSearches()
+        .then((views) => {
+          if (!cancelled) setSavedViewCount(views.length);
+        })
+        .catch(() => {
+          // Saved-view discovery should not block the inventory. Leaving this
+          // unknown also prevents false first-session onboarding.
+        });
+    };
+    refresh();
+    window.addEventListener('citylens:saved-views-updated', refresh);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('citylens:saved-views-updated', refresh);
     };
   }, [auth.status]);
 
@@ -1331,10 +1360,11 @@ export function ParcelIntelExplorer({
     setSavedViewsOpen(false);
   };
 
-  const openSavedViews = () => {
+  const openSavedViews = (entry: 'browse' | 'create' = 'browse') => {
     if (!savedViewsOpen) {
       rememberToolPanelOpener();
     }
+    setSavedViewsEntry(entry);
     setSavedViewsOpen(true);
     setActionsOpen(false);
     setAlertsOpen(false);
@@ -1656,7 +1686,7 @@ export function ParcelIntelExplorer({
                     setSavedViewsOpen(false);
                     return;
                   }
-                  openSavedViews();
+                  openSavedViews('browse');
                 }}
                 aria-expanded={savedViewsOpen}
                 aria-controls="parcel-saved-views-panel"
@@ -1665,6 +1695,15 @@ export function ParcelIntelExplorer({
               >
                 <Bookmark className="h-3.5 w-3.5 text-amber-300" />
                 Saved views
+                {savedViewCount !== null && savedViewCount > 0 && (
+                  <span
+                    aria-hidden="true"
+                    data-testid="saved-view-count"
+                    className="inline-flex min-w-5 items-center justify-center rounded-full bg-amber-300 px-1.5 py-0.5 text-[10px] font-bold leading-none text-slate-950"
+                  >
+                    {savedViewCount}
+                  </span>
+                )}
               </button>
             )}
             {isAuthenticated && (
@@ -1807,6 +1846,7 @@ export function ParcelIntelExplorer({
           }
           feedGeneration={inventoryFeedGeneration}
           feedGeneratedAt={inventoryGeneratedAt}
+          initialFocus={savedViewsEntry === 'create' ? 'name' : 'close'}
           onApply={applySavedView}
           onSelectParcel={(bbl) => {
             setSavedViewsOpen(false);
@@ -1865,18 +1905,18 @@ export function ParcelIntelExplorer({
         !alertsOpen &&
         !insightsOpen &&
         !savedViewsOpen &&
-        (workflowActions.total_records === 0 ||
+        ((workflowActions.total_records === 0 && savedViewCount === 0) ||
           workflowActions.attention_count > 0) && (
           <section
             className="order-2 border-b border-sky-200 bg-gradient-to-r from-sky-50 via-white to-emerald-50 px-5 py-4 lg:order-none md:px-7"
             aria-label="Acquisition workflow next step"
             data-testid={
-              workflowActions.total_records === 0
+              workflowActions.total_records === 0 && savedViewCount === 0
                 ? 'activation-guide-empty'
                 : 'activation-guide-attention'
             }
           >
-            {workflowActions.total_records === 0 ? (
+            {workflowActions.total_records === 0 && savedViewCount === 0 ? (
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div>
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-sky-800">
@@ -1895,7 +1935,7 @@ export function ParcelIntelExplorer({
                   <button
                     type="button"
                     data-tool-panel-trigger="saved"
-                    onClick={openSavedViews}
+                    onClick={() => openSavedViews('create')}
                     className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-sky-300 bg-white px-4 text-xs font-semibold text-sky-950 shadow-sm hover:bg-sky-50"
                   >
                     <Bookmark className="h-3.5 w-3.5" />

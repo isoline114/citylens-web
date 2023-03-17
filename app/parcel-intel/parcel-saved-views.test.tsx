@@ -134,7 +134,28 @@ describe('ParcelSavedViewsPanel', () => {
     expect(onApply).toHaveBeenCalledWith(savedView);
   });
 
+  it('focuses the screen name when opened from the activation guide', async () => {
+    render(
+      <ParcelSavedViewsPanel
+        {...monitorProps}
+        currentView={currentView}
+        inventoryRows={inventoryRows}
+        inventoryReady
+        initialFocus="name"
+        onApply={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByLabelText('View name')).toHaveFocus();
+    expect(
+      screen.getByRole('button', { name: 'Close saved views' }),
+    ).not.toHaveFocus();
+  });
+
   it('saves the complete current state without promising alerts', async () => {
+    const updated = vi.fn();
+    window.addEventListener('citylens:saved-views-updated', updated);
     render(
       <ParcelSavedViewsPanel
         {...monitorProps}
@@ -155,6 +176,8 @@ describe('ParcelSavedViewsPanel', () => {
     );
 
     await waitFor(() => expect(mocks.saveParcelSearch).toHaveBeenCalled());
+    expect(updated).toHaveBeenCalledTimes(1);
+    window.removeEventListener('citylens:saved-views-updated', updated);
     const [, payload] = mocks.saveParcelSearch.mock.calls[0];
     expect(payload).toEqual({
       name: 'Owner search',
