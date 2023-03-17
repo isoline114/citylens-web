@@ -2051,7 +2051,6 @@ export function ParcelIntelExplorer({
           <button
             type="button"
             onClick={() => setMobileMarketFiltersOpen((value) => !value)}
-            aria-label="Market filters"
             aria-expanded={mobileMarketFiltersOpen}
             aria-controls="parcel-mobile-market-filters"
             className="inline-flex h-10 items-center justify-between rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-800 shadow-sm sm:hidden"
@@ -2954,9 +2953,9 @@ export function ParcelIntelExplorer({
 
           <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-slate-950">
+              <h2 className="text-sm font-semibold text-slate-950">
                 Acquisition sites
-              </h3>
+              </h2>
               <p className="text-xs text-slate-500">
                 {rankMapView
                   ? `${rankingRows.length.toLocaleString()} ${

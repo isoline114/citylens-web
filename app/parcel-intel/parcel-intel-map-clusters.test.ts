@@ -80,10 +80,10 @@ describe('parcel explorer map clustering', () => {
   });
 
   it('scales cluster controls without allowing unbounded markers', () => {
-    expect(clusterMarkerDiameter(12)).toBe(36);
-    expect(clusterMarkerDiameter(50)).toBe(42);
-    expect(clusterMarkerDiameter(250)).toBe(48);
-    expect(clusterMarkerDiameter(1_000)).toBe(54);
-    expect(clusterMarkerDiameter(5_000)).toBe(54);
+    expect(clusterMarkerDiameter(12)).toBe(44);
+    expect(clusterMarkerDiameter(50)).toBe(48);
+    expect(clusterMarkerDiameter(250)).toBe(52);
+    expect(clusterMarkerDiameter(1_000)).toBe(56);
+    expect(clusterMarkerDiameter(5_000)).toBe(56);
   });
 });

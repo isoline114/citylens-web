@@ -364,7 +364,9 @@ describe('ParcelIntelExplorer', () => {
   it('keeps secondary market filters compact and explicit on mobile', async () => {
     render(<ParcelIntelExplorer boroughs={boroughs} />);
 
-    const toggle = screen.getByRole('button', { name: 'Market filters' });
+    const toggle = screen.getByRole('button', {
+      name: /Market filters.*Borough.*priority.*type/i,
+    });
     const controls = document.getElementById('parcel-mobile-market-filters');
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(toggle).toHaveAttribute(

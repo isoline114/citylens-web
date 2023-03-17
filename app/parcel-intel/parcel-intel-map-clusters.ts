@@ -47,7 +47,11 @@ export function buildParcelClusterIndex(rows: ParcelExplorerRow[]) {
     ParcelMapPointProperties,
     ParcelMapClusterProperties
   >({
-    radius: 52,
+    // Keep interactive cluster controls far enough apart for a 24px safe
+    // touch area around the smallest 44px marker. This also reduces visual
+    // collisions on the narrow citywide mobile map without hiding parcels:
+    // every point remains available as the user zooms.
+    radius: 72,
     maxZoom: 16,
     minPoints: 3,
     nodeSize: 64,
@@ -80,8 +84,8 @@ export function rowBblsInBounds(
 }
 
 export function clusterMarkerDiameter(pointCount: number): number {
-  if (pointCount >= 1_000) return 54;
-  if (pointCount >= 250) return 48;
-  if (pointCount >= 50) return 42;
-  return 36;
+  if (pointCount >= 1_000) return 56;
+  if (pointCount >= 250) return 52;
+  if (pointCount >= 50) return 48;
+  return 44;
 }
