@@ -123,7 +123,7 @@ export default async function ParcelIntelIndexPage({
 
   return (
     <div>
-      <header className="mb-3 grid gap-4 md:mb-5 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.82fr)] lg:items-end">
+      <header className="mb-3 grid gap-4 md:mb-5 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.82fr)] lg:items-start">
         <div>
           <div className="inline-flex items-center gap-2 self-start rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-800 ring-1 ring-inset ring-sky-200">
             <Building2 className="h-3.5 w-3.5" />

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import {
   ParcelFeedReceipt,
@@ -126,7 +126,10 @@ describe('ParcelFeedReceipt', () => {
       'Address provenance 500 PAD / 4,500 PLUTO',
     );
     expect(screen.getByTestId('parcel-feed-receipt')).toHaveTextContent(
-      'reserves 250 qualified leads per borough and retains 97.7% of the pure-merit list',
+      '250-lead borough floor · 97.7% pure-merit overlap',
+    );
+    expect(screen.getByTestId('parcel-feed-receipt')).toHaveTextContent(
+      'Membership gate only—it does not retrain the rank.',
     );
     expect(screen.getByTestId('parcel-feed-receipt')).toHaveTextContent(
       'Selection borough floor 250',
@@ -134,11 +137,17 @@ describe('ParcelFeedReceipt', () => {
     expect(screen.getByTestId('parcel-feed-receipt')).toHaveTextContent(
       /not model accuracy, seller intent, transaction probability/i,
     );
-    expect(screen.getByTestId('parcel-feed-receipt')).toHaveTextContent(
-      '34 of the top 100 and 104 of the top 1,000',
+    const historicalEvidence = within(
+      screen.getByTestId('parcel-feed-receipt'),
+    ).getByTestId('historical-ranking-evidence');
+    expect(historicalEvidence).toHaveTextContent('Top 10034.0%');
+    expect(historicalEvidence).toHaveTextContent('Top 1,00010.4%');
+    expect(historicalEvidence).toHaveTextContent('NYC base0.12%');
+    expect(historicalEvidence).toHaveTextContent(
+      '273× top-100 enrichment · 84× top-1,000',
     );
     expect(screen.getByTestId('parcel-feed-receipt')).toHaveTextContent(
-      '2024 features → 2025 outcomes',
+      '2024 features → 2025 DOB NB filings',
     );
     expect(screen.getByTestId('parcel-feed-receipt')).toHaveTextContent(
       'development-exposed benchmark',

@@ -18,6 +18,20 @@ const RUN_LIST_RECEIPT_KEYS = [
   'status_counts',
   'value_minimized',
 ];
+const WORKFLOW_ANALYTICS_RECEIPT_KEYS = [
+  'cohort_state',
+  'has_saved_leads',
+  'maturity_boundary_safe',
+  'schema_version_valid',
+  'shape_valid',
+  'status',
+  'value_minimized',
+];
+const WORKFLOW_MEASUREMENT_STATES = [
+  'collecting',
+  'directional',
+  'usable',
+];
 
 export function positiveFormattedCount(value) {
   if (typeof value !== 'string') return null;
@@ -337,6 +351,195 @@ export function summarizeRunListResponse(status, payload) {
     ) &&
     statusKeys.length === RUN_STATUS_KEYS.length &&
     statusKeys.every((key, index) => key === RUN_STATUS_KEYS[index]);
+
+  return receipt;
+}
+
+export function summarizeWorkflowAnalyticsResponse(status, payload) {
+  const record =
+    payload && typeof payload === 'object' && !Array.isArray(payload)
+      ? payload
+      : {};
+  const totalRecords = record.total_records;
+  const activeRecords = record.active_records;
+  const archivedRecords = record.archived_records;
+  const eventHistoryRecords = record.event_history_records;
+  const validSavedAtRecords = record.valid_saved_at_records;
+  const minimumRateDenominator = record.minimum_rate_denominator;
+  const maturityWindows = Array.isArray(record.maturity_windows)
+    ? record.maturity_windows
+    : [];
+  const cohorts = Array.isArray(record.cohorts) ? record.cohorts : [];
+  const funnel =
+    record.funnel &&
+    typeof record.funnel === 'object' &&
+    !Array.isArray(record.funnel)
+      ? record.funnel
+      : {};
+  const measurementStatus = WORKFLOW_MEASUREMENT_STATES.includes(
+    record.measurement_status,
+  )
+    ? record.measurement_status
+    : null;
+  const nonnegativeInteger = (value) =>
+    Number.isSafeInteger(value) && value >= 0;
+  const positiveInteger = (value) =>
+    Number.isSafeInteger(value) && value > 0;
+  const rateIsValid = (value) =>
+    typeof value === 'number' &&
+    Number.isFinite(value) &&
+    value >= 0 &&
+    value <= 1;
+  const confidenceIntervalIsValid = (value) =>
+    value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    value.confidence_level === 0.95 &&
+    rateIsValid(value.lower) &&
+    rateIsValid(value.upper) &&
+    value.lower <= value.upper;
+  const estimateIsMaturitySafe = (
+    denominator,
+    rate,
+    confidenceInterval,
+    sufficientDenominator,
+  ) => {
+    if (!nonnegativeInteger(denominator)) return false;
+    const sufficient = denominator >= minimumRateDenominator;
+    if (
+      typeof sufficientDenominator === 'boolean' &&
+      sufficientDenominator !== sufficient
+    ) {
+      return false;
+    }
+    return sufficient
+      ? rateIsValid(rate) &&
+          confidenceIntervalIsValid(confidenceInterval)
+      : rate === null && confidenceInterval === null;
+  };
+  const funnelBoundarySafe = [
+    'contacted_per_saved',
+    'qualified_per_contacted',
+    'offer_per_qualified',
+    'contract_per_offer',
+    'close_per_contract',
+  ].every((key) => {
+    const estimate = funnel[key];
+    return (
+      estimate &&
+      typeof estimate === 'object' &&
+      !Array.isArray(estimate) &&
+      nonnegativeInteger(estimate.numerator) &&
+      estimate.numerator <= estimate.denominator &&
+      estimateIsMaturitySafe(
+        estimate.denominator,
+        estimate.rate,
+        estimate.confidence_interval,
+        estimate.sufficient_denominator,
+      )
+    );
+  });
+  const cohortBoundarySafe = cohorts.every((cohort) => {
+    if (!cohort || typeof cohort !== 'object' || Array.isArray(cohort)) {
+      return false;
+    }
+    return [
+      [
+        cohort.contacted_rate_denominator,
+        cohort.contacted_rate,
+        cohort.contacted_confidence_interval,
+      ],
+      [
+        cohort.qualified_rate_denominator,
+        cohort.qualified_rate,
+        cohort.qualified_confidence_interval,
+      ],
+      [
+        cohort.close_rate_denominator,
+        cohort.close_rate,
+        cohort.close_confidence_interval,
+      ],
+    ].every(([denominator, rate, confidenceInterval]) =>
+      estimateIsMaturitySafe(
+        denominator,
+        rate,
+        confidenceInterval,
+        undefined,
+      ),
+    );
+  });
+
+  const maturityWindowBoundarySafe =
+    Array.isArray(record.maturity_windows) &&
+    maturityWindows.every((window) => {
+      if (!window || typeof window !== 'object' || Array.isArray(window)) {
+        return false;
+      }
+      if (
+        !nonnegativeInteger(window.eligible_records) ||
+        !nonnegativeInteger(window.reached_within_horizon) ||
+        !nonnegativeInteger(window.pending_records) ||
+        window.reached_within_horizon > window.eligible_records
+      ) {
+        return false;
+      }
+      if (window.sufficient_denominator === true) {
+        return (
+          window.eligible_records >= minimumRateDenominator &&
+          rateIsValid(window.rate) &&
+          confidenceIntervalIsValid(window.confidence_interval)
+        );
+      }
+      return (
+        window.sufficient_denominator === false &&
+        window.rate === null &&
+        window.confidence_interval === null
+      );
+    });
+  const maturityBoundarySafe =
+    funnelBoundarySafe &&
+    cohortBoundarySafe &&
+    maturityWindowBoundarySafe;
+  const schemaVersionValid =
+    record.schema_version === 'citylens/parcel-workflow-analytics@v3';
+  const shapeValid =
+    status === 200 &&
+    schemaVersionValid &&
+    measurementStatus !== null &&
+    typeof record.measurement_label === 'string' &&
+    record.measurement_label.trim().length > 0 &&
+    nonnegativeInteger(totalRecords) &&
+    nonnegativeInteger(activeRecords) &&
+    nonnegativeInteger(archivedRecords) &&
+    activeRecords + archivedRecords === totalRecords &&
+    nonnegativeInteger(eventHistoryRecords) &&
+    eventHistoryRecords <= totalRecords &&
+    nonnegativeInteger(validSavedAtRecords) &&
+    validSavedAtRecords <= totalRecords &&
+    positiveInteger(record.minimum_cohort_size) &&
+    positiveInteger(minimumRateDenominator) &&
+    Array.isArray(record.cohorts) &&
+    Array.isArray(record.warnings) &&
+    maturityBoundarySafe;
+  const receipt = {
+    status,
+    schema_version_valid: schemaVersionValid,
+    shape_valid: shapeValid,
+    cohort_state:
+      nonnegativeInteger(totalRecords) && totalRecords === 0
+        ? 'empty'
+        : measurementStatus,
+    has_saved_leads:
+      nonnegativeInteger(totalRecords) ? totalRecords > 0 : null,
+    maturity_boundary_safe: maturityBoundarySafe,
+    value_minimized: false,
+  };
+  const receiptKeys = Object.keys(receipt).sort();
+  receipt.value_minimized =
+    receiptKeys.length === WORKFLOW_ANALYTICS_RECEIPT_KEYS.length &&
+    receiptKeys.every(
+      (key, index) => key === WORKFLOW_ANALYTICS_RECEIPT_KEYS[index],
+    );
 
   return receipt;
 }

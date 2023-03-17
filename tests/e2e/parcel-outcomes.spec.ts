@@ -895,34 +895,22 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
             qualified_per_contacted: {
               numerator: 2,
               denominator: 4,
-              rate: 0.5,
-              confidence_interval: {
-                confidence_level: 0.95,
-                lower: 0.15,
-                upper: 0.85,
-              },
+              rate: null,
+              confidence_interval: null,
               sufficient_denominator: false,
             },
             offer_per_qualified: {
               numerator: 1,
               denominator: 2,
-              rate: 0.5,
-              confidence_interval: {
-                confidence_level: 0.95,
-                lower: 0.0945,
-                upper: 0.9055,
-              },
+              rate: null,
+              confidence_interval: null,
               sufficient_denominator: false,
             },
             contract_per_offer: {
               numerator: 0,
               denominator: 1,
-              rate: 0,
-              confidence_interval: {
-                confidence_level: 0.95,
-                lower: 0,
-                upper: 0.7935,
-              },
+              rate: null,
+              confidence_interval: null,
               sufficient_denominator: false,
             },
             close_per_contract: {
@@ -956,12 +944,8 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
               eligible_records: 8,
               reached_within_horizon: 2,
               pending_records: 4,
-              rate: 0.25,
-              confidence_interval: {
-                confidence_level: 0.95,
-                lower: 0.0715,
-                upper: 0.5907,
-              },
+              rate: null,
+              confidence_interval: null,
               sufficient_denominator: false,
             },
             {
@@ -971,12 +955,8 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
               eligible_records: 3,
               reached_within_horizon: 1,
               pending_records: 9,
-              rate: 0.3333,
-              confidence_interval: {
-                confidence_level: 0.95,
-                lower: 0.0615,
-                upper: 0.7923,
-              },
+              rate: null,
+              confidence_interval: null,
               sufficient_denominator: false,
             },
             {
@@ -1023,12 +1003,8 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
                 lower: 0.1682,
                 upper: 0.6873,
               },
-              qualified_rate: 0.25,
-              qualified_confidence_interval: {
-                confidence_level: 0.95,
-                lower: 0.0715,
-                upper: 0.5907,
-              },
+              qualified_rate: null,
+              qualified_confidence_interval: null,
               close_rate: null,
               close_confidence_interval: null,
             },
@@ -1654,6 +1630,18 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(
     page.getByTestId('workflow-insights-measurement-label'),
   ).toHaveText('Directional maturity-qualified evidence');
+  await expect(page.getByTestId('workflow-insights-panel')).toHaveAttribute(
+    'data-state',
+    'directional',
+  );
+  await expect(
+    page.getByTestId('workflow-insights-evidence-boundary'),
+  ).toContainText(
+    "These rates are not the historical model's validation accuracy.",
+  );
+  await expect(
+    page.getByTestId('workflow-insights-maturity-boundary'),
+  ).toContainText('Rates remain hidden as “Collecting” until');
   await expect(
     page.getByTestId('maturity-window-owner_contacted'),
   ).toContainText('40%');

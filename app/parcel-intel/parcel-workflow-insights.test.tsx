@@ -60,23 +60,15 @@ describe('ParcelWorkflowInsights', () => {
         contacted_per_saved: {
           numerator: 1,
           denominator: 3,
-          rate: 0.3333,
-          confidence_interval: {
-            confidence_level: 0.95,
-            lower: 0.0615,
-            upper: 0.7923,
-          },
+          rate: null,
+          confidence_interval: null,
           sufficient_denominator: false,
         },
         qualified_per_contacted: {
           numerator: 0,
           denominator: 1,
-          rate: 0,
-          confidence_interval: {
-            confidence_level: 0.95,
-            lower: 0,
-            upper: 0.7935,
-          },
+          rate: null,
+          confidence_interval: null,
           sufficient_denominator: false,
         },
         offer_per_qualified: {
@@ -129,11 +121,11 @@ describe('ParcelWorkflowInsights', () => {
           contacted_rate_denominator: 0,
           qualified_rate_denominator: 0,
           close_rate_denominator: 0,
-          contacted_rate: 0.3333,
+          contacted_rate: null,
           contacted_confidence_interval: null,
-          qualified_rate: 0,
+          qualified_rate: null,
           qualified_confidence_interval: null,
-          close_rate: 0,
+          close_rate: null,
           close_confidence_interval: null,
         },
       ],
@@ -145,6 +137,20 @@ describe('ParcelWorkflowInsights', () => {
     expect(
       await screen.findByText('Collecting observation time'),
     ).toBeInTheDocument();
+    expect(screen.getByTestId('workflow-insights-panel')).toHaveAttribute(
+      'data-state',
+      'collecting',
+    );
+    expect(
+      screen.getByTestId('workflow-insights-evidence-boundary'),
+    ).toHaveTextContent(
+      "These rates are not the historical model's validation accuracy.",
+    );
+    expect(
+      screen.getByTestId('workflow-insights-maturity-boundary'),
+    ).toHaveTextContent(
+      'Rates remain hidden as “Collecting” until that mature denominator reaches 10.',
+    );
     expect(
       screen.getByRole('button', { name: 'Close outcome insights' }),
     ).toHaveFocus();
@@ -220,6 +226,10 @@ describe('ParcelWorkflowInsights', () => {
     render(<ParcelWorkflowInsights onClose={vi.fn()} />);
 
     const emptyState = await screen.findByTestId('workflow-evidence-empty');
+    expect(screen.getByTestId('workflow-insights-panel')).toHaveAttribute(
+      'data-state',
+      'empty',
+    );
     expect(emptyState).toHaveTextContent('No outcome cohort yet');
     expect(emptyState).toHaveTextContent('Save ranked leads');
     expect(emptyState).toHaveTextContent('Work the queue');

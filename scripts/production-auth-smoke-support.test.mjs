@@ -14,6 +14,7 @@ import {
   summarizeBrowserErrors,
   summarizeProductEvent,
   summarizeRunListResponse,
+  summarizeWorkflowAnalyticsResponse,
 } from './production-auth-smoke-support.mjs';
 
 describe('production authenticated smoke support', () => {
@@ -285,6 +286,187 @@ describe('production authenticated smoke support', () => {
         succeeded: 0,
         unknown: 0,
       },
+      value_minimized: true,
+    });
+  });
+
+  it('summarizes maturity-safe workflow analytics without retaining private values', () => {
+    const receipt = summarizeWorkflowAnalyticsResponse(200, {
+      schema_version: 'citylens/parcel-workflow-analytics@v3',
+      generated_at: '2026-07-29T12:00:00Z',
+      measurement_status: 'collecting',
+      measurement_label: 'Collecting observation time',
+      total_records: 3,
+      active_records: 2,
+      archived_records: 1,
+      event_history_records: 3,
+      valid_saved_at_records: 3,
+      minimum_cohort_size: 30,
+      minimum_rate_denominator: 10,
+      funnel: {
+        contacted_per_saved: {
+          numerator: 1,
+          denominator: 3,
+          rate: null,
+          confidence_interval: null,
+          sufficient_denominator: false,
+        },
+        qualified_per_contacted: {
+          numerator: 0,
+          denominator: 1,
+          rate: null,
+          confidence_interval: null,
+          sufficient_denominator: false,
+        },
+        offer_per_qualified: {
+          numerator: 0,
+          denominator: 0,
+          rate: null,
+          confidence_interval: null,
+          sufficient_denominator: false,
+        },
+        contract_per_offer: {
+          numerator: 0,
+          denominator: 0,
+          rate: null,
+          confidence_interval: null,
+          sufficient_denominator: false,
+        },
+        close_per_contract: {
+          numerator: 0,
+          denominator: 0,
+          rate: null,
+          confidence_interval: null,
+          sufficient_denominator: false,
+        },
+      },
+      maturity_windows: [
+        {
+          milestone: 'owner_contacted',
+          eligible_records: 0,
+          reached_within_horizon: 0,
+          pending_records: 3,
+          rate: null,
+          confidence_interval: null,
+          sufficient_denominator: false,
+        },
+      ],
+      cohorts: [
+        {
+          value: 'private rank cohort',
+          contacted_rate_denominator: 0,
+          contacted_rate: null,
+          contacted_confidence_interval: null,
+          qualified_rate_denominator: 0,
+          qualified_rate: null,
+          qualified_confidence_interval: null,
+          close_rate_denominator: 0,
+          close_rate: null,
+          close_confidence_interval: null,
+        },
+      ],
+      warnings: ['private workflow warning'],
+      private_workflow_rows: [
+        {
+          bbl: '3000000001',
+          address: 'Private workflow address',
+          assignee: 'Private person',
+        },
+      ],
+    });
+
+    expect(receipt).toEqual({
+      status: 200,
+      schema_version_valid: true,
+      shape_valid: true,
+      cohort_state: 'collecting',
+      has_saved_leads: true,
+      maturity_boundary_safe: true,
+      value_minimized: true,
+    });
+    expect(JSON.stringify(receipt)).not.toMatch(
+      /private|address|assignee|3000000001|rank cohort/i,
+    );
+  });
+
+  it('rejects premature workflow rates and malformed aggregate totals', () => {
+    expect(
+      summarizeWorkflowAnalyticsResponse(200, {
+        schema_version: 'citylens/parcel-workflow-analytics@v3',
+        measurement_status: 'usable',
+        measurement_label: 'Usable evidence',
+        total_records: 8,
+        active_records: 8,
+        archived_records: 1,
+        event_history_records: 9,
+        valid_saved_at_records: 8,
+        minimum_cohort_size: 30,
+        minimum_rate_denominator: 10,
+        funnel: {
+          contacted_per_saved: {
+            numerator: 1,
+            denominator: 8,
+            rate: 0.125,
+            confidence_interval: {
+              confidence_level: 0.95,
+              lower: 0.02,
+              upper: 0.47,
+            },
+            sufficient_denominator: false,
+          },
+          qualified_per_contacted: {
+            numerator: 0,
+            denominator: 1,
+            rate: null,
+            confidence_interval: null,
+            sufficient_denominator: false,
+          },
+          offer_per_qualified: {
+            numerator: 0,
+            denominator: 0,
+            rate: null,
+            confidence_interval: null,
+            sufficient_denominator: false,
+          },
+          contract_per_offer: {
+            numerator: 0,
+            denominator: 0,
+            rate: null,
+            confidence_interval: null,
+            sufficient_denominator: false,
+          },
+          close_per_contract: {
+            numerator: 0,
+            denominator: 0,
+            rate: null,
+            confidence_interval: null,
+            sufficient_denominator: false,
+          },
+        },
+        maturity_windows: [
+          {
+            eligible_records: 4,
+            reached_within_horizon: 2,
+            pending_records: 4,
+            rate: 0.5,
+            confidence_interval: {
+              confidence_level: 0.95,
+              lower: 0.15,
+              upper: 0.85,
+            },
+            sufficient_denominator: true,
+          },
+        ],
+        cohorts: [],
+        warnings: [],
+      }),
+    ).toEqual({
+      status: 200,
+      schema_version_valid: true,
+      shape_valid: false,
+      cohort_state: 'usable',
+      has_saved_leads: true,
+      maturity_boundary_safe: false,
       value_minimized: true,
     });
   });

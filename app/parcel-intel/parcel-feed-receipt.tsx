@@ -78,6 +78,11 @@ function formatPercent(value: number | null): string {
   return `${(value * 100).toFixed(value >= 0.1 ? 1 : 2)}%`;
 }
 
+function formatLift(value: number | null, baseRate: number | null): string {
+  if (value === null || baseRate === null || baseRate <= 0) return '—';
+  return `${Math.round(value / baseRate).toLocaleString('en-US')}×`;
+}
+
 function formatUtcDate(value: string | null): string {
   if (!value) return '—';
   const parsed = new Date(value);
@@ -153,30 +158,62 @@ export function parcelFeedReceipt(
 function HistoricalEvidence({ receipt }: { receipt: Receipt }) {
   const hasMetrics =
     receipt.historicalPrecisionAt100 !== null &&
-    receipt.historicalPrecisionAt1000 !== null;
+    receipt.historicalPrecisionAt1000 !== null &&
+    receipt.historicalBaseRate !== null;
   const exposed = receipt.historicalEvidenceStatus === 'development_exposed';
 
   return (
-    <div className="rounded-lg bg-white/[0.06] p-3 ring-1 ring-inset ring-white/10">
+    <div
+      className="rounded-lg bg-white/[0.06] p-3 ring-1 ring-inset ring-white/10"
+      data-testid="historical-ranking-evidence"
+    >
       <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-sky-300">
         1 · Historical rank
       </div>
-      <p className="mt-1.5 text-xs font-semibold leading-5 text-white">
-        {hasMetrics
-          ? `${Math.round(
-              receipt.historicalPrecisionAt100! * 100,
-            )} of the top 100 and ${Math.round(
-              receipt.historicalPrecisionAt1000! * 1000,
-            )} of the top 1,000 filed a DOB NB job the next year.`
-          : 'Historical forward-ranking evidence is unavailable.'}
-      </p>
+      {hasMetrics ? (
+        <>
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            {[
+              ['Top 100', formatPercent(receipt.historicalPrecisionAt100)],
+              ['Top 1,000', formatPercent(receipt.historicalPrecisionAt1000)],
+              ['NYC base', formatPercent(receipt.historicalBaseRate)],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                className="rounded-md bg-slate-950/40 px-2 py-1.5 ring-1 ring-inset ring-white/10"
+              >
+                <div className="text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+                  {label}
+                </div>
+                <div className="mt-0.5 text-xs font-semibold tabular-nums text-white">
+                  {value}
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[10px] font-medium leading-4 text-sky-100">
+            {formatLift(
+              receipt.historicalPrecisionAt100,
+              receipt.historicalBaseRate,
+            )}{' '}
+            top-100 enrichment ·{' '}
+            {formatLift(
+              receipt.historicalPrecisionAt1000,
+              receipt.historicalBaseRate,
+            )}{' '}
+            top-1,000
+          </p>
+        </>
+      ) : (
+        <p className="mt-1.5 text-xs font-semibold leading-5 text-white">
+          Historical forward-ranking evidence is unavailable.
+        </p>
+      )}
       <p className="mt-1 text-[10px] leading-4 text-slate-400">
-        2024 features → 2025 outcomes
-        {receipt.historicalBaseRate !== null
-          ? ` · ${formatPercent(receipt.historicalBaseRate)} base rate`
-          : ''}
-        {exposed ? ' · development-exposed benchmark' : ''}. This is ranking
-        evidence, not current parcel accuracy.
+        2024 features → 2025 DOB NB filings
+        {exposed ? ' · development-exposed benchmark' : ''}. Historical
+        enrichment—not current parcel accuracy, seller intent, or deal
+        probability.
       </p>
     </div>
   );
@@ -198,17 +235,16 @@ function CurrentQualification({ receipt }: { receipt: Receipt }) {
         leaks.
         {receipt.selectionPolicy === 'borough_floor_250' &&
           receipt.selectionMinimumPerBorough !== null &&
-          ` Merit-led citywide selection reserves ${formatCount(
+          ` ${formatCount(
             receipt.selectionMinimumPerBorough,
-          )} qualified leads per borough${
+          )}-lead borough floor${
             receipt.selectionPureMeritOverlap !== null
-              ? ` and retains ${formatPercent(
+              ? ` · ${formatPercent(
                   receipt.selectionPureMeritOverlap,
-                )} of the pure-merit list`
+                )} pure-merit overlap`
               : ''
           }.`}{' '}
-        Current gates and coverage policy can change published membership, not
-        the historical model.
+        Membership gate only—it does not retrain the rank.
       </p>
     </div>
   );

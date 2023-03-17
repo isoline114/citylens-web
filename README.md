@@ -293,7 +293,9 @@ to see fixed-horizon 30-day contact, 90-day qualification, 180-day offer,
 270-day contract, and 365-day close rates. A lead enters a denominator only
 when the full observation window has elapsed; late-recorded milestones do not
 inflate on-time rates, archived leads remain included, and small cohorts stay
-labeled “Collecting.” Each parcel workflow also exposes its value-minimized
+labeled “Collecting.” Below the minimum mature denominator, the API and UI
+both omit the point estimate and interval while retaining the auditable
+counts. Each parcel workflow also exposes its value-minimized
 decision history. Those user-entered, selected-lead outcomes are kept separate
 from historical model accuracy. Outcome Insights also provides a private,
 one-click evidence export. The versioned JSON contains

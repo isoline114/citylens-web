@@ -69,6 +69,7 @@ jobs:
           console.log(`- Auditable historical benchmark receipt: \`${report?.historical_benchmark_receipt_verified ? 'passed' : 'failed'}\``);
           console.log(`- Temporal train → calibrate → current-inference lineage: \`${report?.model_lineage_receipt_verified ? 'passed' : 'failed'}\``);
           console.log(`- Live prospective cohort boundary: \`${report?.prospective_validation_receipt?.health === 'current' && report?.prospective_validation_receipt?.claim_boundary_visible ? `passed · ${report.prospective_validation_receipt.status}` : 'failed'}\``);
+          console.log(`- Private workflow-outcome evidence: \`${report?.workflow_outcome_receipt?.shape_valid && report?.workflow_outcome_receipt?.maturity_boundary_safe && report?.workflow_outcome_receipt?.evidence_boundary_visible && report?.workflow_outcome_receipt?.maturity_boundary_visible && report?.workflow_outcome_receipt?.focus_restored ? `passed · ${report.workflow_outcome_receipt.cohort_state}` : 'failed'}\``);
           console.log(`- Any-NYC-lot official dossier: \`${report?.official_dossier_verified ? 'passed' : 'failed'}\``);
           console.log(`- Source-grounded dossier readiness: \`${report?.dossier_readiness_verified ? 'passed' : 'failed'}\``);
           console.log(`- Official address → BBL → screening flow: \`${report?.address_resolution_verified ? 'passed' : 'failed'}\``);

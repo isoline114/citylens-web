@@ -107,6 +107,16 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
       id="parcel-outcome-insights"
       className="border-b border-slate-200 bg-slate-950 px-4 py-5 text-white md:px-7"
       aria-label="Prospective workflow outcomes"
+      data-testid="workflow-insights-panel"
+      data-state={
+        loading
+          ? 'loading'
+          : error || !data
+            ? 'error'
+            : data.total_records === 0
+              ? 'empty'
+              : data.measurement_status
+      }
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
@@ -117,7 +127,10 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
           <h3 className="mt-1 text-xl font-semibold">
             Are saved leads becoming real opportunities?
           </h3>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-300">
+          <p
+            className="mt-1 max-w-3xl text-sm leading-6 text-slate-300"
+            data-testid="workflow-insights-evidence-boundary"
+          >
             Your private workflow outcomes, measured from the day a lead entered the
             pipeline. These rates are not the historical model&apos;s validation accuracy.
           </p>
@@ -413,7 +426,10 @@ export function ParcelWorkflowInsights({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          <p className="mt-3 text-xs leading-5 text-slate-400">
+          <p
+            className="mt-3 text-xs leading-5 text-slate-400"
+            data-testid="workflow-insights-maturity-boundary"
+          >
             A lead enters each denominator only after its full 30, 90, 180, 270, or
             365-day observation window. Rates remain hidden as “Collecting” until that
             mature denominator reaches {data.minimum_rate_denominator}. Milestones use

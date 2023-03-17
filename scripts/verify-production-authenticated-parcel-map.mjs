@@ -14,6 +14,7 @@ import {
   summarizeParcelCsv,
   summarizeProductEvent,
   summarizeRunListResponse,
+  summarizeWorkflowAnalyticsResponse,
 } from './production-auth-smoke-support.mjs';
 
 const webBase = (
@@ -61,6 +62,7 @@ let dossierReadinessVerified = false;
 let historicalBenchmarkReceiptVerified = false;
 let modelLineageReceiptVerified = false;
 let prospectiveValidationReceipt = null;
+let workflowOutcomeReceipt = null;
 let thesisComposerVerified = false;
 let thesisComposerReceiptVerified = false;
 let thesisComposerFiltersVerified = false;
@@ -502,6 +504,120 @@ try {
     );
   }
 
+  desktopCheckpoint = 'workflow_outcome_evidence';
+  const workflowAnalyticsResponsePromise = page.waitForResponse(
+    (response) => {
+      try {
+        return (
+          new URL(response.url()).pathname ===
+            '/v1/parcel-intel/workflow/analytics' &&
+          response.request().method() === 'GET'
+        );
+      } catch {
+        return false;
+      }
+    },
+    { timeout: 30_000 },
+  );
+  const workflowInsightsTrigger = page.getByRole('button', {
+    name: 'Outcome insights',
+  });
+  await workflowInsightsTrigger.click();
+  const workflowAnalyticsResponse =
+    await workflowAnalyticsResponsePromise;
+  const workflowAnalyticsPayload = await workflowAnalyticsResponse
+    .json()
+    .catch(() => null);
+  const workflowAnalyticsApiReceipt =
+    summarizeWorkflowAnalyticsResponse(
+      workflowAnalyticsResponse.status(),
+      workflowAnalyticsPayload,
+    );
+  const workflowInsightsPanel = page.getByTestId(
+    'workflow-insights-panel',
+  );
+  await workflowInsightsPanel.waitFor({ timeout: 20_000 });
+  await page.waitForFunction(
+    () => {
+      const state = document
+        .querySelector('[data-testid="workflow-insights-panel"]')
+        ?.getAttribute('data-state');
+      return state !== null && state !== 'loading';
+    },
+    undefined,
+    { timeout: 20_000 },
+  );
+  const workflowInsightsUiState =
+    await workflowInsightsPanel.getAttribute('data-state');
+  const expectedWorkflowInsightsUiState =
+    workflowAnalyticsApiReceipt.cohort_state === 'empty'
+      ? 'empty'
+      : workflowAnalyticsApiReceipt.cohort_state;
+  const workflowEvidenceBoundary = workflowInsightsPanel.getByTestId(
+    'workflow-insights-evidence-boundary',
+  );
+  const workflowMaturityBoundary = workflowInsightsPanel.getByTestId(
+    'workflow-insights-maturity-boundary',
+  );
+  const workflowEvidenceBoundaryVisible =
+    (await workflowEvidenceBoundary.isVisible()) &&
+    /not the historical model(?:'|’)s validation accuracy/i.test(
+      (await workflowEvidenceBoundary.textContent()) ?? '',
+    );
+  const workflowMaturityBoundaryVisible =
+    (await workflowMaturityBoundary.isVisible()) &&
+    /rates remain hidden as .Collecting. until/i.test(
+      (await workflowMaturityBoundary.textContent()) ?? '',
+    );
+  const workflowEmptyStateVisible =
+    workflowAnalyticsApiReceipt.cohort_state === 'empty'
+      ? await workflowInsightsPanel
+          .getByTestId('workflow-evidence-empty')
+          .getByText(/never from demo or synthetic outcomes/i)
+          .isVisible()
+      : null;
+  await workflowInsightsPanel
+    .getByRole('button', { name: 'Close outcome insights' })
+    .click();
+  await workflowInsightsTrigger.waitFor({ state: 'visible' });
+  const workflowFocusRestored = await page
+    .waitForFunction(
+      () =>
+        document.activeElement?.getAttribute(
+          'data-tool-panel-trigger',
+        ) === 'insights',
+      undefined,
+      { timeout: 5_000 },
+    )
+    .then(() => true)
+    .catch(() => false);
+  workflowOutcomeReceipt = {
+    ...workflowAnalyticsApiReceipt,
+    ui_state: workflowInsightsUiState,
+    evidence_boundary_visible: workflowEvidenceBoundaryVisible,
+    maturity_boundary_visible: workflowMaturityBoundaryVisible,
+    empty_state_honest:
+      workflowAnalyticsApiReceipt.cohort_state === 'empty'
+        ? workflowEmptyStateVisible
+        : null,
+    focus_restored: workflowFocusRestored,
+  };
+  if (
+    workflowAnalyticsApiReceipt.shape_valid !== true ||
+    workflowAnalyticsApiReceipt.maturity_boundary_safe !== true ||
+    workflowAnalyticsApiReceipt.value_minimized !== true ||
+    workflowInsightsUiState !== expectedWorkflowInsightsUiState ||
+    workflowEvidenceBoundaryVisible !== true ||
+    workflowMaturityBoundaryVisible !== true ||
+    (workflowAnalyticsApiReceipt.cohort_state === 'empty' &&
+      workflowEmptyStateVisible !== true) ||
+    workflowFocusRestored !== true
+  ) {
+    throw new Error(
+      `The private workflow-outcome receipt was incomplete: ${JSON.stringify(workflowOutcomeReceipt)}.`,
+    );
+  }
+
   await page.getByLabel('Search parcels').fill('3058920038');
   const officialDossier = page.getByTestId('parcel-official-dossier');
   await officialDossier.waitFor({ timeout: 15_000 });
@@ -897,7 +1013,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v15',
+  schema_version: 'citylens/production-authenticated-parcel-map@v16',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -919,6 +1035,7 @@ const report = {
   historical_benchmark_receipt_verified: historicalBenchmarkReceiptVerified,
   model_lineage_receipt_verified: modelLineageReceiptVerified,
   prospective_validation_receipt: prospectiveValidationReceipt,
+  workflow_outcome_receipt: workflowOutcomeReceipt,
   thesis_composer_verified: thesisComposerVerified,
   thesis_composer_receipt_verified: thesisComposerReceiptVerified,
   thesis_composer_filters_verified: thesisComposerFiltersVerified,

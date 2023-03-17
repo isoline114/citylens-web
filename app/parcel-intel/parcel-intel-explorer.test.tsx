@@ -823,6 +823,11 @@ describe('ParcelIntelExplorer', () => {
         2,
       ),
     );
+    await waitFor(() =>
+      expect(
+        mocks.getParcelIntelSweep.mock.calls.length,
+      ).toBeGreaterThanOrEqual(10),
+    );
     expect(mocks.getParcelIntelMap).not.toHaveBeenCalledWith(1000, {
       includeAuth: false,
     });
