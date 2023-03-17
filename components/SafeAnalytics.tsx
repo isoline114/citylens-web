@@ -1,9 +1,23 @@
-'use client';
+import { SafeAnalyticsClient } from '@/components/SafeAnalyticsClient';
 
-import { Analytics } from '@vercel/analytics/next';
+type AnalyticsEnvironment = {
+  VERCEL?: string;
+  VERCEL_ENV?: string;
+};
 
-import { redactAnalyticsUrl } from '@/lib/analytics';
+export function isVercelAnalyticsEnabled(
+  environment: AnalyticsEnvironment = {
+    VERCEL: process.env.VERCEL,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+  },
+) {
+  return environment.VERCEL === '1' || Boolean(environment.VERCEL_ENV);
+}
 
 export function SafeAnalytics() {
-  return <Analytics beforeSend={redactAnalyticsUrl} />;
+  if (!isVercelAnalyticsEnabled()) {
+    return null;
+  }
+
+  return <SafeAnalyticsClient />;
 }

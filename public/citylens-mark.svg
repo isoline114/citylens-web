@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img">
+  <title>CityLens</title>
+  <defs>
+    <linearGradient id="citylens-surface" x1="116" y1="76" x2="900" y2="948" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f172a"/>
+      <stop offset="0.62" stop-color="#020617"/>
+      <stop offset="1" stop-color="#082f49"/>
+    </linearGradient>
+  </defs>
+  <rect x="24" y="24" width="976" height="976" rx="280" fill="url(#citylens-surface)"/>
+  <path d="M196 716h632" fill="none" stroke="#38bdf8" stroke-width="54" stroke-linecap="round"/>
+  <path d="M236 274c148-112 404-112 552 0" fill="none" stroke="#34d399" stroke-width="44" stroke-linecap="round"/>
+  <path d="M226 696V508h136v188zm186 0V300h152v396zm202 0V430h136v266z" fill="#f8fafc"/>
+  <path d="m488 300 76-78v78z" fill="#f8fafc"/>
+</svg>

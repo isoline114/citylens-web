@@ -590,8 +590,8 @@ must be added manually.
 
 ## Icons
 
-`public/icon.png` is the source-of-truth. Regenerate derived icons whenever
-it changes:
+`public/citylens-mark.svg` is the source-of-truth. Regenerate the raster and
+platform-specific fallbacks whenever it changes:
 
 ```bash
 npm run generate:icons

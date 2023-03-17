@@ -6,7 +6,7 @@ import pngToIco from 'png-to-ico';
 
 const ROOT = process.cwd();
 const PUBLIC_DIR = path.join(ROOT, 'public');
-const SRC = path.join(PUBLIC_DIR, 'icon.png');
+const SRC = path.join(PUBLIC_DIR, 'citylens-mark.svg');
 
 async function exists(filePath) {
   try {
@@ -29,13 +29,21 @@ async function writePng(outPath, size) {
 async function main() {
   if (!(await exists(SRC))) {
     console.error(`Error: missing source icon at ${SRC}`);
-    console.error('Expected public/icon.png to exist (source-of-truth).');
+    console.error('Expected public/citylens-mark.svg to exist (source-of-truth).');
     process.exit(1);
   }
 
   await fs.mkdir(PUBLIC_DIR, { recursive: true });
 
   const created = [];
+
+  // General raster fallback for clients that do not consume SVG metadata.
+  await writePng(path.join(PUBLIC_DIR, 'icon.png'), 1024);
+  created.push('public/icon.png (1024x1024)');
+
+  // Legacy filename retained for external embeds and older cached clients.
+  await writePng(path.join(PUBLIC_DIR, 'citylens-mark.png'), 1024);
+  created.push('public/citylens-mark.png (1024x1024)');
 
   // Apple touch icon
   await writePng(path.join(PUBLIC_DIR, 'apple-touch-icon.png'), 180);

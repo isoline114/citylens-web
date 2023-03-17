@@ -4,7 +4,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import '../styles/globals.css';
 
-import { DemoModeBanner } from '@/components/DemoModeBanner';
 import { SafeAnalytics } from '@/components/SafeAnalytics';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteMain } from '@/components/SiteMain';
@@ -36,6 +35,7 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: publicAssetPath('/favicon.ico') },
+      { url: publicAssetPath('/citylens-mark.svg'), type: 'image/svg+xml' },
       { url: publicAssetPath('/icon.png'), type: 'image/png' },
     ],
     apple: [{ url: publicAssetPath('/apple-touch-icon.png') }],
@@ -59,8 +59,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </a>
           <SiteHeader />
 
-          <DemoModeBanner />
-
           <SiteMain>{children}</SiteMain>
           <SiteFooter />
           <Toasts />
@@ -77,10 +75,10 @@ function SiteFooter() {
       <div className="mx-auto flex max-w-[1480px] flex-col gap-4 px-4 py-6 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:px-6 xl:px-8">
         <div className="flex items-center gap-2">
           <Image
-            src={publicAssetPath('/citylens-mark.png')}
+            src={publicAssetPath('/citylens-mark.svg')}
             alt=""
-            width={16}
-            height={16}
+            width={18}
+            height={18}
             aria-hidden
           />
           <span className="font-medium text-slate-900">CityLens</span>

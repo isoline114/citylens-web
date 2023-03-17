@@ -60,10 +60,10 @@ export function SiteHeader() {
             aria-label="CityLens home"
           >
             <Image
-              src={publicAssetPath('/citylens-mark.png')}
+              src={publicAssetPath('/citylens-mark.svg')}
               alt=""
-              width={24}
-              height={24}
+              width={28}
+              height={28}
               priority
             />
             <span className="text-lg font-semibold tracking-[-0.02em]">

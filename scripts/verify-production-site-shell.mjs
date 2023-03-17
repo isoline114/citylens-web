@@ -14,31 +14,28 @@ const outputDir = path.resolve(
     'test-results/production-shell-smoke',
 );
 const routes = [
-  { name: 'home', path: '/', current: 'Home', demo: true },
-  { name: 'parcels', path: '/parcel-intel', current: 'Parcels', demo: false },
-  { name: 'runs', path: '/runs', current: 'Runs', demo: true },
+  { name: 'home', path: '/', current: 'Home' },
+  { name: 'parcels', path: '/parcel-intel', current: 'Parcels' },
+  { name: 'runs', path: '/runs', current: 'Runs' },
   {
     name: 'new-run',
     path: '/runs/new',
     current: 'Runs',
-    demo: false,
     requiredTestId: 'new-run-access-gate',
   },
-  { name: 'pricing', path: '/pricing', current: 'Pricing', demo: false },
-  { name: 'docs', path: '/docs', current: 'Docs', demo: false },
-  { name: 'contact', path: '/contact', current: null, demo: false },
+  { name: 'pricing', path: '/pricing', current: 'Pricing' },
+  { name: 'docs', path: '/docs', current: 'Docs' },
+  { name: 'contact', path: '/contact', current: null },
   {
     name: 'sign-in',
     path: '/sign-in',
     current: null,
-    demo: false,
     requiredTestId: 'auth-page-shell',
   },
   {
     name: 'api-keys',
     path: '/account/api-keys',
     current: null,
-    demo: false,
     requiredTestId: 'api-key-access-gate',
   },
 ];
@@ -89,9 +86,6 @@ try {
       const currentLabels = await primaryNavigation
         .locator('[aria-current="page"]')
         .allTextContents();
-      const demoBannerCount = await page
-        .getByText(/demo mode \(precomputed\)/i)
-        .count();
       const requiredSurfaceCount = route.requiredTestId
         ? await page.getByTestId(route.requiredTestId).count()
         : null;
@@ -109,8 +103,6 @@ try {
         main_width_px: mainBounds ? Math.round(mainBounds.width) : null,
         current_navigation: currentLabels,
         expected_current_navigation: route.current,
-        demo_banner_visible: demoBannerCount > 0,
-        expected_demo_banner: route.demo,
         required_surface_test_id: route.requiredTestId ?? null,
         required_surface_count: requiredSurfaceCount,
         body_height_px: bodyDimensions.height,
@@ -134,7 +126,6 @@ try {
         receipt.current_navigation.length === (route.current ? 1 : 0) &&
         (route.current === null ||
           receipt.current_navigation[0]?.trim() === route.current) &&
-        receipt.demo_banner_visible === route.demo &&
         (route.requiredTestId === undefined ||
           receipt.required_surface_count === 1) &&
         receipt.body_width_px <= viewport.width &&

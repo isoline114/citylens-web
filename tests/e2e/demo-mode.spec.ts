@@ -137,7 +137,12 @@ end_header
   });
 
   await page.goto('/');
-  await expect(page.getByText(/Demo mode \(precomputed\)/i)).toBeVisible();
+  await expect(
+    page.getByRole('heading', {
+      level: 1,
+      name: /Turn the whole NYC market into a defensible weekly shortlist/i,
+    }),
+  ).toBeVisible();
   await page.getByLabel('Select a featured demo run').selectOption('demo-1');
 
   await expect(page).toHaveURL(/\/runs\/demo-1\?demo=1/);

@@ -15,9 +15,6 @@ test('shared shell exposes one landmark, active navigation, and a true sticky fo
   await expect(pricingLinks).toHaveCount(2);
   await expect(pricingLinks.first()).toHaveAttribute('aria-current', 'page');
   await expect(pricingLinks.last()).not.toHaveAttribute('aria-current');
-  await expect(
-    page.getByText(/demo mode \(precomputed\)/i),
-  ).not.toBeVisible();
   await expect(page.getByTestId('product-page-header')).toBeVisible();
   await expect(
     page.getByText('Full 5,000-lead citywide workspace'),
