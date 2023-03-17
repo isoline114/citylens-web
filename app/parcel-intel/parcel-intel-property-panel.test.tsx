@@ -1279,6 +1279,12 @@ describe('ParcelIntelPropertyPanel', () => {
     );
     expect(mocks.recordParcelProductEvent).not.toHaveBeenCalled();
 
+    const historicalValidation = screen.getByTestId(
+      'historical-validation-details',
+    );
+    expect(historicalValidation).not.toHaveAttribute('open');
+    fireEvent.click(screen.getByText('Historical validation'));
+    expect(historicalValidation).toHaveAttribute('open');
     expect(screen.getByText('Eligible lead with diligence flags')).toBeInTheDocument();
     expect(screen.getByText('34.0%')).toBeInTheDocument();
     expect(screen.getByText('10.4%')).toBeInTheDocument();
@@ -1504,9 +1510,26 @@ describe('ParcelIntelPropertyPanel', () => {
     );
   });
 
-  it('opens the governed workflow from the decision brief when signed in', () => {
+  it('starts recommended diligence from the decision brief without copying source facts', async () => {
     mocks.authStatus = 'authenticated';
-    mocks.getParcelWorkflow.mockReturnValue(new Promise(() => {}));
+    mocks.getParcelWorkflow.mockResolvedValue(null);
+    mocks.saveParcelWorkflow.mockResolvedValue({
+      bbl: parcel.bbl,
+      borough: 'brooklyn',
+      stage: 'reviewing',
+      notes: '',
+      tags: [],
+      assignee: null,
+      watching: true,
+      decision_reason: null,
+      next_action:
+        'Verify the linked official records, then assign an owner/title review.',
+      next_action_due_date: null,
+      outcome: 'unknown',
+      snapshot: {} as ParcelWorkflowItem['snapshot'],
+      saved_at: '2026-07-30T07:00:00Z',
+      updated_at: '2026-07-30T07:00:00Z',
+    } satisfies ParcelWorkflowItem);
     render(
       <ParcelIntelPropertyPanel
         row={{
@@ -1542,10 +1565,33 @@ describe('ParcelIntelPropertyPanel', () => {
       />,
     );
 
-    fireEvent.click(screen.getByTestId('parcel-decision-next-action'));
-    expect(
-      screen.getByText('Checking pipeline status…'),
-    ).toBeInTheDocument();
+    const startDiligence = screen.getByTestId(
+      'parcel-decision-next-action',
+    );
+    await waitFor(() => expect(startDiligence).toBeEnabled());
+    expect(startDiligence).toHaveTextContent('Start diligence');
+    fireEvent.click(startDiligence);
+
+    await waitFor(() =>
+      expect(mocks.saveParcelWorkflow).toHaveBeenCalledWith(parcel.bbl, {
+        borough: 'brooklyn',
+        entry_source: 'decision_audit',
+        stage: 'reviewing',
+        notes: '',
+        tags: [],
+        assignee: null,
+        watching: true,
+        decision_reason: null,
+        next_action:
+          'Verify the linked official records, then assign an owner/title review.',
+        next_action_due_date: null,
+        outcome: 'unknown',
+      }),
+    );
+    expect(JSON.stringify(mocks.saveParcelWorkflow.mock.calls[0]?.[1])).not.toMatch(
+      /owner name|address|bbl|source_as_of|precision|probability/i,
+    );
+    expect(await screen.findByText('Saved to your pipeline')).toBeVisible();
   });
 
   it('does not emit city-system links for malformed BBLs', () => {

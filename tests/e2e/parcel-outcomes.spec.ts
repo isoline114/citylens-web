@@ -1483,6 +1483,12 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(page.getByTestId('parcel-decision-audit')).toContainText(
     '10.4%',
   );
+  const historicalValidation = page.getByTestId(
+    'historical-validation-details',
+  );
+  await expect(historicalValidation).not.toHaveAttribute('open', '');
+  await historicalValidation.getByText('Historical validation').click();
+  await expect(historicalValidation).toHaveAttribute('open', '');
   await expect(page.getByTestId('historical-benchmark-receipt')).toContainText(
     'Development-exposed evidence',
   );

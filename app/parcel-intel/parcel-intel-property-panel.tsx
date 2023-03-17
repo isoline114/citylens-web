@@ -475,11 +475,15 @@ function ParcelDecisionAuditPanel({
   audit,
   workflowItem,
   signedIn,
+  actionPending,
+  actionDisabled,
   onOpenWorkflow,
 }: {
   audit: ParcelDecisionAudit | undefined;
   workflowItem: ParcelWorkflowItem | null;
   signedIn: boolean;
+  actionPending: boolean;
+  actionDisabled: boolean;
   onOpenWorkflow: () => void;
 }) {
   if (!audit) {
@@ -613,16 +617,23 @@ function ParcelDecisionAuditPanel({
             <button
               type="button"
               onClick={onOpenWorkflow}
-              className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-medium text-white hover:bg-slate-800"
+              disabled={actionDisabled}
+              className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <ShieldCheck className="h-3.5 w-3.5" />
-              {evidenceVersionCount > 0
+              {actionPending ? (
+                <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <ShieldCheck className="h-3.5 w-3.5" />
+              )}
+              {actionPending
+                ? 'Saving diligence…'
+                : evidenceVersionCount > 0
                 ? workflowItem
                   ? `Review ${evidenceVersionCount} source ${evidenceVersionCount === 1 ? 'version' : 'versions'}`
-                  : `Save to review ${evidenceVersionCount} ${evidenceVersionCount === 1 ? 'source' : 'sources'}`
+                  : `Start review of ${evidenceVersionCount} ${evidenceVersionCount === 1 ? 'source' : 'sources'}`
                 : workflowItem
                   ? 'Open workflow'
-                  : 'Plan next action'}
+                  : 'Start diligence'}
             </button>
           )}
           {signedIn && evidenceVersionCount > 0 && (
@@ -637,7 +648,20 @@ function ParcelDecisionAuditPanel({
         </section>
       )}
 
-      <section className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+      <details
+        data-testid="historical-validation-details"
+        className="group mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white"
+      >
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-xs text-slate-800 marker:content-none">
+          <span className="flex items-center gap-1.5 font-semibold">
+            <Gauge className="h-3.5 w-3.5" />
+            Historical validation
+          </span>
+          <span className="text-[10px] font-medium text-slate-500">
+            2024 features → 2025 filings
+          </span>
+        </summary>
+        <div className="border-t border-slate-200 p-3">
         {boroughCohort && boroughCohortLabel && (
           <div
             data-testid="historical-borough-cohort"
@@ -737,7 +761,8 @@ function ParcelDecisionAuditPanel({
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           {audit.validation.disclaimer}
         </p>
-      </section>
+        </div>
+      </details>
 
       <section className="mt-3 space-y-2" aria-label="Decision audit checks">
         {audit.checks.map((check) => {
@@ -852,12 +877,18 @@ function ParcelAcquisitionBrief({
   row,
   audit,
   isAuthenticated,
+  actionPending,
+  actionDisabled,
+  workflowItem,
   onOpenAudit,
   onOpenWorkflow,
 }: {
   row: ParcelIntelRow;
   audit: ParcelDecisionAudit;
   isAuthenticated: boolean;
+  actionPending: boolean;
+  actionDisabled: boolean;
+  workflowItem: ParcelWorkflowItem | null;
   onOpenAudit: () => void;
   onOpenWorkflow: () => void;
 }) {
@@ -972,11 +1003,21 @@ function ParcelAcquisitionBrief({
             <button
               type="button"
               onClick={onOpenWorkflow}
+              disabled={actionDisabled}
               data-testid="parcel-decision-next-action"
-              className="inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-white px-2.5 text-[10px] font-semibold text-slate-950 hover:bg-sky-50"
+              className="inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-white px-2.5 text-[10px] font-semibold text-slate-950 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Plan next action
-              <ArrowRight className="h-3 w-3" />
+              {actionPending ? (
+                <>
+                  Saving diligence
+                  <LoaderCircle className="h-3 w-3 animate-spin" />
+                </>
+              ) : (
+                <>
+                  {workflowItem ? 'Open workflow' : 'Start diligence'}
+                  <ArrowRight className="h-3 w-3" />
+                </>
+              )}
             </button>
           ) : (
             <Link
@@ -1193,7 +1234,8 @@ export function ParcelIntelPropertyPanel({
     options?: {
       openAfterSave?: boolean;
       closeDossierAfterSave?: boolean;
-      entrySource?: 'parcel' | 'underwriting';
+      entrySource?: 'parcel' | 'underwriting' | 'decision_audit';
+      workflowEntryAfterSave?: 'editor' | 'evidence';
     },
   ) => {
     if (effectiveWorkflowLoadState !== 'ready') return;
@@ -1221,7 +1263,7 @@ export function ParcelIntelPropertyPanel({
         setOfficialDossierOpen(false);
       }
       if (options?.openAfterSave) {
-        setWorkflowEntry('editor');
+        setWorkflowEntry(options.workflowEntryAfterSave ?? 'editor');
         setTab('workflow');
       }
       window.dispatchEvent(new Event('citylens:workflow-updated'));
@@ -1280,6 +1322,36 @@ export function ParcelIntelPropertyPanel({
         outcome: 'unknown',
       },
       { openAfterSave: true, entrySource: 'underwriting' },
+    );
+  };
+
+  const continueDecisionAuditDiligence = () => {
+    const evidenceVersionCount = reviewableAuditCount(row.decision_audit);
+    if (workflowItem) {
+      setWorkflowEntry(evidenceVersionCount > 0 ? 'evidence' : 'editor');
+      setTab('workflow');
+      return;
+    }
+    void saveWorkflow(
+      {
+        stage: 'reviewing',
+        notes: '',
+        tags: [],
+        assignee: null,
+        watching: true,
+        decision_reason: null,
+        next_action:
+          row.decision_audit?.readiness?.recommended_action ??
+          'Review the cited current records and assign the next diligence step.',
+        next_action_due_date: null,
+        outcome: 'unknown',
+      },
+      {
+        openAfterSave: true,
+        entrySource: 'decision_audit',
+        workflowEntryAfterSave:
+          evidenceVersionCount > 0 ? 'evidence' : 'editor',
+      },
     );
   };
 
@@ -1820,11 +1892,13 @@ export function ParcelIntelPropertyPanel({
                 row={row}
                 audit={row.decision_audit}
                 isAuthenticated={auth.status === 'authenticated'}
+                actionPending={workflowBusy}
+                actionDisabled={
+                  workflowBusy || effectiveWorkflowLoadState !== 'ready'
+                }
+                workflowItem={workflowItem}
                 onOpenAudit={() => openDecisionAudit('decision_posture')}
-                onOpenWorkflow={() => {
-                  setWorkflowEntry('editor');
-                  setTab('workflow');
-                }}
+                onOpenWorkflow={continueDecisionAuditDiligence}
               />
             )}
             {row.acquisition_status === 'active_project' && (
@@ -2667,14 +2741,11 @@ export function ParcelIntelPropertyPanel({
             audit={row.decision_audit}
             workflowItem={workflowItem}
             signedIn={auth.status === 'authenticated'}
-            onOpenWorkflow={() => {
-              setWorkflowEntry(
-                reviewableAuditCount(row.decision_audit) > 0
-                  ? 'evidence'
-                  : 'editor',
-              );
-              setTab('workflow');
-            }}
+            actionPending={workflowBusy}
+            actionDisabled={
+              workflowBusy || effectiveWorkflowLoadState !== 'ready'
+            }
+            onOpenWorkflow={continueDecisionAuditDiligence}
           />
         )}
 

@@ -1793,7 +1793,7 @@ export async function saveParcelWorkflow(
     ParcelWorkflowItem,
     'bbl' | 'saved_at' | 'updated_at' | 'snapshot' | 'evidence_reviews'
   > & {
-    entry_source?: 'parcel' | 'underwriting';
+    entry_source?: 'parcel' | 'underwriting' | 'decision_audit';
   },
 ): Promise<ParcelWorkflowItem> {
   return requestJson<ParcelWorkflowItem>(
