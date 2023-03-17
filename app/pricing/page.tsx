@@ -7,6 +7,9 @@ import { PRODUCT_ACCESS_COPY } from '@/lib/product-access';
 export const metadata = {
   title: 'Pilot Pricing — CityLens',
   description: 'Pilot plans for NYC development-site acquisition teams.',
+  alternates: {
+    canonical: '/pricing',
+  },
 };
 
 const plans = [

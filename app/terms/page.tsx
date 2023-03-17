@@ -7,6 +7,9 @@ export const metadata = {
   title: 'Terms — CityLens',
   description:
     'Terms for evaluation and pilot use of the CityLens acquisition-intelligence product.',
+  alternates: {
+    canonical: '/terms',
+  },
 };
 
 const navigation = [

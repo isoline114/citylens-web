@@ -17,6 +17,9 @@ export const metadata = {
   title: 'Parcel Intelligence — CityLens',
   description:
     'Find and qualify NYC development-site leads with current parcel facts, ownership context, aerial evidence, and an acquisition pipeline.',
+  alternates: {
+    canonical: '/parcel-intel',
+  },
 };
 
 // SSR with 5-minute revalidation; sweep cadence is monthly so this is plenty.

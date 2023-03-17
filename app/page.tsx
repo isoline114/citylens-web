@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -15,6 +16,12 @@ import { FeaturedDemoCards } from '@/components/FeaturedDemoCards';
 import { SiteEvidencePreviewImage } from '@/components/SiteEvidencePreviewImage';
 import type { DemoFeaturedRun } from '@/lib/api';
 import { fetchFeaturedDemosOnServer } from '@/lib/api.server';
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: '/',
+  },
+};
 
 // Re-render the homepage's SSR HTML at most once per minute so a freshly
 // published demo lands on the landing page within ~60s without hammering

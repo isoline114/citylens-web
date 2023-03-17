@@ -8,6 +8,9 @@ export const metadata = {
   title: 'Request a Pilot — CityLens',
   description:
     'Request a working-session pilot for an NYC development-site acquisition team.',
+  alternates: {
+    canonical: '/contact',
+  },
 };
 
 function selectedPlan(value: string | undefined): PilotPlan {

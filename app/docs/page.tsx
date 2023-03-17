@@ -21,6 +21,9 @@ export const metadata: Metadata = {
   title: 'Developer Center — CityLens',
   description:
     'Build on CityLens parcel intelligence and reproducible aerial-change evidence with the REST API.',
+  alternates: {
+    canonical: '/docs',
+  },
 };
 
 const API_BASE = 'https://api.citylens.dev';

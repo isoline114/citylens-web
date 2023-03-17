@@ -4,6 +4,10 @@ import type { ReactNode } from 'react';
 export const metadata: Metadata = {
   title: 'Sign in — CityLens',
   description: 'Sign in to your CityLens parcel intelligence workspace.',
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function SignInLayout({ children }: { children: ReactNode }) {

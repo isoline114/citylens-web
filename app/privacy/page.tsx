@@ -7,6 +7,9 @@ export const metadata = {
   title: 'Privacy — CityLens',
   description:
     'How CityLens handles account, workflow, public-property, pilot, and aggregate usage data.',
+  alternates: {
+    canonical: '/privacy',
+  },
 };
 
 const navigation = [
