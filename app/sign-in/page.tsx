@@ -12,6 +12,10 @@ import {
   authTextLinkClass,
 } from '@/components/auth/AuthPageShell';
 import { selectAuthProvider, useAuth } from '@/lib/auth';
+import {
+  authFlowHref,
+  safeAuthDestination,
+} from '@/lib/auth/returnTo';
 
 // Keep the sign-in form aligned with the provider selected by AuthProvider.
 // This matters in local development: when localhost points at the deployed
@@ -22,11 +26,9 @@ import { selectAuthProvider, useAuth } from '@/lib/auth';
 const IS_NEON = selectAuthProvider() === 'neon';
 
 function requestedDestination(): string {
-  if (typeof window === 'undefined') return '/';
+  if (typeof window === 'undefined') return '/parcel-intel';
   const requested = new URLSearchParams(window.location.search).get('next');
-  return requested?.startsWith('/') && !requested.startsWith('//')
-    ? requested
-    : '/';
+  return safeAuthDestination(requested);
 }
 
 export default function SignInPage() {
@@ -73,7 +75,10 @@ export default function SignInPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span>
               New to CityLens?{' '}
-              <Link href="/sign-up" className={authTextLinkClass}>
+              <Link
+                href={authFlowHref('/sign-up', '/parcel-intel')}
+                className={authTextLinkClass}
+              >
                 Create an account
               </Link>
             </span>
@@ -115,8 +120,11 @@ export default function SignInPage() {
                   /not verified|verify your email|email.*verif/i.test(msg) ||
                   code === 'EMAIL_NOT_VERIFIED';
                 if (looksLikeVerificationGate) {
+                  const destination = requestedDestination();
                   router.push(
-                    `/verify-email?email=${encodeURIComponent(trimmedEmail)}`,
+                    authFlowHref('/verify-email', destination, {
+                      email: trimmedEmail,
+                    }),
                   );
                   return;
                 }

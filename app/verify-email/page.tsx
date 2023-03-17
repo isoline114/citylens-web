@@ -14,6 +14,7 @@ import {
 } from '@/components/auth/AuthPageShell';
 import { selectAuthProvider } from '@/lib/auth';
 import { neonAuthClient } from '@/lib/auth/neonAuth';
+import { authFlowHref, safeAuthDestination } from '@/lib/auth/returnTo';
 
 const IS_NEON = selectAuthProvider() === 'neon';
 
@@ -59,6 +60,11 @@ function VerifyEmailInner() {
     () => searchParams.get('email') ?? '',
     [searchParams],
   );
+  const destination = useMemo(
+    () => safeAuthDestination(searchParams.get('next')),
+    [searchParams],
+  );
+  const signInHref = authFlowHref('/sign-in', destination);
 
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState('');
@@ -79,7 +85,7 @@ function VerifyEmailInner() {
         title="Verification skipped"
         description="Mock authentication does not require email verification."
       >
-        <Link href="/sign-in" className={authPrimaryButtonClass}>
+        <Link href={signInHref} className={authPrimaryButtonClass}>
           Continue to sign-in
         </Link>
       </AuthPageShell>
@@ -96,7 +102,7 @@ function VerifyEmailInner() {
         <button
           type="button"
           className={authPrimaryButtonClass}
-          onClick={() => router.push('/sign-in')}
+          onClick={() => router.push(signInHref)}
         >
           Continue to sign in
         </button>
@@ -112,7 +118,7 @@ function VerifyEmailInner() {
       footer={
         <span>
           Already verified?{' '}
-          <Link href="/sign-in" className={authTextLinkClass}>
+          <Link href={signInHref} className={authTextLinkClass}>
             Sign in
           </Link>
         </span>

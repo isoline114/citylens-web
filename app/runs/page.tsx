@@ -140,7 +140,10 @@ export default function RunsPage() {
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-slate-300">
-                <Link href="/sign-up" className="underline-offset-4 hover:text-white hover:underline">
+                <Link
+                  href="/sign-up?next=%2Fruns"
+                  className="underline-offset-4 hover:text-white hover:underline"
+                >
                   Create account
                 </Link>
                 <Link href="/#featured-demos" className="underline-offset-4 hover:text-white hover:underline">

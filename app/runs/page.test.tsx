@@ -57,7 +57,9 @@ describe('/runs (signed out)', () => {
       'href',
       '/sign-in?next=%2Fruns',
     );
-    expect(screen.getByRole('link', { name: 'Create account' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Create account' }),
+    ).toHaveAttribute('href', '/sign-up?next=%2Fruns');
     expect(screen.getByRole('link', { name: 'Explore a public demo' })).toBeInTheDocument();
   });
 

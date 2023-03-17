@@ -380,13 +380,13 @@ export function RunForm({
         ) : (
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              href="/sign-up"
+              href="/sign-up?next=%2Fruns%2Fnew"
               className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
             >
               Sign up — free
             </Link>
             <Link
-              href="/sign-in"
+              href="/sign-in?next=%2Fruns%2Fnew"
               className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 hover:bg-slate-50"
             >
               Sign in

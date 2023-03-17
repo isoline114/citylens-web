@@ -137,8 +137,14 @@ describe('RunForm', () => {
     mocks.authState.user = null;
 
     render(<RunForm />);
-    expect(screen.getByRole('link', { name: 'Sign up — free' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign up — free' })).toHaveAttribute(
+      'href',
+      '/sign-up?next=%2Fruns%2Fnew',
+    );
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
+      'href',
+      '/sign-in?next=%2Fruns%2Fnew',
+    );
     expect(screen.queryByRole('button', { name: 'Create run' })).not.toBeInTheDocument();
     expect(mocks.createRun).not.toHaveBeenCalled();
     // Free-account callout is visible

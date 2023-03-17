@@ -17,8 +17,18 @@ test('shared shell exposes one landmark, active navigation, and a true sticky fo
   await expect(pricingLinks.last()).not.toHaveAttribute('aria-current');
   await expect(page.getByTestId('product-page-header')).toBeVisible();
   await expect(
-    page.getByText('Full 5,000-lead citywide workspace'),
+    page
+      .getByTestId('product-page-header')
+      .getByText('Full 5,000-lead citywide workspace', { exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByText(
+      /Every verified account includes the full 5,000-lead citywide workspace/i,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Create an account' }),
+  ).toHaveAttribute('href', '/sign-up?next=%2Fparcel-intel');
   await expectNoWcagViolations(page, 'Pricing');
 
   const footerBounds = await page.locator('footer').boundingBox();

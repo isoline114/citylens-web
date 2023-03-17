@@ -148,7 +148,7 @@ export function ApiKeyList() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/sign-up"
+                href="/sign-up?next=%2Faccount%2Fapi-keys"
                 className="inline-flex h-10 items-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50"
               >
                 Create an account

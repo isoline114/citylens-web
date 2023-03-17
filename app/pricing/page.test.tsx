@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import PricingPage from './page';
@@ -10,7 +10,7 @@ describe('/pricing', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: 'Pay for a better acquisition process—not another database.',
+        name: 'Explore the full market free. Pay for hands-on leverage.',
       }),
     ).toBeVisible();
     expect(
@@ -22,7 +22,30 @@ describe('/pricing', () => {
     expect(
       screen.getByRole('heading', { name: 'Concierge team pilot' }),
     ).toBeVisible();
-    expect(screen.getByText('Full 5,000-lead citywide workspace')).toBeVisible();
+    const explorer = screen
+      .getByRole('heading', { name: 'Explorer' })
+      .closest('article');
+    expect(explorer).not.toBeNull();
+    expect(
+      within(explorer as HTMLElement).getByText(
+        'Full 5,000-lead citywide workspace',
+      ),
+    ).toBeVisible();
+    expect(
+      within(explorer as HTMLElement).getByText(
+        '5 custom imagery runs per month',
+      ),
+    ).toBeVisible();
+    expect(
+      within(explorer as HTMLElement).getByRole('link', {
+        name: /Create an account/i,
+      }),
+    ).toHaveAttribute('href', '/sign-up?next=%2Fparcel-intel');
+    expect(
+      screen.getByText(
+        /Every verified account includes the full 5,000-lead citywide workspace/i,
+      ),
+    ).toBeVisible();
     expect(
       screen.getByRole('link', { name: /Request pilot access/i }),
     ).toHaveAttribute('href', '/contact?plan=acquisitions');

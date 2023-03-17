@@ -68,6 +68,12 @@ describe('ApiKeyList (signed out)', () => {
       'href',
       '/sign-in?next=%2Faccount%2Fapi-keys',
     );
+    expect(
+      screen.getByRole('link', { name: /create an account/i }),
+    ).toHaveAttribute(
+      'href',
+      '/sign-up?next=%2Faccount%2Fapi-keys',
+    );
     expect(screen.queryByText(/verify a key/i)).not.toBeInTheDocument();
     expect(mocks.listApiKeys).not.toHaveBeenCalled();
   });

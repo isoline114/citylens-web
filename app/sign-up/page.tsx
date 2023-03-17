@@ -12,6 +12,8 @@ import {
   authTextLinkClass,
 } from '@/components/auth/AuthPageShell';
 import { selectAuthProvider } from '@/lib/auth';
+import { authFlowHref, safeAuthDestination } from '@/lib/auth/returnTo';
+import { PRODUCT_ACCESS_COPY } from '@/lib/product-access';
 
 const IS_NEON = selectAuthProvider() === 'neon';
 
@@ -41,11 +43,14 @@ export default function SignUpPage() {
     <AuthPageShell
       eyebrow="Start free"
       title="Create your account"
-      description="Explore the full parcel workspace and run five imagery analyses each month."
+      description={PRODUCT_ACCESS_COPY.freeAccountSummary}
       footer={
         <span>
           Already have an account?{' '}
-          <Link href="/sign-in" className={authTextLinkClass}>
+          <Link
+            href={authFlowHref('/sign-in', '/parcel-intel')}
+            className={authTextLinkClass}
+          >
             Sign in
           </Link>
         </span>
@@ -88,8 +93,13 @@ export default function SignUpPage() {
             // Account created. Whether or not email verification is required
             // for sign-in, route to /verify-email so the user knows where to
             // enter the code that was just emailed.
+            const destination = safeAuthDestination(
+              new URLSearchParams(window.location.search).get('next'),
+            );
             router.push(
-              `/verify-email?email=${encodeURIComponent(trimmedEmail)}`,
+              authFlowHref('/verify-email', destination, {
+                email: trimmedEmail,
+              }),
             );
           } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Sign up failed.');

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowRight, Building2, Check, ShieldCheck } from 'lucide-react';
 
 import { ProductPageHeader } from '@/components/ProductPageHeader';
+import { PRODUCT_ACCESS_COPY } from '@/lib/product-access';
 
 export const metadata = {
   title: 'Pilot Pricing — CityLens',
@@ -13,26 +14,27 @@ const plans = [
     name: 'Explorer',
     kicker: 'Start here',
     price: 'Free',
-    description: 'Evaluate the market and aerial-evidence workflow.',
+    description: 'Use the complete product on your own acquisition work.',
     features: [
-      '125-parcel public market preview',
-      '5 custom imagery runs per month',
-      'CSV sample and developer docs',
+      PRODUCT_ACCESS_COPY.authenticatedWorkspace,
+      'Current evidence, parcel briefs, and exports',
+      'Saved pursuits, comparisons, and watches',
+      PRODUCT_ACCESS_COPY.monthlyRuns,
     ],
     cta: 'Create an account',
-    href: '/sign-up',
+    href: '/sign-up?next=%2Fparcel-intel',
   },
   {
     name: 'Acquisitions pilot',
     kicker: 'Best for active teams',
     price: '$399',
     suffix: '/ user / month',
-    description: 'Qualify and advance a live development-site pipeline.',
+    description: 'Add a rollout partner to a live acquisition process.',
     features: [
-      'Full 5,000-lead citywide workspace',
-      'Current evidence and parcel briefs',
-      'Saved pursuits, stages, notes, and watches',
-      'Comparison, saved views, and exports',
+      'Everything in Explorer',
+      'Guided acquisition-workflow setup',
+      'Monthly pipeline and evidence review',
+      'Priority support and pilot roadmap access',
     ],
     cta: 'Request pilot access',
     href: '/contact?plan=acquisitions',
@@ -45,10 +47,10 @@ const plans = [
     suffix: '/ month',
     description: 'Add reviewed opportunities and direct implementation support.',
     features: [
-      'Everything in Acquisitions',
+      'Everything in Acquisitions pilot',
       'Reviewed opportunity briefs',
       'Team workflow setup',
-      'Data and API integration support',
+      'Bespoke data and API integration support',
     ],
     cta: 'Talk to CityLens',
     href: '/contact?plan=concierge',
@@ -60,15 +62,15 @@ export default function PricingPage() {
     <div className="mx-auto flex max-w-6xl flex-col gap-6 py-2 sm:py-6">
       <ProductPageHeader
         eyebrow="Design-partner plans"
-        title="Pay for a better acquisition process—not another database."
+        title="Explore the full market free. Pay for hands-on leverage."
         icon={Building2}
-        description="Start free, then add the complete market, team workflow, and hands-on review when the process earns it."
+        description={PRODUCT_ACCESS_COPY.freeAccountSummary}
         receipt={
           <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-slate-600">
             {[
-              '125-parcel public preview',
-              '5,000-lead full workspace',
-              'Source-dated evidence',
+              PRODUCT_ACCESS_COPY.publicPreview,
+              PRODUCT_ACCESS_COPY.authenticatedWorkspace,
+              'Paid pilots add guided rollout',
             ].map((item) => (
               <span key={item} className="inline-flex items-center gap-1.5">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />

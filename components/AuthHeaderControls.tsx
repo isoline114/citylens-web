@@ -1,13 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Key, LogIn, LogOut, UserRound } from 'lucide-react';
 
 import { useAuth } from '@/lib/auth';
+import {
+  authFlowHref,
+  destinationForPathname,
+} from '@/lib/auth/returnTo';
 
 export function AuthHeaderControls() {
   const auth = useAuth();
+  const pathname = usePathname();
   const router = useRouter();
 
   // For SSR + first paint, render the "Sign in" CTA as the default. Crawlers
@@ -17,7 +22,10 @@ export function AuthHeaderControls() {
   if (auth.status !== 'authenticated') {
     return (
       <Link
-        href="/sign-in"
+        href={authFlowHref(
+          '/sign-in',
+          destinationForPathname(pathname),
+        )}
         className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 hover:bg-slate-50"
       >
         <LogIn className="h-4 w-4" />
