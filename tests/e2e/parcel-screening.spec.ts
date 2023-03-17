@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { completeAuthenticatedInventory } from './parcel-fixtures';
 
 test('explains why an exact BBL is absent from the published inventory', async ({
   page,
@@ -15,32 +16,33 @@ test('explains why an exact BBL is absent from the published inventory', async (
     );
   });
   await page.route('**/v1/parcel-intel/map?**', async (route) => {
+    const rows = completeAuthenticatedInventory([
+      {
+        bbl: '3020960069',
+        borough: 'brooklyn',
+        address: '100 E 21 STREET',
+        lat: 40.65,
+        lng: -73.96,
+        acquisition_rank: 21,
+        priority_rank: 21,
+        acquisition_eligible: true,
+        acquisition_status: 'eligible',
+        priority_tier: 'highest',
+        opportunity_category: 'ground_up_candidate',
+        score_calibrated: 0.42,
+        lot_area_sqft: 5_000,
+        unused_floor_area_sqft: 12_000,
+      },
+    ]);
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
         generated_at: '2026-07-26T18:00:00Z',
-        rows: [
-          {
-            bbl: '3020960069',
-            borough: 'brooklyn',
-            address: '100 E 21 STREET',
-            lat: 40.65,
-            lng: -73.96,
-            acquisition_rank: 21,
-            priority_rank: 21,
-            acquisition_eligible: true,
-            acquisition_status: 'eligible',
-            priority_tier: 'highest',
-            opportunity_category: 'ground_up_candidate',
-            score_calibrated: 0.42,
-            lot_area_sqft: 5_000,
-            unused_floor_area_sqft: 12_000,
-          },
-        ],
+        rows,
         access_scope: 'authenticated_full',
         requested_top_per_borough: 1000,
-        returned_count: 1,
-        available_count: 1,
+        returned_count: rows.length,
+        available_count: rows.length,
         inventory_complete: true,
       }),
     });

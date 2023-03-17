@@ -537,13 +537,12 @@ export function ParcelSavedViewsPanel({
             Saved views
           </div>
           <h3 className="mt-1 text-xl font-semibold">
-            Monitor an acquisition thesis across feed updates.
+            Watch this acquisition screen.
           </h3>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-300">
-            Save the current borough, filters, search, owner focus, and map
-            overlay with its exact matching BBL set. CityLens will show what
-            entered or left after a new feed is published. Views are private,
-            evaluated when you open the workspace, and do not send notifications.
+            Save its exact BBL baseline. On the next feed, CityLens shows what
+            entered or left. Views stay private and update when you open the
+            workspace; notifications are not sent yet.
           </p>
         </div>
         <button

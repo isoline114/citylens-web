@@ -32,6 +32,29 @@ function publicMapRows() {
   );
 }
 
+function authenticatedMapRows() {
+  return Object.entries(BOROUGH_CENTERS).flatMap(
+    ([borough, [centerLat, centerLng]], boroughIndex) =>
+      Array.from({ length: 1000 }, (_, index) => ({
+        bbl: `${boroughIndex + 1}${String(index + 1).padStart(9, '0')}`,
+        borough,
+        address: `${index + 1} ${borough.replace('_', ' ')} test avenue`,
+        lat: centerLat + (index % 40) * 0.0007,
+        lng: centerLng + Math.floor(index / 40) * 0.0007,
+        acquisition_rank: boroughIndex * 1000 + index + 1,
+        citywide_rank: boroughIndex * 1000 + index + 1,
+        priority_rank: index + 1,
+        acquisition_eligible: true,
+        acquisition_status: 'eligible',
+        priority_tier: index < 50 ? 'highest' : 'high',
+        opportunity_category: 'ground_up_candidate',
+        score_calibrated: 0.9 - index * 0.0002,
+        lot_area_sqft: 5_000,
+        unused_floor_area_sqft: 12_000,
+      })),
+  );
+}
+
 test('clusters the citywide preview and converges borough URLs on one explorer', async ({
   page,
 }) => {
@@ -168,4 +191,89 @@ test('clusters the citywide preview and converges borough URLs on one explorer',
   const workspaceTabs = page.getByTestId('parcel-workspace-tabs');
   await expect(workspaceTabs).toBeVisible();
   await expect(workspaceTabs).toHaveClass(/\bsticky\b/);
+});
+
+test('lets a first-session user watch the verified citywide screen', async ({
+  page,
+}) => {
+  const rows = authenticatedMapRows();
+  await page.addInitScript(() => {
+    sessionStorage.setItem(
+      'citylens_mock_auth_user',
+      JSON.stringify({
+        id: 'mock-first-session',
+        email: 'first-session@mock.local',
+        displayName: 'First session',
+      }),
+    );
+  });
+  await page.route('**/v1/parcel-intel/map?**', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        generated_at: '2026-07-30T01:00:00Z',
+        feed_generation: 'e2e-first-session-generation',
+        rows,
+        access_scope: 'authenticated_full',
+        requested_top_per_borough: 1000,
+        returned_count: rows.length,
+        available_count: rows.length,
+        inventory_complete: true,
+      }),
+    });
+  });
+  await page.route('**/v1/parcel-intel/workflow/actions', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        schema_version: 'citylens/parcel-workflow-actions@v1',
+        generated_at: '2026-07-30T01:00:00Z',
+        total_records: 0,
+        open_records: 0,
+        completed_records: 0,
+        overdue_count: 0,
+        due_today_count: 0,
+        due_soon_count: 0,
+        scheduled_count: 0,
+        unscheduled_count: 0,
+        unassigned_count: 0,
+        outcome_update_due_count: 0,
+        attention_count: 0,
+        snoozed_count: 0,
+        complete_plan_count: 0,
+        plan_coverage_rate: null,
+        assigned_count: 0,
+        assignee_coverage_rate: null,
+        outcome_current_count: 0,
+        outcome_current_rate: null,
+        items: [],
+      }),
+    });
+  });
+  await page.route('**/v1/parcel-intel/saved-searches', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: '[]',
+    });
+  });
+  await page.route('**/v1/parcel-intel/product-events', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: '{}',
+    });
+  });
+
+  await page.goto('/parcel-intel');
+
+  await expect(page.getByTestId('parcel-map-inventory-scope')).toHaveText(
+    'Full inventory · 5,000 loaded',
+  );
+  const guide = page.getByTestId('activation-guide-empty');
+  await expect(guide).toContainText(
+    'Open a lead—or watch this exact screen.',
+  );
+  await guide.getByRole('button', { name: 'Watch this screen' }).click();
+  await expect(page.getByTestId('saved-views-panel')).toBeVisible();
+  await expect(page.getByTestId('saved-view-save')).toBeEnabled();
+  await expect(page.getByText('No saved views yet.')).toBeVisible();
 });

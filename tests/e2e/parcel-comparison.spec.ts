@@ -4,6 +4,7 @@ import {
   expectNoDocumentHorizontalOverflow,
   expectNoWcagViolations,
 } from './accessibility';
+import { completeAuthenticatedInventory } from './parcel-fixtures';
 
 const mapRows = [
   {
@@ -112,6 +113,7 @@ function detail(row: (typeof mapRows)[number]) {
 test('compares two parcels and downloads a source-dated evidence packet', async ({
   page,
 }) => {
+  const inventoryRows = completeAuthenticatedInventory(mapRows);
   const desktopViewport = page.viewportSize() ?? {
     width: 1280,
     height: 720,
@@ -133,11 +135,11 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
       contentType: 'application/json',
       body: JSON.stringify({
         generated_at: '2026-07-24T02:43:29Z',
-        rows: mapRows,
+        rows: inventoryRows,
         access_scope: 'authenticated_full',
         requested_top_per_borough: 1000,
-        returned_count: mapRows.length,
-        available_count: mapRows.length,
+        returned_count: inventoryRows.length,
+        available_count: inventoryRows.length,
         inventory_complete: true,
       }),
     });

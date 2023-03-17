@@ -179,7 +179,9 @@ describe('ParcelSavedViewsPanel', () => {
         matched_bbls: ['1000010001', '3000010001'],
       },
     });
-    expect(screen.getByText(/do not send notifications/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/notifications are not sent yet/i),
+    ).toBeInTheDocument();
   });
 
   it('shows exact entered and exited parcels across feed generations', async () => {

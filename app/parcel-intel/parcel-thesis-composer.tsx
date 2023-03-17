@@ -138,7 +138,7 @@ export function ParcelThesisComposer({
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-controls="parcel-thesis-composer-body"
-        className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left outline-none hover:bg-white/45 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500 md:px-6"
+        className="flex w-full scroll-mt-24 items-center justify-between gap-4 px-4 py-3 text-left outline-none hover:bg-white/45 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500 md:px-6"
       >
         <span className="flex min-w-0 items-start gap-3">
           <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-sky-300 shadow-sm">

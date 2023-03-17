@@ -401,12 +401,17 @@ export function ParcelIntelExplorer({
         response.returned_count === response.rows.length &&
         uniqueMapCount === response.rows.length &&
         response.available_count === response.returned_count;
+      const receiptCoversPublishedInventory =
+        uniqueMapCount >= totalAvailable &&
+        response.returned_count >= totalAvailable &&
+        response.available_count >= totalAvailable;
       const fullInventoryVerified =
         includeAuth &&
         (hasInventoryReceipt
           ? response.access_scope === 'authenticated_full' &&
             response.inventory_complete === true &&
-            receiptMatchesRows
+            receiptMatchesRows &&
+            receiptCoversPublishedInventory
           : response.rows.length >= totalAvailable);
       const mapResult: ExplorerLoadResult = {
         rows: response.rows,
@@ -1326,6 +1331,16 @@ export function ParcelIntelExplorer({
     setSavedViewsOpen(false);
   };
 
+  const openSavedViews = () => {
+    if (!savedViewsOpen) {
+      rememberToolPanelOpener();
+    }
+    setSavedViewsOpen(true);
+    setActionsOpen(false);
+    setAlertsOpen(false);
+    setInsightsOpen(false);
+  };
+
   const applySavedView = (view: ParcelSavedSearch) => {
     const dimensions = savedSearchDimensions(view.filters);
     setFilters({
@@ -1597,7 +1612,7 @@ export function ParcelIntelExplorer({
           )}
           <div
             id="parcel-mobile-workspace-tools"
-            className={`flex-wrap items-center justify-end gap-2 text-xs text-slate-300 ${
+            className={`flex-wrap items-center justify-end gap-3 text-xs text-slate-300 ${
               isAuthenticated && !mobileWorkspaceToolsOpen ? 'hidden' : 'flex'
             } sm:flex`}
           >
@@ -1637,18 +1652,16 @@ export function ParcelIntelExplorer({
               <button
                 type="button"
                 onClick={() => {
-                  if (!savedViewsOpen) {
-                    rememberToolPanelOpener();
+                  if (savedViewsOpen) {
+                    setSavedViewsOpen(false);
+                    return;
                   }
-                  setSavedViewsOpen((value) => !value);
-                  setActionsOpen(false);
-                  setAlertsOpen(false);
-                  setInsightsOpen(false);
+                  openSavedViews();
                 }}
                 aria-expanded={savedViewsOpen}
                 aria-controls="parcel-saved-views-panel"
                 data-tool-panel-trigger="saved"
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
+                className="inline-flex h-11 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
               >
                 <Bookmark className="h-3.5 w-3.5 text-amber-300" />
                 Saved views
@@ -1667,7 +1680,7 @@ export function ParcelIntelExplorer({
                 aria-expanded={actionsOpen}
                 aria-controls="parcel-action-queue"
                 data-tool-panel-trigger="actions"
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
+                className="inline-flex h-11 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
               >
                 <CalendarClock className="h-3.5 w-3.5 text-violet-300" />
                 Action queue
@@ -1696,7 +1709,7 @@ export function ParcelIntelExplorer({
                 aria-expanded={alertsOpen}
                 aria-controls="parcel-evidence-changes"
                 data-tool-panel-trigger="alerts"
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
+                className="inline-flex h-11 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
               >
                 <BellRing className="h-3.5 w-3.5 text-sky-300" />
                 Evidence changes
@@ -1717,7 +1730,7 @@ export function ParcelIntelExplorer({
                 aria-expanded={insightsOpen}
                 aria-controls="parcel-outcome-insights"
                 data-tool-panel-trigger="insights"
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
+                className="inline-flex h-11 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
               >
                 <TrendingUp className="h-3.5 w-3.5 text-emerald-300" />
                 Outcome insights
@@ -1852,54 +1865,55 @@ export function ParcelIntelExplorer({
         !alertsOpen &&
         !insightsOpen &&
         !savedViewsOpen &&
-        (workflowActions.open_records === 0 ||
+        (workflowActions.total_records === 0 ||
           workflowActions.attention_count > 0) && (
           <section
             className="order-2 border-b border-sky-200 bg-gradient-to-r from-sky-50 via-white to-emerald-50 px-5 py-4 lg:order-none md:px-7"
             aria-label="Acquisition workflow next step"
             data-testid={
-              workflowActions.open_records === 0
+              workflowActions.total_records === 0
                 ? 'activation-guide-empty'
                 : 'activation-guide-attention'
             }
           >
-            {workflowActions.open_records === 0 ? (
+            {workflowActions.total_records === 0 ? (
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div>
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-sky-800">
                     <Sparkles className="h-4 w-4" />
-                    Build your first evidence-backed shortlist
+                    Make the market repeatable
                   </div>
                   <h3 className="mt-1 text-base font-semibold text-slate-950">
-                    Compare before you commit team time.
+                    Open a lead—or watch this exact screen.
                   </h3>
-                  <ol className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-600">
-                    {[
-                      'Open a current lead',
-                      'Add a second parcel to Compare',
-                      'Save only the one worth next diligence',
-                    ].map((step, index) => (
-                      <li key={step} className="flex items-center gap-2">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-100 text-[10px] font-bold text-sky-800">
-                          {index + 1}
-                        </span>
-                        {step}
-                      </li>
-                    ))}
-                  </ol>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">
+                    Review the top parcel now, or save this result set and see
+                    what enters or exits after the next feed.
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  disabled={rankingRows.length === 0}
-                  onClick={() => {
-                    const topLead = rankingRows[0];
-                    if (topLead) selectParcel(topLead.bbl, 'ranking');
-                  }}
-                  className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-4 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Open the first lead
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                </button>
+                <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    data-tool-panel-trigger="saved"
+                    onClick={openSavedViews}
+                    className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-sky-300 bg-white px-4 text-xs font-semibold text-sky-950 shadow-sm hover:bg-sky-50"
+                  >
+                    <Bookmark className="h-3.5 w-3.5" />
+                    Watch this screen
+                  </button>
+                  <button
+                    type="button"
+                    disabled={rankingRows.length === 0}
+                    onClick={() => {
+                      const topLead = rankingRows[0];
+                      if (topLead) selectParcel(topLead.bbl, 'ranking');
+                    }}
+                    className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-4 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Open top lead
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

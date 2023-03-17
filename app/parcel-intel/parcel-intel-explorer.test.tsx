@@ -861,6 +861,48 @@ describe('ParcelIntelExplorer', () => {
     ).toBe(false);
   });
 
+  it('rejects a self-consistent full-access receipt below the published inventory', async () => {
+    mocks.authStatus = 'authenticated';
+    const fiveBoroughs = [
+      { slug: 'manhattan', display_name: 'Manhattan', count: 1000, top_score: 1 },
+      { slug: 'brooklyn', display_name: 'Brooklyn', count: 1000, top_score: 1 },
+      { slug: 'queens', display_name: 'Queens', count: 1000, top_score: 1 },
+      { slug: 'bronx', display_name: 'Bronx', count: 1000, top_score: 1 },
+      {
+        slug: 'staten_island',
+        display_name: 'Staten Island',
+        count: 1000,
+        top_score: 1,
+      },
+    ];
+    const truncatedRows = Array.from({ length: 125 }, (_, index) =>
+      row(`1${String(index + 1).padStart(9, '0')}`, 'manhattan'),
+    );
+    mocks.getParcelIntelMap.mockResolvedValue({
+      rows: truncatedRows,
+      generated_at: '2026-07-30T00:00:00Z',
+      access_scope: 'authenticated_full',
+      requested_top_per_borough: 1000,
+      returned_count: 125,
+      available_count: 125,
+      inventory_complete: true,
+    });
+
+    render(<ParcelIntelExplorer boroughs={fiveBoroughs} />);
+
+    const alert = await screen.findByTestId('parcel-inventory-incomplete');
+    expect(alert).toHaveTextContent(
+      'The signed-in inventory response was incomplete',
+    );
+    expect(screen.getByTestId('parcel-inventory-status')).toHaveTextContent(
+      'Inventory incomplete · 0 of 5,000 loaded',
+    );
+    expect(screen.queryByTestId('citywide-map-stub')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Full inventory verified/i),
+    ).not.toBeInTheDocument();
+  });
+
   it('does not request or render public rows when a signed-in credential cannot refresh', async () => {
     mocks.authStatus = 'authenticated';
     mocks.getAccessToken.mockResolvedValue(null);
@@ -1239,14 +1281,20 @@ describe('ParcelIntelExplorer', () => {
     render(<ParcelIntelExplorer boroughs={boroughs} />);
 
     const guide = await screen.findByTestId('activation-guide-empty');
-    expect(guide).toHaveTextContent('Open a current lead');
-    expect(guide).toHaveTextContent('Add a second parcel to Compare');
+    expect(guide).toHaveTextContent('Open a lead—or watch this exact screen');
     expect(guide).toHaveTextContent(
-      'Save only the one worth next diligence',
+      'see what enters or exits after the next feed',
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Watch this screen' }),
+    );
+    expect(await screen.findByTestId('saved-views-panel')).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Close saved views' }),
     );
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Open the first lead' }),
+      screen.getByRole('button', { name: 'Open top lead' }),
     );
 
     await waitFor(() =>
@@ -1513,6 +1561,43 @@ describe('ParcelIntelExplorer', () => {
     expect(screen.queryByTestId('activation-guide-empty')).not.toBeInTheDocument();
     expect(
       screen.queryByTestId('activation-guide-attention'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not call an archived-only pipeline a first shortlist', async () => {
+    mocks.authStatus = 'authenticated';
+    mocks.getParcelWorkflowActions.mockResolvedValue({
+      schema_version: 'citylens/parcel-workflow-actions@v1',
+      generated_at: '2026-07-24T14:00:00Z',
+      total_records: 2,
+      open_records: 0,
+      completed_records: 2,
+      overdue_count: 0,
+      due_today_count: 0,
+      due_soon_count: 0,
+      scheduled_count: 0,
+      unscheduled_count: 0,
+      unassigned_count: 0,
+      outcome_update_due_count: 0,
+      attention_count: 0,
+      snoozed_count: 0,
+      complete_plan_count: 0,
+      plan_coverage_rate: null,
+      assigned_count: 0,
+      assignee_coverage_rate: null,
+      outcome_current_count: 0,
+      outcome_current_rate: null,
+      items: [],
+    });
+
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+
+    await waitFor(() =>
+      expect(mocks.getParcelWorkflowActions).toHaveBeenCalled(),
+    );
+    expect(screen.queryByTestId('activation-guide-empty')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Open a lead—or watch this exact screen.'),
     ).not.toBeInTheDocument();
   });
 

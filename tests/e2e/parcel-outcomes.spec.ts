@@ -7,6 +7,7 @@ import {
   expectNoDocumentHorizontalOverflow,
   expectNoWcagViolations,
 } from './accessibility';
+import { completeAuthenticatedInventory } from './parcel-fixtures';
 
 async function auditNarrowTextSpacing(
   page: Page,
@@ -152,40 +153,41 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   });
 
   await page.route('**/v1/parcel-intel/map?**', async (route) => {
+    const rows = completeAuthenticatedInventory([
+      {
+        bbl: '3020960069',
+        borough: 'brooklyn',
+        address: '100 E 21 STREET',
+        lat: 40.65,
+        lng: -73.96,
+        citywide_rank: 82,
+        acquisition_rank: 21,
+        acquisition_eligible: true,
+        acquisition_status: 'eligible',
+        priority_tier: 'highest',
+        opportunity_category: 'ground_up_candidate',
+        score_calibrated: 0.42,
+        lot_area_sqft: 5_000,
+        land_use: '01',
+        mandatory_inclusionary_housing: true,
+        nearest_transit_station_name: 'Church Av',
+        nearest_transit_station_distance_m: 420,
+        nearest_transit_routes: ['B', 'Q'],
+        nearest_transit_ada_status: 'full',
+        transit_station_count_800m: 2,
+        transit_access_tier: 'walkable',
+      },
+    ]);
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
         generated_at: '2026-07-24T02:43:29Z',
         feed_generation: '20260724T024329000000Z-e2e000000000',
-        rows: [
-          {
-            bbl: '3020960069',
-            borough: 'brooklyn',
-            address: '100 E 21 STREET',
-            lat: 40.65,
-            lng: -73.96,
-            citywide_rank: 82,
-            acquisition_rank: 21,
-            acquisition_eligible: true,
-            acquisition_status: 'eligible',
-            priority_tier: 'highest',
-            opportunity_category: 'ground_up_candidate',
-            score_calibrated: 0.42,
-            lot_area_sqft: 5_000,
-            land_use: '01',
-            mandatory_inclusionary_housing: true,
-            nearest_transit_station_name: 'Church Av',
-            nearest_transit_station_distance_m: 420,
-            nearest_transit_routes: ['B', 'Q'],
-            nearest_transit_ada_status: 'full',
-            transit_station_count_800m: 2,
-            transit_access_tier: 'walkable',
-          },
-        ],
+        rows,
         access_scope: 'authenticated_full',
         requested_top_per_borough: 1000,
-        returned_count: 1,
-        available_count: 1,
+        returned_count: rows.length,
+        available_count: rows.length,
         inventory_complete: true,
       }),
     });
@@ -1108,7 +1110,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   const savedScreenComparison = page.getByTestId('saved-screen-comparison');
   await expect(savedScreenComparison).toBeVisible();
   await expect(savedScreenComparison).toContainText(
-    'same 1 currently loaded ranked leads',
+    'same 5,000 currently loaded ranked leads',
   );
   await expect(savedScreenComparison).toContainText(
     'not ranking accuracy, relative quality, feasibility, seller intent',
