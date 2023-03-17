@@ -85,6 +85,7 @@ export type PilotRequestReceipt = {
 };
 
 export type ParcelProductEventName =
+  | 'market_explorer_opened'
   | 'parcel_opened'
   | 'official_dossier_opened'
   | 'screening_lookup_completed'
@@ -100,6 +101,7 @@ export type ParcelProductEventName =
   | 'saved_thesis_changes_opened';
 
 export type ParcelProductEventSource =
+  | 'full_inventory'
   | 'direct'
   | 'official_dossier'
   | 'screening_lookup'

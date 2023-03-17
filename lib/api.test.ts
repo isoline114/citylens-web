@@ -119,6 +119,25 @@ describe('api client', () => {
     );
 
     fetchMock.mockClear();
+    await recordParcelProductEvent(
+      'market_explorer_opened',
+      'full_inventory',
+    );
+
+    const [, marketInit] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(JSON.parse(String(marketInit.body))).toEqual({
+      schema_version: 'citylens/parcel-product-event@v1',
+      event: 'market_explorer_opened',
+      source: 'full_inventory',
+    });
+    expect(String(marketInit.body)).not.toMatch(
+      /bbl|address|owner|filter|borough|query|count|5000|inventory_size|user|session/i,
+    );
+
+    fetchMock.mockClear();
     await recordParcelProductEvent('saved_view_applied', 'saved_views');
 
     const [applyUrl, applyInit] = fetchMock.mock.calls[0] as [

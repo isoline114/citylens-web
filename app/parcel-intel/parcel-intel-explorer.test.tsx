@@ -446,6 +446,20 @@ describe('ParcelIntelExplorer', () => {
     expect(mocks.getParcelIntelMap).not.toHaveBeenCalledWith(1000, {
       includeAuth: false,
     });
+    await waitFor(() =>
+      expect(mocks.recordParcelProductEvent).toHaveBeenCalledWith(
+        'market_explorer_opened',
+        'full_inventory',
+      ),
+    );
+    expect(
+      mocks.recordParcelProductEvent.mock.calls.filter(
+        ([event]) => event === 'market_explorer_opened',
+      ),
+    ).toHaveLength(1);
+    expect(
+      JSON.stringify(mocks.recordParcelProductEvent.mock.calls),
+    ).not.toMatch(/1000010001|3000010001|manhattan|brooklyn|5000/i);
   });
 
   it('ranks and exports only the explicitly selected map extent', async () => {
@@ -840,6 +854,11 @@ describe('ParcelIntelExplorer', () => {
         3,
       ),
     );
+    expect(
+      mocks.recordParcelProductEvent.mock.calls.some(
+        ([event]) => event === 'market_explorer_opened',
+      ),
+    ).toBe(false);
   });
 
   it('does not request or render public rows when a signed-in credential cannot refresh', async () => {
@@ -924,6 +943,13 @@ describe('ParcelIntelExplorer', () => {
     expect(
       screen.queryByTestId('parcel-inventory-incomplete'),
     ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        mocks.recordParcelProductEvent.mock.calls.filter(
+          ([event]) => event === 'market_explorer_opened',
+        ),
+      ).toHaveLength(1),
+    );
   });
 
   it('applies a reviewed browser-local thesis and emits only the coarse event', async () => {
@@ -1567,7 +1593,11 @@ describe('ParcelIntelExplorer', () => {
         'ranking',
       ),
     );
-    expect(mocks.recordParcelProductEvent).toHaveBeenCalledTimes(1);
+    expect(
+      mocks.recordParcelProductEvent.mock.calls.filter(
+        ([event]) => event === 'parcel_opened',
+      ),
+    ).toHaveLength(1);
     expect(
       JSON.stringify(mocks.recordParcelProductEvent.mock.calls),
     ).not.toMatch(/3000010001|brooklyn test site/i);
@@ -1576,7 +1606,11 @@ describe('ParcelIntelExplorer', () => {
     await waitFor(() =>
       expect(mocks.getParcelIntelParcel).toHaveBeenCalled(),
     );
-    expect(mocks.recordParcelProductEvent).toHaveBeenCalledTimes(1);
+    expect(
+      mocks.recordParcelProductEvent.mock.calls.filter(
+        ([event]) => event === 'parcel_opened',
+      ),
+    ).toHaveLength(1);
   });
 
   it('compares two parcels without sending their identities in telemetry', async () => {

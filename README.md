@@ -433,9 +433,13 @@ Authenticated Parcel Intelligence interactions send only the strict
 `citylens/parcel-product-event@v1` event/source pair to the engine. The client
 never includes a BBL, address, owner, URL, notes, tags, assignee, contact,
 underwriting value, cost, margin, efficiency, or free text. Parcel opens,
-official-dossier opens, comparison-desk opens, decision-audit opens,
+verified full-inventory market opens, official-dossier opens,
+comparison-desk opens, decision-audit opens,
 Underwrite-tab opens, first assumption adjustments, and saved-view applies are
-coarse directional events. Official-dossier opens contain no BBL, address,
+coarse directional events. A market open is emitted only after the complete
+authenticated inventory is verified and contains no inventory size, filter,
+geography, parcel, session, account, or source-fact value. Official-dossier
+opens contain no BBL, address,
 owner, source fact, readiness state, lead membership, or result.
 Comparison-desk, decision-peer entry, and saved-screen-comparison events contain no parcel
 identifiers, saved-view identity, filters, criteria, thresholds, search text,

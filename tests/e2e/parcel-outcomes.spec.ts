@@ -1240,6 +1240,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     .toEqual([
       {
         schema_version: 'citylens/parcel-product-event@v1',
+        event: 'market_explorer_opened',
+        source: 'full_inventory',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
         event: 'thesis_composer_applied',
         source: 'thesis_composer',
       },
@@ -1298,6 +1303,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     .toEqual([
       {
         schema_version: 'citylens/parcel-product-event@v1',
+        event: 'market_explorer_opened',
+        source: 'full_inventory',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
         event: 'thesis_composer_applied',
         source: 'thesis_composer',
       },
@@ -1353,6 +1363,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     .toEqual([
       {
         schema_version: 'citylens/parcel-product-event@v1',
+        event: 'market_explorer_opened',
+        source: 'full_inventory',
+      },
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
         event: 'thesis_composer_applied',
         source: 'thesis_composer',
       },
@@ -1391,6 +1406,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect
     .poll(() => productEvents)
     .toEqual([
+      {
+        schema_version: 'citylens/parcel-product-event@v1',
+        event: 'market_explorer_opened',
+        source: 'full_inventory',
+      },
       {
         schema_version: 'citylens/parcel-product-event@v1',
         event: 'thesis_composer_applied',

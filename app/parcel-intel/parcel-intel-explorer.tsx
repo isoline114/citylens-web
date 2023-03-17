@@ -294,6 +294,7 @@ export function ParcelIntelExplorer({
   const screenAuditOpenTrackedRef = useRef(false);
   const savedViewComparisonOpenTrackedRef = useRef(false);
   const savedThesisChangesTrackedRef = useRef(new Set<string>());
+  const marketExplorerOpenTrackedRef = useRef(false);
   const trackedParcelOpensRef = useRef(new Set<string>());
   const comparisonOpenTrackedRef = useRef(false);
   const comparisonDialogRef = useRef<HTMLDivElement>(null);
@@ -559,6 +560,28 @@ export function ParcelIntelExplorer({
     }, delay);
     return () => window.clearTimeout(timeout);
   }, [auth.status, fullInventoryReady, inventoryState]);
+
+  // Count only a verified authenticated market activation. This event carries
+  // no inventory size, filters, geography, parcel identifiers, or account
+  // values; the server stores one bounded aggregate daily counter. Public
+  // previews and failed/incomplete upgrades never enter the funnel.
+  useEffect(() => {
+    if (
+      !isAuthenticated ||
+      inventoryState !== 'full' ||
+      !fullInventoryReady ||
+      marketExplorerOpenTrackedRef.current
+    ) {
+      return;
+    }
+    marketExplorerOpenTrackedRef.current = true;
+    void recordParcelProductEvent(
+      'market_explorer_opened',
+      'full_inventory',
+    ).catch(() => {
+      // Adoption telemetry is best-effort and never blocks the market.
+    });
+  }, [fullInventoryReady, inventoryState, isAuthenticated]);
 
   useEffect(() => {
     if (
