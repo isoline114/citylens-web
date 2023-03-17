@@ -14,7 +14,12 @@ const outputDir = path.resolve(
     'test-results/production-shell-smoke',
 );
 const routes = [
-  { name: 'home', path: '/', current: 'Home' },
+  {
+    name: 'home',
+    path: '/',
+    current: 'Home',
+    requiredTestId: 'home-closing-cta',
+  },
   { name: 'parcels', path: '/parcel-intel', current: 'Parcels' },
   { name: 'runs', path: '/runs', current: 'Runs' },
   {
@@ -33,10 +38,46 @@ const routes = [
     requiredTestId: 'auth-page-shell',
   },
   {
+    name: 'sign-up',
+    path: '/sign-up',
+    current: null,
+    requiredTestId: 'auth-page-shell',
+  },
+  {
+    name: 'forgot-password',
+    path: '/forgot-password',
+    current: null,
+    requiredTestId: 'auth-page-shell',
+  },
+  {
+    name: 'reset-password',
+    path: '/reset-password',
+    current: null,
+    requiredTestId: 'auth-page-shell',
+  },
+  {
+    name: 'verify-email',
+    path: '/verify-email',
+    current: null,
+    requiredTestId: 'auth-page-shell',
+  },
+  {
     name: 'api-keys',
     path: '/account/api-keys',
     current: null,
     requiredTestId: 'api-key-access-gate',
+  },
+  {
+    name: 'privacy',
+    path: '/privacy',
+    current: null,
+    requiredTestId: 'legal-document-shell',
+  },
+  {
+    name: 'terms',
+    path: '/terms',
+    current: null,
+    requiredTestId: 'legal-document-shell',
   },
 ];
 const viewports = [
@@ -133,6 +174,10 @@ try {
         receipt.footer_bottom_px >= viewport.height &&
         receipt.console_error_count === 0 &&
         receipt.page_error_count === 0 &&
+        (route.name !== 'home' ||
+          (viewport.name === 'desktop'
+            ? receipt.body_height_px <= 3_800
+            : receipt.body_height_px <= 7_000)) &&
         (route.name !== 'parcels' ||
           viewport.name !== 'desktop' ||
           (receipt.main_width_px !== null &&
@@ -191,7 +236,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-site-shell@v2',
+  schema_version: 'citylens/production-site-shell@v3',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   passed: failure === null,

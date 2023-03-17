@@ -3,7 +3,6 @@ import Link from 'next/link';
 import {
   ArrowRight,
   Building2,
-  Columns3,
   FileCode,
   Fingerprint,
   GitCompareArrows,
@@ -14,7 +13,6 @@ import {
 } from 'lucide-react';
 
 import { FeaturedDemoCards } from '@/components/FeaturedDemoCards';
-import { RunForm } from '@/components/RunForm';
 import type { DemoFeaturedRun } from '@/lib/api';
 import { fetchFeaturedDemosOnServer } from '@/lib/api.server';
 
@@ -141,7 +139,7 @@ export default async function HomePage() {
             visual={
               <div className="font-mono text-[13px] text-slate-700">
                 <span className="text-sky-700">All NYC</span>
-                <span className="text-slate-400"> · one map</span>
+                <span className="text-slate-600"> · one map</span>
               </div>
             }
           />
@@ -154,7 +152,7 @@ export default async function HomePage() {
             visual={
               <div className="font-mono text-[12px] text-slate-700">
                 <span className="text-amber-700">Rank</span>
-                <span className="text-slate-400"> ≠ seller intent</span>
+                <span className="text-slate-600"> ≠ seller intent</span>
               </div>
             }
           />
@@ -187,46 +185,6 @@ export default async function HomePage() {
         </ol>
       </section>
 
-      {/* ---------- Product proof row ---------- */}
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <FeatureCard
-          accent="sky"
-          icon={<SearchCheck className="h-4 w-4" />}
-          title="Current-project screening"
-          body={
-            <>
-              Surface active or completed planning and DOB activity before a
-              stale historical lead reaches owner outreach.
-            </>
-          }
-          href="/parcel-intel"
-        />
-        <FeatureCard
-          accent="amber"
-          icon={<ShieldCheck className="h-4 w-4" />}
-          title="Decision audit, not score theater"
-          body={
-            <>
-              See what affects model rank, what gates acquisition eligibility,
-              what remains diligence-only, and when each source was observed.
-            </>
-          }
-          href="/parcel-intel"
-        />
-        <FeatureCard
-          accent="emerald"
-          icon={<Columns3 className="h-4 w-4" />}
-          title="Comparison that leaves the browser"
-          body={
-            <>
-              Compare the shortlist, export the explicit evidence fields, and
-              move the chosen parcel into a private acquisition workflow.
-            </>
-          }
-          href="/parcel-intel"
-        />
-      </section>
-
       {/* ---------- Aerial evidence — three real artifacts ---------- */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -251,9 +209,18 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <p className="mt-4 text-xs font-medium text-slate-500 md:hidden">
+          Swipe to inspect all three outputs.
+        </p>
+        <div
+          className="mt-4 grid snap-x snap-mandatory auto-cols-[88%] grid-flow-col gap-4 overflow-x-auto pb-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 md:mt-6 md:grid-flow-row md:grid-cols-3 md:overflow-visible md:pb-0"
+          role="region"
+          aria-label="CityLens site evidence outputs"
+          tabIndex={0}
+          data-testid="home-evidence-output-strip"
+        >
           {/* preview.png card */}
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+          <div className="snap-start overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
             <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-950">
               <Image
                 src={brooklynPreviewUrl}
@@ -278,7 +245,7 @@ export default async function HomePage() {
           </div>
 
           {/* change.geojson card — now with a proportional stack-bar */}
-          <div className="flex flex-col rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex snap-start flex-col rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="font-mono text-[11px] uppercase tracking-wider text-slate-500">
               change.geojson
             </div>
@@ -326,7 +293,7 @@ export default async function HomePage() {
           </div>
 
           {/* mesh.ply card */}
-          <div className="flex flex-col rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex snap-start flex-col rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="font-mono text-[11px] uppercase tracking-wider text-slate-500">
               mesh.ply
             </div>
@@ -399,29 +366,44 @@ export default async function HomePage() {
         <FeaturedDemoCards demos={featured} />
       </div>
 
-      {/* ---------- Create a run ---------- */}
+      {/* ---------- Closing action ---------- */}
       <section
         id="create"
-        className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8"
+        data-testid="home-closing-cta"
+        className="relative overflow-hidden rounded-2xl border border-sky-200 bg-sky-50 p-6 shadow-sm md:p-8"
       >
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-              Try it
+        <div
+          className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-sky-300/30 blur-3xl"
+          aria-hidden="true"
+        />
+        <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="max-w-2xl">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">
+              Move from market to site
             </div>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight">Create a CityLens run</h2>
-            <p className="mt-1.5 max-w-2xl text-sm text-slate-600">
-              Pick a featured demo above, or sign in with a free account to run CityLens on
-              any NYC address. We inject pipeline defaults — you only pick the address and
-              outputs.
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
+              Start with the citywide shortlist. Escalate only the parcel that earns it.
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-700">
+              Open the 5,000-lead workspace, or create dated aerial and 3D
+              evidence for a specific NYC address.
             </p>
           </div>
-          <span className="inline-flex items-center gap-2 self-start rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
-            Free plan · 5 runs/month
-          </span>
-        </div>
-        <div className="mt-6">
-          <RunForm initialFeatured={featured} />
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+            <Link
+              href="/parcel-intel"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              Open parcel intelligence
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/runs/new"
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-sky-300 bg-white px-5 text-sm font-semibold text-slate-950 transition hover:border-sky-400 hover:bg-sky-100"
+            >
+              Create site evidence
+            </Link>
+          </div>
         </div>
       </section>
     </div>
@@ -617,40 +599,6 @@ const ACCENTS = {
     chipNum: 'bg-violet-50 text-violet-700 ring-violet-200',
   },
 } as const;
-
-function FeatureCard({
-  accent,
-  icon,
-  title,
-  body,
-  href,
-}: {
-  accent: keyof typeof ACCENTS;
-  icon: React.ReactNode;
-  title: string;
-  body: React.ReactNode;
-  href: string;
-}) {
-  const a = ACCENTS[accent];
-  return (
-    <Link
-      href={href}
-      className="group relative flex flex-col gap-3 overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-    >
-      <span className={`absolute inset-y-0 left-0 w-1 ${a.bar}`} aria-hidden="true" />
-      <span
-        className={`inline-flex h-7 w-7 items-center justify-center rounded-md ring-1 ring-inset ${a.iconBg}`}
-      >
-        {icon}
-      </span>
-      <div className="text-sm font-semibold text-slate-900">{title}</div>
-      <p className="text-sm leading-6 text-slate-600">{body}</p>
-      <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-slate-700 group-hover:text-slate-950">
-        Learn more <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-      </span>
-    </Link>
-  );
-}
 
 function Step({
   n,

@@ -5,10 +5,6 @@ const mocks = vi.hoisted(() => ({
   fetchFeaturedDemosOnServer: vi.fn(),
 }));
 
-vi.mock('@/components/RunForm', () => ({
-  RunForm: () => <div data-testid="run-form">Run form</div>,
-}));
-
 vi.mock('@/lib/api.server', () => ({
   fetchFeaturedDemosOnServer: mocks.fetchFeaturedDemosOnServer,
 }));
@@ -72,7 +68,11 @@ describe('HomePage', () => {
     const demoCards = screen.getAllByTestId('featured-demo-card');
     expect(demoCards.length).toBeGreaterThan(0);
 
-    expect(screen.getByTestId('run-form')).toBeInTheDocument();
+    expect(screen.getByTestId('home-closing-cta')).toBeVisible();
+    expect(
+      screen.getByRole('link', { name: /Create site evidence/i }),
+    ).toHaveAttribute('href', '/runs/new');
+    expect(screen.queryByTestId('run-form')).not.toBeInTheDocument();
   });
 
   it('keeps the primary acquisition journey intact when no demos load', async () => {

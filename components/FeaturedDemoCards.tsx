@@ -36,7 +36,13 @@ export function FeaturedDemoCards({ demos }: Props) {
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <p className="mt-4 text-xs font-medium text-slate-500 md:hidden">
+        Swipe through real NYC examples.
+      </p>
+      <div
+        className="mt-4 grid snap-x snap-mandatory auto-cols-[86%] grid-flow-col gap-4 overflow-x-auto pb-2 md:mt-6 md:grid-flow-row md:grid-cols-2 md:overflow-visible md:pb-0 lg:grid-cols-3"
+        data-testid="featured-demo-strip"
+      >
         {demos.slice(0, 6).map((demo, index) => {
           const id = demoId(demo);
           if (!id) return null;
@@ -73,7 +79,7 @@ function DemoCard({
   return (
     <Link
       href={`/runs/${encodeURIComponent(runId)}?demo=1`}
-      className="group relative flex flex-col gap-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-4 pl-5 transition-all hover:border-slate-300 hover:bg-white hover:shadow-sm"
+      className="group relative flex snap-start flex-col gap-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-4 pl-5 transition-all hover:border-slate-300 hover:bg-white hover:shadow-sm"
       data-testid="featured-demo-card"
     >
       <span className={`absolute inset-y-0 left-0 w-1 ${accent}`} aria-hidden="true" />

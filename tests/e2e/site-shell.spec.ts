@@ -46,6 +46,25 @@ test('shared shell exposes one landmark, active navigation, and a true sticky fo
       .getByRole('link', { name: 'Home', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
 
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByTestId('home-closing-cta')).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Create site evidence' }),
+  ).toHaveAttribute('href', '/runs/new');
+  await expectNoDocumentHorizontalOverflow(page, 'Compact mobile homepage');
+  expect(
+    await page.evaluate(() => document.body.scrollHeight),
+  ).toBeLessThanOrEqual(7_000);
+  const evidenceStrip = page.getByTestId('home-evidence-output-strip');
+  await expect(evidenceStrip).toBeVisible();
+  expect(
+    await evidenceStrip.evaluate(
+      (element) => element.scrollWidth > element.clientWidth,
+    ),
+  ).toBe(true);
+  await expectNoWcagViolations(page, 'Homepage');
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
   for (const policy of [
     {
       path: '/privacy',

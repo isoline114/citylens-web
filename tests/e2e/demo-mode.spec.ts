@@ -143,7 +143,11 @@ end_header
       name: /Turn the whole NYC market into a defensible weekly shortlist/i,
     }),
   ).toBeVisible();
-  await page.getByLabel('Select a featured demo run').selectOption('demo-1');
+  // SSR demos are deliberately disabled in the deterministic e2e build
+  // because Playwright cannot intercept a Server Component fetch. The card
+  // link contract is covered at component level; exercise the public demo
+  // route directly here.
+  await page.goto('/runs/demo-1?demo=1');
 
   await expect(page).toHaveURL(/\/runs\/demo-1\?demo=1/);
   await expect(page.getByText('Public demo', { exact: true })).toBeVisible();
@@ -197,9 +201,8 @@ test('homepage shows product-safe copy when /v1/demo/featured returns 404', asyn
   });
 
   await page.goto('/');
-  // When the demo endpoint fails, the run form's selector and the demo
-  // cards both show the same product-safe fallback. We don't surface
-  // raw error strings to a public visitor.
+  // When the demo endpoint fails, the demo surface shows product-safe copy.
+  // We don't surface raw error strings to a public visitor.
   await expect(
     page.getByText(/Featured demos are temporarily unavailable/i).first(),
   ).toBeVisible({ timeout: 10000 });
