@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -13,6 +12,7 @@ import {
 } from 'lucide-react';
 
 import { FeaturedDemoCards } from '@/components/FeaturedDemoCards';
+import { SiteEvidencePreviewImage } from '@/components/SiteEvidencePreviewImage';
 import type { DemoFeaturedRun } from '@/lib/api';
 import { fetchFeaturedDemosOnServer } from '@/lib/api.server';
 
@@ -129,13 +129,21 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <ol className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <p className="text-xs font-medium text-slate-500 sm:hidden">
+          Swipe through the decision flow.
+        </p>
+        <ol
+          className="grid snap-x snap-mandatory auto-cols-[86%] grid-flow-col gap-4 overflow-x-auto pb-2 sm:grid-flow-row sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-4"
+          aria-label="CityLens acquisition decision flow"
+          tabIndex={0}
+          data-testid="home-decision-flow"
+        >
           <Step
             n={1}
             accent="sky"
             icon={<MapPin className="h-4 w-4" />}
             title="Scan one citywide market"
-            body="Search and filter current development-site leads across all five boroughs without opening separate borough tools."
+            body="Rank current development-site leads across all five boroughs on one map."
             visual={
               <div className="font-mono text-[13px] text-slate-700">
                 <span className="text-sky-700">All NYC</span>
@@ -148,7 +156,7 @@ export default async function HomePage() {
             accent="amber"
             icon={<SearchCheck className="h-4 w-4" />}
             title="Open the current evidence"
-            body="Separate historical rank from current project activity, capacity, ownership, constraints, and source dates."
+            body="Keep historical rank separate from projects, capacity, ownership, constraints, and source dates."
             visual={
               <div className="font-mono text-[12px] text-slate-700">
                 <span className="text-amber-700">Rank</span>
@@ -161,7 +169,7 @@ export default async function HomePage() {
             accent="emerald"
             icon={<GitCompareArrows className="h-4 w-4" />}
             title="Compare before committing"
-            body="Put two or three parcels side by side and carry their source-dated evidence into a portable team brief."
+            body="Compare two or three parcels and export their source-dated evidence."
             visual={
               <div className="flex items-center gap-1.5 font-mono text-[11px]">
                 <ArtifactPill label="2–3 parcels" />
@@ -174,7 +182,7 @@ export default async function HomePage() {
             accent="violet"
             icon={<Sparkles className="h-4 w-4" />}
             title="Advance with a reason"
-            body="Save, assign, underwrite, watch, pursue, or pass with a dated record of what the team knew."
+            body="Save, assign, underwrite, pursue, or pass with a dated record."
             visual={
               <div className="flex items-center gap-1.5 font-mono text-[11px]">
                 <ArtifactPill label="review" />
@@ -222,13 +230,7 @@ export default async function HomePage() {
           {/* preview.png card */}
           <div className="snap-start overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
             <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-950">
-              <Image
-                src={brooklynPreviewUrl}
-                alt=""
-                fill
-                unoptimized
-                className="object-cover opacity-95"
-              />
+              <SiteEvidencePreviewImage src={brooklynPreviewUrl} />
               <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-slate-950/70 to-transparent" />
               <div className="absolute bottom-2 left-2 rounded-md bg-slate-950/70 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-slate-100 ring-1 ring-white/10 backdrop-blur-sm">
                 preview.png
@@ -334,29 +336,34 @@ export default async function HomePage() {
               Built for diligence
             </div>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight text-white">
-              Every input is hashed. Every run is reproducible.
+              Site-evidence runs stay reproducible.
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-300">
-              CityLens records the SHA-256 of every orthophoto tile, footprint snapshot,
-              and LiDAR tile. Re-run the same address tomorrow and you get a byte-for-byte
-              audit trail back to the source data.
+              Each advanced run records hashes for its imagery, footprint, and
+              LiDAR inputs, keeping every artifact tied to its source.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div
+            className="grid snap-x snap-mandatory auto-cols-[84%] grid-flow-col gap-3 overflow-x-auto pb-2 sm:grid-flow-row sm:grid-cols-3 sm:overflow-visible sm:pb-0"
+            role="region"
+            aria-label="Reproducible site-evidence safeguards"
+            tabIndex={0}
+            data-testid="home-trust-strip"
+          >
             <TrustCard
               icon={<Fingerprint className="h-4 w-4" />}
-              title="SHA-256 per input"
-              body="Imagery, footprints, LiDAR — all hashed and embedded in run_summary.json."
+              title="Hashed inputs"
+              body="Imagery, footprints, and LiDAR are fingerprinted in run_summary.json."
             />
             <TrustCard
               icon={<ShieldCheck className="h-4 w-4" />}
-              title="Server-locked options"
-              body="Imagery 2024, baseline 2017, SAM2. Clients can't drift the contract."
+              title="Fixed run contract"
+              body="Year, baseline, and model options are governed by the server."
             />
             <TrustCard
               icon={<FileCode className="h-4 w-4" />}
-              title="QA metrics included"
-              body="mask_iou, change_polygon_f1, mesh_footprint_iou — included in every run."
+              title="QA travels with artifacts"
+              body="Segmentation, change, and mesh checks stay with every run."
             />
           </div>
         </div>
@@ -617,7 +624,7 @@ function Step({
 }) {
   const a = ACCENTS[accent];
   return (
-    <li className="relative flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <li className="relative flex snap-start flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <span className={`absolute inset-y-0 left-0 w-1 rounded-l-xl ${a.bar}`} aria-hidden="true" />
       <div className="flex items-center gap-2.5">
         <span
@@ -660,7 +667,7 @@ function TrustCard({
   body: string;
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
+    <div className="snap-start rounded-xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
       <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-400/10 text-emerald-300 ring-1 ring-inset ring-emerald-400/30">
         {icon}
       </span>

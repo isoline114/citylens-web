@@ -64,7 +64,16 @@ test('shared shell exposes one landmark, active navigation, and a true sticky fo
   await expectNoDocumentHorizontalOverflow(page, 'Compact mobile homepage');
   expect(
     await page.evaluate(() => document.body.scrollHeight),
-  ).toBeLessThanOrEqual(7_000);
+  ).toBeLessThanOrEqual(5_000);
+  for (const testId of ['home-decision-flow', 'home-trust-strip']) {
+    const strip = page.getByTestId(testId);
+    await expect(strip).toBeVisible();
+    expect(
+      await strip.evaluate(
+        (element) => element.scrollWidth > element.clientWidth,
+      ),
+    ).toBe(true);
+  }
   const evidenceStrip = page.getByTestId('home-evidence-output-strip');
   await expect(evidenceStrip).toBeVisible();
   expect(

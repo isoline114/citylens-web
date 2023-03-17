@@ -51,6 +51,16 @@ describe('HomePage', () => {
         name: /See the market. Commit to the few/i,
       }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('list', {
+        name: 'CityLens acquisition decision flow',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', {
+        name: 'Reproducible site-evidence safeguards',
+      }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Compare before committing')).toBeInTheDocument();
     expect(screen.getByText('Advance with a reason')).toBeInTheDocument();
 

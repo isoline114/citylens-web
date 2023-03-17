@@ -196,7 +196,7 @@ try {
         (route.name !== 'home' ||
           (viewport.name === 'desktop'
             ? receipt.body_height_px <= 3_800
-            : receipt.body_height_px <= 7_000)) &&
+            : receipt.body_height_px <= 5_000)) &&
         (route.name !== 'docs' ||
           (receipt.docs_section_count === 6 &&
             receipt.docs_open_section_count === 1 &&
