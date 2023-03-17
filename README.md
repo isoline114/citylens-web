@@ -271,6 +271,12 @@ in-progress hit rates are labeled lower bounds; final precision and confidence
 intervals appear only after the complete 365-day horizon. If the engine cannot
 match the status to the active feed generation, the UI shows an explicit
 unavailable warning rather than falling back to historical metrics.
+The v2 receipt separates ranked-parcel outcomes from acquisition-site
+outcomes. Site membership is frozen when the feed is issued, and one site hit
+means any frozen member later received a qualifying DOB New Building filing.
+The browser receives aggregate site counts only—never site identities or the
+private member crosswalk—and continues to state that the target is not seller
+intent, acquisition, or closing probability.
 Full borough payloads are deferred until the user requests a CSV. The explorer
 separates acquisition site type from combinable evidence screens, including
 multi-lot assemblage candidates, a signed-in filter for official

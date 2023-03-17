@@ -651,6 +651,21 @@ try {
     await prospectiveValidation.getAttribute('data-status');
   const prospectiveHealth =
     await prospectiveValidation.getAttribute('data-health');
+  const prospectiveSchema =
+    await prospectiveValidation.getAttribute('data-schema');
+  const prospectiveSiteCount = Number(
+    await prospectiveValidation.getAttribute('data-site-count'),
+  );
+  const prospectiveTop100SiteCount = Number(
+    await prospectiveValidation.getAttribute(
+      'data-site-top-100-count',
+    ),
+  );
+  const prospectiveTop1000SiteCount = Number(
+    await prospectiveValidation.getAttribute(
+      'data-site-top-1000-count',
+    ),
+  );
   const acceptedProspectiveStatuses = new Set([
     'awaiting_post_issue_data',
     'collecting',
@@ -671,14 +686,25 @@ try {
               .isVisible()
           : false;
   prospectiveValidationReceipt = {
+    schema: prospectiveSchema,
     status: prospectiveStatus,
     health: prospectiveHealth,
+    site_count: prospectiveSiteCount,
+    top_100_site_count: prospectiveTop100SiteCount,
+    top_1000_site_count: prospectiveTop1000SiteCount,
+    map_site_count: siteRankingReceipt?.site_count ?? null,
     visible: await prospectiveValidation.isVisible(),
     claim_boundary_visible: statusBoundaryVisible,
   };
   if (
+    prospectiveSchema !==
+      'citylens-parcel-intel/prospective-validation-status@v2' ||
     !acceptedProspectiveStatuses.has(prospectiveStatus) ||
     prospectiveHealth !== 'current' ||
+    !Number.isSafeInteger(prospectiveSiteCount) ||
+    prospectiveSiteCount !== siteRankingReceipt?.site_count ||
+    prospectiveTop100SiteCount !== 100 ||
+    prospectiveTop1000SiteCount !== 1000 ||
     prospectiveValidationReceipt.visible !== true ||
     prospectiveValidationReceipt.claim_boundary_visible !== true
   ) {
@@ -1196,7 +1222,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v18',
+  schema_version: 'citylens/production-authenticated-parcel-map@v19',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,

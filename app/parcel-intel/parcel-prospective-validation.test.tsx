@@ -6,6 +6,7 @@ import { ParcelProspectiveValidation } from './parcel-prospective-validation';
 
 function status(
   measurementStatus: ParcelProspectiveValidationStatus['measurement_status'],
+  siteAware = false,
 ): ParcelProspectiveValidationStatus {
   const collecting = measurementStatus !== 'awaiting_post_issue_data';
   const mature = measurementStatus === 'mature';
@@ -27,8 +28,10 @@ function status(
         : null,
     };
   };
-  return {
-    schema: 'citylens-parcel-intel/prospective-validation-status@v1',
+  const result: ParcelProspectiveValidationStatus = {
+    schema: siteAware
+      ? 'citylens-parcel-intel/prospective-validation-status@v2'
+      : 'citylens-parcel-intel/prospective-validation-status@v1',
     cohort_id: '20260724T211504776940Z-9242d66f6201',
     source_generation: '20260724T211504776940Z-9242d66f6201',
     label_definition: 'dob_nb_job_filing',
@@ -71,6 +74,25 @@ function status(
     },
     interpretation: 'Maturity-safe DOB filing measurement.',
   };
+  if (siteAware) {
+    const siteMetric = (eligibleSites: number, hits: number) => {
+      const values = metric(eligibleSites, hits);
+      return {
+        eligible_sites: eligibleSites,
+        observed_nb_filing_hits: values.observed_nb_filing_hits,
+        observed_precision_lower_bound:
+          values.observed_precision_lower_bound,
+        final_precision: values.final_precision,
+        final_precision_95ci: values.final_precision_95ci,
+      };
+    };
+    result.site_count = 4769;
+    result.site_metrics = {
+      top_100: siteMetric(100, 2),
+      top_1000: siteMetric(1000, 7),
+    };
+  }
+  return result;
 }
 
 function health(
@@ -118,6 +140,38 @@ describe('ParcelProspectiveValidation', () => {
 
     expect(screen.getByText(/3 filings · 3.00% lower bound/i)).toBeVisible();
     expect(screen.getByText(/lower bounds, not final accuracy/i)).toBeVisible();
+  });
+
+  it('separates issuance-time site outcomes from parcel outcomes', () => {
+    render(
+      <ParcelProspectiveValidation status={status('collecting', true)} />,
+    );
+
+    expect(screen.getByTestId('prospective-site-metrics')).toBeVisible();
+    expect(screen.getByText('Parcel top 100')).toBeVisible();
+    expect(screen.getByText('Site top 100')).toBeVisible();
+    expect(screen.getByText(/2 filings · 2\.00% lower bound/i)).toBeVisible();
+    expect(screen.getByText(/7 filings · 0\.70% lower bound/i)).toBeVisible();
+  });
+
+  it('discloses the frozen site cohort before observations begin', () => {
+    render(
+      <ParcelProspectiveValidation
+        status={status('awaiting_post_issue_data', true)}
+      />,
+    );
+
+    expect(
+      screen.getByText(/4,769 frozen acquisition sites/i),
+    ).toBeVisible();
+    const receipt = screen.getByTestId('prospective-validation-status');
+    expect(receipt).toHaveAttribute(
+      'data-schema',
+      'citylens-parcel-intel/prospective-validation-status@v2',
+    );
+    expect(receipt).toHaveAttribute('data-site-count', '4769');
+    expect(receipt).toHaveAttribute('data-site-top-100-count', '100');
+    expect(receipt).toHaveAttribute('data-site-top-1000-count', '1000');
   });
 
   it('shows final precision and intervals only for mature cohorts', () => {

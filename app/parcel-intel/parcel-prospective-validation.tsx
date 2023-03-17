@@ -2,6 +2,7 @@ import { Activity, Clock3, ShieldCheck } from 'lucide-react';
 import type {
   ParcelProspectiveValidationHealth,
   ParcelProspectiveValidationMetric,
+  ParcelProspectiveSiteValidationMetric,
   ParcelProspectiveValidationStatus,
 } from '@/lib/api';
 
@@ -22,7 +23,9 @@ function formatPercent(value: number): string {
 }
 
 function observedMetric(
-  metric: ParcelProspectiveValidationMetric,
+  metric:
+    | ParcelProspectiveValidationMetric
+    | ParcelProspectiveSiteValidationMetric,
 ): string {
   if (
     metric.observed_nb_filing_hits === null ||
@@ -36,7 +39,9 @@ function observedMetric(
 }
 
 function matureMetric(
-  metric: ParcelProspectiveValidationMetric,
+  metric:
+    | ParcelProspectiveValidationMetric
+    | ParcelProspectiveSiteValidationMetric,
 ): string {
   if (
     metric.final_precision === null ||
@@ -133,6 +138,15 @@ export function ParcelProspectiveValidation({
     );
   }
 
+  const siteEvidenceAttributes = {
+    'data-schema': status.schema,
+    'data-site-count': status.site_count ?? '',
+    'data-site-top-100-count':
+      status.site_metrics?.top_100.eligible_sites ?? '',
+    'data-site-top-1000-count':
+      status.site_metrics?.top_1000.eligible_sites ?? '',
+  };
+
   if (status.measurement_status === 'awaiting_post_issue_data') {
     return (
       <section
@@ -140,16 +154,21 @@ export function ParcelProspectiveValidation({
         data-testid="prospective-validation-status"
         data-status={status.measurement_status}
         data-health={health?.status ?? 'unknown'}
+        {...siteEvidenceAttributes}
       >
         <h3 className="flex items-center gap-2 text-sm font-semibold text-sky-950">
           <Clock3 className="h-4 w-4" />
           Live cohort · awaiting observations
         </h3>
         <p className="mt-2 text-xs leading-5 text-sky-900">
-          The exact top 1,000 issued {formatDate(status.issued_at)} starts
-          observation {formatDate(status.observation_starts_on)}. Official DOB
-          data is currently observed through {formatDate(status.observed_through)}.
-          Live precision is intentionally unavailable—not 0%.
+          The exact ranked cohort
+          {status.site_count
+            ? ` and its ${status.site_count.toLocaleString()} frozen acquisition sites`
+            : ''}{' '}
+          issued {formatDate(status.issued_at)} starts observation{' '}
+          {formatDate(status.observation_starts_on)}. Official DOB data is
+          observed through {formatDate(status.observed_through)}. Live
+          precision is intentionally unavailable—not 0%.
         </p>
         <p className="mt-2 text-[11px] leading-4 text-sky-800">
           Final 365-day results become eligible after {formatDate(status.matures_at)}.
@@ -166,6 +185,7 @@ export function ParcelProspectiveValidation({
         data-testid="prospective-validation-status"
         data-status={status.measurement_status}
         data-health={health?.status ?? 'unknown'}
+        {...siteEvidenceAttributes}
       >
         <h3 className="flex items-center gap-2 text-sm font-semibold text-sky-950">
           <Activity className="h-4 w-4" />
@@ -173,15 +193,34 @@ export function ParcelProspectiveValidation({
         </h3>
         <dl className="mt-2 space-y-1 text-xs leading-5 text-sky-900">
           <div className="flex justify-between gap-3">
-            <dt>Top 100 so far</dt>
+            <dt>Parcel top 100</dt>
             <dd className="font-medium">{observedMetric(status.metrics.top_100)}</dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt>Top 1,000 so far</dt>
+            <dt>Parcel top 1,000</dt>
             <dd className="font-medium">
               {observedMetric(status.metrics.top_1000)}
             </dd>
           </div>
+          {status.site_metrics ? (
+            <>
+              <div
+                className="mt-2 flex justify-between gap-3 border-t border-sky-200 pt-2"
+                data-testid="prospective-site-metrics"
+              >
+                <dt>Site top 100</dt>
+                <dd className="font-medium">
+                  {observedMetric(status.site_metrics.top_100)}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt>Site top 1,000</dt>
+                <dd className="font-medium">
+                  {observedMetric(status.site_metrics.top_1000)}
+                </dd>
+              </div>
+            </>
+          ) : null}
         </dl>
         <p className="mt-2 text-[11px] leading-4 text-sky-800">
           Observed through {formatDate(status.observed_through)}. These are
@@ -199,6 +238,7 @@ export function ParcelProspectiveValidation({
       data-testid="prospective-validation-status"
       data-status={status.measurement_status}
       data-health={health?.status ?? 'unknown'}
+      {...siteEvidenceAttributes}
     >
       <h3 className="flex items-center gap-2 text-sm font-semibold text-emerald-950">
         <ShieldCheck className="h-4 w-4" />
@@ -206,15 +246,34 @@ export function ParcelProspectiveValidation({
       </h3>
       <dl className="mt-2 space-y-1 text-xs leading-5 text-emerald-900">
         <div className="flex justify-between gap-3">
-          <dt>Top 100</dt>
+          <dt>Parcel top 100</dt>
           <dd className="font-medium">{matureMetric(status.metrics.top_100)}</dd>
         </div>
         <div className="flex justify-between gap-3">
-          <dt>Top 1,000</dt>
+          <dt>Parcel top 1,000</dt>
           <dd className="font-medium">
             {matureMetric(status.metrics.top_1000)}
           </dd>
         </div>
+        {status.site_metrics ? (
+          <>
+            <div
+              className="mt-2 flex justify-between gap-3 border-t border-emerald-200 pt-2"
+              data-testid="prospective-site-metrics"
+            >
+              <dt>Site top 100</dt>
+              <dd className="font-medium">
+                {matureMetric(status.site_metrics.top_100)}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt>Site top 1,000</dt>
+              <dd className="font-medium">
+                {matureMetric(status.site_metrics.top_1000)}
+              </dd>
+            </div>
+          </>
+        ) : null}
       </dl>
       <p className="mt-2 text-[11px] leading-4 text-emerald-800">
         Complete 365-day DOB New Building filing outcome window. This is not

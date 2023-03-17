@@ -846,8 +846,18 @@ export type ParcelProspectiveValidationMetric = {
   final_precision_95ci: [number, number] | null;
 };
 
+export type ParcelProspectiveSiteValidationMetric = {
+  eligible_sites: number;
+  observed_nb_filing_hits: number | null;
+  observed_precision_lower_bound: number | null;
+  final_precision: number | null;
+  final_precision_95ci: [number, number] | null;
+};
+
 export type ParcelProspectiveValidationStatus = {
-  schema: 'citylens-parcel-intel/prospective-validation-status@v1';
+  schema:
+    | 'citylens-parcel-intel/prospective-validation-status@v1'
+    | 'citylens-parcel-intel/prospective-validation-status@v2';
   cohort_id: string;
   source_generation: string;
   label_definition: 'dob_nb_job_filing';
@@ -865,6 +875,11 @@ export type ParcelProspectiveValidationStatus = {
     top_100: ParcelProspectiveValidationMetric;
     top_1000: ParcelProspectiveValidationMetric;
   };
+  site_count?: number | null;
+  site_metrics?: {
+    top_100: ParcelProspectiveSiteValidationMetric;
+    top_1000: ParcelProspectiveSiteValidationMetric;
+  } | null;
   historical_benchmark: {
     scope: string | null;
     evaluation_window: string | null;
