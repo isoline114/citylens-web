@@ -1,4 +1,4 @@
-import { BookOpen, Building2, Database, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { BookOpen, Building2, Database, TriangleAlert } from 'lucide-react';
 import { fetchParcelIntelIndexOnServer } from '@/lib/api.server';
 import type {
   ParcelProspectiveValidationHealth,
@@ -6,11 +6,11 @@ import type {
 } from '@/lib/api';
 import {
   historicalBenchmarkCopy,
-  normalizePerformanceScope,
   parseHistoricalBenchmarkReceipt,
 } from '@/lib/parcel-intel-evidence';
 import { ParcelFeedReceipt } from './parcel-feed-receipt';
 import { ParcelIntelExplorer } from './parcel-intel-explorer';
+import { ParcelModelLineage } from './parcel-model-lineage';
 import { ParcelProspectiveValidation } from './parcel-prospective-validation';
 
 export const metadata = {
@@ -44,22 +44,24 @@ export default async function ParcelIntelIndexPage({
   const { borough, bbl } = await searchParams;
   const index = await fetchParcelIntelIndexOnServer();
   const generatedLabel = formatGenerated(index.generated_at);
-  const modelType =
-    typeof index.model_metadata?.model_type === 'string'
-      ? (index.model_metadata.model_type as string).toUpperCase()
-      : null;
-  const featureYear = index.model_metadata?.feature_year as
-    | string
-    | number
-    | undefined;
   const labelWindow = index.model_metadata?.label_window as string | undefined;
-  // Older published feeds described the latest historical fold as
-  // "untouched." That cohort has since been inspected during challenger
-  // development, so the browser fails conservative even before the next feed
-  // publication replaces the metadata.
-  const performanceScope = normalizePerformanceScope(
-    index.model_metadata?.performance_scope,
-  );
+  const trainingOrigins = Array.isArray(
+    index.model_metadata?.training_origins,
+  )
+    ? index.model_metadata.training_origins.filter(
+        (value): value is number =>
+          typeof value === 'number' && Number.isInteger(value),
+      )
+    : [];
+  const calibrationOrigin =
+    typeof index.model_metadata?.calibration_origin === 'number' &&
+    Number.isInteger(index.model_metadata.calibration_origin)
+      ? index.model_metadata.calibration_origin
+      : null;
+  const inferenceSnapshot =
+    typeof index.model_metadata?.inference_feature_snapshot === 'string'
+      ? index.model_metadata.inference_feature_snapshot
+      : null;
   const evaluationEvidence =
     index.model_metadata?.evaluation_evidence &&
     typeof index.model_metadata.evaluation_evidence === 'object'
@@ -114,9 +116,9 @@ export default async function ParcelIntelIndexPage({
   const selectionPolicySummary =
     selectionPolicy?.policy_id === 'borough_floor_250' &&
     typeof selectionPolicy.minimum_per_borough === 'number'
-      ? ` The published 5,000 use one citywide merit order with a minimum of ${selectionPolicy.minimum_per_borough.toLocaleString(
+      ? ` The current list reserves ${selectionPolicy.minimum_per_borough.toLocaleString(
           'en-US',
-        )} qualified leads per borough; borough counts are intentionally unequal.`
+        )} qualified leads per borough before merit-fill.`
       : '';
 
   return (
@@ -188,10 +190,10 @@ export default async function ParcelIntelIndexPage({
             initialBbl={bbl ?? null}
           />
           <MethodologyDisclosure
-            modelType={modelType}
-            featureYear={featureYear}
             labelWindow={labelWindow}
-            performanceScope={performanceScope}
+            trainingOrigins={trainingOrigins}
+            calibrationOrigin={calibrationOrigin}
+            inferenceSnapshot={inferenceSnapshot}
             precisionAt100={precisionAt100}
             precisionAt1000={precisionAt1000}
             evaluationBaseRate={evaluationBaseRate}
@@ -210,10 +212,10 @@ export default async function ParcelIntelIndexPage({
 }
 
 function MethodologyDisclosure({
-  modelType,
-  featureYear,
   labelWindow,
-  performanceScope,
+  trainingOrigins,
+  calibrationOrigin,
+  inferenceSnapshot,
   precisionAt100,
   precisionAt1000,
   evaluationBaseRate,
@@ -223,10 +225,10 @@ function MethodologyDisclosure({
   prospectiveValidationHealth,
   historicalBenchmarkReceipt,
 }: {
-  modelType: string | null;
-  featureYear: string | number | undefined;
   labelWindow: string | undefined;
-  performanceScope: string | null;
+  trainingOrigins: number[];
+  calibrationOrigin: number | null;
+  inferenceSnapshot: string | null;
   precisionAt100: number | null;
   precisionAt1000: number | null;
   evaluationBaseRate: number | null;
@@ -260,19 +262,18 @@ function MethodologyDisclosure({
           Hide methodology
         </span>
       </summary>
-      <div className="grid gap-3 border-t border-slate-200 bg-slate-50 p-4 md:grid-cols-2 md:p-5 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-3 border-t border-slate-200 bg-slate-50 p-4 md:grid-cols-2 md:p-5 lg:grid-cols-3 xl:grid-cols-6">
         <MethodCard
           icon={Database}
           title="Source records"
           body="Current parcel facts combine NYC PLUTO (including E-designations and restrictive declarations), ACRIS ownership, DOB project activity, LPC constraints, and available CityLens aerial-change observations. Source dates remain visible on every parcel."
         />
-        <MethodCard
-          icon={ShieldCheck}
-          title="What rank means"
-          body={`${modelType ?? 'The'} model evidence covers ${
-            performanceScope ??
-            `${featureYear ?? 'historical'} features and ${labelWindow ?? 'later'} outcomes`
-          }. Current DOB projects and constrained or incomplete parcels are removed before acquisition rank is assigned.${selectionPolicySummary} Rank remains an ordinal screening signal—not a probability that a site will transact.`}
+        <ParcelModelLineage
+          trainingOrigins={trainingOrigins}
+          calibrationOrigin={calibrationOrigin}
+          benchmarkOutcomeWindow={labelWindow ?? null}
+          inferenceSnapshot={inferenceSnapshot}
+          selectionPolicySummary={selectionPolicySummary}
         />
         <MethodCard
           icon={Database}

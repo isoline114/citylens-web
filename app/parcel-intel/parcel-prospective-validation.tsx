@@ -90,6 +90,7 @@ export function ParcelProspectiveValidation({
         className="rounded-xl border border-amber-200 bg-amber-50 p-4"
         data-testid="prospective-validation-status"
         data-status="unavailable"
+        data-health={health?.status ?? 'unavailable'}
       >
         <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-950">
           <Clock3 className="h-4 w-4" />
@@ -110,6 +111,7 @@ export function ParcelProspectiveValidation({
         className="rounded-xl border border-amber-300 bg-amber-50 p-4"
         data-testid="prospective-validation-status"
         data-status="stale"
+        data-health="stale"
       >
         <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-950">
           <Clock3 className="h-4 w-4" />
@@ -137,6 +139,7 @@ export function ParcelProspectiveValidation({
         className="rounded-xl border border-sky-200 bg-sky-50 p-4"
         data-testid="prospective-validation-status"
         data-status={status.measurement_status}
+        data-health={health?.status ?? 'unknown'}
       >
         <h3 className="flex items-center gap-2 text-sm font-semibold text-sky-950">
           <Clock3 className="h-4 w-4" />
@@ -162,6 +165,7 @@ export function ParcelProspectiveValidation({
         className="rounded-xl border border-sky-200 bg-sky-50 p-4"
         data-testid="prospective-validation-status"
         data-status={status.measurement_status}
+        data-health={health?.status ?? 'unknown'}
       >
         <h3 className="flex items-center gap-2 text-sm font-semibold text-sky-950">
           <Activity className="h-4 w-4" />
@@ -194,6 +198,7 @@ export function ParcelProspectiveValidation({
       className="rounded-xl border border-emerald-200 bg-emerald-50 p-4"
       data-testid="prospective-validation-status"
       data-status={status.measurement_status}
+      data-health={health?.status ?? 'unknown'}
     >
       <h3 className="flex items-center gap-2 text-sm font-semibold text-emerald-950">
         <ShieldCheck className="h-4 w-4" />

@@ -67,6 +67,8 @@ jobs:
           console.log(`- Complete unique-BBL citywide CSV: \`${report?.citywide_export_receipt?.row_count === 5000 && report?.citywide_export_receipt?.unique_bbl_count === 5000 && report?.citywide_export_receipt?.consistent_column_count === true ? 'passed' : 'failed'}\``);
           console.log(`- Citywide CSV delivery: \`${report?.citywide_export_receipt?.file_bytes ? `${(report.citywide_export_receipt.file_bytes / 1_000_000).toFixed(2)} MB in ${(report.citywide_export_receipt.duration_ms / 1_000).toFixed(1)}s` : 'unavailable'}\``);
           console.log(`- Auditable historical benchmark receipt: \`${report?.historical_benchmark_receipt_verified ? 'passed' : 'failed'}\``);
+          console.log(`- Temporal train → calibrate → current-inference lineage: \`${report?.model_lineage_receipt_verified ? 'passed' : 'failed'}\``);
+          console.log(`- Live prospective cohort boundary: \`${report?.prospective_validation_receipt?.health === 'current' && report?.prospective_validation_receipt?.claim_boundary_visible ? `passed · ${report.prospective_validation_receipt.status}` : 'failed'}\``);
           console.log(`- Any-NYC-lot official dossier: \`${report?.official_dossier_verified ? 'passed' : 'failed'}\``);
           console.log(`- Source-grounded dossier readiness: \`${report?.dossier_readiness_verified ? 'passed' : 'failed'}\``);
           console.log(`- Official address → BBL → screening flow: \`${report?.address_resolution_verified ? 'passed' : 'failed'}\``);

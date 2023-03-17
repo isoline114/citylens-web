@@ -59,6 +59,8 @@ let addressResolutionVerified = false;
 let officialDossierVerified = false;
 let dossierReadinessVerified = false;
 let historicalBenchmarkReceiptVerified = false;
+let modelLineageReceiptVerified = false;
+let prospectiveValidationReceipt = null;
 let thesisComposerVerified = false;
 let thesisComposerReceiptVerified = false;
 let thesisComposerFiltersVerified = false;
@@ -439,6 +441,67 @@ try {
     );
   }
   historicalBenchmarkReceiptVerified = true;
+
+  const modelLineage = methodology.getByTestId('model-lineage-receipt');
+  if (
+    !(await modelLineage.isVisible()) ||
+    (await modelLineage.getAttribute('data-status')) !== 'verified' ||
+    !(await modelLineage.getByText('2018 · 2020 · 2022').isVisible()) ||
+    !(await modelLineage.getByText('2024 → 2025').isVisible()) ||
+    !(await modelLineage.getByText('Current records').isVisible()) ||
+    !(await modelLineage
+      .getByText(/not this final refit(?:'|’|&apos;)s current hit rate/i)
+      .isVisible())
+  ) {
+    throw new Error(
+      'The temporal model-lineage receipt was incomplete or misleading.',
+    );
+  }
+  modelLineageReceiptVerified = true;
+
+  const prospectiveValidation = methodology.getByTestId(
+    'prospective-validation-status',
+  );
+  const prospectiveStatus =
+    await prospectiveValidation.getAttribute('data-status');
+  const prospectiveHealth =
+    await prospectiveValidation.getAttribute('data-health');
+  const acceptedProspectiveStatuses = new Set([
+    'awaiting_post_issue_data',
+    'collecting',
+    'mature',
+  ]);
+  const statusBoundaryVisible =
+    prospectiveStatus === 'awaiting_post_issue_data'
+      ? await prospectiveValidation
+          .getByText(/intentionally unavailable—not 0%/i)
+          .isVisible()
+      : prospectiveStatus === 'collecting'
+        ? await prospectiveValidation
+            .getByText(/lower bounds, not final accuracy/i)
+            .isVisible()
+        : prospectiveStatus === 'mature'
+          ? await prospectiveValidation
+              .getByText(/complete 365-day DOB New Building filing outcome window/i)
+              .isVisible()
+          : false;
+  prospectiveValidationReceipt = {
+    status: prospectiveStatus,
+    health: prospectiveHealth,
+    visible: await prospectiveValidation.isVisible(),
+    claim_boundary_visible: statusBoundaryVisible,
+  };
+  if (
+    !acceptedProspectiveStatuses.has(prospectiveStatus) ||
+    prospectiveHealth !== 'current' ||
+    prospectiveValidationReceipt.visible !== true ||
+    prospectiveValidationReceipt.claim_boundary_visible !== true
+  ) {
+    throw new Error(
+      `The live prospective-validation receipt was incomplete: ${JSON.stringify(prospectiveValidationReceipt)}.`,
+    );
+  }
+
   await page.getByLabel('Search parcels').fill('3058920038');
   const officialDossier = page.getByTestId('parcel-official-dossier');
   await officialDossier.waitFor({ timeout: 15_000 });
@@ -834,7 +897,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v14',
+  schema_version: 'citylens/production-authenticated-parcel-map@v15',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -854,6 +917,8 @@ const report = {
   official_dossier_verified: officialDossierVerified,
   dossier_readiness_verified: dossierReadinessVerified,
   historical_benchmark_receipt_verified: historicalBenchmarkReceiptVerified,
+  model_lineage_receipt_verified: modelLineageReceiptVerified,
+  prospective_validation_receipt: prospectiveValidationReceipt,
   thesis_composer_verified: thesisComposerVerified,
   thesis_composer_receipt_verified: thesisComposerReceiptVerified,
   thesis_composer_filters_verified: thesisComposerFiltersVerified,
