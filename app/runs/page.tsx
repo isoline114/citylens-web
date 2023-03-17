@@ -393,16 +393,39 @@ function StatusBadge({ status }: { status?: string }) {
 function RunsPageSkeleton() {
   return (
     <div className="flex flex-col gap-5" aria-busy="true" aria-label="Loading runs">
-      <div className="h-24 animate-pulse rounded-2xl bg-slate-100" />
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {Array.from({ length: 4 }, (_, index) => (
-          <div
-            key={index}
-            className="h-24 animate-pulse rounded-2xl border border-slate-200 bg-white"
-          />
-        ))}
-      </div>
-      <div className="h-72 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+      <ProductPageHeader
+        eyebrow="Processing workspace"
+        title="Runs"
+        icon={Database}
+        description="Track each imagery-to-evidence job from request through review."
+        receipt={
+          <div className="inline-flex items-center gap-2 text-xs font-medium text-slate-500">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-600" />
+            Checking workspace access
+          </div>
+        }
+      />
+      <section className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 p-6 text-white shadow-[0_24px_70px_-36px_rgba(15,23,42,0.65)] sm:p-8">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-sky-500/20 blur-3xl" />
+        <div className="relative grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(280px,0.65fr)] md:items-end">
+          <div>
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-sky-300">
+              <Database className="h-5 w-5" />
+            </span>
+            <h2 className="mt-5 text-2xl font-semibold tracking-tight">
+              Your processing history stays with your account.
+            </h2>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
+              Follow active jobs, inspect failures, and reopen completed
+              evidence packages from one private workspace.
+            </p>
+          </div>
+          <div className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-slate-200">
+            <Loader2 className="h-4 w-4 animate-spin text-sky-300" />
+            Resolving your session
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

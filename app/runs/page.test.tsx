@@ -78,6 +78,31 @@ describe('/runs (signed out)', () => {
   });
 });
 
+describe('/runs (auth resolving)', () => {
+  it('keeps the real product header visible while workspace access resolves', () => {
+    mocks.authState.status = 'loading';
+
+    render(<RunsPage />);
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: /^runs$/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Checking workspace access')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', {
+        level: 2,
+        name: /processing history stays with your account/i,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Resolving your session')).toBeInTheDocument();
+    expect(screen.getByLabelText('Loading runs')).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
+    expect(mocks.getRuns).not.toHaveBeenCalled();
+  });
+});
+
 describe('/runs (signed in, empty)', () => {
   beforeEach(() => {
     mocks.authState.status = 'authenticated';
