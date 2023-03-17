@@ -24,6 +24,7 @@ import {
 type Props = {
   bbl: string;
   feedGeneration: string | null;
+  onOpenAudit?: () => void;
 };
 
 type ReviewLoadState = 'loading' | 'ready' | 'error';
@@ -113,6 +114,12 @@ const REASONS: Record<
   ],
 };
 
+const SOURCE_AUDIT_REASONS = new Set<ParcelLeadReviewReason>([
+  'active_or_completed_project',
+  'data_quality_issue',
+  'source_conflict',
+]);
+
 function sameReview(
   review: ParcelLeadReview | null,
   verdict: ParcelLeadReviewVerdict | null,
@@ -130,6 +137,7 @@ function sameReview(
 export function ParcelLeadReviewCard({
   bbl,
   feedGeneration,
+  onOpenAudit,
 }: Props) {
   const [loadState, setLoadState] =
     useState<ReviewLoadState>('loading');
@@ -341,6 +349,22 @@ export function ParcelLeadReviewCard({
               {review ? 'Update' : 'Record'}
             </button>
           </div>
+          {review &&
+            onOpenAudit &&
+            review.reason_codes.some((code) =>
+              SOURCE_AUDIT_REASONS.has(code),
+            ) && (
+              <div className="mt-2 flex items-center justify-between gap-3 rounded-lg bg-sky-50 px-2.5 py-2 text-[10px] leading-4 text-sky-900 ring-1 ring-inset ring-sky-100">
+                <span>Check the cited current record before escalation.</span>
+                <button
+                  type="button"
+                  onClick={onOpenAudit}
+                  className="shrink-0 font-semibold text-sky-950 underline decoration-sky-300 underline-offset-2 hover:decoration-sky-700"
+                >
+                  Open source audit
+                </button>
+              </div>
+            )}
         </div>
       )}
     </section>

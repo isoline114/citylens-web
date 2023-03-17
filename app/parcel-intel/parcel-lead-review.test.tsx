@@ -51,6 +51,7 @@ beforeEach(() => {
 describe('ParcelLeadReviewCard', () => {
   it('records a controlled pass reason against the current feed', async () => {
     const user = userEvent.setup();
+    const onOpenAudit = vi.fn();
     mocks.getParcelLeadReview.mockResolvedValue({
       schema_version: 'citylens/parcel-lead-review-state@v1',
       current_feed_generation: GENERATION,
@@ -62,6 +63,7 @@ describe('ParcelLeadReviewCard', () => {
       <ParcelLeadReviewCard
         bbl={BBL}
         feedGeneration={GENERATION}
+        onOpenAudit={onOpenAudit}
       />,
     );
 
@@ -84,6 +86,10 @@ describe('ParcelLeadReviewCard', () => {
     expect(await screen.findByText('Review recorded')).toBeVisible();
     expect(screen.getByText('Recorded')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Update' })).toBeDisabled();
+    await user.click(
+      screen.getByRole('button', { name: 'Open source audit' }),
+    );
+    expect(onOpenAudit).toHaveBeenCalledOnce();
   });
 
   it('loads a prior review and enables only a real change', async () => {

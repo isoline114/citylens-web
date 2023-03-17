@@ -1895,6 +1895,7 @@ export function ParcelIntelPropertyPanel({
                 key={`${row.bbl}:${feedGeneration}`}
                 bbl={row.bbl}
                 feedGeneration={feedGeneration}
+                onOpenAudit={() => openDecisionAudit('decision_posture')}
               />
             )}
             {row.decision_audit?.readiness && (
