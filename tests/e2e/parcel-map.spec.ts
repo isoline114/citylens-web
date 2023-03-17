@@ -198,6 +198,9 @@ test('lets a first-session user watch the verified citywide screen', async ({
 }) => {
   const rows = authenticatedMapRows();
   const savedViews: Record<string, unknown>[] = [];
+  const feedGeneration =
+    '20260730T092749819158Z-daf06394d35b';
+  let leadReview: Record<string, unknown> | null = null;
   await page.addInitScript(() => {
     sessionStorage.setItem(
       'citylens_mock_auth_user',
@@ -213,7 +216,7 @@ test('lets a first-session user watch the verified citywide screen', async ({
       contentType: 'application/json',
       body: JSON.stringify({
         generated_at: '2026-07-30T01:00:00Z',
-        feed_generation: 'e2e-first-session-generation',
+        feed_generation: feedGeneration,
         rows,
         access_scope: 'authenticated_full',
         requested_top_per_borough: 1000,
@@ -223,6 +226,71 @@ test('lets a first-session user watch the verified citywide screen', async ({
       }),
     });
   });
+  await page.route('**/v1/parcel-intel/parcel/**', async (route) => {
+    const bbl = decodeURIComponent(
+      new URL(route.request().url()).pathname.split('/').pop() ?? '',
+    );
+    const selected = rows.find((row) => row.bbl === bbl) ?? rows[0];
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ...selected,
+        top_features: [],
+        redev_status: 'still_vacant',
+        property_facts_current: true,
+        property_facts_as_of: '2026-07-30',
+      }),
+    });
+  });
+  await page.route(
+    '**/v1/parcel-intel/lead-reviews/*',
+    async (route) => {
+      const bbl = new URL(route.request().url()).pathname.split('/').pop();
+      if (route.request().method() === 'PUT') {
+        const input = route.request().postDataJSON() as {
+          verdict: string;
+          reason_codes: string[];
+        };
+        leadReview = {
+          schema_version: 'citylens/parcel-lead-review@v1',
+          review_id: 'plr_0123456789abcdef0123456789abcdef',
+          bbl,
+          feed_generation: feedGeneration,
+          verdict: input.verdict,
+          reason_codes: input.reason_codes,
+          citywide_rank: 1,
+          acquisition_rank: 1,
+          priority_tier: 'highest',
+          opportunity_category: 'ground_up_candidate',
+          created_at: '2026-07-30T01:10:00Z',
+          updated_at: '2026-07-30T01:10:00Z',
+          revision: 1,
+        };
+        await route.fulfill({
+          contentType: 'application/json',
+          body: JSON.stringify(leadReview),
+        });
+        return;
+      }
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          schema_version: 'citylens/parcel-lead-review-state@v1',
+          current_feed_generation: feedGeneration,
+          review: leadReview,
+        }),
+      });
+    },
+  );
+  await page.route(
+    /\/v1\/parcel-intel\/workflow\/\d+$/,
+    async (route) => {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: 'null',
+      });
+    },
+  );
   await page.route('**/v1/parcel-intel/workflow/actions', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -300,4 +368,18 @@ test('lets a first-session user watch the verified citywide screen', async ({
   await expect(page.getByTestId('saved-view-count')).toHaveText('1');
   await page.getByRole('button', { name: 'Close saved views' }).click();
   await expect(page.getByTestId('activation-guide-empty')).toHaveCount(0);
+
+  await page.locator('[data-parcel-ranking-bbl]').first().click();
+  const leadReviewCard = page.getByTestId('parcel-lead-review');
+  await expect(leadReviewCard).toBeVisible();
+  await leadReviewCard.getByRole('button', { name: 'Pass' }).click();
+  await leadReviewCard
+    .getByRole('button', { name: 'Already active / completed' })
+    .click();
+  await leadReviewCard.getByRole('button', { name: 'Record' }).click();
+  await expect(leadReviewCard.getByText('Review recorded')).toBeVisible();
+  expect(leadReview).toMatchObject({
+    verdict: 'pass',
+    reason_codes: ['active_or_completed_project'],
+  });
 });

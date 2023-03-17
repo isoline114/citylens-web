@@ -197,6 +197,16 @@ The browser mints the API Bearer JWT through the same-origin
 `/api/auth/token` route using the authoritative HttpOnly Neon session cookie.
 The Neon client helper remains only a fallback: a cached visual session is not
 accepted as proof of data access.
+Browser sessions are origin-scoped. Signing in at `https://www.citylens.dev`
+does not sign in `http://localhost:3000`; use the local `/sign-in` route when
+testing the full 5,000-row authenticated inventory locally. A local page that
+still shows `Sign in` is correctly using the 125-row public preview.
+Authenticated ranked-parcel overviews also provide a private **Your lead
+call** control. A practitioner can mark the current generation `Pursue`,
+`Watch`, `Pass`, or `Unclear` with one controlled reason. The server binds the
+review to the immutable ranking generation and current rank snapshot; the
+review never changes rank or silently creates workflow state. This is selected
+practitioner relevance evidence, not model accuracy or a realized outcome.
 The selected-parcel panel also has a Decision Audit tab. It separates the
 historical next-year DOB filing signal from current acquisition gates,
 post-score diligence overlays, source dates, and user-entered workflow
@@ -417,6 +427,9 @@ This frontend aligns to the CityLens API contract served by `citylens-engine`:
   Bearer-authenticated, on-demand NYC DOF comparable-transaction screen with
   at most five explained tax-lot matches; private/no-store, independent of
   the lead score, and explicitly not an appraisal
+- `GET|PUT /v1/parcel-intel/lead-reviews/{bbl}` — Bearer-authenticated,
+  private/no-store practitioner relevance review for the current immutable
+  ranking generation; separate from rank, workflow, and outcome evidence
 - `GET  /v1/demo/featured`, `GET /v1/demo/runs/{run_id}` — public demo endpoints
 - `POST /v1/runs` — Bearer auth required (the engine narrowly validates the public
   request shape; sam2/aoi defaults are server-injected)

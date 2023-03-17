@@ -990,6 +990,52 @@ export type ParcelIntelMapResponse = {
   inventory_complete: boolean;
 };
 
+export type ParcelLeadReviewVerdict =
+  | 'pursue'
+  | 'watch'
+  | 'pass'
+  | 'unclear';
+
+export type ParcelLeadReviewReason =
+  | 'strong_capacity'
+  | 'strategic_location'
+  | 'ownership_opportunity'
+  | 'market_signal'
+  | 'needs_diligence'
+  | 'timing_uncertain'
+  | 'active_or_completed_project'
+  | 'insufficient_capacity'
+  | 'zoning_or_site_constraint'
+  | 'ownership_or_assembly_complexity'
+  | 'pricing_or_basis'
+  | 'data_quality_issue'
+  | 'not_development_site'
+  | 'source_conflict'
+  | 'missing_facts'
+  | 'other';
+
+export type ParcelLeadReview = {
+  schema_version: 'citylens/parcel-lead-review@v1';
+  review_id: string;
+  bbl: string;
+  feed_generation: string;
+  verdict: ParcelLeadReviewVerdict;
+  reason_codes: ParcelLeadReviewReason[];
+  citywide_rank: number | null;
+  acquisition_rank: number | null;
+  priority_tier: ParcelIntelRow['priority_tier'] | null;
+  opportunity_category: ParcelIntelRow['opportunity_category'] | null;
+  created_at: string;
+  updated_at: string;
+  revision: number;
+};
+
+export type ParcelLeadReviewState = {
+  schema_version: 'citylens/parcel-lead-review-state@v1';
+  current_feed_generation: string;
+  review: ParcelLeadReview | null;
+};
+
 export type ParcelScreeningStatus = {
   schema_version: 'citylens/parcel-screening-status@v1';
   bbl: string;
@@ -1740,6 +1786,36 @@ export async function getParcelIntelParcel(
     `/v1/parcel-intel/parcel/${encodeURIComponent(bbl)}`,
     undefined,
     { includeAuth: opts?.includeAuth ?? false },
+  );
+}
+
+export async function getParcelLeadReview(
+  bbl: string,
+): Promise<ParcelLeadReviewState> {
+  return requestJson<ParcelLeadReviewState>(
+    `/v1/parcel-intel/lead-reviews/${encodeURIComponent(bbl)}`,
+    { cache: 'no-store' },
+  );
+}
+
+export async function saveParcelLeadReview(
+  bbl: string,
+  input: {
+    expected_feed_generation: string;
+    verdict: ParcelLeadReviewVerdict;
+    reason_codes: ParcelLeadReviewReason[];
+  },
+): Promise<ParcelLeadReview> {
+  return requestJson<ParcelLeadReview>(
+    `/v1/parcel-intel/lead-reviews/${encodeURIComponent(bbl)}`,
+    {
+      method: 'PUT',
+      cache: 'no-store',
+      body: JSON.stringify({
+        schema_version: 'citylens/parcel-lead-review-request@v1',
+        ...input,
+      }),
+    },
   );
 }
 

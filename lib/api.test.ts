@@ -10,6 +10,7 @@ import {
   getFeaturedDemos,
   getParcelIntelMap,
   getParcelIntelParcel,
+  getParcelLeadReview,
   getParcelOfficialDossier,
   getParcelSalesComparables,
   getParcelScreeningStatus,
@@ -27,6 +28,7 @@ import {
   resolveParcelAddress,
   resolveApiUrl,
   revokeApiKey,
+  saveParcelLeadReview,
   saveParcelSearch,
   setAuthTokenGetter,
   snoozeParcelWorkflowReminder,
@@ -961,6 +963,52 @@ describe('parcel intelligence progressive reads', () => {
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(url).toContain('/v1/parcel-intel/parcel/3000010001');
     expect(new Headers(init.headers).get('Authorization')).toBe('Bearer tok-abc');
+  });
+
+  it('reads and records a generation-bound private lead review', async () => {
+    setAuthTokenGetter(async () => 'tok-abc');
+    const responseBody = {
+      schema_version: 'citylens/parcel-lead-review-state@v1',
+      current_feed_generation:
+        '20260730T092749819158Z-daf06394d35b',
+      review: null,
+    };
+    const mockFetch = stubFetch(responseBody);
+
+    await getParcelLeadReview('3058920038');
+
+    let [url, init] = mockFetch.mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toContain(
+      '/v1/parcel-intel/lead-reviews/3058920038',
+    );
+    expect(init.cache).toBe('no-store');
+    expect(new Headers(init.headers).get('Authorization')).toBe(
+      'Bearer tok-abc',
+    );
+
+    mockFetch.mockClear();
+    await saveParcelLeadReview('3058920038', {
+      expected_feed_generation:
+        '20260730T092749819158Z-daf06394d35b',
+      verdict: 'pass',
+      reason_codes: ['active_or_completed_project'],
+    });
+
+    [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain(
+      '/v1/parcel-intel/lead-reviews/3058920038',
+    );
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(String(init.body))).toEqual({
+      schema_version: 'citylens/parcel-lead-review-request@v1',
+      expected_feed_generation:
+        '20260730T092749819158Z-daf06394d35b',
+      verdict: 'pass',
+      reason_codes: ['active_or_completed_project'],
+    });
   });
 
   it('loads an exact screening receipt privately with the user token', async () => {

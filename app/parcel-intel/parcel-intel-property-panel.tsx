@@ -68,12 +68,14 @@ import {
   ParcelDecisionPeers,
   type ParcelDecisionPeer,
 } from './parcel-decision-peers';
+import { ParcelLeadReviewCard } from './parcel-lead-review';
 import { ParcelOfficialDossierPanel } from './parcel-official-dossier';
 
 type PanelTab = 'overview' | 'audit' | 'underwrite' | 'workflow';
 
 type Props = {
   row: ParcelIntelRow;
+  feedGeneration?: string | null;
   onClose: () => void;
   onViewOwnerPortfolio?: (ownerPortfolioId: string) => void;
   isCompared?: boolean;
@@ -1042,6 +1044,7 @@ function ParcelAcquisitionBrief({
 
 export function ParcelIntelPropertyPanel({
   row,
+  feedGeneration = null,
   onClose,
   onViewOwnerPortfolio,
   isCompared = false,
@@ -1887,6 +1890,13 @@ export function ParcelIntelPropertyPanel({
 
         {!officialDossierOpen && tab === 'overview' && (
           <div>
+            {auth.status === 'authenticated' && feedGeneration && (
+              <ParcelLeadReviewCard
+                key={`${row.bbl}:${feedGeneration}`}
+                bbl={row.bbl}
+                feedGeneration={feedGeneration}
+              />
+            )}
             {row.decision_audit?.readiness && (
               <ParcelAcquisitionBrief
                 row={row}

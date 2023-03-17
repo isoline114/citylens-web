@@ -78,6 +78,7 @@ let citywideExportReceipt = null;
 let mobileWorkspaceReceipt = null;
 let savedScreenReceipt = null;
 let runOperationsReceipt = null;
+let leadReviewContractReceipt = null;
 let sensitiveSurface = false;
 let passed = false;
 let failure = null;
@@ -527,6 +528,94 @@ try {
       `Unexpected citywide CSV receipt: ${JSON.stringify(citywideExportReceipt)}.`,
     );
   }
+
+  // Verify the private, generation-bound relevance-review surface without
+  // submitting synthetic practitioner feedback. A monitor must never pollute
+  // the product-quality evidence it is responsible for checking.
+  desktopCheckpoint = 'lead_review_contract';
+  const leadReviewResponsePromise = page.waitForResponse(
+    (response) => {
+      try {
+        return (
+          response.request().method() === 'GET' &&
+          /^\/v1\/parcel-intel\/lead-reviews\/[^/]+$/.test(
+            new URL(response.url()).pathname,
+          )
+        );
+      } catch {
+        return false;
+      }
+    },
+    { timeout: 20_000 },
+  );
+  await page.locator('[data-parcel-ranking-bbl]').first().click();
+  const leadReviewResponse = await leadReviewResponsePromise;
+  const leadReviewPayload = await leadReviewResponse.json().catch(() => null);
+  const leadReviewCard = page.getByTestId('parcel-lead-review');
+  await leadReviewCard.waitFor({ timeout: 20_000 });
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector('[data-testid="parcel-lead-review"]')
+        ?.getAttribute('data-state') === 'ready',
+    undefined,
+    { timeout: 20_000 },
+  );
+  const currentGeneration =
+    leadReviewPayload &&
+    typeof leadReviewPayload === 'object' &&
+    typeof leadReviewPayload.current_feed_generation === 'string'
+      ? leadReviewPayload.current_feed_generation
+      : null;
+  const existingReview =
+    leadReviewPayload &&
+    typeof leadReviewPayload === 'object' &&
+    leadReviewPayload.review &&
+    typeof leadReviewPayload.review === 'object'
+      ? leadReviewPayload.review
+      : null;
+  leadReviewContractReceipt = {
+    status: leadReviewResponse.status(),
+    schema:
+      leadReviewPayload && typeof leadReviewPayload === 'object'
+        ? leadReviewPayload.schema_version ?? null
+        : null,
+    generation_shape_valid:
+      typeof currentGeneration === 'string' &&
+      /^[0-9]{8}T[0-9]{12}Z-[0-9a-f]{12}$/.test(currentGeneration),
+    existing_review_shape_valid:
+      existingReview === null ||
+      (existingReview.schema_version ===
+        'citylens/parcel-lead-review@v1' &&
+        existingReview.feed_generation === currentGeneration),
+    card_state: await leadReviewCard.getAttribute('data-state'),
+    rank_boundary_visible: await leadReviewCard
+      .getByText(/never changes rank/i)
+      .isVisible(),
+    outcome_boundary_visible: await leadReviewCard
+      .getByText(/separate from pipeline outcomes/i)
+      .isVisible(),
+    mutation_requested: false,
+  };
+  if (
+    leadReviewContractReceipt.status !== 200 ||
+    leadReviewContractReceipt.schema !==
+      'citylens/parcel-lead-review-state@v1' ||
+    leadReviewContractReceipt.generation_shape_valid !== true ||
+    leadReviewContractReceipt.existing_review_shape_valid !== true ||
+    leadReviewContractReceipt.card_state !== 'ready' ||
+    leadReviewContractReceipt.rank_boundary_visible !== true ||
+    leadReviewContractReceipt.outcome_boundary_visible !== true
+  ) {
+    throw new Error(
+      `The generation-bound lead-review contract was incomplete: ${JSON.stringify(leadReviewContractReceipt)}.`,
+    );
+  }
+  await page
+    .getByRole('button', {
+      name: 'Close parcel panel and return to ranked parcels',
+    })
+    .click();
 
   const mobilePage = await context.newPage();
   mobilePage.on('console', (message) => {
@@ -1254,7 +1343,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v20',
+  schema_version: 'citylens/production-authenticated-parcel-map@v21',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -1276,6 +1365,7 @@ const report = {
   official_dossier_verified: officialDossierVerified,
   dossier_readiness_verified: dossierReadinessVerified,
   sales_comparables_verified: salesComparablesVerified,
+  lead_review_contract_receipt: leadReviewContractReceipt,
   historical_benchmark_receipt_verified: historicalBenchmarkReceiptVerified,
   model_lineage_receipt_verified: modelLineageReceiptVerified,
   prospective_validation_receipt: prospectiveValidationReceipt,

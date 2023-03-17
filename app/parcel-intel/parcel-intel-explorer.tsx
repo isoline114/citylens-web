@@ -2678,6 +2678,7 @@ export function ParcelIntelExplorer({
             <ParcelIntelPropertyPanel
               key={selectedDetail.bbl}
               row={selectedDetail}
+              feedGeneration={inventoryFeedGeneration}
               onClose={closeParcel}
               onViewOwnerPortfolio={focusOwnerPortfolio}
               isCompared={comparisonRows.some(
