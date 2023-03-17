@@ -11,6 +11,7 @@ import {
   getParcelIntelMap,
   getParcelIntelParcel,
   getParcelOfficialDossier,
+  getParcelSalesComparables,
   getParcelScreeningStatus,
   getParcelWorkflow,
   getParcelWorkflowActions,
@@ -992,6 +993,27 @@ describe('parcel intelligence progressive reads', () => {
 
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(url).toContain('/v1/parcel-intel/official-parcel/3058920038');
+    expect(new Headers(init.headers).get('Authorization')).toBe(
+      'Bearer tok-abc',
+    );
+    expect(init.cache).toBe('no-store');
+  });
+
+  it('loads official parcel sale context privately with the user token', async () => {
+    setAuthTokenGetter(async () => 'tok-abc');
+    const mockFetch = stubFetch({
+      schema_version: 'citylens/parcel-sales-comparables@v1',
+      status: 'available',
+      subject_bbl: '3058920038',
+      comparables: [],
+    });
+
+    await getParcelSalesComparables('3058920038');
+
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain(
+      '/v1/parcel-intel/official-parcel/3058920038/sales-comparables',
+    );
     expect(new Headers(init.headers).get('Authorization')).toBe(
       'Bearer tok-abc',
     );

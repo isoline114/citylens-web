@@ -413,6 +413,10 @@ This frontend aligns to the CityLens API contract served by `citylens-engine`:
 - `GET  /v1/parcel-intel/official-parcel/{bbl}` — Bearer-authenticated,
   rate-limited, source-dated official dossier for one current NYC PLUTO tax
   lot; private/no-store and independent of lead membership
+- `GET  /v1/parcel-intel/official-parcel/{bbl}/sales-comparables` —
+  Bearer-authenticated, on-demand NYC DOF comparable-transaction screen with
+  at most five explained tax-lot matches; private/no-store, independent of
+  the lead score, and explicitly not an appraisal
 - `GET  /v1/demo/featured`, `GET /v1/demo/runs/{run_id}` — public demo endpoints
 - `POST /v1/runs` — Bearer auth required (the engine narrowly validates the public
   request shape; sam2/aoi defaults are server-injected)

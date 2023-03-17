@@ -1120,6 +1120,55 @@ export type ParcelOfficialDossier = {
   interpretation: string;
 };
 
+export type ParcelComparableSale = {
+  bbl: string;
+  address: string;
+  sale_date: string;
+  sale_price: number;
+  distance_miles: number;
+  lot_area_sqft: number;
+  gross_area_sqft: number | null;
+  residential_units: number | null;
+  commercial_units: number | null;
+  total_units: number | null;
+  year_built: number | null;
+  building_class: string | null;
+  building_class_category: string | null;
+  price_per_land_sqft: number;
+  price_per_gross_sqft: number | null;
+  match_reasons: string[];
+};
+
+export type ParcelSalesComparables = {
+  schema_version: 'citylens/parcel-sales-comparables@v1';
+  status:
+    | 'available'
+    | 'insufficient_source_facts'
+    | 'insufficient_sales';
+  subject_bbl: string;
+  search_zip_code: string | null;
+  query_window_start: string;
+  source_candidate_count: number;
+  eligible_candidate_count: number;
+  source_limit_reached: boolean;
+  comparables: ParcelComparableSale[];
+  summary: {
+    comparable_count: number;
+    median_sale_price: number;
+    median_price_per_land_sqft: number | null;
+    median_price_per_gross_sqft: number | null;
+    minimum_sale_price: number;
+    maximum_sale_price: number;
+  } | null;
+  source_name: string;
+  source_dataset_id: 'w2pb-icbu';
+  source_url: string;
+  source_data_updated_at: string | null;
+  source_retrieved_at: string;
+  selection_method: string;
+  interpretation: string;
+};
+
 export type ParcelWorkflowStage =
   | 'new'
   | 'reviewing'
@@ -1724,6 +1773,15 @@ export async function getParcelOfficialDossier(
 ): Promise<ParcelOfficialDossier> {
   return requestJson<ParcelOfficialDossier>(
     `/v1/parcel-intel/official-parcel/${encodeURIComponent(bbl)}`,
+    { cache: 'no-store' },
+  );
+}
+
+export async function getParcelSalesComparables(
+  bbl: string,
+): Promise<ParcelSalesComparables> {
+  return requestJson<ParcelSalesComparables>(
+    `/v1/parcel-intel/official-parcel/${encodeURIComponent(bbl)}/sales-comparables`,
     { cache: 'no-store' },
   );
 }

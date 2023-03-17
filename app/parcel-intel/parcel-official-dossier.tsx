@@ -28,6 +28,7 @@ import {
   buildDossierEvidenceReadiness,
   type DossierEvidenceStatus,
 } from './parcel-official-dossier-readiness';
+import { ParcelSalesComparablesPanel } from './parcel-sales-comparables';
 
 type State =
   | { status: 'loading' }
@@ -404,6 +405,8 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
             </aside>
           </div>
         </div>
+
+        <ParcelSalesComparablesPanel bbl={bbl} compact={compact} />
 
         <div
           className={
