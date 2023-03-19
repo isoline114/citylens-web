@@ -372,6 +372,35 @@ try {
   const savedViewDeleteButtons = savedViewsPanel.locator(
     'button[aria-label^="Delete saved view "]',
   );
+  const staleSmokeDeleteButtons = savedViewsPanel.locator(
+    'button[aria-label^="Delete saved view Production smoke "]',
+  );
+  let staleSmokeViewsRemoved = 0;
+  while ((await staleSmokeDeleteButtons.count()) > 0) {
+    if (staleSmokeViewsRemoved >= 20) {
+      throw new Error(
+        'Refusing to remove more than 20 stale production-smoke saved views.',
+      );
+    }
+    const staleDeleteButton = staleSmokeDeleteButtons.first();
+    const staleDeleteResponsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'DELETE' &&
+        /\/v1\/parcel-intel\/saved-searches\/[^/]+$/.test(
+          new URL(response.url()).pathname,
+        ),
+      { timeout: 20_000 },
+    );
+    await staleDeleteButton.click({ timeout: 20_000 });
+    const staleDeleteResponse = await staleDeleteResponsePromise;
+    if (!staleDeleteResponse.ok() && staleDeleteResponse.status() !== 404) {
+      throw new Error(
+        `Stale saved-screen cleanup returned HTTP ${staleDeleteResponse.status()}.`,
+      );
+    }
+    await staleDeleteButton.waitFor({ state: 'detached', timeout: 20_000 });
+    staleSmokeViewsRemoved += 1;
+  }
   const initialSavedViewCount = await savedViewDeleteButtons.count();
   const closeButton = savedViewsPanel.getByRole('button', {
     name: 'Close saved views',
@@ -467,6 +496,7 @@ try {
     await savedViewsPanel.waitFor({ state: 'detached', timeout: 20_000 });
   }
   savedScreenReceipt = {
+    stale_smoke_views_removed: staleSmokeViewsRemoved,
     initial_count: initialSavedViewCount,
     created_count: createdSavedViewCount,
     header_count_after_create: headerCountAfterCreate,
