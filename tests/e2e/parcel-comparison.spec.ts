@@ -263,6 +263,18 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   await expect(page.getByTestId('parcel-decision-peers')).toContainText(
     'not valuation or sale comps',
   );
+  const diligenceDetails = page.getByTestId('parcel-diligence-details');
+  const rankingRationale = page.getByTestId('parcel-ranking-rationale');
+  await expect(diligenceDetails).not.toHaveAttribute('open', '');
+  await expect(
+    diligenceDetails.locator('summary').getByText('Assemblage'),
+  ).toBeVisible();
+  await expect(rankingRationale).not.toHaveAttribute('open', '');
+  await diligenceDetails.locator('summary').click();
+  await expect(diligenceDetails).toHaveAttribute('open', '');
+  await expect(diligenceDetails.getByText('Hide details')).toBeVisible();
+  await diligenceDetails.locator('summary').click();
+  await expect(diligenceDetails).not.toHaveAttribute('open', '');
   await expectNoWcagViolations(page, 'Parcel evidence workspace');
   const comparePeer = page.getByRole('button', {
     name: 'Compare 1:1 with 41-20 QUEENS PLAZA',

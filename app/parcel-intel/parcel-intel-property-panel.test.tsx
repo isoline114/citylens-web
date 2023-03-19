@@ -18,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   clearParcelWorkflowEvidenceReview: vi.fn(),
   submitParcelWorkflowEvidenceIssue: vi.fn(),
   withdrawParcelWorkflowEvidenceIssue: vi.fn(),
+  getParcelLeadReview: vi.fn(),
+  saveParcelLeadReview: vi.fn(),
 }));
 
 vi.mock('@/lib/auth', () => ({
@@ -43,6 +45,8 @@ vi.mock('@/lib/api', async (importOriginal) => {
       mocks.submitParcelWorkflowEvidenceIssue,
     withdrawParcelWorkflowEvidenceIssue:
       mocks.withdrawParcelWorkflowEvidenceIssue,
+    getParcelLeadReview: mocks.getParcelLeadReview,
+    saveParcelLeadReview: mocks.saveParcelLeadReview,
   };
 });
 
@@ -55,6 +59,7 @@ vi.mock('./parcel-official-dossier', () => ({
 import {
   buildParcelDecisionBrief,
   externalParcelLinks,
+  parcelDiligenceHighlights,
   ParcelIntelPropertyPanel,
 } from './parcel-intel-property-panel';
 
@@ -178,9 +183,134 @@ beforeEach(() => {
   mocks.clearParcelWorkflowEvidenceReview.mockReset();
   mocks.submitParcelWorkflowEvidenceIssue.mockReset();
   mocks.withdrawParcelWorkflowEvidenceIssue.mockReset();
+  mocks.getParcelLeadReview.mockReset();
+  mocks.getParcelLeadReview.mockResolvedValue({
+    schema_version: 'citylens/parcel-lead-review-state@v1',
+    current_feed_generation: '20260730T070000000000Z-123456789abc',
+    review: null,
+  });
+  mocks.saveParcelLeadReview.mockReset();
 });
 
 describe('ParcelIntelPropertyPanel', () => {
+  it('summarizes only diligence evidence that can be opened', () => {
+    expect(parcelDiligenceHighlights(parcel)).toEqual([]);
+    expect(
+      parcelDiligenceHighlights({
+        ...parcel,
+        owner_portfolio_id: 'portfolio-123',
+        owner_portfolio_lot_count: 4,
+        tax_lien_sale_year: 2025,
+        dob_safety_active_count: 1,
+        firm07_floodplain: true,
+        pfirm15_floodplain: false,
+        environmental_review_required: true,
+        mandatory_inclusionary_housing: true,
+        nearest_transit_station_distance_m: 420,
+        assemblage_lot_count: 3,
+      }),
+    ).toEqual([
+      'Owner portfolio',
+      'Lien history',
+      'Open violations',
+      'Floodplain',
+      'Environmental',
+      'MIH',
+      'Transit ≤800 m',
+      'Assemblage',
+    ]);
+
+    expect(
+      parcelDiligenceHighlights({
+        ...parcel,
+        owner_portfolio_lot_count: 4,
+        firm07_floodplain: true,
+        pfirm15_floodplain: null,
+      }),
+    ).toEqual([]);
+  });
+
+  it('keeps secondary diligence and ranking rationale concise until requested', () => {
+    render(
+      <ParcelIntelPropertyPanel
+        row={{
+          ...parcel,
+          owner_portfolio_id: 'portfolio-123',
+          owner_portfolio_lot_count: 4,
+          assemblage_lot_count: 3,
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const diligence = screen.getByTestId('parcel-diligence-details');
+    const rationale = screen.getByTestId('parcel-ranking-rationale');
+    expect(diligence).not.toHaveAttribute('open');
+    expect(rationale).not.toHaveAttribute('open');
+    expect(diligence).toHaveTextContent('Owner portfolio');
+    expect(diligence).toHaveTextContent('Assemblage');
+
+    fireEvent.click(
+      screen.getByText('Diligence & site context').closest('summary')!,
+    );
+    expect(diligence).toHaveAttribute('open');
+    expect(diligence).toHaveTextContent('Hide details');
+
+    fireEvent.click(
+      screen.getByText('Why it surfaced').closest('summary')!,
+    );
+    expect(rationale).toHaveAttribute('open');
+  });
+
+  it('puts the verified decision posture before the private lead call', async () => {
+    mocks.authStatus = 'authenticated';
+    render(
+      <ParcelIntelPropertyPanel
+        row={{
+          ...parcel,
+          model_rank: 28,
+          decision_audit: {
+            schema_version: 'citylens/parcel-decision-audit@v1',
+            overall_status: 'screened',
+            overall_label: 'Eligible lead after current gates',
+            readiness: {
+              status: 'initial_review_ready',
+              label: 'Ready for an initial acquisition review',
+              recommended_action: 'Verify official records before outreach.',
+              blockers: [],
+              review_items: [],
+              cleared_items: ['Current acquisition gate passed.'],
+              disclaimer: 'Not a purchase recommendation.',
+            },
+            validation: {
+              target: 'dob_nb_job_filing',
+              evaluation_scope: 'Historical cohort only',
+              precision_at_100: 0.34,
+              precision_at_1000: 0.104,
+              base_rate: 0.0012,
+              prospective_validated: false,
+              disclaimer: 'No parcel probability.',
+            },
+            checks: [],
+            limitations: [],
+          },
+        }}
+        feedGeneration="20260730T070000000000Z-123456789abc"
+        onClose={vi.fn()}
+      />,
+    );
+
+    const decisionPosture = screen.getByTestId('parcel-decision-posture');
+    const leadReview = await screen.findByTestId('parcel-lead-review');
+    expect(
+      decisionPosture.compareDocumentPosition(leadReview) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    await waitFor(() =>
+      expect(leadReview).toHaveAttribute('data-state', 'ready'),
+    );
+  });
+
   it('keeps the parcel workspace modes in an accessible sticky navigator', () => {
     render(<ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />);
 

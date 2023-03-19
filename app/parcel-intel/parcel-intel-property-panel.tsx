@@ -10,6 +10,7 @@ import {
   BriefcaseBusiness,
   Building2,
   CheckCircle2,
+  ChevronDown,
   CircleAlert,
   ClipboardCheck,
   Clock3,
@@ -260,6 +261,46 @@ const READINESS_STYLES: Record<
 
 function pluralize(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
+}
+
+export function parcelDiligenceHighlights(row: ParcelIntelRow): string[] {
+  const highlights: string[] = [];
+  if (
+    row.owner_portfolio_id &&
+    (row.owner_portfolio_lot_count ?? 0) >= 2
+  ) {
+    highlights.push('Owner portfolio');
+  }
+  if (row.tax_lien_sale_year) highlights.push('Lien history');
+  if (
+    (row.dob_safety_active_count ?? 0) +
+      (row.ecb_active_count ?? 0) +
+      (row.hpd_open_count ?? 0) >
+    0
+  ) {
+    highlights.push('Open violations');
+  }
+  if (
+    typeof row.firm07_floodplain === 'boolean' &&
+    typeof row.pfirm15_floodplain === 'boolean' &&
+    (row.firm07_floodplain || row.pfirm15_floodplain)
+  ) {
+    highlights.push('Floodplain');
+  }
+  if (row.environmental_review_required) {
+    highlights.push('Environmental');
+  }
+  if (row.mandatory_inclusionary_housing) highlights.push('MIH');
+  if (
+    typeof row.nearest_transit_station_distance_m === 'number' &&
+    row.nearest_transit_station_distance_m <= 800
+  ) {
+    highlights.push('Transit ≤800 m');
+  }
+  if ((row.assemblage_lot_count ?? 0) >= 2) {
+    highlights.push('Assemblage');
+  }
+  return highlights;
 }
 
 function briefSource(
@@ -1107,6 +1148,7 @@ export function ParcelIntelPropertyPanel({
       : row.environmental_designation_kind === 'e_designation'
         ? 'E-designation'
         : 'environmental designation';
+  const diligenceHighlights = parcelDiligenceHighlights(row);
 
   const openDecisionAudit = (
     source: 'decision_posture' | 'audit_tab',
@@ -1890,14 +1932,6 @@ export function ParcelIntelPropertyPanel({
 
         {!officialDossierOpen && tab === 'overview' && (
           <div>
-            {auth.status === 'authenticated' && feedGeneration && (
-              <ParcelLeadReviewCard
-                key={`${row.bbl}:${feedGeneration}`}
-                bbl={row.bbl}
-                feedGeneration={feedGeneration}
-                onOpenAudit={() => openDecisionAudit('decision_posture')}
-              />
-            )}
             {row.decision_audit?.readiness && (
               <ParcelAcquisitionBrief
                 row={row}
@@ -2014,6 +2048,48 @@ export function ParcelIntelPropertyPanel({
               />
             )}
 
+            {auth.status === 'authenticated' && feedGeneration && (
+              <ParcelLeadReviewCard
+                key={`${row.bbl}:${feedGeneration}`}
+                bbl={row.bbl}
+                feedGeneration={feedGeneration}
+                onOpenAudit={() => openDecisionAudit('decision_posture')}
+              />
+            )}
+
+            <details
+              data-testid="parcel-diligence-details"
+              className="group mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white"
+            >
+              <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-3 py-3 marker:content-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500">
+                <span className="min-w-0">
+                  <span className="block text-xs font-semibold text-slate-950">
+                    Diligence &amp; site context
+                  </span>
+                  <span className="mt-1 flex flex-wrap gap-1.5">
+                    {diligenceHighlights.length > 0 ? (
+                      diligenceHighlights.map((highlight) => (
+                        <span
+                          key={highlight}
+                          className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700"
+                        >
+                          {highlight}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[11px] leading-4 text-slate-500">
+                        Official parcel screens available
+                      </span>
+                    )}
+                  </span>
+                </span>
+                <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-sky-700">
+                  <span className="group-open:hidden">Review details</span>
+                  <span className="hidden group-open:inline">Hide details</span>
+                  <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+                </span>
+              </summary>
+              <div className="border-t border-slate-200 px-3 pb-3">
             {row.owner_portfolio_id &&
               (row.owner_portfolio_lot_count ?? 0) >= 2 && (
                 <section className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50 p-3">
@@ -2625,6 +2701,8 @@ export function ParcelIntelPropertyPanel({
                 </p>
               </section>
             )}
+              </div>
+            </details>
 
             <div className="mt-3 flex flex-wrap gap-1.5" aria-label="External parcel records">
               {links.map((link) => (
@@ -2643,11 +2721,20 @@ export function ParcelIntelPropertyPanel({
 
             <ParcelBriefActions row={row} />
 
-            <section className="mt-4">
-              <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                Why it surfaced
-              </h4>
-              <div className="mt-2 space-y-2">
+            <details
+              data-testid="parcel-ranking-rationale"
+              className="group mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 marker:content-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500">
+                <span className="text-xs font-semibold text-slate-950">
+                  Why it surfaced
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500">
+                  {pluralize(reasons.length, 'signal')}
+                  <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+                </span>
+              </summary>
+              <div className="space-y-2 border-t border-slate-200 p-3">
                 {reasons.length > 0 ? (
                   reasons.map((reason) => (
                     <div
@@ -2675,7 +2762,7 @@ export function ParcelIntelPropertyPanel({
                   </p>
                 )}
               </div>
-            </section>
+            </details>
 
             {(row.top_features ?? []).length > 0 && (
               <details className="mt-4 rounded-xl border border-slate-200 bg-white p-3">

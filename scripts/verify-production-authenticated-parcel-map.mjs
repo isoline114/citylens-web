@@ -80,6 +80,7 @@ let savedScreenReceipt = null;
 let runOperationsReceipt = null;
 let leadReviewWorkspaceReceipt = null;
 let leadReviewContractReceipt = null;
+let decisionFirstPanelReceipt = null;
 let sensitiveSurface = false;
 let passed = false;
 let failure = null;
@@ -738,6 +739,48 @@ try {
   ) {
     throw new Error(
       `The generation-bound lead-review contract was incomplete: ${JSON.stringify(leadReviewContractReceipt)}.`,
+    );
+  }
+  const decisionPosture = page.getByTestId('parcel-decision-posture');
+  const diligenceDetails = page.getByTestId('parcel-diligence-details');
+  const rankingRationale = page.getByTestId('parcel-ranking-rationale');
+  const decisionBeforeLeadReview = await page.evaluate(() => {
+    const decision = document.querySelector(
+      '[data-testid="parcel-decision-posture"]',
+    );
+    const review = document.querySelector(
+      '[data-testid="parcel-lead-review"]',
+    );
+    return Boolean(
+      decision &&
+        review &&
+        (decision.compareDocumentPosition(review) &
+          Node.DOCUMENT_POSITION_FOLLOWING) !==
+          0,
+    );
+  });
+  decisionFirstPanelReceipt = {
+    decision_posture_visible: await decisionPosture.isVisible(),
+    decision_before_lead_review: decisionBeforeLeadReview,
+    diligence_summary_visible: await diligenceDetails
+      .locator('summary')
+      .isVisible(),
+    diligence_collapsed: !(await diligenceDetails.evaluate(
+      (element) => element.open,
+    )),
+    ranking_rationale_collapsed: !(await rankingRationale.evaluate(
+      (element) => element.open,
+    )),
+  };
+  if (
+    decisionFirstPanelReceipt.decision_posture_visible !== true ||
+    decisionFirstPanelReceipt.decision_before_lead_review !== true ||
+    decisionFirstPanelReceipt.diligence_summary_visible !== true ||
+    decisionFirstPanelReceipt.diligence_collapsed !== true ||
+    decisionFirstPanelReceipt.ranking_rationale_collapsed !== true
+  ) {
+    throw new Error(
+      `The decision-first parcel panel receipt was incomplete: ${JSON.stringify(decisionFirstPanelReceipt)}.`,
     );
   }
   await page
@@ -1472,7 +1515,7 @@ try {
 }
 
 const report = {
-  schema_version: 'citylens/production-authenticated-parcel-map@v22',
+  schema_version: 'citylens/production-authenticated-parcel-map@v23',
   verified_at: new Date().toISOString(),
   web_base: webBase,
   expected_count: expectedCount,
@@ -1496,6 +1539,7 @@ const report = {
   sales_comparables_verified: salesComparablesVerified,
   lead_review_workspace_receipt: leadReviewWorkspaceReceipt,
   lead_review_contract_receipt: leadReviewContractReceipt,
+  decision_first_panel_receipt: decisionFirstPanelReceipt,
   historical_benchmark_receipt_verified: historicalBenchmarkReceiptVerified,
   model_lineage_receipt_verified: modelLineageReceiptVerified,
   prospective_validation_receipt: prospectiveValidationReceipt,

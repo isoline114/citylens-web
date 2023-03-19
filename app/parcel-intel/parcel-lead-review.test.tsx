@@ -67,10 +67,9 @@ describe('ParcelLeadReviewCard', () => {
       />,
     );
 
-    expect(
-      await screen.findByText('Private · tied to this ranking · never changes rank'),
-    ).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Pass' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Pass' }),
+    );
     await user.click(
       screen.getByRole('button', {
         name: 'Already active / completed',

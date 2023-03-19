@@ -8,6 +8,14 @@ vi.mock('@/components/PreviewImage', () => ({
   ),
 }));
 
+vi.mock('@/components/GeojsonMap', () => ({
+  GeojsonMap: () => <div data-testid="geojson-map-stub" />,
+}));
+
+vi.mock('@/components/MeshViewer', () => ({
+  MeshViewer: () => <div data-testid="mesh-viewer-stub" />,
+}));
+
 import { ArtifactsPanel } from '@/components/ArtifactsPanel';
 
 describe('ArtifactsPanel', () => {
@@ -51,10 +59,10 @@ describe('ArtifactsPanel', () => {
       'aria-selected',
       'true',
     );
-    expect(screen.getByText('Loading change.geojson viewer…')).toBeInTheDocument();
+    expect(await screen.findByTestId('geojson-map-stub')).toBeInTheDocument();
 
     await user.click(screen.getByRole('tab', { name: /3D massing:/ }));
-    expect(screen.getByText('Loading mesh viewer…')).toBeInTheDocument();
+    expect(await screen.findByTestId('mesh-viewer-stub')).toBeInTheDocument();
   });
 
   it('renders summary QA and performance fields after loading', async () => {
