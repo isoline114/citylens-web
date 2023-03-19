@@ -555,6 +555,13 @@ It then performs a full document reload and requires a second complete
 5,000-row receipt from the returning authenticated session. It
 separately records successful API-credential minting, so a stale session
 cannot pass by rendering the 125-row public preview. It also
+creates and deletes one private saved screen, reconciles the toolbar count,
+and restores the exact starting state. Before measuring, the dedicated smoke
+account removes only stale views bearing its own `Production smoke ` prefix,
+with a hard cap of 20; ordinary user-named views are preserved. The receipt
+records initial focus before cleanup changes focus, so the dialog's
+accessibility contract and cleanup behavior are measured independently. It
+also
 verifies the auditable historical benchmark receipt and its limitations, the
 live Ovington exact-BBL dossier, source-grounded evidence readiness,
 official-address resolution, current screening receipt, and the governed
