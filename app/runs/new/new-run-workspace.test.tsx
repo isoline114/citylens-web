@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -25,22 +25,27 @@ vi.mock('@/components/RunForm', () => ({
   RunForm: ({
     showFeaturedDemos,
     submitLabel,
+    initialAddress,
   }: {
     showFeaturedDemos?: boolean;
     submitLabel?: string;
+    initialAddress?: string;
   }) => (
     <div
       data-testid="run-form-stub"
       data-show-featured={String(showFeaturedDemos)}
       data-submit-label={submitLabel}
+      data-initial-address={initialAddress ?? ''}
     />
   ),
 }));
 
 import { NewRunWorkspace } from './new-run-workspace';
+import { consumeRunPrefill, queueRunPrefill } from '@/lib/run-prefill';
 
 beforeEach(() => {
   mocks.authStatus = 'unauthenticated';
+  window.sessionStorage.clear();
 });
 
 describe('NewRunWorkspace', () => {
@@ -73,6 +78,21 @@ describe('NewRunWorkspace', () => {
     expect(screen.queryByTestId('run-form-stub')).not.toBeInTheDocument();
   });
 
+  it('preserves a pending parcel handoff while the user is signed out', () => {
+    queueRunPrefill({
+      address: '224 Clarkson Avenue',
+      bbl: '3050660023',
+    });
+
+    render(<NewRunWorkspace />);
+
+    expect(screen.getByTestId('new-run-access-gate')).toBeInTheDocument();
+    expect(consumeRunPrefill()).toMatchObject({
+      address: '224 Clarkson Avenue',
+      bbl: '3050660023',
+    });
+  });
+
   it('renders the focused account processing request', () => {
     mocks.authStatus = 'authenticated';
     render(<NewRunWorkspace />);
@@ -96,5 +116,26 @@ describe('NewRunWorkspace', () => {
       'href',
       '/runs',
     );
+  });
+
+  it('receives a parcel handoff without exposing it in the route', async () => {
+    mocks.authStatus = 'authenticated';
+    queueRunPrefill({
+      address: '224 Clarkson Avenue',
+      bbl: '3050660023',
+    });
+
+    render(<NewRunWorkspace />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId('run-form-stub')).toHaveAttribute(
+        'data-initial-address',
+        '224 Clarkson Avenue',
+      ),
+    );
+    const receipt = screen.getByTestId('parcel-run-prefill-receipt');
+    expect(receipt).toHaveTextContent('BBL 3050660023');
+    expect(receipt).toHaveTextContent('224 Clarkson Avenue');
+    expect(window.location.search).toBe('');
   });
 });

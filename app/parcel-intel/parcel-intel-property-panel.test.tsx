@@ -20,6 +20,21 @@ const mocks = vi.hoisted(() => ({
   withdrawParcelWorkflowEvidenceIssue: vi.fn(),
   getParcelLeadReview: vi.fn(),
   saveParcelLeadReview: vi.fn(),
+  push: vi.fn(),
+  queueRunPrefill: vi.fn(),
+  trackEvent: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mocks.push }),
+}));
+
+vi.mock('@/lib/analytics', () => ({
+  trackEvent: mocks.trackEvent,
+}));
+
+vi.mock('@/lib/run-prefill', () => ({
+  queueRunPrefill: mocks.queueRunPrefill,
 }));
 
 vi.mock('@/lib/auth', () => ({
@@ -190,6 +205,10 @@ beforeEach(() => {
     review: null,
   });
   mocks.saveParcelLeadReview.mockReset();
+  mocks.push.mockReset();
+  mocks.queueRunPrefill.mockReset();
+  mocks.queueRunPrefill.mockReturnValue(true);
+  mocks.trackEvent.mockReset();
 });
 
 describe('ParcelIntelPropertyPanel', () => {
@@ -415,6 +434,62 @@ describe('ParcelIntelPropertyPanel', () => {
 
     expect(screen.getByText('Unnumbered tax lot')).toBeInTheDocument();
     expect(screen.queryByText('PAD · BBL matched')).not.toBeInTheDocument();
+  });
+
+  it('carries an authenticated numbered parcel into site-evidence processing', () => {
+    mocks.authStatus = 'authenticated';
+    render(<ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />);
+
+    fireEvent.click(screen.getByTestId('parcel-evidence-handoff'));
+
+    expect(mocks.queueRunPrefill).toHaveBeenCalledWith({
+      address: '224 Clarkson Avenue',
+      bbl: '3050660023',
+    });
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      'parcel_evidence_handoff_opened',
+      { prefilled: true },
+    );
+    expect(mocks.push).toHaveBeenCalledWith('/runs/new');
+    expect(JSON.stringify(mocks.trackEvent.mock.calls)).not.toMatch(
+      /224 Clarkson|3050660023/,
+    );
+  });
+
+  it('still opens the run workspace when browser storage is unavailable', () => {
+    mocks.authStatus = 'authenticated';
+    mocks.queueRunPrefill.mockReturnValue(false);
+    render(<ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />);
+
+    fireEvent.click(screen.getByTestId('parcel-evidence-handoff'));
+
+    expect(mocks.trackEvent).toHaveBeenCalledWith(
+      'parcel_evidence_handoff_opened',
+      { prefilled: false },
+    );
+    expect(mocks.push).toHaveBeenCalledWith('/runs/new');
+  });
+
+  it('keeps public evidence discoverable and blocks unnumbered processing', () => {
+    const { rerender } = render(
+      <ParcelIntelPropertyPanel row={parcel} onClose={vi.fn()} />,
+    );
+    expect(screen.getByTestId('parcel-public-evidence-link')).toHaveAttribute(
+      'href',
+      '/runs#public-evidence',
+    );
+
+    mocks.authStatus = 'authenticated';
+    rerender(
+      <ParcelIntelPropertyPanel
+        row={{ ...parcel, address: 'Taylor Street' }}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId('parcel-evidence-handoff')).toBeDisabled();
+    fireEvent.click(screen.getByTestId('parcel-evidence-handoff'));
+    expect(mocks.queueRunPrefill).not.toHaveBeenCalled();
+    expect(mocks.push).not.toHaveBeenCalled();
   });
 
   it('shows underwriting in place and gates workflow actions when signed out', () => {

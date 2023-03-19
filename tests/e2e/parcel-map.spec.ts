@@ -410,4 +410,16 @@ test('lets a first-session user watch the verified citywide screen', async ({
     verdict: 'pass',
     reason_codes: ['active_or_completed_project'],
   });
+
+  const evidenceHandoff = page.getByTestId('parcel-evidence-handoff');
+  await expect(evidenceHandoff).toBeVisible();
+  await evidenceHandoff.click();
+  await expect(page).toHaveURL(/\/runs\/new$/);
+  await expect(page.getByTestId('parcel-run-prefill-receipt')).toContainText(
+    'BBL 1000000001',
+  );
+  await expect(page.getByTestId('run-address-input')).toHaveValue(
+    '1 manhattan test avenue',
+  );
+  expect(new URL(page.url()).search).toBe('');
 });

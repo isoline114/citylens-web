@@ -211,6 +211,12 @@ export default function DocsPage() {
               response is valid <code>public_preview</code>, not a truncated
               full inventory.
             </Callout>
+            <Callout tone="info" title="Continue a qualified parcel into site evidence">
+              In the signed-in dashboard, <strong>Build site evidence</strong>{' '}
+              carries a numbered selected parcel into a new imagery run. The
+              address is editable before submission and travels in a one-time,
+              tab-scoped session record—not in the URL or analytics.
+            </Callout>
             <div className="grid gap-3 md:grid-cols-2">
               <ContractRoute
                 method="GET"

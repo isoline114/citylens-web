@@ -40,6 +40,8 @@ export type RunFormProps = {
    *  workspace to focus only on a new processing request. */
   showFeaturedDemos?: boolean;
   submitLabel?: string;
+  /** Optional session-scoped address carried from parcel qualification. */
+  initialAddress?: string;
 };
 
 const OUTPUT_OPTIONS = [
@@ -64,6 +66,7 @@ export function RunForm({
   initialFeatured,
   showFeaturedDemos = true,
   submitLabel = 'Create run',
+  initialAddress,
 }: RunFormProps = {}) {
   const router = useRouter();
   const auth = useAuth();
@@ -86,6 +89,14 @@ export function RunForm({
   const [runOptions, setRunOptions] = useState<RunOptions | null>(null);
 
   const signedIn = auth.status === 'authenticated';
+
+  useEffect(() => {
+    const address = initialAddress?.trim();
+    if (!address) return;
+    setForm((current) =>
+      current.address.trim() ? current : { ...current, address },
+    );
+  }, [initialAddress]);
 
   useEffect(() => {
     let alive = true;
@@ -283,6 +294,7 @@ export function RunForm({
         <label className="flex flex-col gap-1 md:col-span-2">
           <span className="text-sm font-medium">Address</span>
           <input
+            data-testid="run-address-input"
             className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
             value={form.address}
             onChange={(e) => setField('address', e.target.value)}

@@ -11,13 +11,16 @@ import {
   ImageIcon,
   LogIn,
   Map,
+  MapPinned,
   Sparkles,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 import { ProductPageHeader } from '@/components/ProductPageHeader';
 import { RunForm } from '@/components/RunForm';
 import { useAuth } from '@/lib/auth';
+import { consumeRunPrefill, type RunPrefill } from '@/lib/run-prefill';
 
 const EVIDENCE_SURFACES: {
   icon: LucideIcon;
@@ -36,6 +39,13 @@ const EVIDENCE_SURFACES: {
 
 export function NewRunWorkspace() {
   const auth = useAuth();
+  const [prefill, setPrefill] = useState<RunPrefill | null>(null);
+
+  useEffect(() => {
+    if (auth.status === 'authenticated') {
+      setPrefill(consumeRunPrefill());
+    }
+  }, [auth.status]);
 
   if (auth.status === 'loading') {
     return <NewRunSkeleton />;
@@ -147,10 +157,32 @@ export function NewRunWorkspace() {
               <p className="mt-1 text-sm text-slate-600">
                 Enter the site, choose the review outputs, and start processing.
               </p>
+              {prefill && (
+                <div
+                  data-testid="parcel-run-prefill-receipt"
+                  className="mt-4 flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-3.5 py-3 text-sky-950"
+                >
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-sky-700 ring-1 ring-inset ring-sky-200">
+                    <MapPinned className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold uppercase tracking-[0.12em] text-sky-800">
+                      From parcel intelligence · BBL {prefill.bbl}
+                    </span>
+                    <span className="mt-0.5 block text-sm font-medium">
+                      {prefill.address}
+                    </span>
+                    <span className="mt-0.5 block text-xs leading-5 text-sky-800">
+                      Address prefilled for processing; verify it before starting.
+                    </span>
+                  </span>
+                </div>
+              )}
             </div>
             <RunForm
               showFeaturedDemos={false}
               submitLabel="Start processing"
+              initialAddress={prefill?.address}
             />
           </section>
 

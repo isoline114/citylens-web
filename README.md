@@ -29,6 +29,12 @@ The selected-parcel header exposes address identity honestly: numbered NYC PAD
 addresses are labeled as BBL-matched enrichment, while street-only records are
 marked as unnumbered tax lots. Address provenance never implies a rank or
 eligibility change.
+For signed-in operators, **Build site evidence** carries a numbered selected
+parcel into `/runs/new` and prefills its address for imagery, change, 3D, and
+QA processing. The handoff is tab-scoped, expires after 30 minutes, is consumed
+once, and never places the address or BBL in a URL or analytics payload.
+Unnumbered lots remain disabled; signed-out visitors are routed to the public
+evidence library instead.
 The explorer header also publishes a compact qualification receipt from the
 active feed manifest. It reports the evaluated, screened-out, below-cutoff,
 and surfaced candidate counts; current private ZAP project-to-BBL coverage;
@@ -393,7 +399,9 @@ Next.js app for CityLens. It pairs with:
 - **Account-backed**: creating new runs, viewing your run history, the
   monthly-quota dashboard, and the complete `/parcel-intel` explorer with
   parcel overview, decision audit, underwriting, workflow, and
-  model-attribution panels. Free plan includes 5 runs per month.
+  model-attribution panels. A qualified numbered parcel can be carried into a
+  new evidence run without leaking its address or BBL into the URL. Free plan
+  includes 5 runs per month.
 - **Auth**: email + password via Neon Auth. The browser obtains a
   short-lived JWT and includes it as `Authorization: Bearer <token>` on
   authenticated API calls. Normal users do not configure API keys.
@@ -423,6 +431,7 @@ lib/
   api.ts                      # browser API client (Bearer + parsing helpers)
   api.server.ts               # Server-side fetcher for SSR demo data
   auth/                       # AuthProvider abstraction (mock + neon adapters)
+  run-prefill.ts              # one-time, session-scoped parcel-to-run handoff
   validation.ts               # Zod schema for the public run payload
 ```
 
@@ -506,6 +515,10 @@ Decision-audit opens identify only whether the posture card or Audit tab was
 used; underwriting events identify only whether the Underwrite tab opened or
 any base assumption was changed. The event does not include which parcel or
 view was used or what assumption changed.
+The parcel-to-run handoff emits only the coarse
+`parcel_evidence_handoff_opened` browser event and whether prefilling was
+available. Address and BBL remain in a short-lived `sessionStorage` record and
+are never analytics properties.
 Delivery is best-effort and cannot block parcel diligence, scenario editing,
 saved-view restoration, or workflow saves. Canonical saved-view
 create/update/delete and thesis-baseline create/advance counts are recorded

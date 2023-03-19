@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
@@ -23,10 +24,12 @@ import {
   LockKeyhole,
   LoaderCircle,
   MapPin,
+  ScanSearch,
   ShieldCheck,
   TriangleAlert,
   XCircle,
 } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 import { useAuth } from '@/lib/auth';
 import {
   ApiError,
@@ -50,6 +53,7 @@ import {
   type ParcelWorkflowItem,
   type TopFeature,
 } from '@/lib/api';
+import { queueRunPrefill } from '@/lib/run-prefill';
 import {
   EvidenceReviewChecklist,
   LandBasisCalculator,
@@ -1097,6 +1101,7 @@ export function ParcelIntelPropertyPanel({
   onComparePeer,
 }: Props) {
   const auth = useAuth();
+  const router = useRouter();
   const [tab, setTab] = useState<PanelTab>('overview');
   const [workflowItem, setWorkflowItem] = useState<ParcelWorkflowItem | null>(null);
   const [workflowEvents, setWorkflowEvents] = useState<ParcelWorkflowEvent[]>([]);
@@ -1149,6 +1154,19 @@ export function ParcelIntelPropertyPanel({
         ? 'E-designation'
         : 'environmental designation';
   const diligenceHighlights = parcelDiligenceHighlights(row);
+
+  const openSiteEvidence = () => {
+    if (
+      auth.status !== 'authenticated' ||
+      !hasNumberedAddress ||
+      !row.address
+    ) {
+      return;
+    }
+    const prefilled = queueRunPrefill({ address: row.address, bbl: row.bbl });
+    trackEvent('parcel_evidence_handoff_opened', { prefilled });
+    router.push('/runs/new');
+  };
 
   const openDecisionAudit = (
     source: 'decision_posture' | 'audit_tab',
@@ -1721,7 +1739,7 @@ export function ParcelIntelPropertyPanel({
               : 'Ranked'}
           </span>
         </div>
-        {(onToggleCompare || auth.status === 'authenticated') && (
+        {(onToggleCompare || auth.status !== 'loading') && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {onToggleCompare && (
               <button
@@ -1752,6 +1770,21 @@ export function ParcelIntelPropertyPanel({
             )}
             {auth.status === 'authenticated' && (
               <>
+                <button
+                  type="button"
+                  data-testid="parcel-evidence-handoff"
+                  disabled={!hasNumberedAddress}
+                  title={
+                    hasNumberedAddress
+                      ? 'Carry this parcel into aerial and 3D processing'
+                      : 'A numbered official address is required for processing'
+                  }
+                  onClick={openSiteEvidence}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3 text-xs font-semibold text-sky-950 transition-colors hover:bg-sky-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
+                >
+                  <ScanSearch className="h-3.5 w-3.5" />
+                  Build site evidence
+                </button>
                 <button
                   type="button"
                   data-testid="parcel-official-dossier-open"
@@ -1807,6 +1840,16 @@ export function ParcelIntelPropertyPanel({
                     : 'Creates the canonical save-time snapshot, then opens follow-up planning.'}
                 </span>
               </>
+            )}
+            {auth.status === 'unauthenticated' && (
+              <Link
+                href="/runs#public-evidence"
+                data-testid="parcel-public-evidence-link"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3 text-xs font-semibold text-sky-950 transition-colors hover:bg-sky-100"
+              >
+                <ScanSearch className="h-3.5 w-3.5" />
+                View aerial evidence
+              </Link>
             )}
           </div>
         )}

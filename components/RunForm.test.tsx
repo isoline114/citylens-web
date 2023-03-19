@@ -100,6 +100,31 @@ describe('RunForm', () => {
     expect(screen.getByText('3D massing')).toBeInTheDocument();
   });
 
+  it('prefills a parcel address without overwriting operator edits', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <RunForm
+        initialAddress="224 Clarkson Avenue"
+        showFeaturedDemos={false}
+      />,
+    );
+    const address = screen.getByTestId('run-address-input');
+    await waitFor(() =>
+      expect(address).toHaveValue('224 Clarkson Avenue'),
+    );
+
+    await user.clear(address);
+    await user.type(address, '226 Clarkson Avenue');
+    rerender(
+      <RunForm
+        initialAddress="350 5th Avenue"
+        showFeaturedDemos={false}
+      />,
+    );
+
+    expect(address).toHaveValue('226 Clarkson Avenue');
+  });
+
   it('renders the server-provided locked values once run options load', async () => {
     mocks.getRunOptions.mockResolvedValueOnce({
       imagery_years: [2025],
