@@ -372,6 +372,12 @@ try {
   const savedViewDeleteButtons = savedViewsPanel.locator(
     'button[aria-label^="Delete saved view "]',
   );
+  const closeButton = savedViewsPanel.getByRole('button', {
+    name: 'Close saved views',
+  });
+  const browseFocusVerified = await closeButton.evaluate(
+    (element) => element === document.activeElement,
+  );
   const staleSmokeDeleteButtons = savedViewsPanel.locator(
     'button[aria-label^="Delete saved view Production smoke "]',
   );
@@ -402,12 +408,6 @@ try {
     staleSmokeViewsRemoved += 1;
   }
   const initialSavedViewCount = await savedViewDeleteButtons.count();
-  const closeButton = savedViewsPanel.getByRole('button', {
-    name: 'Close saved views',
-  });
-  const browseFocusVerified = await closeButton.evaluate(
-    (element) => element === document.activeElement,
-  );
   const smokeViewName = `Production smoke ${Date.now()}`;
   const smokeDeleteButton = savedViewsPanel.getByRole('button', {
     name: `Delete saved view ${smokeViewName}`,
