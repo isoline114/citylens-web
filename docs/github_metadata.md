@@ -8,9 +8,9 @@ this file is the canonical source of what they should be set to.
 
 | Field | Value |
 |---|---|
-| Description | CityLens product frontend — urban change detection and 3D reconstruction from aerial imagery. Next.js + Neon Auth. |
+| Description | NYC parcel intelligence for acquisition teams — source-bound screening, diligence workflow, aerial change evidence, and 3D site review. |
 | Website | https://www.citylens.dev |
-| Topics (comma-separated) | `nextjs`, `react`, `typescript`, `tailwindcss`, `geospatial`, `change-detection`, `3d-reconstruction`, `urban-planning`, `neon-auth`, `vercel` |
+| Topics (comma-separated) | `commercial-real-estate`, `parcel-data`, `geospatial`, `change-detection`, `3d-reconstruction`, `nextjs`, `typescript`, `nyc`, `real-estate-tech`, `urban-planning` |
 
 ## How to update
 
