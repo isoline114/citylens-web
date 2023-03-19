@@ -37,6 +37,14 @@ score, and labels the set as screening peers rather than valuation or sale
 comps. Users can open a peer in place or launch a focused 1:1 evidence
 comparison; public users match only within the 125-row preview, while a
 verified authenticated workspace matches across all 5,000 published leads.
+The Overview is deliberately decision-first: the source-bound acquisition
+brief, core facts, decision peers, and private practitioner call precede
+secondary evidence. Owner portfolio, lien, violation, flood, environmental,
+MIH, transit, and assemblage screens remain source-visible under one accessible
+**Diligence & site context** disclosure. Duplicate ranking rationale also
+starts collapsed. Summary chips are derived only from evidence that can be
+opened; this hierarchy does not create a new score, probability, buy/pass
+recommendation, or cleared-diligence state.
 Users can place up to three fully loaded parcels into an evidence comparison
 desk without leaving the explorer. The desk keeps current acquisition posture,
 capacity, ownership/sale context, official project activity, surfaced diligence
@@ -565,8 +573,8 @@ also
 verifies the auditable historical benchmark receipt and its limitations, the
 live Ovington exact-BBL dossier, source-grounded evidence readiness,
 official-address resolution, current screening receipt, and the governed
-acquisition-thesis flow. The v14 receipt records the returning-session result
-as a boolean without storing the credential or account identity. Browser
+acquisition-thesis flow. The current v23 receipt records the returning-session
+result as a boolean without storing the credential or account identity. Browser
 failures retain only a coarse category, exception type, message shape, runtime
 source, action checkpoint, desktop/mobile surface, and truncated SHA-256
 fingerprint—not the raw message or stack. The thesis
