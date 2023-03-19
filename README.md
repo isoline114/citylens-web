@@ -9,6 +9,14 @@ deeper site evidence after a parcel warrants investigation, not as a competing
 homepage product. The primary explorer CTA and illustrative decision workspace
 remain useful when featured aerial demos are unavailable.
 
+The signed-out `/runs` route is the canonical public evidence library. It
+loads only real precomputed runs from `/v1/demo/featured` and lets a visitor
+inspect imagery, change geometry, 3D massing, and the QA receipt without an
+account. Private run history remains account-scoped. Signed-out `/runs/new`
+and private run deep links point back to this gallery instead of creating a
+dead end. The production shell monitor requires at least one valid public demo
+link on both desktop and mobile; it never substitutes hard-coded demo data.
+
 The Parcel Intelligence surface at `/parcel-intel` is one citywide explorer,
 not five separate borough workspaces. Borough and eligibility filters update the
 same map/list, and selecting a lot opens its overview, underwriting, workflow,
