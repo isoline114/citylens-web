@@ -80,6 +80,9 @@ describe('run detail access and output states', () => {
       '/sign-in?next=%2Fruns%2Fprivate-run-123',
     );
     expect(screen.queryByTestId('status-card')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Explore public demos' }),
+    ).toHaveAttribute('href', '/runs#public-evidence');
   });
 
   it('shows an explicit pending-output state for active work', () => {

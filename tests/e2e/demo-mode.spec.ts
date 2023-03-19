@@ -136,18 +136,21 @@ end_header
     });
   });
 
-  await page.goto('/');
+  await page.goto('/runs');
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: /Turn the whole NYC market into a defensible weekly shortlist/i,
+      name: /^Runs$/i,
     }),
   ).toBeVisible();
-  // SSR demos are deliberately disabled in the deterministic e2e build
-  // because Playwright cannot intercept a Server Component fetch. The card
-  // link contract is covered at component level; exercise the public demo
-  // route directly here.
-  await page.goto('/runs/demo-1?demo=1');
+  await expect(page.getByTestId('public-evidence-library')).toBeVisible();
+  await expect(page.getByText('Brooklyn demo')).toBeVisible();
+  await expect(page.getByTestId('featured-demo-card')).toHaveAttribute(
+    'href',
+    '/runs/demo-1?demo=1',
+  );
+  await expectNoWcagViolations(page, 'Public evidence library');
+  await page.getByTestId('featured-demo-card').click();
 
   await expect(page).toHaveURL(/\/runs\/demo-1\?demo=1/);
   await expect(page.getByText('Public demo', { exact: true })).toBeVisible();

@@ -63,6 +63,13 @@ describe('NewRunWorkspace', () => {
     expect(
       screen.getByRole('link', { name: 'Sign in to continue' }),
     ).toHaveAttribute('href', '/sign-in?next=%2Fruns%2Fnew');
+    expect(
+      screen.getByRole('link', { name: 'Review a public evidence package' }),
+    ).toHaveAttribute('href', '/runs#public-evidence');
+    expect(screen.getByText('Imagery')).toBeInTheDocument();
+    expect(screen.getByText('Change')).toBeInTheDocument();
+    expect(screen.getByText('3D massing')).toBeInTheDocument();
+    expect(screen.getByText('QA receipt')).toBeInTheDocument();
     expect(screen.queryByTestId('run-form-stub')).not.toBeInTheDocument();
   });
 

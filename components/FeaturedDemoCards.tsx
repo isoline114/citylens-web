@@ -7,13 +7,34 @@ type Props = {
   /** Pre-fetched demos. Server components should pass the result of
    *  fetchFeaturedDemosOnServer() so the SSR HTML already includes them. */
   demos: DemoFeaturedRun[];
+  sectionId?: string;
+  eyebrow?: string;
+  title?: string;
+  description?: string;
+  limit?: number;
 };
 
-export function FeaturedDemoCards({ demos }: Props) {
+export function FeaturedDemoCards({
+  demos,
+  sectionId,
+  eyebrow,
+  title = 'Featured demos',
+  description = 'Real precomputed CityLens runs. No sign-in required.',
+  limit = 6,
+}: Props) {
   if (!demos || demos.length === 0) {
     return (
-      <section className="rounded-2xl border border-slate-200 bg-white p-6">
-        <h2 className="text-xl font-semibold">Featured demos</h2>
+      <section
+        id={sectionId}
+        data-testid={sectionId === 'public-evidence' ? 'public-evidence-library' : undefined}
+        className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-6"
+      >
+        {eyebrow && (
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
+            {eyebrow}
+          </div>
+        )}
+        <h2 className="mt-1 text-xl font-semibold">{title}</h2>
         <p className="mt-2 text-sm text-slate-600">
           Featured demos are temporarily unavailable. You can still{' '}
           <Link href="/sign-in" className="font-medium text-slate-900 underline">
@@ -26,12 +47,21 @@ export function FeaturedDemoCards({ demos }: Props) {
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section
+      id={sectionId}
+      data-testid={sectionId === 'public-evidence' ? 'public-evidence-library' : undefined}
+      className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+    >
       <div className="flex items-end justify-between">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">Featured demos</h2>
+          {eyebrow && (
+            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
+              {eyebrow}
+            </div>
+          )}
+          <h2 className="mt-1 text-xl font-semibold tracking-tight">{title}</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Real precomputed CityLens runs. No sign-in required.
+            {description}
           </p>
         </div>
       </div>
@@ -43,7 +73,7 @@ export function FeaturedDemoCards({ demos }: Props) {
         className="mt-4 grid snap-x snap-mandatory auto-cols-[86%] grid-flow-col gap-4 overflow-x-auto pb-2 md:mt-6 md:grid-flow-row md:grid-cols-2 md:overflow-visible md:pb-0 lg:grid-cols-3"
         data-testid="featured-demo-strip"
       >
-        {demos.slice(0, 6).map((demo, index) => {
+        {demos.slice(0, limit).map((demo, index) => {
           const id = demoId(demo);
           if (!id) return null;
           return <DemoCard key={id} demo={demo} runId={id} index={index} />;

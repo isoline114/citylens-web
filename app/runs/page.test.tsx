@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
     user: null as { id: string; email: string | null } | null,
   },
   getRuns: vi.fn(),
+  getFeaturedDemos: vi.fn(),
   getRecentRuns: vi.fn(),
   forgetRecentRuns: vi.fn(),
 }));
@@ -22,7 +23,7 @@ vi.mock('@/lib/auth', () => ({
 
 vi.mock('@/lib/api', async () => {
   const actual = await vi.importActual<typeof import('@/lib/api')>('@/lib/api');
-  return { ...actual, getRuns: mocks.getRuns };
+  return { ...actual, getRuns: mocks.getRuns, getFeaturedDemos: mocks.getFeaturedDemos };
 });
 
 vi.mock('@/lib/storage', async () => {
@@ -38,6 +39,17 @@ import RunsPage from './page';
 
 beforeEach(() => {
   mocks.getRuns.mockReset();
+  mocks.getFeaturedDemos.mockReset();
+  mocks.getFeaturedDemos.mockResolvedValue([
+    {
+      run_id: 'real-demo-1',
+      label: 'Flatbush evidence package',
+      address: '100 E 21st St Brooklyn, NY 11226',
+      imagery_year: 2024,
+      baseline_year: 2017,
+      outputs: ['preview', 'change', 'mesh', 'summary'],
+    },
+  ]);
   mocks.getRecentRuns.mockReset();
   mocks.forgetRecentRuns.mockReset();
   mocks.getRecentRuns.mockReturnValue([]);
@@ -47,7 +59,7 @@ beforeEach(() => {
 });
 
 describe('/runs (signed out)', () => {
-  it('leads with sign-in / sign-up / featured-demos CTAs', () => {
+  it('leads with account CTAs and a real public evidence library', async () => {
     render(<RunsPage />);
 
     expect(
@@ -60,19 +72,26 @@ describe('/runs (signed out)', () => {
     expect(
       screen.getByRole('link', { name: 'Create account' }),
     ).toHaveAttribute('href', '/sign-up?next=%2Fruns');
-    expect(screen.getByRole('link', { name: 'Explore a public demo' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'See real evidence' })).toHaveAttribute(
+      'href',
+      '#public-evidence',
+    );
+    expect(await screen.findByText('Flatbush evidence package')).toBeInTheDocument();
+    expect(screen.getByTestId('public-evidence-library')).toBeInTheDocument();
   });
 
-  it('does not call /v1/runs while signed out', () => {
+  it('does not call /v1/runs while signed out', async () => {
     render(<RunsPage />);
+    await screen.findByText('Flatbush evidence package');
     expect(mocks.getRuns).not.toHaveBeenCalled();
   });
 
-  it('does not render any localStorage-derived run rows', () => {
+  it('does not render any localStorage-derived run rows', async () => {
     mocks.getRecentRuns.mockReturnValue([
       { runId: 'old-run-1', createdAtMs: 1700000000000, lastKnownStatus: 'succeeded' },
     ]);
     render(<RunsPage />);
+    await screen.findByText('Flatbush evidence package');
     expect(screen.queryByText('old-run-1')).not.toBeInTheDocument();
     expect(screen.queryByText(/Browser-local run history/i)).not.toBeInTheDocument();
   });

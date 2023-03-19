@@ -21,7 +21,12 @@ const routes = [
     requiredTestId: 'home-closing-cta',
   },
   { name: 'parcels', path: '/parcel-intel', current: 'Parcels' },
-  { name: 'runs', path: '/runs', current: 'Runs' },
+  {
+    name: 'runs',
+    path: '/runs',
+    current: 'Runs',
+    requiredTestId: 'public-evidence-library',
+  },
   {
     name: 'new-run',
     path: '/runs/new',
@@ -150,6 +155,16 @@ try {
               ).length,
             }))
           : null;
+      const publicEvidenceReceipt =
+        route.name === 'runs'
+          ? {
+              card_count: await page.getByTestId('featured-demo-card').count(),
+              first_href: await page
+                .getByTestId('featured-demo-card')
+                .first()
+                .getAttribute('href'),
+            }
+          : null;
       const receipt = {
         route: route.name,
         path: route.path,
@@ -167,6 +182,8 @@ try {
         docs_section_count: docsDisclosureReceipt?.section_count ?? null,
         docs_open_section_count:
           docsDisclosureReceipt?.open_section_count ?? null,
+        public_evidence_card_count: publicEvidenceReceipt?.card_count ?? null,
+        public_evidence_first_href: publicEvidenceReceipt?.first_href ?? null,
         footer_bottom_px: footerBounds
           ? Math.round(footerBounds.y + footerBounds.height)
           : null,
@@ -203,6 +220,11 @@ try {
             (viewport.name === 'desktop'
               ? receipt.body_height_px <= 3_200
               : receipt.body_height_px <= 4_800))) &&
+        (route.name !== 'runs' ||
+          ((receipt.public_evidence_card_count ?? 0) >= 1 &&
+            /^\/runs\/[^?]+\?demo=1$/.test(
+              receipt.public_evidence_first_href ?? '',
+            ))) &&
         (route.name !== 'parcels' ||
           viewport.name !== 'desktop' ||
           (receipt.main_width_px !== null &&

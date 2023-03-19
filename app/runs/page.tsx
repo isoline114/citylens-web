@@ -17,6 +17,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 
 import { ProductPageHeader } from '@/components/ProductPageHeader';
+import { PublicDemoGallery } from '@/components/PublicDemoGallery';
 import { getRuns } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { forgetRecentRuns, getRecentRuns } from '@/lib/storage';
@@ -146,13 +147,15 @@ export default function RunsPage() {
                 >
                   Create account
                 </Link>
-                <Link href="/#featured-demos" className="underline-offset-4 hover:text-white hover:underline">
-                  Explore a public demo
+                <Link href="#public-evidence" className="underline-offset-4 hover:text-white hover:underline">
+                  See real evidence
                 </Link>
               </div>
             </div>
           </div>
         </section>
+
+        <PublicDemoGallery />
       </div>
     );
   }

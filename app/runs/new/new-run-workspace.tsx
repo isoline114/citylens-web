@@ -111,12 +111,21 @@ export function NewRunWorkspace() {
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <Link
-                href="/#featured-demos"
+                href="/runs#public-evidence"
                 className="inline-flex h-10 items-center justify-center text-xs font-medium text-slate-300 hover:text-white"
               >
-                Review a public example
+                Review a public evidence package
               </Link>
             </div>
+          </div>
+          <div className="relative mt-7 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-4">
+            {EVIDENCE_SURFACES.map(({ icon: Icon, label, detail }) => (
+              <div key={label} className="bg-slate-950/80 p-4">
+                <Icon className="h-4 w-4 text-sky-300" />
+                <div className="mt-2 text-sm font-semibold text-white">{label}</div>
+                <div className="mt-0.5 text-xs leading-5 text-slate-400">{detail}</div>
+              </div>
+            ))}
           </div>
         </section>
       ) : (

@@ -54,6 +54,31 @@ describe('FeaturedDemoCards', () => {
     expect(screen.getAllByTestId('featured-demo-card')).toHaveLength(6);
   });
 
+  it('supports a focused evidence-library presentation', () => {
+    const demos = Array.from({ length: 3 }, (_, i) => ({
+      run_id: `demo-${i}`,
+      label: `Demo ${i}`,
+    }));
+    render(
+      <FeaturedDemoCards
+        demos={demos}
+        sectionId="public-evidence"
+        eyebrow="Public evidence library"
+        title="Inspect the evidence."
+        description="Real outputs."
+        limit={2}
+      />,
+    );
+
+    expect(screen.getByTestId('public-evidence-library')).toHaveAttribute(
+      'id',
+      'public-evidence',
+    );
+    expect(screen.getByText('Public evidence library')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Inspect the evidence.' })).toBeInTheDocument();
+    expect(screen.getAllByTestId('featured-demo-card')).toHaveLength(2);
+  });
+
   it('skips demos missing both run_id and id', () => {
     render(
       <FeaturedDemoCards

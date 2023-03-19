@@ -114,7 +114,7 @@ export default function RunDetailPage() {
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <Link
-                href="/#featured-demos"
+                href="/runs#public-evidence"
                 className="inline-flex h-11 items-center justify-center rounded-xl border border-white/20 bg-white/5 px-4 text-sm font-semibold text-white hover:bg-white/10"
               >
                 Explore public demos
