@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test-fixtures';
 import { completeAuthenticatedInventory } from './parcel-fixtures';
 
 test('explains why an exact BBL is absent from the published inventory', async ({

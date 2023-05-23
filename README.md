@@ -487,6 +487,22 @@ mounting every heavy renderer in a long page. The selector reports artifact
 availability, supports arrow/Home/End keyboard navigation, and loads map/mesh
 resources only when their view is opened.
 
+Both the parcel explorer and GeoJSON artifact view use the shared
+`OpenStreetMapBasemap` component. It requests standard OpenStreetMap raster
+tiles directly from `https://tile.openstreetmap.org/{z}/{x}/{y}.png`, requires no
+map-service API key, and keeps linked contributor attribution visible. Tile
+requests stop at native zoom 19 and use normal browser caching and referrers;
+do not add bulk downloads or prefetching. See the
+[OpenStreetMap tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
+The previous unauthenticated CARTO endpoint now returns an API-key watermark
+inside HTTP 200 images, so HTTP success alone does not establish map health.
+Map E2E tests intercept tiles and verify provider requests, decoded images,
+and attribution. Scheduled authenticated and public-shell browser checks also
+intercept tiles for all desktop/mobile pages and explicitly report them as
+mocked, so automated navigation does not load public tile servers. Their
+API and application checks remain live. Verify real basemap imagery manually
+after deployment; automated receipts do not establish provider availability.
+
 ## Privacy-preserving adoption measurement
 
 Authenticated Parcel Intelligence interactions send only the strict
@@ -563,7 +579,7 @@ npm run lint     # ESLint flat config (eslint-config-next 16)
 npm test         # vitest
 npm run test:e2e # Playwright (requires host browser libs)
 npm run build    # Next.js production build (Turbopack)
-npm audit --audit-level=high
+npm run audit    # Full dependency audit with the reviewed, expiring exception
 ```
 
 Playwright builds and owns an isolated production server (port `3100` by
@@ -571,8 +587,10 @@ default) and never reuses an unknown development server. Override with
 `PLAYWRIGHT_PORT=<port> npm run test:e2e` when needed. CI uses its own
 production server on port `3000`.
 
-CI fails on high/critical npm advisories, then runs lint + build + vitest +
-Playwright on every PR. See
+CI fails on high/critical npm advisories, with one exact, development-only
+`braces@3.0.3` exception that expires November 4, 2026. See the
+[audit policy and exposure review](docs/dependency-audit.md). It then runs
+lint + build + vitest + Playwright on every PR. See
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 The separate
 [`production-auth-smoke.yml`](.github/workflows/production-auth-smoke.yml)
@@ -646,12 +664,12 @@ gh workflow run production-run-canary.yml \
 `package.json` intentionally overrides Better Auth and its passkey/core
 packages to the reviewed patched `1.6.25` release. Do not remove those
 overrides until the upstream Neon package carries a non-vulnerable line and
-the complete auth route, unit, build, browser, and `npm audit` gates pass.
+the complete auth route, unit, build, browser, and `npm run audit` gates pass.
 The development-tooling graph also overrides legacy `minimatch` and
-`brace-expansion` copies to the audited `10.2.5` and `5.0.8` releases. This
-closes the unbounded-expansion advisory without forcing ESLint 10 ahead of the
+`brace-expansion` copies to the reviewed `10.2.5` and `5.0.12` releases. This
+closes the expansion advisories without forcing ESLint 10 ahead of the
 Next lint plugins' declared peer support. Keep this override only while a
-clean `npm ci`, lint, build, Vitest, Playwright, and `npm audit` all pass;
+clean `npm ci`, lint, build, Vitest, Playwright, and `npm run audit` all pass;
 remove it once the upstream ESLint plugin graph resolves the patched matcher
 natively.
 

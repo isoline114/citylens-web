@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test-fixtures';
 import {
   expectNoDocumentHorizontalOverflow,
   expectNoWcagViolations,

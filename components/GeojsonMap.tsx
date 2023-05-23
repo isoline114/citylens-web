@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
+import { MapContainer, GeoJSON, useMap } from 'react-leaflet';
 import type { Feature, FeatureCollection, Geometry, GeoJsonProperties, GeoJsonObject } from 'geojson';
 import { Download } from 'lucide-react';
+import { OpenStreetMapBasemap } from '@/components/OpenStreetMapBasemap';
 import {
   boundsFromGeojson,
   getGeojsonChangeKindCounts,
@@ -122,10 +123,7 @@ export function GeojsonMap({ url }: { url: string }) {
             </div>
             <div className="min-h-0 flex-1">
               <MapContainer style={{ height: '100%', width: '100%' }} bounds={leafletBounds}>
-                <TileLayer
-                  attribution="&copy; OpenStreetMap contributors"
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
+                <OpenStreetMapBasemap />
                 <FitBounds bounds={bounds} />
                 <GeoJSON data={geojson as unknown as GeoJsonObject} style={styleForFeature} />
               </MapContainer>

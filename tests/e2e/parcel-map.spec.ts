@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test-fixtures';
+import { expectOpenStreetMapBasemap, mockBasemapTiles } from './basemap';
 
 const BOROUGH_CENTERS = {
   manhattan: [40.76, -73.98],
@@ -58,6 +59,7 @@ function authenticatedMapRows() {
 test('clusters the citywide preview and converges borough URLs on one explorer', async ({
   page,
 }) => {
+  const tileRequests = await mockBasemapTiles(page);
   const rows = publicMapRows();
   await page.route('**/v1/parcel-intel/map?**', async (route) => {
     await route.fulfill({
@@ -111,6 +113,7 @@ test('clusters the citywide preview and converges borough URLs on one explorer',
 
   const map = page.getByTestId('parcel-citywide-map');
   await expect(map).toBeVisible();
+  await expectOpenStreetMapBasemap(map, tileRequests);
   await expect(page.getByTestId('parcel-map-inventory-scope')).toHaveText(
     'Public preview · 125 of 5,000 loaded',
   );
@@ -168,6 +171,7 @@ test('clusters the citywide preview and converges borough URLs on one explorer',
   await page.goto('/parcel-intel');
 
   const mobileMap = page.getByTestId('parcel-citywide-map');
+  await expectOpenStreetMapBasemap(mobileMap, tileRequests);
   const marketFilters = page.getByRole('button', {
     name: 'Market filters',
   });
@@ -196,6 +200,7 @@ test('clusters the citywide preview and converges borough URLs on one explorer',
 test('lets a first-session user watch the verified citywide screen', async ({
   page,
 }) => {
+  await mockBasemapTiles(page);
   const rows = authenticatedMapRows();
   const savedViews: Record<string, unknown>[] = [];
   const feedGeneration =

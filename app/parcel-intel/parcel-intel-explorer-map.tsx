@@ -6,7 +6,6 @@ import {
   GeoJSON,
   MapContainer,
   Marker,
-  TileLayer,
   Tooltip,
   useMap,
   useMapEvents,
@@ -20,6 +19,7 @@ import {
 import type { BBox, GeoJsonObject } from 'geojson';
 import type Supercluster from 'supercluster';
 import type { ParcelIntelRow } from '@/lib/api';
+import { OpenStreetMapBasemap } from '@/components/OpenStreetMapBasemap';
 import {
   BOROUGH_COLORS,
   BOROUGH_LABELS,
@@ -383,12 +383,7 @@ export function ParcelIntelExplorerMap({
         className="h-full w-full"
         style={{ height: '100%', width: '100%', zIndex: 0 }}
       >
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · <a href="https://carto.com/attributions">CARTO</a>'
-          subdomains={['a', 'b', 'c', 'd']}
-          maxZoom={19}
-        />
+        <OpenStreetMapBasemap />
         <FitExplorerBounds rows={mappable} selectedBbl={selectedBbl} />
         <PanToSelection rows={mappable} selectedBbl={selectedBbl} />
         <MapViewportObserver onChange={handleViewportChange} />

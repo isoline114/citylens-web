@@ -54,6 +54,7 @@ jobs:
           const keyboard = receipts.find((receipt) => receipt.viewport === 'keyboard');
           console.log(`## ${report?.passed ? '✅' : '❌'} Production site shell`);
           console.log('');
+          console.log(`- Basemap tiles: \`${report?.basemap_tiles?.length && report.basemap_tiles.every((receipt) => receipt.tiles?.mode === 'mocked') ? 'mocked' : 'unknown'}\` (live provider availability is not checked)`);
           console.log(`- Desktop/mobile page receipts: \`${pageReceipts.filter((receipt) => receipt.passed).length}/${pageReceipts.length}\``);
           console.log(`- One content landmark per page: \`${pageReceipts.every((receipt) => receipt.main_count === 1) ? 'passed' : 'failed'}\``);
           console.log(`- Active navigation and route messaging: \`${pageReceipts.every((receipt) => receipt.passed) ? 'passed' : 'failed'}\``);

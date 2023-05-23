@@ -5,6 +5,7 @@ import path from 'node:path';
 import process from 'node:process';
 
 import { chromium } from '@playwright/test';
+import { mockSmokeBasemap } from './smoke-basemap.mjs';
 
 import {
   encryptBrowserDiagnostics,
@@ -47,6 +48,7 @@ const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({
   viewport: { width: 1440, height: 900 },
 });
+const basemapTiles = await mockSmokeBasemap(context);
 const page = await context.newPage();
 const mapReceipts = [];
 const authTokenReceipts = [];
@@ -1521,6 +1523,7 @@ const report = {
   expected_count: expectedCount,
   passed,
   failure,
+  basemap_tiles: basemapTiles,
   auth_token_receipts: authTokenReceipts,
   map_receipts: mapReceipts,
   initial_clustered_map_receipt: initialClusteredMapReceipt,

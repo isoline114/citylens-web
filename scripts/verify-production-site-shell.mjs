@@ -5,6 +5,7 @@ import path from 'node:path';
 import process from 'node:process';
 
 import { chromium } from '@playwright/test';
+import { mockSmokeBasemap } from './smoke-basemap.mjs';
 
 const webBase = (
   process.env.CITYLENS_WEB_BASE || 'https://www.citylens.dev'
@@ -103,12 +104,17 @@ await fs.mkdir(outputDir, { recursive: true });
 
 const browser = await chromium.launch({ headless: true });
 const receipts = [];
+const basemapReceipts = [];
 let failure = null;
 
 try {
   for (const viewport of viewports) {
     const context = await browser.newContext({
       viewport: { width: viewport.width, height: viewport.height },
+    });
+    basemapReceipts.push({
+      viewport: viewport.name,
+      tiles: await mockSmokeBasemap(context),
     });
 
     for (const route of routes) {
@@ -288,6 +294,7 @@ const report = {
   web_base: webBase,
   passed: failure === null,
   failure,
+  basemap_tiles: basemapReceipts,
   receipt_count: receipts.length,
   receipts,
 };

@@ -59,6 +59,7 @@ jobs:
           const passed = Boolean(report?.passed);
           console.log(`## ${passed ? '✅' : '❌'} Real browser authentication`);
           console.log('');
+          console.log(`- Basemap tiles: \`${report?.basemap_tiles?.mode || 'unknown'}\` (live provider availability is not checked)`);
           console.log(`- Signed-in API credential: \`${report?.auth_token_receipts?.some((receipt) => receipt.status === 200 && receipt.jwt_shape === true) ? 'passed' : 'failed'}\``);
           console.log(`- Signed-in 5,000-parcel clustered map: \`${report?.initial_clustered_map_receipt?.match_count === 5000 && report?.initial_clustered_map_receipt?.cluster_count > 0 ? 'passed' : 'failed'}\``);
           console.log(`- Site-ranked decision list: \`${report?.site_ranking_receipt?.parcel_count === 5000 && report?.site_ranking_receipt?.site_count === report?.site_ranking_receipt?.api_site_count ? `passed · ${report.site_ranking_receipt.site_count.toLocaleString()} sites across 5,000 parcels` : 'failed'}\``);

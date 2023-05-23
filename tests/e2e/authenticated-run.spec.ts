@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test-fixtures';
+import { expectOpenStreetMapBasemap, mockBasemapTiles } from './basemap';
 
 async function expectMeshState(page: Page) {
   await page.getByTestId('artifact-tab-mesh').click();
@@ -13,6 +14,7 @@ async function expectMeshState(page: Page) {
 }
 
 test('authenticated run detail renders artifacts and qa summary', async ({ page }) => {
+  const tileRequests = await mockBasemapTiles(page);
   await page.addInitScript(() => {
     sessionStorage.setItem(
       'citylens_mock_auth_user',
@@ -131,4 +133,5 @@ end_header
   await page.getByTestId('artifact-tab-change').click();
   await expect(page.getByText('Added: 1')).toBeVisible();
   await expect(page.getByText('Demolished: 0')).toBeVisible();
+  await expectOpenStreetMapBasemap(page.getByTestId('artifacts-panel'), tileRequests);
 });

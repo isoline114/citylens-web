@@ -161,10 +161,21 @@ export default async function ParcelIntelIndexPage({
       </header>
 
       {staleSources.length > 0 && (
-        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          <strong>Freshness warning:</strong> {staleSources.join(', ')}. Verify the
-          latest city records before acquisition diligence.
-        </div>
+        <details className="mb-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1 text-xs text-amber-950 sm:mb-6 sm:px-4 sm:py-3 sm:text-sm">
+          <summary className="cursor-pointer font-semibold">
+            Freshness warning: {staleSources.length}{' '}
+            {staleSources.length === 1 ? 'source' : 'sources'} overdue.
+            <span className="ml-1 hidden font-normal sm:inline">View source details</span>
+          </summary>
+          <p className="mt-1 text-xs sm:text-sm">
+            Verify the latest city records before acquisition diligence.
+          </p>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            {staleSources.map((source, position) => (
+              <li key={`${position}-${source}`}>{source}</li>
+            ))}
+          </ul>
+        </details>
       )}
 
       {qualityGateFailed && (
