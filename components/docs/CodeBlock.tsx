@@ -10,14 +10,14 @@ type CodeBlockProps = {
 
 export function CodeBlock({ language = 'bash', label, children }: CodeBlockProps) {
   return (
-    <div className="max-w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-sm">
+    <div className="max-w-full overflow-hidden rounded-sm border border-ink bg-ink">
       {(label || language) && (
-        <div className="flex min-w-0 items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/70 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+        <div className="font-cond flex min-w-0 items-center justify-between gap-3 border-b border-ink bg-ink/70 px-3 py-2 text-[13px] font-medium text-rule">
           <span className="min-w-0 truncate">{label ?? language}</span>
           <CopyButton value={children} />
         </div>
       )}
-      <pre className="max-w-full overflow-x-auto overscroll-x-contain px-4 py-4 text-[12px] leading-6 text-slate-100 sm:text-[13px]">
+      <pre className="max-w-full overflow-x-auto overscroll-x-contain px-4 py-4 text-[12px] leading-6 text-white sm:text-[13px]">
         <code>{children}</code>
       </pre>
     </div>
@@ -36,19 +36,7 @@ type EndpointProps = {
   id: string;
 };
 
-const METHOD_COLORS: Record<EndpointProps['method'], string> = {
-  GET: 'bg-sky-100 text-sky-800 ring-sky-200',
-  POST: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
-  PUT: 'bg-amber-100 text-amber-800 ring-amber-200',
-  DELETE: 'bg-rose-100 text-rose-800 ring-rose-200',
-  PATCH: 'bg-violet-100 text-violet-800 ring-violet-200',
-};
-
-const AUTH_BADGES: Record<EndpointProps['auth'], { label: string; classes: string }> = {
-  public: { label: 'public', classes: 'bg-slate-100 text-slate-700 ring-slate-200' },
-  bearer: { label: 'requires bearer', classes: 'bg-indigo-50 text-indigo-700 ring-indigo-200' },
-  admin: { label: 'admin only', classes: 'bg-rose-50 text-rose-700 ring-rose-200' },
-};
+const AUTH_LABELS = { public: 'public', bearer: 'requires bearer', admin: 'admin only' };
 
 export function Endpoint({
   method,
@@ -61,35 +49,34 @@ export function Endpoint({
   notes,
   id,
 }: EndpointProps) {
-  const methodClass = METHOD_COLORS[method];
-  const authBadge = AUTH_BADGES[auth];
+  const authLabel = AUTH_LABELS[auth];
 
   return (
     <section
       id={id}
-      className="scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+      className="scroll-mt-24 border-t border-rule bg-white"
     >
-      <header className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-b border-slate-200 bg-slate-50/70 px-4 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+      <header className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-b border-rule bg-paper-2/70 px-4 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
         <span
-          className={`inline-flex h-6 items-center rounded-md px-2 font-mono text-xs font-semibold ring-1 ring-inset ${methodClass}`}
+          className="font-mono text-xs font-medium text-ink"
         >
           {method}
         </span>
-        <code className="min-w-0 break-all font-mono text-sm text-slate-900">{path}</code>
+        <code className="min-w-0 break-all font-mono text-sm text-ink">{path}</code>
         <span
-          className={`col-span-2 inline-flex h-6 w-fit items-center rounded-full px-2.5 text-[11px] font-medium ring-1 ring-inset sm:col-span-1 ${authBadge.classes}`}
+          className="col-span-2 text-xs text-ink-3 sm:col-span-1"
         >
-          {authBadge.label}
+          {authLabel}
         </span>
       </header>
       <div className="space-y-4 px-4 py-4">
         <div>
-          <div className="text-sm font-medium text-slate-900">{title}</div>
-          <div className="mt-1 text-sm text-slate-700">{description}</div>
+          <div className="text-sm font-medium text-ink">{title}</div>
+          <div className="mt-1 text-sm text-ink-2">{description}</div>
         </div>
         {request && (
           <div>
-            <div className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <div className="font-cond mb-1.5 text-[13px] font-semibold text-ink-3">
               Request
             </div>
             <CodeBlock language={request.language} label={request.label}>
@@ -99,7 +86,7 @@ export function Endpoint({
         )}
         {response && (
           <div>
-            <div className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <div className="font-cond mb-1.5 text-[13px] font-semibold text-ink-3">
               Response
             </div>
             <CodeBlock language={response.language} label={response.label}>
@@ -108,7 +95,7 @@ export function Endpoint({
           </div>
         )}
         {notes && (
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+          <div className="border-t border-rule py-2 text-xs text-ink-2">
             {notes}
           </div>
         )}

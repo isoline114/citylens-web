@@ -40,11 +40,10 @@ export default function VerifyEmailPage() {
     <Suspense
       fallback={
         <AuthPageShell
-          eyebrow="Account security"
           title="Loading verification"
           description="Preparing the secure verification form."
         >
-          <div className="h-11 animate-pulse rounded-xl bg-slate-100" />
+          <div className="h-11 animate-pulse border-t border-rule" />
         </AuthPageShell>
       }
     >
@@ -81,7 +80,6 @@ function VerifyEmailInner() {
   if (!IS_NEON) {
     return (
       <AuthPageShell
-        eyebrow="Local workspace"
         title="Verification skipped"
         description="Mock authentication does not require email verification."
       >
@@ -95,7 +93,6 @@ function VerifyEmailInner() {
   if (verified) {
     return (
       <AuthPageShell
-        eyebrow="Account ready"
         title="Email verified"
         description="Your account is ready. Sign in to open your CityLens workspace."
       >
@@ -112,7 +109,6 @@ function VerifyEmailInner() {
 
   return (
     <AuthPageShell
-      eyebrow="Account security"
       title="Verify your email"
       description="Enter the six-digit code from your email. Codes expire after a few minutes."
       footer={
@@ -160,7 +156,7 @@ function VerifyEmailInner() {
         }}
       >
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-800">Email</span>
+          <span className="text-sm font-medium text-ink">Email</span>
           <input
             className={authInputClass}
             type="email"
@@ -172,11 +168,11 @@ function VerifyEmailInner() {
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-800">
+          <span className="text-sm font-medium text-ink">
             Verification code
           </span>
           <input
-            className={`${authInputClass} tracking-[0.3em]`}
+            className={`field ${authInputClass} tracking-[0.3em]`}
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
@@ -210,7 +206,7 @@ function VerifyEmailInner() {
       <button
         type="button"
         disabled={resendBusy || !email.trim()}
-        className="mt-4 text-sm font-semibold text-slate-700 underline-offset-4 hover:text-sky-700 hover:underline disabled:text-slate-400"
+        className="mt-4 text-sm font-semibold text-ink-2 underline-offset-4 hover:text-select hover:underline disabled:text-ink-3"
         onClick={async () => {
           setError(null);
           setInfo(null);

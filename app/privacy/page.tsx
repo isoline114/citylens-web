@@ -24,7 +24,6 @@ const navigation = [
 export default function PrivacyPage() {
   return (
     <LegalDocumentShell
-      eyebrow="Trust center"
       title="Privacy notice"
       summary="How CityLens handles account, workflow, pilot, public-property, and aggregate usage data."
       effectiveDate="July 24, 2026"

@@ -255,10 +255,10 @@ test('explains why an exact BBL is absent from the published inventory', async (
   );
   await page.getByLabel('Search parcels').fill('3-05892-0038');
   await expect(page.getByTestId('parcel-official-dossier')).toContainText(
-    '464 OVINGTON AVENUE',
+    '464 Ovington Avenue',
   );
   await expect(page.getByTestId('parcel-official-dossier')).toContainText(
-    'Owner sources differ — verify title',
+    'Owner sources differ; verify title',
   );
   await expect(page.getByTestId('parcel-dossier-readiness')).toContainText(
     'Source review required',
@@ -271,7 +271,7 @@ test('explains why an exact BBL is absent from the published inventory', async (
     .click();
   await expect(
     page.getByTestId('parcel-sales-comparables-ready'),
-  ).toContainText('609 OVINGTON AVENUE');
+  ).toContainText('609 Ovington Avenue');
   await expect(
     page.getByTestId('parcel-sales-comparables-ready'),
   ).toContainText('not an appraisal');
@@ -283,6 +283,7 @@ test('explains why an exact BBL is absent from the published inventory', async (
   await expect(receipt).toContainText(
     'Excluded from the current acquisition inventory',
   );
+  await expect(receipt).toContainText('3-05892-0038');
   await expect(receipt).toContainText('Approved land-use project');
   await expect(receipt).toContainText('2023K0205');
   await expect(

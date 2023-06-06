@@ -69,7 +69,7 @@ describe('ParcelAddressResolver', () => {
     );
 
     expect(await screen.findByText('One official tax lot found')).toBeVisible();
-    expect(screen.getByText('3058920038')).toBeVisible();
+    expect(screen.getByText('3-05892-0038')).toBeVisible();
     expect(screen.getByText(/NYC PAD · Jul 26, 2026/i)).toBeVisible();
     expect(screen.getByTestId('screening-stub')).toHaveTextContent(
       'Screening 3058920038',

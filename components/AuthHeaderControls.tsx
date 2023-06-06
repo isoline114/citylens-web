@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { KeyRound, LogOut } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Key, LogIn, LogOut, UserRound } from 'lucide-react';
 
 import { useAuth } from '@/lib/auth';
 import {
@@ -26,10 +26,9 @@ export function AuthHeaderControls() {
           '/sign-in',
           destinationForPathname(pathname),
         )}
-        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 hover:bg-slate-50"
+        className="btn"
       >
-        <LogIn className="h-4 w-4" />
-        <span>Sign in</span>
+        Sign in
       </Link>
     );
   }
@@ -41,19 +40,21 @@ export function AuthHeaderControls() {
        *  signed-in cluster from wrapping. The badge + actions still make
        *  it obvious you're signed in. */}
       <span
-        className="hidden h-9 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 xl:inline-flex"
+        className="hidden max-w-[200px] truncate text-xs text-ink-3 xl:inline"
         title={emailLabel}
       >
-        <UserRound className="h-4 w-4" />
-        <span className="max-w-[180px] truncate">{emailLabel}</span>
+        {emailLabel}
       </span>
+      {/* Below `sm` the actions collapse to 36px icon buttons so the signed-in
+       *  cluster fits a 320px viewport with WCAG text spacing applied. */}
       <Link
         href="/account/api-keys"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-900 hover:bg-slate-50 lg:w-auto lg:gap-2 lg:px-3"
+        className="btn w-9 px-0 sm:w-auto sm:px-3"
         title="API keys"
         aria-label="API keys"
       >
-        <Key className="h-4 w-4" />
+        <KeyRound className="h-4 w-4 sm:hidden" aria-hidden="true" />
+        <span className="hidden sm:inline lg:hidden">Keys</span>
         <span className="hidden lg:inline">API keys</span>
       </Link>
       <button
@@ -62,12 +63,12 @@ export function AuthHeaderControls() {
           await auth.signOut();
           router.push('/');
         }}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-900 hover:bg-slate-50 lg:w-auto lg:gap-2 lg:px-3"
+        className="btn w-9 px-0 sm:w-auto sm:px-3"
         title="Sign out"
         aria-label="Sign out"
       >
-        <LogOut className="h-4 w-4" />
-        <span className="hidden lg:inline">Sign out</span>
+        <LogOut className="h-4 w-4 sm:hidden" aria-hidden="true" />
+        <span className="hidden sm:inline">Sign out</span>
       </button>
     </div>
   );

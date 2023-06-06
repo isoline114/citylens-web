@@ -56,7 +56,7 @@ function authenticatedMapRows() {
   );
 }
 
-test('clusters the citywide preview and converges borough URLs on one explorer', async ({
+test('draws every citywide preview parcel on canvas and converges borough URLs on one explorer', async ({
   page,
 }) => {
   const tileRequests = await mockBasemapTiles(page);
@@ -109,19 +109,21 @@ test('clusters the citywide preview and converges borough URLs on one explorer',
     });
   });
 
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/parcel-intel');
 
   const map = page.getByTestId('parcel-citywide-map');
   await expect(map).toBeVisible();
   await expectOpenStreetMapBasemap(map, tileRequests);
   await expect(page.getByTestId('parcel-map-inventory-scope')).toHaveText(
-    'Public preview · 125 of 5,000 loaded',
+    '125 of 5,000 ranked parcels shown · public preview',
   );
   await expect(map.getByText('125 in view')).toBeVisible();
   await expect(map.getByText('125 matches')).toBeVisible();
-  await expect(page.locator('.parcel-map-cluster-icon')).toHaveCount(5);
+  await expect(page.locator('.parcel-map-cluster-icon')).toHaveCount(0);
+  await expect(map.locator('canvas')).toHaveCount(1);
 
-  await page.locator('.parcel-map-cluster-icon').first().click();
+  await map.getByRole('button', { name: 'Zoom in', exact: true }).click();
   await expect(map.getByText(/in view/)).toBeVisible();
   const rankView = page.getByTestId('rank-map-view');
   await expect(rankView).toHaveText(/Rank this view · [1-9][0-9]* sites/);
@@ -143,7 +145,8 @@ test('clusters the citywide preview and converges borough URLs on one explorer',
   await page
     .getByRole('button', { name: 'Fit the map to all matching parcels' })
     .click();
-  await expect(page.locator('.parcel-map-cluster-icon')).toHaveCount(5);
+  await expect(page.locator('.parcel-map-cluster-icon')).toHaveCount(0);
+  await expect(map.locator('canvas')).toHaveCount(1);
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'CSV' }).click();
@@ -158,6 +161,29 @@ test('clusters the citywide preview and converges borough URLs on one explorer',
   await expect(page.getByTestId('parcel-export-receipt')).toContainText(
     'Downloaded 125 unique parcels',
   );
+
+  // Opening a parcel must retain the existing results and the user's place
+  // in the list, even while the detail pane is visible alongside the map.
+  const ranking = page.locator('#parcel-acquisition-ranking');
+  const rankingElement = await ranking.elementHandle();
+  expect(rankingElement).not.toBeNull();
+  const desktopLead = ranking.locator('[data-parcel-ranking-bbl]').nth(8);
+  await desktopLead.scrollIntoViewIfNeeded();
+  const rankingScroll = await ranking.evaluate((element) => element.scrollTop);
+  expect(rankingScroll).toBeGreaterThan(0);
+  await desktopLead.click();
+  const closeParcel = page.getByRole('button', {
+    name: 'Close parcel panel and return to ranked parcels',
+  });
+  await expect(closeParcel).toBeVisible();
+  await expect(desktopLead).toHaveAttribute('aria-pressed', 'true');
+  expect(await ranking.evaluate((element, original) => element === original, rankingElement)).toBe(true);
+  expect(await ranking.evaluate((element) => element.scrollTop)).toBe(rankingScroll);
+  await closeParcel.click();
+  await expect(desktopLead).toBeFocused();
+  await expect(desktopLead).toHaveAttribute('aria-pressed', 'false');
+  expect(await ranking.evaluate((element, original) => element === original, rankingElement)).toBe(true);
+  expect(await ranking.evaluate((element) => element.scrollTop)).toBe(rankingScroll);
 
   await page.goto('/parcel-intel/queens');
   await expect(page).toHaveURL(/\/parcel-intel\?borough=queens$/);
@@ -182,7 +208,13 @@ test('clusters the citywide preview and converges borough URLs on one explorer',
   );
   const mobileMapBox = await mobileMap.boundingBox();
   expect(mobileMapBox).not.toBeNull();
-  expect(mobileMapBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(844);
+  expect(mobileMapBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(600);
+  const mapView = page.getByRole('button', { name: 'Map', exact: true });
+  const resultsView = page.getByRole('button', { name: 'Results', exact: true });
+  const detailsView = page.getByRole('button', { name: 'Parcel details', exact: true });
+  await expect(mapView).toHaveAttribute('aria-pressed', 'true');
+  await expect(detailsView).toBeDisabled();
+  await expect(page.locator('#parcel-results-pane')).toBeHidden();
 
   await marketFilters.click();
   await expect(marketFilters).toHaveAttribute('aria-expanded', 'true');
@@ -191,10 +223,39 @@ test('clusters the citywide preview and converges borough URLs on one explorer',
   ).toBeVisible();
 
   await marketFilters.click();
-  await page.locator('[data-parcel-ranking-bbl]').first().click();
+  await resultsView.click();
+  await expect(resultsView).toHaveAttribute('aria-pressed', 'true');
+  await expect(mobileMap).toBeHidden();
+  const mobileRankingElement = await ranking.elementHandle();
+  const mobileLead = ranking.locator('[data-parcel-ranking-bbl]').nth(6);
+  await mobileLead.scrollIntoViewIfNeeded();
+  const mobileRankingScroll = await ranking.evaluate((element) => element.scrollTop);
+  expect(mobileRankingScroll).toBeGreaterThan(0);
+  await mobileLead.click();
   const workspaceTabs = page.getByTestId('parcel-workspace-tabs');
   await expect(workspaceTabs).toBeVisible();
   await expect(workspaceTabs).toHaveClass(/\bsticky\b/);
+  await expect(detailsView).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#parcel-results-pane')).toBeHidden();
+  await expect(closeParcel).toBeVisible();
+
+  await mapView.click();
+  await expect(mapView).toHaveAttribute('aria-pressed', 'true');
+  await expect(mobileMap).toBeVisible();
+  await expect(workspaceTabs).toBeHidden();
+  await resultsView.click();
+  await expect(mobileLead).toHaveAttribute('aria-pressed', 'true');
+  expect(await ranking.evaluate((element, original) => element === original, mobileRankingElement)).toBe(true);
+  expect(await ranking.evaluate((element) => element.scrollTop)).toBe(mobileRankingScroll);
+  await detailsView.click();
+  await expect(workspaceTabs).toBeVisible();
+  await closeParcel.click();
+  await expect(resultsView).toHaveAttribute('aria-pressed', 'true');
+  await expect(detailsView).toBeDisabled();
+  await expect(mobileLead).toBeFocused();
+  await expect(mobileLead).toHaveAttribute('aria-pressed', 'false');
+  expect(await ranking.evaluate((element, original) => element === original, mobileRankingElement)).toBe(true);
+  expect(await ranking.evaluate((element) => element.scrollTop)).toBe(mobileRankingScroll);
 });
 
 test('lets a first-session user watch the verified citywide screen', async ({
@@ -380,11 +441,11 @@ test('lets a first-session user watch the verified citywide screen', async ({
   await page.goto('/parcel-intel');
 
   await expect(page.getByTestId('parcel-map-inventory-scope')).toHaveText(
-    'Full inventory · 5,000 loaded',
+    '5,000 of 5,000 ranked parcels shown · full inventory',
   );
   const guide = page.getByTestId('activation-guide-empty');
   await expect(guide).toContainText(
-    'Open a lead—or watch this exact screen.',
+    'Open a lead or watch this exact screen.',
   );
   await guide.getByRole('button', { name: 'Watch this screen' }).click();
   await expect(page.getByTestId('saved-views-panel')).toBeVisible();
@@ -401,7 +462,7 @@ test('lets a first-session user watch the verified citywide screen', async ({
   const reviewWorkspace = page.getByTestId('lead-review-workspace');
   await expect(reviewWorkspace).toHaveAttribute('data-state', 'ready');
   await expect(reviewWorkspace).toContainText('0 / 5,000');
-  await expect(reviewWorkspace).toContainText('Coverage—not accuracy');
+  await expect(reviewWorkspace).toContainText('Coverage does not measure accuracy');
   await reviewWorkspace.getByTestId('review-next-unreviewed').click();
   const leadReviewCard = page.getByTestId('parcel-lead-review');
   await expect(leadReviewCard).toBeVisible();
@@ -421,7 +482,7 @@ test('lets a first-session user watch the verified citywide screen', async ({
   await evidenceHandoff.click();
   await expect(page).toHaveURL(/\/runs\/new$/);
   await expect(page.getByTestId('parcel-run-prefill-receipt')).toContainText(
-    'BBL 1000000001',
+    'BBL 1-00000-0001',
   );
   await expect(page.getByTestId('run-address-input')).toHaveValue(
     '1 manhattan test avenue',

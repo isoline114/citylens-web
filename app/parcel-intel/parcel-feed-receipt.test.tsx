@@ -129,7 +129,7 @@ describe('ParcelFeedReceipt', () => {
       '250-lead borough floor · 97.7% pure-merit overlap',
     );
     expect(screen.getByTestId('parcel-feed-receipt')).toHaveTextContent(
-      'Membership gate only—it does not retrain the rank.',
+      'Membership gate only; it does not retrain the rank.',
     );
     expect(screen.getByTestId('parcel-feed-receipt')).toHaveTextContent(
       'Selection borough floor 250',
@@ -175,6 +175,23 @@ describe('ParcelFeedReceipt', () => {
     expect(screen.getByTestId('parcel-feed-receipt')).toHaveTextContent(
       /treat this feed as unverified/i,
     );
+    const disclosure = screen.getByTestId('parcel-feed-receipt');
+    expect(disclosure).not.toHaveAttribute('open');
+    expect(disclosure.querySelector('summary')).toHaveTextContent('Unverified feed');
+  });
+
+  it('keeps a failed qualification check visible before disclosure', () => {
+    render(
+      <ParcelFeedReceipt
+        qualityGate={{ ...qualityGate, passed: false }}
+        dataSources={dataSources}
+        generatedLabel="Jul 26, 2026"
+      />,
+    );
+    const disclosure = screen.getByTestId('parcel-feed-receipt');
+    expect(disclosure).not.toHaveAttribute('open');
+    expect(disclosure.querySelector('summary')).toHaveTextContent('Unverified feed');
+    expect(disclosure.querySelector('summary')).not.toHaveTextContent('Passed');
   });
 
   it('counts current and stale source declarations without trusting labels', () => {
@@ -189,5 +206,32 @@ describe('ParcelFeedReceipt', () => {
       staleSources: 1,
       projectLeakage: 0,
     });
+  });
+  it('shows overdue source ages at request time and keeps the warning accessible', () => {
+    render(<ParcelFeedReceipt qualityGate={qualityGate} generatedLabel="Oct 1, 2026" evaluatedAt={Date.parse('2026-10-19T12:00:00Z')} dataSources={{
+      dob: { source: 'NYC DOB', retrieved_at: '2026-10-05T12:00:00Z', age_days: 1, max_age_days: 8, stale: false },
+      imagery: { source: 'Historical imagery', baseline_year: 2024, stale: true },
+    }} />);
+    const receipt = screen.getByTestId('parcel-feed-receipt');
+    expect(receipt.querySelector('summary')).toHaveTextContent('Sources · 1 past limit');
+    expect(receipt.querySelector('summary')).toHaveAccessibleName(/Freshness warning: NYC DOB \(14 days old\)/);
+    expect(receipt.querySelector('summary')).toHaveClass('bg-stale-wash');
+    expect(receipt).toHaveTextContent('14 d old, limit 8 d · past limit');
+    expect(receipt).toHaveTextContent('Historical imagery · 2024');
+  });
+  it('compares exact ages, honors stale flags and marks missing ages unchecked', () => {
+    render(<ParcelFeedReceipt qualityGate={qualityGate} generatedLabel="Oct 1, 2026" evaluatedAt={Date.parse('2026-10-19T12:00:00Z')} dataSources={{
+      dob: { source: 'NYC DOB', retrieved_at: '2026-10-11T00:00:00Z', max_age_days: 8, stale: false },
+      zap: { source: 'NYC ZAP', retrieved_at: '2026-10-18T12:00:00Z', max_age_days: 8, stale: true },
+      lpc: { source: 'NYC LPC', max_age_days: 180 },
+      pluto: { source: 'NYC PLUTO', retrieved_at: '2026-10-18T12:00:00Z', max_age_days: 45, stale: false },
+    }} />);
+    const receipt = screen.getByTestId('parcel-feed-receipt');
+    // 8.5 days against an 8-day limit is past it even though it displays as "8 d".
+    expect(receipt.querySelector('summary')).toHaveTextContent('Sources · 2 past limit');
+    expect(receipt).toHaveTextContent('8 d old, limit 8 d · past limit');
+    expect(receipt).toHaveTextContent('1 d old, limit 8 d · past limit');
+    expect(receipt).toHaveTextContent('Age unchecked, limit 180 d');
+    expect(receipt).toHaveTextContent('1 current source');
   });
 });

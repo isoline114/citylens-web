@@ -20,7 +20,7 @@ describe('ProductPageHeader', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Runs' }),
     ).toBeVisible();
-    expect(screen.getByText('Processing workspace')).toBeVisible();
+    expect(screen.queryByText('Processing workspace')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'New run' })).toHaveAttribute(
       'href',
       '/create',

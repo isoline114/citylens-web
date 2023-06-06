@@ -70,7 +70,7 @@ function FreshnessNote({
     return null;
   }
   return (
-    <p className={`mt-2 text-[11px] leading-4 ${className}`}>
+    <p className={`mt-2 font-mono text-xs leading-4 ${className}`}>
       Weekly evidence monitor current · {health.observation_lag_days}-day
       observation lag · freshness deadline{' '}
       {formatDate(health.next_monitor_due_on)}. Oldest official source update{' '}
@@ -92,16 +92,16 @@ export function ParcelProspectiveValidation({
   ) {
     return (
       <section
-        className="rounded-xl border border-amber-200 bg-amber-50 p-4"
+        className="border-b border-rule bg-white p-4"
         data-testid="prospective-validation-status"
         data-status="unavailable"
         data-health={health?.status ?? 'unavailable'}
       >
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-950">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-stale">
           <Clock3 className="h-4 w-4" />
           Live cohort status unavailable
         </h3>
-        <p className="mt-2 text-xs leading-5 text-amber-900">
+        <p className="mt-2 text-xs leading-5 text-stale">
           The historical forward test remains available, but the live
           production cohort could not be matched to this feed. Do not infer
           current accuracy from the historical percentages.
@@ -113,23 +113,23 @@ export function ParcelProspectiveValidation({
   if (health?.status === 'stale') {
     return (
       <section
-        className="rounded-xl border border-amber-300 bg-amber-50 p-4"
+        className="border-b border-rule bg-white p-4"
         data-testid="prospective-validation-status"
         data-status="stale"
         data-health="stale"
       >
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-950">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-stale">
           <Clock3 className="h-4 w-4" />
           Live cohort monitor overdue
         </h3>
-        <p className="mt-2 text-xs leading-5 text-amber-900">
+        <p className="mt-2 text-xs leading-5 text-stale">
           Evidence has not advanced for{' '}
           {health.observation_lag_days?.toLocaleString() ?? 'an unknown number of'}{' '}
           days; the weekly freshness limit is{' '}
           {health.max_observation_lag_days} days. The last accepted observation
           date is {formatDate(status.observed_through)}.
         </p>
-        <p className="mt-2 text-[11px] leading-4 text-amber-800">
+        <p className="mt-2 font-mono text-xs leading-4 text-stale-3">
           Historical validation remains available, but live cohort metrics are
           stale and must not be treated as current accuracy. Investigate the
           monitor or official DOB source before relying on them.
@@ -150,17 +150,17 @@ export function ParcelProspectiveValidation({
   if (status.measurement_status === 'awaiting_post_issue_data') {
     return (
       <section
-        className="rounded-xl border border-sky-200 bg-sky-50 p-4"
+        className="border-b border-rule bg-white p-4"
         data-testid="prospective-validation-status"
         data-status={status.measurement_status}
         data-health={health?.status ?? 'unknown'}
         {...siteEvidenceAttributes}
       >
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-sky-950">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
           <Clock3 className="h-4 w-4" />
           Live cohort · awaiting observations
         </h3>
-        <p className="mt-2 text-xs leading-5 text-sky-900">
+        <p className="mt-2 text-xs leading-5 text-ink">
           The exact ranked cohort
           {status.site_count
             ? ` and its ${status.site_count.toLocaleString()} frozen acquisition sites`
@@ -168,12 +168,12 @@ export function ParcelProspectiveValidation({
           issued {formatDate(status.issued_at)} starts observation{' '}
           {formatDate(status.observation_starts_on)}. Official DOB data is
           observed through {formatDate(status.observed_through)}. Live
-          precision is intentionally unavailable—not 0%.
+          precision is intentionally unavailable; not 0%.
         </p>
-        <p className="mt-2 text-[11px] leading-4 text-sky-800">
+        <p className="mt-2 font-mono text-xs leading-4 text-ink-3">
           Final 365-day results become eligible after {formatDate(status.matures_at)}.
         </p>
-        <FreshnessNote health={health} className="text-sky-800" />
+        <FreshnessNote health={health} className="text-ink" />
       </section>
     );
   }
@@ -181,105 +181,105 @@ export function ParcelProspectiveValidation({
   if (status.measurement_status === 'collecting') {
     return (
       <section
-        className="rounded-xl border border-sky-200 bg-sky-50 p-4"
+        className="border-b border-rule bg-white p-4"
         data-testid="prospective-validation-status"
         data-status={status.measurement_status}
         data-health={health?.status ?? 'unknown'}
         {...siteEvidenceAttributes}
       >
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-sky-950">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
           <Activity className="h-4 w-4" />
           Live cohort · collecting
         </h3>
-        <dl className="mt-2 space-y-1 text-xs leading-5 text-sky-900">
+        <dl className="mt-2 space-y-1 text-xs leading-5 text-ink">
           <div className="flex justify-between gap-3">
             <dt>Parcel top 100</dt>
-            <dd className="font-medium">{observedMetric(status.metrics.top_100)}</dd>
+            <dd className="text-right font-medium tabular-nums">{observedMetric(status.metrics.top_100)}</dd>
           </div>
           <div className="flex justify-between gap-3">
             <dt>Parcel top 1,000</dt>
-            <dd className="font-medium">
+            <dd className="text-right font-medium tabular-nums">
               {observedMetric(status.metrics.top_1000)}
             </dd>
           </div>
           {status.site_metrics ? (
             <>
               <div
-                className="mt-2 flex justify-between gap-3 border-t border-sky-200 pt-2"
+                className="mt-2 flex justify-between gap-3 border-t border-rule pt-2"
                 data-testid="prospective-site-metrics"
               >
                 <dt>Site top 100</dt>
-                <dd className="font-medium">
+                <dd className="text-right font-medium tabular-nums">
                   {observedMetric(status.site_metrics.top_100)}
                 </dd>
               </div>
               <div className="flex justify-between gap-3">
                 <dt>Site top 1,000</dt>
-                <dd className="font-medium">
+                <dd className="text-right font-medium tabular-nums">
                   {observedMetric(status.site_metrics.top_1000)}
                 </dd>
               </div>
             </>
           ) : null}
         </dl>
-        <p className="mt-2 text-[11px] leading-4 text-sky-800">
+        <p className="mt-2 font-mono text-xs leading-4 text-ink-3">
           Observed through {formatDate(status.observed_through)}. These are
           lower bounds, not final accuracy; unobserved parcels are not counted
           as negatives before {formatDate(status.matures_at)}.
         </p>
-        <FreshnessNote health={health} className="text-sky-800" />
+        <FreshnessNote health={health} className="text-ink" />
       </section>
     );
   }
 
   return (
     <section
-      className="rounded-xl border border-emerald-200 bg-emerald-50 p-4"
+      className="border-b border-rule bg-white p-4"
       data-testid="prospective-validation-status"
       data-status={status.measurement_status}
       data-health={health?.status ?? 'unknown'}
       {...siteEvidenceAttributes}
     >
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-emerald-950">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
         <ShieldCheck className="h-4 w-4" />
         Live cohort · complete
       </h3>
-      <dl className="mt-2 space-y-1 text-xs leading-5 text-emerald-900">
+      <dl className="mt-2 space-y-1 text-xs leading-5 text-ink">
         <div className="flex justify-between gap-3">
           <dt>Parcel top 100</dt>
-          <dd className="font-medium">{matureMetric(status.metrics.top_100)}</dd>
+          <dd className="text-right font-medium tabular-nums">{matureMetric(status.metrics.top_100)}</dd>
         </div>
         <div className="flex justify-between gap-3">
           <dt>Parcel top 1,000</dt>
-          <dd className="font-medium">
+          <dd className="text-right font-medium tabular-nums">
             {matureMetric(status.metrics.top_1000)}
           </dd>
         </div>
         {status.site_metrics ? (
           <>
             <div
-              className="mt-2 flex justify-between gap-3 border-t border-emerald-200 pt-2"
+              className="mt-2 flex justify-between gap-3 border-t border-rule pt-2"
               data-testid="prospective-site-metrics"
             >
               <dt>Site top 100</dt>
-              <dd className="font-medium">
+              <dd className="text-right font-medium tabular-nums">
                 {matureMetric(status.site_metrics.top_100)}
               </dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt>Site top 1,000</dt>
-              <dd className="font-medium">
+              <dd className="text-right font-medium tabular-nums">
                 {matureMetric(status.site_metrics.top_1000)}
               </dd>
             </div>
           </>
         ) : null}
       </dl>
-      <p className="mt-2 text-[11px] leading-4 text-emerald-800">
+      <p className="mt-2 font-mono text-xs leading-4 text-ink-3">
         Complete 365-day DOB New Building filing outcome window. This is not
         seller intent, acquisition, or closing probability.
       </p>
-      <FreshnessNote health={health} className="text-emerald-800" />
+      <FreshnessNote health={health} className="text-ink" />
     </section>
   );
 }

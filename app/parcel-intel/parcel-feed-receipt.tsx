@@ -2,7 +2,7 @@ import {
   Activity,
   BadgeCheck,
   CircleAlert,
-  Database,
+  ChevronDown,
   ShieldCheck,
 } from 'lucide-react';
 import type {
@@ -19,6 +19,7 @@ export type ParcelFeedReceiptProps = {
   prospectiveValidation?: ParcelProspectiveValidationStatus | null;
   prospectiveValidationHealth?: ParcelProspectiveValidationHealth | null;
   generatedLabel: string;
+  evaluatedAt?: number;
 };
 
 type Receipt = {
@@ -164,11 +165,11 @@ function HistoricalEvidence({ receipt }: { receipt: Receipt }) {
 
   return (
     <div
-      className="rounded-lg bg-white/[0.06] p-3 ring-1 ring-inset ring-white/10"
+      className="border-t border-rule py-3"
       data-testid="historical-ranking-evidence"
     >
-      <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-sky-300">
-        1 · Historical rank
+      <div className="font-cond text-[13px] font-semibold text-ink-3">
+        Historical rank
       </div>
       {hasMetrics ? (
         <>
@@ -180,18 +181,18 @@ function HistoricalEvidence({ receipt }: { receipt: Receipt }) {
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="rounded-md bg-slate-950/40 px-2 py-1.5 ring-1 ring-inset ring-white/10"
+                className="border-l border-rule px-2 py-1.5"
               >
-                <div className="text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+                <div className="font-cond text-[13px] font-semibold text-ink-3">
                   {label}
                 </div>
-                <div className="mt-0.5 text-xs font-semibold tabular-nums text-white">
+                <div className="mt-0.5 text-xs font-semibold tabular-nums text-ink">
                   {value}
                 </div>
               </div>
             ))}
           </div>
-          <p className="mt-2 text-[10px] font-medium leading-4 text-sky-100">
+          <p className="mt-2 text-[11px] font-medium leading-4 text-ink">
             {formatLift(
               receipt.historicalPrecisionAt100,
               receipt.historicalBaseRate,
@@ -205,14 +206,14 @@ function HistoricalEvidence({ receipt }: { receipt: Receipt }) {
           </p>
         </>
       ) : (
-        <p className="mt-1.5 text-xs font-semibold leading-5 text-white">
+        <p className="mt-1.5 text-xs font-semibold leading-5 text-ink">
           Historical forward-ranking evidence is unavailable.
         </p>
       )}
-      <p className="mt-1 text-[10px] leading-4 text-slate-400">
+      <p className="mt-1 text-[11px] leading-4 text-ink-3">
         2024 features → 2025 DOB NB filings
         {exposed ? ' · development-exposed benchmark' : ''}. Historical
-        enrichment—not current parcel accuracy, seller intent, or deal
+        enrichment is not current parcel accuracy, seller intent, or deal
         probability.
       </p>
     </div>
@@ -221,15 +222,15 @@ function HistoricalEvidence({ receipt }: { receipt: Receipt }) {
 
 function CurrentQualification({ receipt }: { receipt: Receipt }) {
   return (
-    <div className="rounded-lg bg-white/[0.06] p-3 ring-1 ring-inset ring-white/10">
-      <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-emerald-300">
-        2 · Current qualification
+    <div className="border-t border-rule py-3">
+      <div className="font-cond text-[13px] font-semibold text-ink-3">
+        Current qualification
       </div>
-      <p className="mt-1.5 text-xs font-semibold leading-5 text-white">
+      <p className="mt-1.5 text-xs font-semibold leading-5 text-ink">
         {formatCount(receipt.screenedOut)} candidates removed before{' '}
         {formatCount(receipt.published)} leads were surfaced.
       </p>
-      <p className="mt-1 text-[10px] leading-4 text-slate-400">
+      <p className="mt-1 text-[11px] leading-4 text-ink-3">
         {formatCount(receipt.joinedProjects)} current DOB/ZAP projects
         reconciled · {formatCount(receipt.projectLeakage)} published project
         leaks.
@@ -244,7 +245,7 @@ function CurrentQualification({ receipt }: { receipt: Receipt }) {
                 )} pure-merit overlap`
               : ''
           }.`}{' '}
-        Membership gate only—it does not retrain the rank.
+        Membership gate only; it does not retrain the rank.
       </p>
     </div>
   );
@@ -266,25 +267,25 @@ function LiveOutcomeEvidence({ receipt }: { receipt: Receipt }) {
         : 'Production outcome evidence is unavailable.';
 
   return (
-    <div className="rounded-lg bg-white/[0.06] p-3 ring-1 ring-inset ring-white/10">
+    <div className="border-t border-rule py-3">
       <div className="flex items-center justify-between gap-2">
-        <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-violet-300">
-          3 · Live outcomes
+        <div className="font-cond text-[13px] font-semibold text-ink-3">
+          Live outcomes
         </div>
         <span
-          className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
+          className={`rounded-sm px-1.5 py-0.5 text-[11px] font-semibold ${
             current
-              ? 'bg-emerald-400/10 text-emerald-200'
-              : 'bg-amber-400/10 text-amber-200'
+              ? 'bg-paper-2 text-ink'
+              : 'bg-white text-ink'
           }`}
         >
           {current ? 'Monitor current' : 'Inspect monitor'}
         </span>
       </div>
-      <p className="mt-1.5 text-xs font-semibold leading-5 text-white">
+      <p className="mt-1.5 text-xs font-semibold leading-5 text-ink">
         {headline}
       </p>
-      <p className="mt-1 text-[10px] leading-4 text-slate-400">
+      <p className="mt-1 text-[11px] leading-4 text-ink-3">
         Cohort issued {formatUtcDate(receipt.prospectiveIssuedAt)} · final
         eligibility {formatUtcDate(receipt.prospectiveMaturesAt)}. Until then,
         current precision is intentionally not claimed.
@@ -303,12 +304,12 @@ function ReceiptBody({
   if (receipt.passed !== true) {
     return (
       <div className="flex items-start gap-3">
-        <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+        <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-ink" />
         <div>
-          <p className="text-sm font-semibold text-white">
+          <p className="text-sm font-semibold text-ink">
             Qualification receipt unavailable
           </p>
-          <p className="mt-1 text-xs leading-5 text-slate-300">
+          <p className="mt-1 text-xs leading-5 text-ink-3">
             Treat this feed as unverified until its project-leakage, rank, and
             source-coverage checks publish successfully.
           </p>
@@ -329,16 +330,16 @@ function ReceiptBody({
     <>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+          <div className="font-cond flex items-center gap-2 text-[13px] font-semibold text-ink-3">
             <BadgeCheck className="h-3.5 w-3.5" />
             Qualification receipt
           </div>
-          <p className="mt-1.5 text-sm font-semibold leading-5 text-white">
+          <p className="mt-1.5 text-sm font-semibold leading-5 text-ink">
             {formatCount(receipt.published)} leads surfaced after current-source
             screening.
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-200 ring-1 ring-inset ring-emerald-300/20">
+        <span className="shrink-0 rounded-sm bg-paper-2 px-2 py-1 text-[11px] font-semibold text-ink ring-1 ring-inset ring-rule">
           Passed
         </span>
       </div>
@@ -351,12 +352,12 @@ function ReceiptBody({
         ].map(([label, value]) => (
           <div
             key={label}
-            className="rounded-lg bg-white/[0.06] px-2.5 py-2 ring-1 ring-inset ring-white/10"
+            className="border-l border-rule px-2.5 py-2"
           >
-            <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+            <div className="font-cond text-[13px] font-semibold text-ink-3">
               {label}
             </div>
-            <div className="mt-0.5 text-sm font-semibold tabular-nums text-white">
+            <div className="mt-0.5 text-sm font-semibold tabular-nums text-ink">
               {value}
             </div>
           </div>
@@ -364,7 +365,7 @@ function ReceiptBody({
       </div>
 
       <div className="mt-3">
-        <div className="mb-2 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+        <div className="font-cond mb-2 flex items-center gap-1.5 text-[13px] font-semibold text-ink-3">
           <Activity className="h-3 w-3" />
           Intelligence evidence chain
         </div>
@@ -375,9 +376,9 @@ function ReceiptBody({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-white/10 pt-2.5 text-[10px] leading-4 text-slate-300">
+      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-rule pt-2.5 text-[11px] leading-4 text-ink-3">
         <span>ZAP projects mapped {projectCoverage}</span>
-        <span aria-hidden="true" className="text-slate-600">
+        <span aria-hidden="true" className="text-ink-3">
           ·
         </span>
         <span>
@@ -385,7 +386,7 @@ function ReceiptBody({
         </span>
         {receipt.selectionPolicy && (
           <>
-            <span aria-hidden="true" className="text-slate-600">
+            <span aria-hidden="true" className="text-ink-3">
               ·
             </span>
             <span>
@@ -393,7 +394,7 @@ function ReceiptBody({
             </span>
           </>
         )}
-        <span aria-hidden="true" className="text-slate-600">
+        <span aria-hidden="true" className="text-ink-3">
           ·
         </span>
         <span>
@@ -406,7 +407,7 @@ function ReceiptBody({
         {(receipt.padAddresses !== null ||
           receipt.plutoAddresses !== null) && (
           <>
-            <span aria-hidden="true" className="text-slate-600">
+            <span aria-hidden="true" className="text-ink-3">
               ·
             </span>
             <span>
@@ -417,7 +418,7 @@ function ReceiptBody({
         )}
         {generatedLabel && (
           <>
-            <span aria-hidden="true" className="text-slate-600">
+            <span aria-hidden="true" className="text-ink-3">
               ·
             </span>
             <span>Refreshed {generatedLabel}</span>
@@ -425,7 +426,7 @@ function ReceiptBody({
         )}
       </div>
 
-      <p className="mt-2 flex items-start gap-1.5 text-[10px] leading-4 text-slate-400">
+      <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-4 text-ink-3">
         <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0" />
         This receipt validates feed eligibility and source reconciliation. It
         is not model accuracy, seller intent, transaction probability, or a
@@ -437,47 +438,43 @@ function ReceiptBody({
 
 function ReceiptSummary({ receipt }: { receipt: Receipt }) {
   const verified = receipt.passed === true;
+  const Icon = verified ? BadgeCheck : CircleAlert;
 
   return (
-    <div className="flex min-w-0 items-center justify-between gap-3">
-      <span className="flex min-w-0 items-center gap-2.5">
-        {verified ? (
-          <BadgeCheck className="h-4 w-4 shrink-0 text-emerald-300" />
-        ) : (
-          <CircleAlert className="h-4 w-4 shrink-0 text-amber-300" />
-        )}
-        <span className="min-w-0">
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-            Qualification receipt
-          </span>
-          <span className="block truncate text-xs font-semibold text-white">
-            {verified
-              ? `${formatCount(receipt.published)} leads · ${formatCount(
-                  receipt.evaluated,
-                )} evaluated · ${formatCount(receipt.projectLeakage)} leaks`
-              : 'Feed verification unavailable'}
-          </span>
-        </span>
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+      <Icon className={`h-4 w-4 shrink-0 ${receipt.staleSources > 0 ? 'text-stale' : 'text-ink'}`} />
+      <span className="font-medium">Sources · {receipt.staleSources > 0 ? `${receipt.staleSources} past limit` : 'Receipt'}</span>
+      <span className="sr-only">Qualification receipt</span>
+      <span className={verified ? 'sr-only' : 'font-semibold text-ink'}>
+        {verified ? 'Passed' : 'Unverified feed'}
       </span>
-      <span className="flex shrink-0 items-center gap-2">
-        <span
-          className={`rounded-full px-2 py-1 text-[10px] font-semibold ring-1 ring-inset ${
-            verified
-              ? 'bg-emerald-400/10 text-emerald-200 ring-emerald-300/20'
-              : 'bg-amber-400/10 text-amber-200 ring-amber-300/20'
-          }`}
-        >
-          {verified ? 'Passed' : 'Inspect'}
-        </span>
-        <span className="text-[10px] font-medium text-sky-300 group-open:hidden">
-          Details
-        </span>
-        <span className="hidden text-[10px] font-medium text-sky-300 group-open:inline">
-          Close
-        </span>
-      </span>
-    </div>
+      <ChevronDown className="ml-auto h-3.5 w-3.5 text-ink-3 transition-transform group-open:rotate-180" aria-hidden="true" />
+    </span>
   );
+}
+
+type SourceCurrency = { key: string; source: string; age: number | null; limit: number | null; pastLimit: boolean; unchecked: boolean; asOf: string | null };
+
+function sourceCurrency(dataSources: UnknownRecord, now?: number): SourceCurrency[] {
+  return Object.entries(dataSources).flatMap(([key, value]) => {
+    const source = record(value);
+    if (!Object.keys(source).length) return [];
+    const retrieved = [source.retrieved_at, source.source_retrieved_at, source.as_of].find((value): value is string => typeof value === 'string');
+    const timestamp = retrieved ? Date.parse(retrieved) : NaN;
+    // Compare the exact age with the limit; round only for display. For sources
+    // with a refresh limit, an explicit stale flag from the API always wins, and
+    // a missing age means unchecked rather than current. Historical sources
+    // without a limit never become operational warnings.
+    const exactAge = now !== undefined && Number.isFinite(timestamp) ? Math.max(0, (now - timestamp) / 86_400_000) : count(source.age_days);
+    const age = exactAge === null ? null : Math.floor(exactAge);
+    const limit = count(source.max_age_days);
+    const limited = limit !== null && limit > 0;
+    const pastLimit = limited && (source.stale === true || (exactAge !== null && exactAge > limit));
+    return [{ key, source: typeof source.source === 'string' ? source.source : key.replaceAll('_', ' '), age, limit,
+      pastLimit,
+      unchecked: limited && !pastLimit && exactAge === null,
+      asOf: retrieved ?? (typeof source.baseline_year === 'number' ? String(source.baseline_year) : null) }];
+  });
 }
 
 export function ParcelFeedReceipt({
@@ -487,6 +484,7 @@ export function ParcelFeedReceipt({
   prospectiveValidation = null,
   prospectiveValidationHealth = null,
   generatedLabel,
+  evaluatedAt,
 }: ParcelFeedReceiptProps) {
   const receipt = parcelFeedReceipt(
     qualityGate,
@@ -496,40 +494,46 @@ export function ParcelFeedReceipt({
     prospectiveValidationHealth,
   );
 
-  return (
-    <>
-      <details className="group overflow-hidden rounded-xl bg-slate-950 px-3 py-2.5 shadow-lg ring-1 ring-inset ring-white/10 sm:hidden">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:hidden">
-          <span className="inline-flex min-w-0 items-center gap-2 text-xs font-semibold text-white">
-            <Database className="h-3.5 w-3.5 shrink-0 text-emerald-300" />
-            {receipt.passed === true
-              ? `${formatCount(receipt.published)} qualified leads`
-              : 'Qualification receipt'}
-          </span>
-          <span className="shrink-0 text-[10px] font-medium text-sky-300 group-open:hidden">
-            Inspect
-          </span>
-          <span className="hidden shrink-0 text-[10px] font-medium text-sky-300 group-open:inline">
-            Hide
-          </span>
-        </summary>
-        <div className="mt-3 border-t border-white/10 pt-3">
-          <ReceiptBody receipt={receipt} generatedLabel={generatedLabel} />
-        </div>
-      </details>
+  const sources = sourceCurrency(dataSources, evaluatedAt);
+  const overdue = sources.filter((source) => source.pastLimit);
+  const unchecked = sources.filter((source) => source.unchecked);
+  receipt.staleSources = overdue.length;
+  receipt.currentSources = sources.length - overdue.length - unchecked.length;
+  const warning = overdue.length > 0
+    ? `Freshness warning: ${overdue.map((source) => `${source.source}${source.age === null ? '' : ` (${source.age} days old)`}`).join(', ')}. Verify the latest city records before acquisition diligence.`
+    : '';
 
-      <details
-        className="group hidden overflow-hidden rounded-2xl bg-[radial-gradient(circle_at_top_right,_rgba(14,165,233,0.22),_transparent_44%),linear-gradient(135deg,#020617,#0f172a)] shadow-xl ring-1 ring-inset ring-white/10 sm:block"
-        aria-label="Current shortlist qualification receipt"
-        data-testid="parcel-feed-receipt"
+  return (
+    <details
+      className="group relative min-w-0 justify-self-end"
+      aria-label="Current shortlist qualification receipt"
+      data-testid="parcel-feed-receipt"
+    >
+      <summary aria-label={`Qualification receipt ${receipt.passed === true ? 'Passed' : 'Unverified feed'}${warning ? `. ${warning}` : ''}`} title={warning || 'Current shortlist qualification receipt'} className={`cursor-pointer list-none rounded-sm border px-3 py-2 marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select focus-visible:ring-offset-2 ${overdue.length > 0 ? 'border-stale bg-stale-wash text-stale' : 'border-control bg-white text-ink hover:bg-paper-2'}`}>
+        <ReceiptSummary receipt={receipt} />
+      </summary>
+      <div
+        role="region"
+        aria-label="Qualification details"
+        tabIndex={0}
+        className="absolute right-0 top-full z-[700] mt-2 max-h-[70dvh] w-[min(60rem,calc(100vw-2rem))] overflow-y-auto rounded-sm border border-control bg-white p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select"
       >
-        <summary className="cursor-pointer list-none px-4 py-3 marker:hidden">
-          <ReceiptSummary receipt={receipt} />
-        </summary>
-        <div className="border-t border-white/10 px-4 py-3">
-          <ReceiptBody receipt={receipt} generatedLabel={generatedLabel} />
-        </div>
-      </details>
-    </>
+        {warning && <p role="status" className="mb-3 border-b border-rule pb-3 text-xs text-stale">{warning}</p>}
+        <ReceiptBody receipt={receipt} generatedLabel={generatedLabel} />
+        {sources.length > 0 && (
+          <section aria-label="Source currency" className="mt-3 border-t border-rule pt-3">
+            <h3 className="text-sm font-semibold text-ink">Source currency</h3>
+            <dl className="mt-2 divide-y divide-rule font-mono text-xs text-ink-3">
+              {sources.map((source) => (
+                <div key={source.key} className={`flex flex-wrap justify-between gap-2 py-2 ${source.pastLimit || source.unchecked ? 'text-stale' : ''}`}>
+                  <dt>{source.source}{source.asOf ? ` · ${source.asOf}` : ''}</dt>
+                  <dd>{source.age === null ? 'Age unchecked' : `${source.age} d old`}{source.limit !== null && source.limit > 0 ? `, limit ${source.limit} d` : ', historical / no refresh limit'}{source.pastLimit ? ' · past limit' : ''}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
+      </div>
+    </details>
   );
 }

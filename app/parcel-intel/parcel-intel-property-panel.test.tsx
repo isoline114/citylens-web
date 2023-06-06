@@ -273,7 +273,7 @@ describe('ParcelIntelPropertyPanel', () => {
       screen.getByText('Diligence & site context').closest('summary')!,
     );
     expect(diligence).toHaveAttribute('open');
-    expect(diligence).toHaveTextContent('Hide details');
+    expect(screen.getByText('Example Owner LLC')).toBeVisible();
 
     fireEvent.click(
       screen.getByText('Why it surfaced').closest('summary')!,

@@ -21,6 +21,7 @@ import {
   revokeApiKey,
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { CodeBlock } from '@/components/docs/CodeBlock';
 
 type Status = 'idle' | 'loading' | 'error';
 
@@ -120,36 +121,34 @@ export function ApiKeyList() {
   if (!signedIn) {
     return (
       <section
-        className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
+        className="relative overflow-hidden border-t border-rule bg-white p-6 sm:p-8"
         data-testid="api-key-access-gate"
       >
         <div
-          className="absolute inset-y-0 left-0 w-1 bg-sky-500"
+          className="absolute inset-y-0 left-0 w-1 bg-white"
           aria-hidden="true"
         />
         <div className="flex max-w-2xl gap-4">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200">
-            <KeyRound className="h-5 w-5" />
-          </span>
+          <KeyRound className="h-5 w-5" />
           <div>
-            <h2 className="text-lg font-semibold text-slate-950">
+            <h2 className="text-lg font-semibold text-ink">
               Sign in to manage API keys
             </h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600">
+            <p className="mt-1 text-sm leading-6 text-ink-2">
               Keys belong to your account and inherit its plan, quota, and audit
               trail.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <Link
                 href="/sign-in?next=%2Faccount%2Fapi-keys"
-                className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+                className="inline-flex h-10 items-center gap-2 rounded-sm bg-ink px-4 text-sm font-semibold text-white hover:bg-ink"
               >
                 Sign in
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/sign-up?next=%2Faccount%2Fapi-keys"
-                className="inline-flex h-10 items-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                className="inline-flex h-10 items-center rounded-sm border border-control bg-white px-4 text-sm font-semibold text-ink hover:bg-paper-2"
               >
                 Create an account
               </Link>
@@ -163,24 +162,24 @@ export function ApiKeyList() {
   return (
     <div className="flex flex-col gap-6">
       {/* Create form */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <section className="border-t border-rule bg-white p-5 sm:p-6">
         <div className="flex gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white">
-            <KeyRound className="h-4 w-4" />
-          </span>
+          <KeyRound className="h-4 w-4" />
           <div>
-            <h2 className="text-base font-semibold text-slate-950">
+            <h2 className="text-base font-semibold text-ink">
               Create a key
             </h2>
-            <p className="mt-1 text-sm leading-5 text-slate-600">
+            <p className="mt-1 text-sm leading-5 text-ink-2">
               Use a label that identifies the integration.
             </p>
           </div>
         </div>
         <form
-          className="mt-5 flex flex-col gap-2 sm:flex-row"
+          className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-end"
           onSubmit={handleCreate}
         >
+          <label className="flex flex-1 flex-col gap-1.5 text-sm font-medium text-ink">
+            Key label
           <input
             type="text"
             value={label}
@@ -189,46 +188,43 @@ export function ApiKeyList() {
             maxLength={128}
             required
             aria-label="Key label"
-            className="h-11 flex-1 rounded-xl border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+            className="field h-11 flex-1 rounded-sm border border-control bg-white px-3.5 text-sm text-ink outline-none transition placeholder:text-ink-3 focus:border-select focus:ring-4 focus:ring-select"
             disabled={creating}
           />
+          {createError && <span className="text-sm font-normal text-red-700" role="alert">{createError}</span>}
+          </label>
           <button
             type="submit"
             disabled={creating || !label.trim()}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-ink px-4 text-sm font-semibold text-white hover:bg-ink disabled:cursor-not-allowed disabled:opacity-60"
           >
             {creating && <Loader2 className="h-4 w-4 animate-spin" />}
             Generate key
           </button>
         </form>
-        {createError && (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-sm text-rose-900">
-            {createError}
-          </div>
-        )}
       </section>
 
       {/* One-time plaintext display */}
       {justCreated && (
         <section
-          className="rounded-2xl border border-emerald-300 bg-emerald-50 p-5 shadow-sm sm:p-6"
+          className="border-t border-rule bg-paper-2 p-5 sm:p-6"
           data-testid="api-key-plaintext-block"
         >
-          <h2 className="flex items-center gap-2 text-base font-semibold text-emerald-950">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
             <ShieldCheck className="h-4 w-4" />
             Copy this key now
           </h2>
-          <p className="mt-1 text-sm leading-5 text-emerald-900">
+          <p className="mt-1 text-sm leading-5 text-ink">
             It is shown once. Store it in a password manager or secret store.
           </p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-            <code className="flex-1 overflow-x-auto rounded-xl bg-slate-950 px-3.5 py-3 font-mono text-xs text-emerald-200">
+            <code className="flex-1 overflow-x-auto border-b border-rule px-3.5 py-3 font-mono text-xs text-ink">
               {justCreated.plaintext_key}
             </code>
             <button
               type="button"
               onClick={() => handleCopy(justCreated.plaintext_key)}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-950 hover:bg-emerald-100"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-sm border border-control bg-white px-4 text-sm font-semibold text-ink hover:bg-paper-2"
             >
               <Copy className="h-4 w-4" />
               {copyOk ? 'Copied!' : 'Copy'}
@@ -236,37 +232,35 @@ export function ApiKeyList() {
           </div>
           <button
             type="button"
-            className="mt-4 text-xs font-semibold text-emerald-950 underline underline-offset-4"
+            className="mt-4 text-xs font-semibold text-select underline underline-offset-4"
             onClick={() => setJustCreated(null)}
           >
-            I&apos;ve saved it — dismiss
+            I&apos;ve saved it. Dismiss
           </button>
         </section>
       )}
 
       {/* List of existing keys */}
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/70 px-5 py-4 text-sm font-medium sm:px-6">
+      <section className="overflow-hidden border-t border-rule bg-white">
+        <div className="flex items-center justify-between border-b border-rule bg-white px-5 py-4 text-sm font-medium sm:px-6">
           <div>Active keys ({keys.length})</div>
           {status === 'loading' && (
-            <div className="text-xs text-slate-500">Loading…</div>
+            <div className="text-xs text-ink-3">Loading…</div>
           )}
         </div>
         <div className="p-5 sm:p-6">
           {error && (
-            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-950">
+            <div className="mb-4 border-t border-rule py-3 text-sm text-red-700">
               {error}
             </div>
           )}
           {keys.length === 0 && status !== 'loading' ? (
-            <div className="flex flex-col items-center gap-2 py-6 text-center text-sm text-slate-600">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-                <KeyRound className="h-4 w-4" />
-              </span>
+            <div className="flex flex-col items-center gap-2 py-6 text-center text-sm text-ink-2">
+              <KeyRound className="h-4 w-4" />
               No active keys yet.
             </div>
           ) : (
-            <ul className="divide-y divide-slate-200">
+            <ul className="divide-y divide-rule">
               {keys.map((key) => (
                 <li
                   key={key.key_id}
@@ -274,13 +268,13 @@ export function ApiKeyList() {
                   data-testid="api-key-row"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-slate-900">
+                    <div className="text-sm font-medium text-ink">
                       {key.label}
                     </div>
-                    <div className="mt-0.5 font-mono text-xs text-slate-500">
+                    <div className="mt-0.5 font-mono text-xs text-ink-3">
                       {key.key_prefix}…
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">
+                    <div className="mt-1 text-xs text-ink-3">
                       Created {formatDate(key.created_at)}
                       {key.last_used_at
                         ? ` · last used ${formatDate(key.last_used_at)}`
@@ -290,7 +284,7 @@ export function ApiKeyList() {
                   <button
                     type="button"
                     onClick={() => handleRevoke(key.key_id)}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-700 hover:bg-rose-50"
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-sm border border-control bg-white px-3 text-xs font-semibold text-red-700 hover:bg-white"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     Revoke
@@ -309,20 +303,18 @@ export function ApiKeyList() {
 
 function QuickTest() {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-950">
+    <section className="border-t border-rule bg-paper-2 p-5 sm:p-6">
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
         <Terminal className="h-4 w-4" />
         Verify a key
       </h2>
-      <p className="mt-1 text-sm text-slate-600">
+      <p className="mt-1 text-sm text-ink-2">
         Call the account endpoint from your terminal.
       </p>
-      <pre className="mt-4 overflow-x-auto rounded-xl bg-slate-950 px-4 py-3 text-[12px] leading-relaxed text-slate-100">
-        <code>{`curl -s https://api.citylens.dev/v1/me \\
-  -H "Authorization: Bearer clk_live_…" | jq '{user, quota}'`}</code>
-      </pre>
-      <p className="mt-3 text-xs leading-5 text-slate-500">
-        A <code className="rounded bg-slate-200 px-1">401</code> means the key
+      <div className="mt-4"><CodeBlock language="bash">{`curl -s https://api.citylens.dev/v1/me \\
+  -H "Authorization: Bearer clk_live_…" | jq '{user, quota}'`}</CodeBlock></div>
+      <p className="mt-3 text-xs leading-5 text-ink-3">
+        A <code className="rounded-sm bg-paper-2 px-1">401</code> means the key
         is invalid or revoked.
       </p>
     </section>

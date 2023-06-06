@@ -230,17 +230,13 @@ test('homepage foregrounds the acquisition workspace without viewport overflow',
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: /Turn the whole NYC market into a defensible weekly shortlist/i,
+      name: /Every tax lot in New York City, ranked for redevelopment/i,
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole('link', { name: 'Open the NYC opportunity map' }),
+    page.getByRole('link', { name: 'Open the parcel map' }),
   ).toBeVisible();
-  const desktopPreview = await page
-    .getByTestId('acquisition-workspace-preview')
-    .boundingBox();
-  expect(desktopPreview).not.toBeNull();
-  expect(desktopPreview?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(1000);
+  await expect(page.getByText(/Live inventory counts are temporarily unavailable/)).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -250,13 +246,9 @@ test('homepage foregrounds the acquisition workspace without viewport overflow',
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
   await expect(
-    page.getByRole('link', { name: 'Open the NYC opportunity map' }),
+    page.getByRole('link', { name: 'Open the parcel map' }),
   ).toBeVisible();
-  const mobilePreview = await page
-    .getByTestId('acquisition-workspace-preview')
-    .boundingBox();
-  expect(mobilePreview).not.toBeNull();
-  expect(mobilePreview?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(844);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

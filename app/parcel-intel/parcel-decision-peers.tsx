@@ -1,11 +1,12 @@
 'use client';
 
+import { formatAddress, formatBbl } from '@/lib/parcel-format';
+
 import { useState } from 'react';
 import {
   ArrowRight,
   Columns3,
   LoaderCircle,
-  Network,
   TriangleAlert,
 } from 'lucide-react';
 import type { ParcelIntelMapRow, ParcelIntelRow } from '@/lib/api';
@@ -188,72 +189,52 @@ export function ParcelDecisionPeers({
 
   return (
     <section
-      className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-[linear-gradient(145deg,#ffffff,#f8fafc)] shadow-sm"
+      className="mt-4 border-b border-rule bg-white"
       data-testid="parcel-decision-peers"
     >
-      <div className="border-b border-slate-200 px-3 py-3">
-        <div className="flex items-start gap-2">
-          <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-800">
-            <Network className="h-3.5 w-3.5" />
-          </span>
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-900">
-              Decision peers
-            </h4>
-            <p className="mt-0.5 text-[10px] leading-4 text-slate-600">
-              Similar qualified leads from the same governed inventory—not
-              valuation or sale comps.
-            </p>
-          </div>
-        </div>
-      </div>
+      <h4 className="text-sm font-semibold text-ink">Decision peers</h4>
+      <p className="mt-1 text-xs leading-4 text-ink-3">
+        Similar qualified leads from the same governed inventory, not valuation or sale comps.
+      </p>
 
-      <div className="divide-y divide-slate-200">
+      <div className="divide-y divide-rule">
         {peers.map(({ row, reasons }) => (
           <article
             key={row.bbl}
-            className="px-3 py-3"
+            className="py-2"
             data-testid={`parcel-decision-peer-${row.bbl}`}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="truncate text-[13px] font-semibold text-slate-950">
-                  {row.address ?? `BBL ${row.bbl}`}
+                <div className="break-words text-sm font-medium text-ink">
+                  {formatAddress(row.address) || `BBL ${formatBbl(row.bbl)}`}
                 </div>
-                <div className="mt-0.5 text-[11px] text-slate-500">
-                  {BOROUGH_LABELS[row.borough ?? ''] ?? row.borough}
-                  {row.zoning_district_1 ? ` · ${row.zoning_district_1}` : ''}
-                  {row.lot_area_sqft
-                    ? ` · ${Math.round(row.lot_area_sqft).toLocaleString()} sf`
-                    : ''}
+                <div className="mt-0.5 text-xs text-ink-3">
+                  {row.lot_area_sqft != null ? Math.round(row.lot_area_sqft).toLocaleString() : '—'}<small className="text-ink-3"> sf</small>
                 </div>
               </div>
-              <span className="shrink-0 rounded-md bg-slate-950 px-1.5 py-1 text-[9px] font-semibold text-white">
+              <span className="shrink-0 py-1 text-xs tabular-nums text-ink-3">
                 {row.citywide_rank ? `NYC #${row.citywide_rank}` : 'Ranked'}
               </span>
             </div>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {reasons.map((reason) => (
-                <span
-                  key={reason}
-                  className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-800 ring-1 ring-inset ring-sky-100"
-                >
-                  {reason}
-                </span>
-              ))}
-            </div>
+            <details className="group mt-1 border-t border-rule">
+              <summary className="flex cursor-pointer list-none items-center justify-between py-2 text-xs text-ink-3 after:content-['+'] group-open:after:content-['−'] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select">Peer matching evidence</summary>
+              <ul className="space-y-1 pb-2 text-xs text-ink-3">
+                {reasons.map((reason) => <li key={reason}>{reason}</li>)}
+              </ul>
+            </details>
             {errorBbl === row.bbl && (
-              <div className="mt-2 flex items-center gap-1 text-[10px] text-rose-700">
+              <div className="mt-2 flex items-center gap-1 text-xs text-red-700">
                 <TriangleAlert className="h-3 w-3" />
                 Could not prepare this comparison. Retry.
               </div>
             )}
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="mt-1 flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => onOpen(row.bbl)}
                 aria-label={`Open decision peer ${row.address ?? row.bbl}`}
-                className="inline-flex h-9 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-700 hover:border-sky-300 hover:text-sky-900"
+                className="inline-flex h-8 items-center justify-center gap-1 rounded-sm border border-control bg-white px-2 text-xs font-semibold text-ink hover:border-rule hover:text-select"
               >
                 Open peer
                 <ArrowRight className="h-3 w-3" />
@@ -263,7 +244,7 @@ export function ParcelDecisionPeers({
                 disabled={busyBbl !== null}
                 onClick={() => void compare(row)}
                 aria-label={`Compare 1:1 with ${row.address ?? row.bbl}`}
-                className="inline-flex h-9 items-center justify-center gap-1 rounded-lg bg-slate-950 px-2 text-[11px] font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex h-8 items-center justify-center gap-1 rounded-sm bg-ink px-2 text-xs font-semibold text-white hover:bg-ink/90 disabled:cursor-wait disabled:opacity-60"
               >
                 {busyBbl === row.bbl ? (
                   <LoaderCircle className="h-3 w-3 animate-spin" />
@@ -277,10 +258,10 @@ export function ParcelDecisionPeers({
         ))}
       </div>
 
-      <div className="border-t border-slate-200 bg-slate-50 px-3 py-2 text-[9px] leading-4 text-slate-500">
+      <div className="border-t border-rule py-2 text-xs leading-4 text-ink-3">
         {fullInventory
           ? 'Matched across the complete 5,000-lead inventory.'
-          : 'Preview peer set only—sign in to match across all 5,000 leads.'}{' '}
+          : 'Preview peer set only; sign in to match across all 5,000 leads.'}{' '}
         Selection uses displayed zoning, opportunity, geography, lot, and
         build-out fields; it is not an appraisal or a parcel-specific
         probability.

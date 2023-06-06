@@ -1,4 +1,4 @@
-import { BookOpen, Building2, Database, TriangleAlert } from 'lucide-react';
+import { BookOpen, Database, TriangleAlert } from 'lucide-react';
 import { fetchParcelIntelIndexOnServer } from '@/lib/api.server';
 import type {
   ParcelProspectiveValidationHealth,
@@ -39,6 +39,11 @@ function formatGenerated(iso: string | null): string {
   }
 }
 
+// Resolve time with the server request, then pass a stable value into the receipt.
+async function receiptRequestTime(): Promise<number> {
+  return Date.now();
+}
+
 export default async function ParcelIntelIndexPage({
   searchParams,
 }: {
@@ -46,6 +51,7 @@ export default async function ParcelIntelIndexPage({
 }) {
   const { borough, bbl } = await searchParams;
   const index = await fetchParcelIntelIndexOnServer();
+  const receiptEvaluatedAt = await receiptRequestTime();
   const generatedLabel = formatGenerated(index.generated_at);
   const labelWindow = index.model_metadata?.label_window as string | undefined;
   const trainingOrigins = Array.isArray(
@@ -89,25 +95,6 @@ export default async function ParcelIntelIndexPage({
   const historicalBenchmarkReceipt = parseHistoricalBenchmarkReceipt(
     index.model_metadata?.historical_benchmark_receipt,
   );
-  const staleSources = Object.values(index.data_sources ?? {}).flatMap((value) => {
-    if (!value || typeof value !== 'object') return [];
-    const status = value as Record<string, unknown>;
-    // A stale warning is meaningful only for a refreshable operational source
-    // with an explicit SLA. Historical model/imagery provenance may carry a
-    // baseline year without a retrieval timestamp; it must not masquerade as
-    // an overdue current-record feed.
-    if (
-      status.stale !== true ||
-      typeof status.max_age_days !== 'number' ||
-      !Number.isFinite(status.max_age_days) ||
-      status.max_age_days <= 0
-    ) {
-      return [];
-    }
-    const source = typeof status.source === 'string' ? status.source : 'A required source';
-    const age = typeof status.age_days === 'number' ? ` (${status.age_days} days old)` : '';
-    return [`${source}${age}`];
-  });
   const qualityGatePassed = index.quality_gate?.passed === true;
   const qualityGateFailed =
     Object.keys(index.quality_gate ?? {}).length > 0 && !qualityGatePassed;
@@ -125,61 +112,11 @@ export default async function ParcelIntelIndexPage({
       : '';
 
   return (
-    <div>
-      <header className="mb-3 grid gap-4 md:mb-5 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.82fr)] lg:items-start">
-        <div>
-          <div className="inline-flex items-center gap-2 self-start rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-800 ring-1 ring-inset ring-sky-200">
-            <Building2 className="h-3.5 w-3.5" />
-            NYC parcel intelligence · v1
-          </div>
-          <h1 className="mt-2 max-w-2xl text-balance text-3xl font-semibold tracking-[-0.03em] text-slate-950 md:mt-3 md:text-4xl">
-            Find the sites worth pursuing this week.
-          </h1>
-          <p className="mt-2 max-w-3xl text-[13px] leading-5 text-slate-600 sm:text-sm sm:leading-6 md:text-base md:leading-7">
-            <span className="sm:hidden">
-              Rank NYC development-site leads, then verify the evidence before
-              diligence.
-            </span>
-            <span className="hidden sm:inline">
-              Rank and qualify NYC development-site leads from current city records,
-              then open the parcel to verify evidence, underwrite, and plan the next
-              action. Priority is ordinal—not a promise that a site will transact or
-              receive a permit.
-            </span>
-          </p>
-        </div>
-        <ParcelFeedReceipt
-          qualityGate={index.quality_gate}
-          dataSources={index.data_sources}
-          modelMetadata={index.model_metadata}
-          prospectiveValidation={index.prospective_validation ?? null}
-          prospectiveValidationHealth={
-            index.prospective_validation_health ?? null
-          }
-          generatedLabel={generatedLabel}
-        />
-      </header>
-
-      {staleSources.length > 0 && (
-        <details className="mb-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1 text-xs text-amber-950 sm:mb-6 sm:px-4 sm:py-3 sm:text-sm">
-          <summary className="cursor-pointer font-semibold">
-            Freshness warning: {staleSources.length}{' '}
-            {staleSources.length === 1 ? 'source' : 'sources'} overdue.
-            <span className="ml-1 hidden font-normal sm:inline">View source details</span>
-          </summary>
-          <p className="mt-1 text-xs sm:text-sm">
-            Verify the latest city records before acquisition diligence.
-          </p>
-          <ul className="mt-2 list-disc space-y-1 pl-5">
-            {staleSources.map((source, position) => (
-              <li key={`${position}-${source}`}>{source}</li>
-            ))}
-          </ul>
-        </details>
-      )}
+    <div className="min-w-0">
+      <h1 className="sr-only">Parcel workspace</h1>
 
       {qualityGateFailed && (
-        <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-950">
+        <div role="alert" className="mb-2 rounded-sm border border-rule bg-white px-3 py-2 text-xs leading-5 text-red-700">
           <strong>Acquisition quality warning:</strong> the published feed did not
           pass its project-leakage, rank-integrity, or coverage checks. Do not use it
           for outreach until the feed is republished.
@@ -187,18 +124,27 @@ export default async function ParcelIntelIndexPage({
       )}
 
       {index.boroughs.length === 0 ? (
-        <section className="rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center">
-          <p className="text-sm text-slate-600">
-            No parcel-intel data has been published yet. Run{' '}
-            <code className="rounded bg-white px-1.5 py-0.5 font-mono text-[12px] ring-1 ring-inset ring-slate-200">
-              scripts/publish_sweep.py
-            </code>{' '}
-            from the citylens-parcel-intel repo to populate this view.
+        <section className="panel p-8 text-center">
+          <p className="text-sm text-ink-3">
+            Parcel data is currently unavailable. Please try again shortly.
           </p>
         </section>
       ) : (
         <>
           <ParcelIntelExplorer
+            sourceReceipt={
+              <ParcelFeedReceipt
+                evaluatedAt={receiptEvaluatedAt}
+                qualityGate={index.quality_gate}
+                dataSources={index.data_sources}
+                modelMetadata={index.model_metadata}
+                prospectiveValidation={index.prospective_validation ?? null}
+                prospectiveValidationHealth={
+                  index.prospective_validation_health ?? null
+                }
+                generatedLabel={generatedLabel}
+              />
+            }
             boroughs={index.boroughs}
             initialBorough={borough ?? null}
             initialBbl={bbl ?? null}
@@ -263,20 +209,20 @@ function MethodologyDisclosure({
   });
 
   return (
-    <details className="group mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 marker:hidden hover:bg-slate-50">
-        <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <BookOpen className="h-4 w-4 text-sky-600" />
+    <details className="group mt-3 overflow-hidden border-t border-rule">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-3 marker:hidden hover:bg-paper-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select">
+        <span className="flex items-center gap-2 text-xs font-medium text-ink">
+          <BookOpen className="h-3.5 w-3.5 text-ink-3" />
           How CityLens ranks and qualifies parcels
         </span>
-        <span className="text-xs font-medium text-slate-500 group-open:hidden">
+        <span className="text-xs text-ink-3 group-open:hidden">
           View methodology and limitations
         </span>
-        <span className="hidden text-xs font-medium text-slate-500 group-open:inline">
+        <span className="hidden text-xs text-ink-3 group-open:inline">
           Hide methodology
         </span>
       </summary>
-      <div className="grid gap-3 border-t border-slate-200 bg-slate-50 p-4 md:grid-cols-2 md:p-5 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-3 border-t border-rule py-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <MethodCard
           icon={Database}
           title="Source records"
@@ -318,12 +264,12 @@ function MethodCard({
   body: string;
 }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4">
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-        <Icon className="h-4 w-4 text-sky-600" />
+    <section className="panel p-4">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+        <Icon className="h-4 w-4 text-ink-3" />
         {title}
       </h3>
-      <p className="mt-2 text-xs leading-5 text-slate-600">{body}</p>
+      <p className="mt-2 text-xs leading-5 text-ink-3">{body}</p>
     </section>
   );
 }

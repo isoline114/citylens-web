@@ -21,28 +21,47 @@ export const BOROUGH_SHORT_LABELS: Record<string, string> = {
   staten_island: 'SI',
 };
 
+// Muted categorical inks keep change-class green/red/yellow exclusive to changes.
 export const BOROUGH_COLORS: Record<string, string> = {
-  manhattan: '#0284c7',
-  brooklyn: '#059669',
-  queens: '#d97706',
-  bronx: '#e11d48',
-  staten_island: '#7c3aed',
+  manhattan: '#39495b',
+  brooklyn: '#697482',
+  queens: '#8a8191',
+  bronx: '#565a64',
+  staten_island: '#9aa2ad',
 };
 
 export const PRIORITY_COLORS: Record<string, string> = {
-  highest: '#dc2626',
-  high: '#f59e0b',
-  medium: '#0ea5e9',
-  watch: '#64748b',
+  highest: '#14171c',
+  high: '#4a4f57',
+  medium: '#80868f',
+  watch: '#b0b5bd',
 };
 
 export const OPPORTUNITY_COLORS: Record<string, string> = {
-  vacant_site: '#16a34a',
-  ground_up_candidate: '#0ea5e9',
-  conversion_or_overbuilt: '#7c3aed',
-  active_project: '#f97316',
-  completed_project: '#64748b',
+  vacant_site: '#39495b',
+  ground_up_candidate: '#697482',
+  conversion_or_overbuilt: '#8a8191',
+  active_project: '#565a64',
+  completed_project: '#9aa2ad',
 };
+
+export function explorerRank(row: ParcelExplorerRow): number {
+  return Math.max(1, row.citywide_rank ?? row.acquisition_rank ?? row.priority_rank ?? 5_000);
+}
+
+// Continuous rank shading keeps a preview of highest-tier rows distinguishable.
+export function explorerRankInk(row: ParcelExplorerRow, maxRank = 5_000): string {
+  const t = Math.min(1, Math.log(explorerRank(row)) / Math.log(Math.max(2, maxRank + 1)));
+  const dark = [20, 23, 28];
+  const light = [120, 126, 135];
+  return `rgb(${dark.map((value, i) => Math.round(value + (light[i] - value) * t)).join(',')})`;
+}
+
+export function explorerRankRadius(row: ParcelExplorerRow): number {
+  // Absolute citywide bands preserve sizes when a borough/filter narrows scope.
+  const rank = explorerRank(row);
+  return rank <= 100 ? 5.5 : rank <= 500 ? 4.5 : rank <= 1_500 ? 4 : 3.5;
+}
 
 export type ExplorerOverlay = 'priority' | 'opportunity' | 'borough';
 export type ExplorerPriority = 'all' | 'highest' | 'high_or_better';
@@ -448,12 +467,12 @@ export function explorerRowColor(
   overlay: ExplorerOverlay,
 ): string {
   if (overlay === 'borough') {
-    return BOROUGH_COLORS[row.borough ?? ''] ?? '#64748b';
+    return BOROUGH_COLORS[row.borough ?? ''] ?? '#676d77';
   }
   if (overlay === 'opportunity') {
-    return OPPORTUNITY_COLORS[row.opportunity_category ?? ''] ?? '#64748b';
+    return OPPORTUNITY_COLORS[row.opportunity_category ?? ''] ?? '#676d77';
   }
-  return PRIORITY_COLORS[row.priority_tier ?? 'watch'] ?? PRIORITY_COLORS.watch;
+  return explorerRankInk(row);
 }
 
 export function filterExplorerRows<T extends ParcelExplorerRow>(

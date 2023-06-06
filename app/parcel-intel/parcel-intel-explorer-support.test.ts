@@ -176,9 +176,13 @@ describe('parcel citywide explorer support', () => {
       opportunity_category: 'vacant_site',
     });
 
-    expect(explorerRowColor(item, 'priority')).toBe('#dc2626');
-    expect(explorerRowColor(item, 'opportunity')).toBe('#16a34a');
-    expect(explorerRowColor(item, 'borough')).toBe('#059669');
+    expect(explorerRowColor(item, 'priority')).toBe('rgb(47,51,57)');
+    expect(explorerRowColor(item, 'opportunity')).toBe('#39495b');
+    expect(explorerRowColor(item, 'borough')).toBe('#697482');
+    // Green, red and yellow are reserved for the change-class legend.
+    for (const overlay of ['priority', 'opportunity', 'borough'] as const) {
+      expect(explorerRowColor(item, overlay)).not.toMatch(/#(?:dc2626|16a34a|059669|00c83c|dc1e1e|ffc800)/i);
+    }
   });
 
   it('groups vacant, ground-up, and conversion parcels as uncommitted', () => {

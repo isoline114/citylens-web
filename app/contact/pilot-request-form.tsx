@@ -37,7 +37,7 @@ function submissionError(error: unknown): string {
   if (error instanceof ApiError && error.status === 422) {
     return 'Please check the highlighted fields and submit again.';
   }
-  return 'We could not securely submit your request. Your entries are still here—please try again or email hello@citylens.dev.';
+  return 'We could not securely submit your request. Your entries are still here. Please try again or email hello@citylens.dev.';
 }
 
 export function PilotRequestForm({
@@ -103,22 +103,22 @@ export function PilotRequestForm({
   if (receipt) {
     return (
       <div
-        className="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50 p-6"
+        className="mt-8 border-t border-rule bg-paper-2 p-6"
         data-testid="pilot-request-success"
         role="status"
       >
-        <CheckCircle2 className="h-8 w-8 text-emerald-600" />
-        <h3 className="mt-4 text-xl font-semibold text-emerald-950">
+        <CheckCircle2 className="h-8 w-8 text-ink" />
+        <h3 className="mt-4 text-xl font-semibold text-ink">
           Your request is in the queue.
         </h3>
-        <p className="mt-2 text-sm leading-6 text-emerald-900">
+        <p className="mt-2 text-sm leading-6 text-ink">
           We&apos;ll review the workflow and reply personally at the email you
           provided. Keep this reference if you contact us directly:{' '}
           <span className="font-mono font-semibold">{receipt.request_id}</span>.
         </p>
         <Link
           href="/parcel-intel"
-          className="mt-5 inline-flex h-10 items-center rounded-md bg-emerald-950 px-4 text-sm font-medium text-white hover:bg-emerald-900"
+          className="mt-5 inline-flex h-10 items-center rounded-sm bg-ink px-4 text-sm font-medium text-white hover:bg-ink"
         >
           Explore Parcel Intelligence
         </Link>
@@ -129,7 +129,7 @@ export function PilotRequestForm({
   return (
     <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
       <fieldset>
-        <legend className="text-sm font-medium text-slate-900">
+        <legend className="text-sm font-medium text-ink">
           Pilot track
         </legend>
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -147,24 +147,24 @@ export function PilotRequestForm({
           ].map((option) => (
             <label
               key={option.value}
-              className={`cursor-pointer rounded-xl border p-3 transition ${
+              className={`cursor-pointer border-b border-rule py-3 transition ${
                 plan === option.value
-                  ? 'border-sky-500 bg-sky-50 ring-1 ring-sky-200'
-                  : 'border-slate-200 hover:border-slate-300'
+                  ? 'text-ink'
+                  : 'text-ink-2'
               }`}
             >
               <input
-                className="sr-only"
+                className="mr-2 accent-ink"
                 type="radio"
                 name="plan"
                 value={option.value}
                 checked={plan === option.value}
                 onChange={() => setPlan(option.value)}
               />
-              <span className="block text-sm font-semibold text-slate-950">
+              <span className="block text-sm font-semibold text-ink">
                 {option.label}
               </span>
-              <span className="mt-0.5 block text-xs text-slate-600">
+              <span className="mt-0.5 block text-xs text-ink-2">
                 {option.detail}
               </span>
             </label>
@@ -196,11 +196,11 @@ export function PilotRequestForm({
       </div>
 
       <label className="block">
-        <span className="text-sm font-medium text-slate-900">Team size</span>
+        <span className="text-sm font-medium text-ink">Team size</span>
         <select
           name="team_size"
           defaultValue="2-5"
-          className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+          className="field mt-2 h-11 w-full rounded-sm border border-control bg-white px-3 text-sm text-ink outline-none transition focus:border-select focus:ring-2 focus:ring-select"
           required
         >
           <option value="1">1 person</option>
@@ -211,7 +211,7 @@ export function PilotRequestForm({
       </label>
 
       <fieldset>
-        <legend className="text-sm font-medium text-slate-900">
+        <legend className="text-sm font-medium text-ink">
           Target boroughs
         </legend>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -221,14 +221,14 @@ export function PilotRequestForm({
               <label
                 key={borough.value}
                 data-testid={`pilot-borough-${borough.value}`}
-                className={`cursor-pointer rounded-full border px-3 py-2 text-xs font-medium transition ${
+                className={`cursor-pointer py-2 pr-3 text-sm font-medium transition ${
                   selected
-                    ? 'border-sky-500 bg-sky-50 text-sky-900'
-                    : 'border-slate-300 text-slate-700 hover:border-slate-400'
+                    ? 'text-ink'
+                    : 'text-ink-2'
                 }`}
               >
                 <input
-                  className="sr-only"
+                  className="mr-2 accent-ink"
                   type="checkbox"
                   name="target_boroughs"
                   value={borough.value}
@@ -240,10 +240,11 @@ export function PilotRequestForm({
             );
           })}
         </div>
+        {error === 'Select at least one target borough.' && <p className="mt-2 text-sm text-red-700" role="alert">{error}</p>}
       </fieldset>
 
       <label className="block">
-        <span className="text-sm font-medium text-slate-900">
+        <span className="text-sm font-medium text-ink">
           What does your acquisition workflow look like today?
         </span>
         <textarea
@@ -253,7 +254,7 @@ export function PilotRequestForm({
           maxLength={1200}
           required
           placeholder="How you find sites, who reviews them, where diligence slows down, and what would make a pilot valuable…"
-          className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm leading-6 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+          className="field mt-2 w-full rounded-sm border border-control bg-white px-3 py-2.5 text-sm leading-6 text-ink outline-none transition placeholder:text-ink-3 focus:border-select focus:ring-2 focus:ring-select"
         />
       </label>
 
@@ -272,18 +273,18 @@ export function PilotRequestForm({
         </label>
       </div>
 
-      <label className="flex items-start gap-3 rounded-xl bg-slate-50 p-3">
+      <label className="flex items-start gap-3 border-t border-rule py-3">
         <input
           type="checkbox"
           name="consent"
           required
-          className="mt-1 h-4 w-4 rounded border-slate-300 text-sky-700 focus:ring-sky-500"
+          className="mt-1 h-4 w-4 rounded-sm border-control text-ink focus:ring-select"
         />
-        <span className="text-xs leading-5 text-slate-600">
+        <span className="text-xs leading-5 text-ink-2">
           I agree that CityLens may use these details to evaluate and respond
           to this pilot request. See the{' '}
           <Link
-            className="font-medium text-sky-700 hover:underline"
+            className="font-medium text-ink hover:underline"
             href="/privacy"
           >
             privacy notice
@@ -292,9 +293,9 @@ export function PilotRequestForm({
         </span>
       </label>
 
-      {error && (
+      {error && error !== 'Select at least one target borough.' && (
         <div
-          className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900"
+          className="border-t border-rule bg-white p-3 text-sm text-red-700"
           role="alert"
         >
           {error}
@@ -304,13 +305,13 @@ export function PilotRequestForm({
       <button
         type="submit"
         disabled={submitting}
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-sm bg-ink px-5 text-sm font-semibold text-white transition hover:bg-ink disabled:cursor-not-allowed disabled:opacity-60"
       >
         {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
         {submitting ? 'Submitting securely…' : 'Request the working session'}
       </button>
 
-      <p className="text-center text-[11px] leading-5 text-slate-500">
+      <p className="text-center text-[11px] leading-5 text-ink-3">
         No payment is collected. Requests expire after 365 days unless retained
         for an active customer or legal obligation.
       </p>
@@ -335,7 +336,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-medium text-slate-900">{label}</span>
+      <span className="text-sm font-medium text-ink">{label}</span>
       <input
         name={name}
         type={type}
@@ -343,7 +344,7 @@ function Field({
         placeholder={placeholder}
         required={required}
         maxLength={type === 'email' ? 254 : 120}
-        className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+        className="field mt-2 h-11 w-full rounded-sm border border-control bg-white px-3 text-sm text-ink outline-none transition placeholder:text-ink-3 focus:border-select focus:ring-2 focus:ring-select"
       />
     </label>
   );

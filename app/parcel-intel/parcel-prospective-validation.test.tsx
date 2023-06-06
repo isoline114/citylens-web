@@ -129,7 +129,7 @@ describe('ParcelProspectiveValidation', () => {
       'data-status',
       'awaiting_post_issue_data',
     );
-    expect(screen.getByText(/intentionally unavailable—not 0%/i)).toBeVisible();
+    expect(screen.getByText(/intentionally unavailable; not 0%/i)).toBeVisible();
     expect(screen.getByText(/weekly evidence monitor current/i)).toBeVisible();
   });
 

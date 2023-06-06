@@ -40,3 +40,14 @@ release or a reviewed replacement. Before the expiry, reassess the upstream
 fix and dependency paths; do not extend the date without another explicit
 review. Moving Tailwind to version 4 alone is insufficient because the Next.js
 ESLint plugin also depends on fast-glob → micromatch → braces.
+
+## postcss-selector-parser override (October 19, 2026)
+
+[GHSA-rj75-hqrm-r3gf](https://github.com/advisories/GHSA-rj75-hqrm-r3gf)
+(quadratic selector parsing, fixed in 7.1.6) was published after the October 5
+audit and has no patched 6.x release. Tailwind CSS 3.4 and postcss-nested pin
+`postcss-selector-parser@^6`, so `package.json` overrides it to `7.1.6` rather
+than widening the exception above. The production CSS compiled with the
+override was byte-identical to the 6.1.4 build (same md5 for every emitted
+stylesheet). Remove the override when Tailwind is upgraded to a release that
+depends on a patched parser.

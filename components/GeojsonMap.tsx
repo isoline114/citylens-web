@@ -75,11 +75,11 @@ export function GeojsonMap({ url }: { url: string }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+    <div className="overflow-hidden border-t border-rule bg-white">
+      <div className="flex items-center justify-between gap-3 border-b border-rule px-4 py-3">
         <div className="text-sm font-medium">change.geojson</div>
         <a
-          className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900"
+          className="inline-flex items-center gap-1.5 text-sm text-ink-2 hover:text-ink"
           data-testid="artifact-change-download"
           href={url}
           target="_blank"
@@ -91,33 +91,34 @@ export function GeojsonMap({ url }: { url: string }) {
       </div>
       <div className="h-80 w-full">
         {error ? (
-          <div className="p-4 text-sm text-rose-700">{error}</div>
+          <div className="p-4 text-sm text-red-700">{error}</div>
         ) : coordinateSpace === 'pixel' ? (
-          <div className="p-4 text-sm text-slate-700">
+          <div className="p-4 text-sm text-ink-2">
             This GeoJSON uses pixel coordinates (`properties.crs = &quot;pixel&quot;`), so it cannot be plotted on
             the Leaflet basemap. Download the file to inspect the pixel-space change boxes directly.
           </div>
         ) : !geojson ? (
-          <div className="p-4 text-sm text-slate-600">Loading GeoJSON…</div>
+          <div className="p-4 text-sm text-ink-2">Loading GeoJSON…</div>
         ) : !leafletBounds ? (
-          <div className="p-4 text-sm text-slate-600">No mappable geometry found in GeoJSON.</div>
+          <div className="p-4 text-sm text-ink-2">No mappable geometry found in GeoJSON.</div>
         ) : (
           <div className="flex h-full flex-col">
-            <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-2 text-xs text-slate-700">
-              <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-2.5 py-1">
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#00c83c' }} />
+            <div aria-label="Model-detected change legend" className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-rule px-4 py-2 text-xs text-ink-2">
+              <span>Model-detected</span>
+              <span className="inline-flex items-center gap-2 font-mono tabular-nums">
+                <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: '#00c83c' }} />
                 Added: {kindCounts.added}
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-2.5 py-1">
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#dc1e1e' }} />
+              <span className="inline-flex items-center gap-2 font-mono tabular-nums">
+                <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: '#dc1e1e' }} />
                 Demolished: {kindCounts.removed}
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-2.5 py-1">
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#ffc800' }} />
+              <span className="inline-flex items-center gap-2 font-mono tabular-nums">
+                <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: '#ffc800' }} />
                 Modified: {kindCounts.modified}
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-2.5 py-1">
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#8c8c8c' }} />
+              <span className="inline-flex items-center gap-2 font-mono tabular-nums">
+                <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: '#8c8c8c' }} />
                 Unchanged: {kindCounts.unchanged}
               </span>
             </div>

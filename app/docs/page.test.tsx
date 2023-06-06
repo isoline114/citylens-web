@@ -10,7 +10,7 @@ describe('DocsPage', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: 'Build acquisition workflows on a source-aware city model.',
+        name: 'Build acquisition workflows with the CityLens API.',
       }),
     ).toBeVisible();
     expect(screen.getAllByText('https://api.citylens.dev').length).toBeGreaterThan(0);

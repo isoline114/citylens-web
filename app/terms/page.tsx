@@ -23,7 +23,6 @@ const navigation = [
 export default function TermsPage() {
   return (
     <LegalDocumentShell
-      eyebrow="Trust center"
       title="Pilot terms of use"
       summary="Terms for evaluation and pilot use of CityLens unless a written order says otherwise."
       effectiveDate="July 17, 2026"

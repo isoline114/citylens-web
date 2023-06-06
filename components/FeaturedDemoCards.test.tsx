@@ -24,7 +24,7 @@ describe('FeaturedDemoCards', () => {
     expect(screen.getByText('Brooklyn brownstones — Flatbush')).toBeInTheDocument();
     expect(screen.getByText('100 E 21st St Brooklyn, NY 11226')).toBeInTheDocument();
     expect(screen.getByText(/2017 → 2024/)).toBeInTheDocument();
-    expect(screen.getByText(/previews · change · mesh/)).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Public evidence runs' })).toBeInTheDocument();
   });
 
   it('links to /runs/{run_id}?demo=1', () => {
@@ -74,7 +74,7 @@ describe('FeaturedDemoCards', () => {
       'id',
       'public-evidence',
     );
-    expect(screen.getByText('Public evidence library')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Public evidence runs' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Inspect the evidence.' })).toBeInTheDocument();
     expect(screen.getAllByTestId('featured-demo-card')).toHaveLength(2);
   });

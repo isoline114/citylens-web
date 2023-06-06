@@ -17,7 +17,7 @@ export function CopyButton({ value }: { value: string }) {
     <button
       type="button"
       onClick={copy}
-      className="inline-flex h-7 shrink-0 items-center justify-center gap-1.5 rounded border border-slate-700 bg-slate-900 px-2 text-[11px] font-medium normal-case tracking-normal text-slate-200 hover:bg-slate-800"
+      className="inline-flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-sm border border-ink bg-ink px-2 text-[11px] font-medium normal-case tracking-normal text-rule hover:bg-ink"
     >
       {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
       {copied ? 'Copied' : 'Copy'}

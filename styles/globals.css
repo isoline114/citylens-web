@@ -5,8 +5,24 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Block & Lot. Ink on white; selection blue is the only interface color;
+ * stale amber marks sources past their freshness limit; the change-class
+ * palette (added/demolished/modified/unchanged) is a data legend.
+ */
 :root {
   color-scheme: light;
+  --ink: #14171c;
+  --ink-2: #474d57;
+  --ink-3: #676d77;
+  --paper: #ffffff;
+  --paper-2: #f3f4f6;
+  --rule: #dadde2;
+  --control: #858b94;
+  --select: #2150d0;
+  --select-wash: #eaf0fd;
+  --stale: #8a5300;
+  --site-header-height: 52px;
 }
 
 /* Basic app defaults */
@@ -15,27 +31,77 @@ body {
   height: 100%;
 }
 
-.parcel-map-cluster-icon {
-  align-items: center;
-  background:
-    radial-gradient(circle at 35% 30%, rgb(14 165 233 / 0.96), rgb(15 23 42));
-  border: 2px solid rgb(255 255 255 / 0.96);
-  border-radius: 9999px;
-  box-shadow:
-    0 0 0 4px rgb(14 165 233 / 0.2),
-    0 8px 20px rgb(15 23 42 / 0.28);
-  color: white;
-  display: flex;
-  font-size: 0.7rem;
-  font-weight: 750;
-  justify-content: center;
-  letter-spacing: -0.02em;
+/* Anything scrolled into view (anchors, focus, find-in-page) stops below the
+   sticky 52px site header instead of underneath it. */
+html {
+  scroll-padding-top: var(--site-header-height);
 }
 
-.parcel-map-cluster-icon:hover,
-.parcel-map-cluster-icon:focus {
-  box-shadow:
-    0 0 0 5px rgb(14 165 233 / 0.35),
-    0 10px 24px rgb(15 23 42 / 0.32);
-  transform: scale(1.05);
+body {
+  font-variant-numeric: lining-nums;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex min-h-9 items-center justify-center gap-2 rounded-sm border border-control bg-white px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn border-ink bg-ink text-white hover:bg-ink-2;
+  }
+
+  .field {
+    @apply min-h-9 rounded-sm border border-control bg-white px-3 py-1.5 text-sm text-ink placeholder:text-ink-3 focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink;
+  }
+
+  /* Names a table column, legend row or map area. Never sits above a heading. */
+  .label-cond {
+    @apply font-cond text-[13px] font-semibold text-ink-3;
+  }
+
+  .panel {
+    @apply border border-rule bg-white;
+  }
+
+  .ws-tabular {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+}
+
+
+
+.map-surface .leaflet-container {
+  background: #eceef0;
+  font-family: inherit;
+}
+
+/* Quiet the basemap so ranked lots and change fills carry the color. */
+.map-surface .leaflet-tile-pane {
+  filter: grayscale(1) contrast(0.9) brightness(1.05);
+}
+
+.map-surface .leaflet-bar {
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+.map-surface .leaflet-bar a {
+  color: var(--ink);
+}
+
+.map-surface .leaflet-tooltip {
+  border-color: var(--rule);
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+.map-surface .leaflet-control-attribution {
+  background: rgb(255 255 255 / 0.95);
+  color: var(--ink-3);
+  font-size: 10px;
+}
+
+.map-surface .leaflet-control-attribution a {
+  color: var(--ink-2);
 }

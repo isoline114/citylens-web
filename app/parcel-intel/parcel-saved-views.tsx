@@ -1,9 +1,10 @@
 'use client';
 
+import { formatAddress, formatBbl } from '@/lib/parcel-format';
+
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
-  Bookmark,
   Check,
   GitCompareArrows,
   History,
@@ -116,21 +117,21 @@ function SavedViewMonitorCard({
 }) {
   if (!inventoryReady) {
     return (
-      <div className="mt-3 rounded-lg border border-white/10 bg-slate-950/40 px-3 py-2 text-[11px] text-slate-400">
+      <div className="mt-3 border-t border-rule bg-white px-3 py-2 text-xs text-ink-3">
         Waiting for the verified full inventory before evaluating this thesis.
       </div>
     );
   }
   if (monitor.status === 'unavailable') {
     return (
-      <div className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/10 p-3">
+      <div className="mt-3 border-t border-rule bg-white p-3">
         <div className="flex items-start gap-2">
-          <Radar className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-200" />
+          <Radar className="mt-0.5 h-3.5 w-3.5 shrink-0 text-stale" />
           <div>
-            <p className="text-[11px] font-semibold text-amber-100">
+            <p className="text-xs font-semibold text-stale">
               Monitoring baseline not established
             </p>
-            <p className="mt-1 text-[10px] leading-4 text-amber-100/70">
+            <p className="mt-1 text-xs leading-4 text-stale">
               Capture today&apos;s exact BBL membership to audit what enters or
               leaves this screen after the next published feed.
             </p>
@@ -140,7 +141,7 @@ function SavedViewMonitorCard({
           type="button"
           onClick={onRefreshBaseline}
           disabled={busy}
-          className="mt-2 inline-flex h-7 items-center gap-1 rounded-md border border-amber-200/30 bg-white/10 px-2 text-[10px] font-semibold text-amber-50 hover:bg-white/15 disabled:opacity-50"
+          className="mt-2 inline-flex h-7 items-center gap-1 rounded-sm border border-control bg-white px-2 text-xs font-semibold text-stale hover:bg-paper-2 disabled:opacity-50"
         >
           {busy ? (
             <LoaderCircle className="h-3 w-3 animate-spin" />
@@ -156,7 +157,7 @@ function SavedViewMonitorCard({
     return (
       <div
         role="alert"
-        className="mt-3 rounded-lg border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-[11px] leading-4 text-amber-100"
+        className="mt-3 border-t border-rule bg-white px-3 py-2 text-xs leading-4 text-stale"
       >
         <strong>Membership could not be compared safely.</strong> The saved and
         current sets disagree inside one feed generation. Refresh the inventory;
@@ -166,7 +167,7 @@ function SavedViewMonitorCard({
   }
   if (monitor.status === 'baseline_current') {
     return (
-      <div className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-[11px] text-emerald-100">
+      <div className="mt-3 flex items-center gap-2 border-t border-rule bg-paper-2 px-3 py-2 text-xs text-ink">
         <Check className="h-3.5 w-3.5 shrink-0" />
         <span>
           Current baseline · {monitor.currentCount.toLocaleString()} matching
@@ -177,14 +178,14 @@ function SavedViewMonitorCard({
   }
   if (monitor.status === 'unchanged') {
     return (
-      <div className="mt-3 rounded-lg border border-emerald-300/20 bg-emerald-300/10 p-3">
+      <div className="mt-3 border-t border-rule bg-paper-2 p-3">
         <div className="flex items-start gap-2">
-          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-200" />
+          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink" />
           <div>
-            <p className="text-[11px] font-semibold text-emerald-50">
+            <p className="text-xs font-semibold text-ink">
               No membership changes
             </p>
-            <p className="mt-1 text-[10px] leading-4 text-emerald-100/70">
+            <p className="mt-1 text-xs leading-4 text-ink">
               {monitor.currentCount.toLocaleString()} matching parcel
               {monitor.currentCount === 1 ? '' : 's'} remain after a newer
               published feed.
@@ -195,7 +196,7 @@ function SavedViewMonitorCard({
           type="button"
           onClick={onRefreshBaseline}
           disabled={busy}
-          className="mt-2 inline-flex h-7 items-center gap-1 rounded-md border border-emerald-200/30 bg-white/10 px-2 text-[10px] font-semibold text-emerald-50 hover:bg-white/15 disabled:opacity-50"
+          className="mt-2 inline-flex h-7 items-center gap-1 rounded-sm border border-control bg-white px-2 text-xs font-semibold text-ink hover:bg-paper-2 disabled:opacity-50"
         >
           {busy && <LoaderCircle className="h-3 w-3 animate-spin" />}
           Mark current feed reviewed
@@ -207,39 +208,39 @@ function SavedViewMonitorCard({
   const enteredCount = monitor.enteredRows.length;
   const exitedCount = monitor.exitedBbls.length;
   return (
-    <div className="mt-3 overflow-hidden rounded-lg border border-sky-300/25 bg-sky-300/10">
+    <div className="mt-3 overflow-hidden border-t border-rule bg-paper-2">
       <button
         type="button"
         aria-expanded={expanded}
         onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-white/5"
+        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-paper-2"
       >
         <span className="flex min-w-0 items-center gap-2">
-          <History className="h-3.5 w-3.5 shrink-0 text-sky-200" />
+          <History className="h-3.5 w-3.5 shrink-0 text-ink" />
           <span>
-            <strong className="text-[11px] text-sky-50">
+            <strong className="text-xs text-ink">
               {enteredCount} entered · {exitedCount} left
             </strong>
-            <span className="mt-0.5 block text-[10px] text-sky-100/70">
+            <span className="mt-0.5 block text-xs text-ink">
               Since {formatBaselineDate(view.snapshot!.feed_generated_at)}
             </span>
           </span>
         </span>
         <ArrowRight
-          className={`h-3.5 w-3.5 shrink-0 text-sky-200 transition-transform ${
+          className={`h-3.5 w-3.5 shrink-0 text-ink  ${
             expanded ? 'rotate-90' : ''
           }`}
         />
       </button>
       {expanded && (
-        <div className="border-t border-sky-200/15 px-3 pb-3 pt-2">
+        <div className="border-t border-rule px-3 pb-3 pt-2">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-200">
+              <div className="font-cond text-[13px] font-semibold text-ink-3">
                 Entered saved screen
               </div>
               {enteredCount === 0 ? (
-                <p className="mt-1 text-[10px] text-slate-400">None</p>
+                <p className="mt-1 text-xs text-ink-3">None</p>
               ) : (
                 <div className="mt-1 space-y-1">
                   {monitor.enteredRows.slice(0, 5).map((row) => (
@@ -247,16 +248,16 @@ function SavedViewMonitorCard({
                       key={row.bbl}
                       type="button"
                       onClick={() => onSelectParcel(row.bbl)}
-                      className="block w-full truncate rounded-md bg-white/5 px-2 py-1.5 text-left text-[10px] text-slate-200 hover:bg-white/10"
+                      className="block w-full truncate rounded-sm bg-white px-2 py-1.5 text-left text-xs text-ink hover:bg-paper-2"
                     >
-                      <span className="font-semibold text-white">
-                        {row.address ?? row.bbl}
+                      <span className="font-semibold text-ink">
+                        {formatAddress(row.address) || formatBbl(row.bbl)}
                       </span>
-                      <span className="ml-1 text-slate-400">· {row.bbl}</span>
+                      <span className="ml-1 font-mono text-ink-3">· {formatBbl(row.bbl)}</span>
                     </button>
                   ))}
                   {enteredCount > 5 && (
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-xs text-ink-3">
                       +{enteredCount - 5} more; apply the view to inspect all.
                     </p>
                   )}
@@ -264,11 +265,11 @@ function SavedViewMonitorCard({
               )}
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-rose-200">
+              <div className="font-cond text-[13px] font-semibold text-ink-3">
                 Left saved screen
               </div>
               {exitedCount === 0 ? (
-                <p className="mt-1 text-[10px] text-slate-400">None</p>
+                <p className="mt-1 text-xs text-ink-3">None</p>
               ) : (
                 <div className="mt-1 space-y-1">
                   {monitor.exitedBbls.slice(0, 5).map((bbl) => (
@@ -276,13 +277,13 @@ function SavedViewMonitorCard({
                       key={bbl}
                       type="button"
                       onClick={() => onInspectExited(bbl)}
-                      className="block w-full rounded-md bg-white/5 px-2 py-1.5 text-left text-[10px] font-semibold text-white hover:bg-white/10"
+                      className="block w-full border-b border-control py-1.5 text-left font-mono text-xs text-ink hover:bg-paper-2"
                     >
-                      BBL {bbl} · inspect current screening
+                      BBL {formatBbl(bbl)} · inspect current screening
                     </button>
                   ))}
                   {exitedCount > 5 && (
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-xs text-ink-3">
                       +{exitedCount - 5} more departures.
                     </p>
                   )}
@@ -290,15 +291,15 @@ function SavedViewMonitorCard({
               )}
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-2">
-            <span className="text-[10px] leading-4 text-slate-400">
-              Exact membership change—not seller intent or a new prediction.
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-rule pt-2">
+            <span className="text-xs leading-4 text-ink-3">
+              Exact membership change, not seller intent or a new prediction.
             </span>
             <button
               type="button"
               onClick={onRefreshBaseline}
               disabled={busy}
-              className="inline-flex h-7 items-center gap-1 rounded-md border border-white/15 bg-white/10 px-2 text-[10px] font-semibold text-white hover:bg-white/15 disabled:opacity-50"
+              className="inline-flex h-7 items-center gap-1 rounded-sm border border-control bg-white px-2 text-xs font-semibold text-ink hover:bg-paper-2 disabled:opacity-50"
             >
               {busy && <LoaderCircle className="h-3 w-3 animate-spin" />}
               Mark current set reviewed
@@ -530,20 +531,16 @@ export function ParcelSavedViewsPanel({
   return (
     <section
       id="parcel-saved-views-panel"
-      className="border-b border-slate-200 bg-slate-950 px-4 py-5 text-white md:px-7"
+      className="border-b border-rule bg-white px-4 py-5 text-ink md:px-7"
       aria-label="Saved parcel views"
       data-testid="saved-views-panel"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-amber-300">
-            <Bookmark className="h-4 w-4" />
-            Saved views
-          </div>
           <h3 className="mt-1 text-xl font-semibold">
             Watch this acquisition screen.
           </h3>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-300">
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-3">
             Save its exact BBL baseline. On the next feed, CityLens shows what
             entered or left. Views stay private and update when you open the
             workspace; notifications are not sent yet.
@@ -554,15 +551,15 @@ export function ParcelSavedViewsPanel({
           autoFocus={initialFocus === 'close'}
           onClick={onClose}
           aria-label="Close saved views"
-          className="self-end rounded-lg border border-white/10 p-2 text-slate-300 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 sm:self-auto"
+          className="self-end rounded-sm border border-control p-2 text-ink-3 hover:bg-paper-2 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select focus-visible:ring-offset-2 focus-visible:ring-offset-white sm:self-auto"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
       <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.4fr)]">
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-          <label className="text-xs font-medium text-slate-200" htmlFor="saved-view-name">
+        <div className="border-t border-rule bg-white p-4">
+          <label className="text-xs font-medium text-ink" htmlFor="saved-view-name">
             View name
           </label>
           <input
@@ -574,42 +571,42 @@ export function ParcelSavedViewsPanel({
               setName(event.target.value);
               setSaved(false);
             }}
-            className="mt-2 h-10 w-full rounded-lg border border-white/15 bg-slate-900 px-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20"
+            className="field mt-2 h-10 w-full rounded-sm border border-control bg-white px-3 text-sm text-ink outline-none placeholder:text-ink-3 focus:border-select focus:ring-2 focus:ring-select"
           />
-          <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] text-slate-300">
-            <span className="rounded-full bg-white/10 px-2 py-1">
+          <div className="mt-3 flex flex-wrap gap-1.5 text-xs text-ink-3">
+            <span className="">
               {currentView.borough === 'all'
                 ? 'All boroughs'
                 : BOROUGH_LABELS[currentView.borough]}
             </span>
-            <span className="rounded-full bg-white/10 px-2 py-1">
+            <span className="">
               {PRIORITY_LABELS[currentView.filters.priority]}
             </span>
-            <span className="rounded-full bg-white/10 px-2 py-1">
+            <span className="">
               {siteTypeLabel(currentView.filters.siteType)}
             </span>
             {currentView.filters.signals.map((signal) => (
               <span
                 key={signal}
-                className="rounded-full bg-sky-400/15 px-2 py-1 text-sky-100"
+                className="rounded-sm bg-paper-2 px-2 py-1 text-ink"
               >
                 {signalLabel(signal)}
               </span>
             ))}
             {currentView.filters.minLotAreaSqft !== null && (
-              <span className="rounded-full bg-emerald-400/15 px-2 py-1 text-emerald-100">
+              <span className="text-ink">
                 Lot ≥{' '}
                 {currentView.filters.minLotAreaSqft.toLocaleString()} sf
               </span>
             )}
             {currentView.filters.minUnusedFloorAreaSqft !== null && (
-              <span className="rounded-full bg-emerald-400/15 px-2 py-1 text-emerald-100">
+              <span className="text-ink">
                 Unused FAR ≥{' '}
                 {currentView.filters.minUnusedFloorAreaSqft.toLocaleString()}{' '}
                 sf
               </span>
             )}
-            <span className="rounded-full bg-white/10 px-2 py-1">
+            <span className="">
               {currentView.overlay} overlay
             </span>
           </div>
@@ -624,19 +621,19 @@ export function ParcelSavedViewsPanel({
               !feedGeneration ||
               !feedGeneratedAt
             }
-            className="mt-4 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-white px-4 text-xs font-semibold text-slate-950 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-4 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-sm bg-ink px-4 text-xs font-semibold text-white hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? (
               <LoaderCircle className="h-4 w-4 animate-spin" />
             ) : saved ? (
-              <Check className="h-4 w-4 text-emerald-600" />
+              <Check className="h-4 w-4" />
             ) : (
               <Save className="h-4 w-4" />
             )}
             {saving ? 'Saving…' : saved ? 'Saved' : 'Save current view'}
           </button>
           {(!inventoryReady || !feedGeneration || !feedGeneratedAt) && (
-            <p className="mt-2 text-[10px] leading-4 text-amber-200">
+            <p className="mt-2 text-xs leading-4 text-stale">
               A verified full inventory and feed generation are required before
               CityLens can establish an auditable baseline.
             </p>
@@ -644,8 +641,8 @@ export function ParcelSavedViewsPanel({
         </div>
 
         <div>
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400">
-            <span className="font-semibold uppercase tracking-[0.12em] text-slate-300">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-3">
+            <span className="font-semibold font-cond text-ink-3">
               Your saved screens
             </span>
             <span>
@@ -655,25 +652,25 @@ export function ParcelSavedViewsPanel({
             </span>
           </div>
           {loading ? (
-            <div className="flex min-h-36 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 text-sm text-slate-300">
+            <div className="flex min-h-36 items-center justify-center gap-2 border-t border-rule bg-white text-sm text-ink-3">
               <LoaderCircle className="h-4 w-4 animate-spin" />
               Loading saved views…
             </div>
           ) : error && views.length === 0 ? (
-            <div className="flex min-h-36 flex-col items-center justify-center rounded-xl border border-rose-400/30 bg-rose-400/10 p-4 text-center text-sm text-rose-100">
+            <div className="flex min-h-36 flex-col items-center justify-center border-t border-rule bg-white p-4 text-center text-sm text-red-700">
               <TriangleAlert className="h-5 w-5" />
               <p className="mt-2">{error}</p>
               <button
                 type="button"
                 onClick={() => setReloadKey((value) => value + 1)}
-                className="mt-3 inline-flex items-center gap-1 rounded-md border border-white/20 px-2.5 py-1.5 text-xs"
+                className="mt-3 inline-flex items-center gap-1 rounded-sm border border-control px-2.5 py-1.5 text-xs"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Retry
               </button>
             </div>
           ) : orderedViews.length === 0 ? (
-            <div className="flex min-h-36 items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/5 p-5 text-center text-sm text-slate-300">
+            <div className="flex min-h-36 items-center justify-center rounded-sm border border-dashed border-rule bg-white p-5 text-center text-sm text-ink-3">
               No saved views yet. Save the current opportunity set to make it
               available in your next session.
             </div>
@@ -689,21 +686,21 @@ export function ParcelSavedViewsPanel({
                 {orderedViews.length.toLocaleString()} saved{' '}
                 {orderedViews.length === 1 ? 'view' : 'views'} loaded.
               </div>
-              <div className="grid gap-2 md:max-h-72 md:grid-cols-2 md:overflow-y-auto md:pr-1">
+              <div className="divide-y divide-rule md:max-h-72 md:overflow-y-auto md:pr-1">
               {orderedViews.map((view) => {
                 const dimensions = savedSearchDimensions(view.filters);
                 const monitor = monitors.get(view.search_id);
                 return (
                   <article
                     key={view.search_id}
-                    className="rounded-xl border border-white/10 bg-white/5 p-3"
+                    className="border-t border-rule bg-white p-3"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <h4 className="break-words text-sm font-semibold text-white">
+                        <h4 className="break-words text-sm font-semibold text-ink">
                           {view.name}
                         </h4>
-                        <p className="mt-1 text-[11px] text-slate-400">
+                        <p className="mt-1 text-xs text-ink-3">
                           {view.borough === 'all'
                             ? 'All boroughs'
                             : BOROUGH_LABELS[view.borough]}{' '}
@@ -715,7 +712,7 @@ export function ParcelSavedViewsPanel({
                         onClick={() => void deleteView(view.search_id)}
                         disabled={deletingId === view.search_id}
                         aria-label={`Delete saved view ${view.name}`}
-                        className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-rose-400/10 hover:text-rose-200 disabled:opacity-50"
+                        className="shrink-0 rounded-sm p-1.5 text-ink-3 hover:bg-white hover:text-red-700 disabled:opacity-50"
                       >
                         {deletingId === view.search_id ? (
                           <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
@@ -725,7 +722,7 @@ export function ParcelSavedViewsPanel({
                       </button>
                     </div>
                     {view.filters.query && (
-                      <p className="mt-2 break-words text-[11px] text-slate-300">
+                      <p className="mt-2 break-words text-xs text-ink-3">
                         Search: “{view.filters.query}”
                       </p>
                     )}
@@ -736,20 +733,20 @@ export function ParcelSavedViewsPanel({
                         {dimensions.signals.map((signal) => (
                           <span
                             key={signal}
-                            className="rounded-full bg-sky-400/10 px-2 py-0.5 text-[10px] text-sky-100"
+                            className="rounded-sm bg-paper-2 px-2 py-0.5 text-xs text-ink"
                           >
                             {signalLabel(signal)}
                           </span>
                         ))}
                         {view.filters.min_lot_area_sqft && (
-                          <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-[10px] text-emerald-100">
+                          <span className="text-xs text-ink">
                             Lot ≥{' '}
                             {view.filters.min_lot_area_sqft.toLocaleString()}{' '}
                             sf
                           </span>
                         )}
                         {view.filters.min_unused_floor_area_sqft && (
-                          <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-[10px] text-emerald-100">
+                          <span className="text-xs text-ink">
                             Unused FAR ≥{' '}
                             {view.filters.min_unused_floor_area_sqft.toLocaleString()}{' '}
                             sf
@@ -789,7 +786,7 @@ export function ParcelSavedViewsPanel({
                         type="button"
                         onClick={() => onApply(view)}
                         aria-label="Apply view"
-                        className="inline-flex h-8 items-center justify-center rounded-md border border-white/15 bg-white/10 px-3 text-xs font-medium text-white hover:bg-white/15"
+                        className="inline-flex h-8 items-center justify-center rounded-sm border border-control bg-white px-3 text-xs font-medium text-ink hover:bg-paper-2"
                       >
                         Apply
                       </button>
@@ -810,10 +807,10 @@ export function ParcelSavedViewsPanel({
                           );
                           if (opening) onComparisonOpened?.();
                         }}
-                        className={`inline-flex h-8 items-center justify-center gap-1 rounded-md border px-3 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-45 ${
+                        className={`inline-flex h-8 items-center justify-center gap-1 rounded-sm border px-3 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-45 ${
                           comparisonViewId === view.search_id
-                            ? 'border-sky-300/40 bg-sky-300/15 text-sky-100'
-                            : 'border-white/15 bg-white/5 text-white hover:bg-white/15'
+                            ? 'border-control bg-paper-2 text-ink'
+                            : 'border-control bg-white text-ink hover:bg-paper-2'
                         }`}
                       >
                         <GitCompareArrows className="h-3.5 w-3.5" />
@@ -829,7 +826,7 @@ export function ParcelSavedViewsPanel({
             </>
           )}
           {error && views.length > 0 && (
-            <p className="mt-2 text-xs text-rose-200">{error}</p>
+            <p className="mt-2 text-xs text-red-700">{error}</p>
           )}
         </div>
       </div>

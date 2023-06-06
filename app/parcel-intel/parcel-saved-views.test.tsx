@@ -248,20 +248,20 @@ describe('ParcelSavedViewsPanel', () => {
     expect(onChangesOpened).toHaveBeenCalledTimes(1);
     fireEvent.click(
       screen.getByRole('button', {
-        name: /100 Brooklyn Avenue.*3000010001/i,
+        name: /100 Brooklyn Avenue.*3-00001-0001/i,
       }),
     );
     expect(onSelectParcel).toHaveBeenCalledWith('3000010001');
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'BBL 3000019999 · inspect current screening',
+        name: 'BBL 3-00001-9999 · inspect current screening',
       }),
     );
     expect(onInspectExited).toHaveBeenCalledWith('3000019999');
     expect(
       screen.getByText(
-        /exact membership change—not seller intent or a new prediction/i,
+        /exact membership change, not seller intent or a new prediction/i,
       ),
     ).toBeInTheDocument();
 

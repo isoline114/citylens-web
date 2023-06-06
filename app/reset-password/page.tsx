@@ -42,11 +42,10 @@ export default function ResetPasswordPage() {
     <Suspense
       fallback={
         <AuthPageShell
-          eyebrow="Account recovery"
           title="Loading password reset"
           description="Preparing the secure reset form."
         >
-          <div className="h-11 animate-pulse rounded-xl bg-slate-100" />
+          <div className="h-11 animate-pulse border-t border-rule" />
         </AuthPageShell>
       }
     >
@@ -80,7 +79,6 @@ function ResetPasswordInner() {
   if (!IS_NEON) {
     return (
       <AuthPageShell
-        eyebrow="Local workspace"
         title="No password to reset"
         description="Mock authentication does not persist passwords."
       >
@@ -94,7 +92,6 @@ function ResetPasswordInner() {
   if (done) {
     return (
       <AuthPageShell
-        eyebrow="Account ready"
         title="Password updated"
         description="Your new password is active."
       >
@@ -111,7 +108,6 @@ function ResetPasswordInner() {
 
   return (
     <AuthPageShell
-      eyebrow="Account recovery"
       title="Choose a new password"
       description="Enter your six-digit reset code, then set a password with at least eight characters."
       footer={
@@ -166,7 +162,7 @@ function ResetPasswordInner() {
         }}
       >
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-800">Email</span>
+          <span className="text-sm font-medium text-ink">Email</span>
           <input
             className={authInputClass}
             type="email"
@@ -178,9 +174,9 @@ function ResetPasswordInner() {
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-800">Reset code</span>
+          <span className="text-sm font-medium text-ink">Reset code</span>
           <input
-            className={`${authInputClass} tracking-[0.3em]`}
+            className={`field ${authInputClass} tracking-[0.3em]`}
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
@@ -192,7 +188,7 @@ function ResetPasswordInner() {
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-800">
+          <span className="text-sm font-medium text-ink">
             New password
           </span>
           <input
@@ -207,7 +203,7 @@ function ResetPasswordInner() {
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-800">
+          <span className="text-sm font-medium text-ink">
             Confirm new password
           </span>
           <input
@@ -244,7 +240,7 @@ function ResetPasswordInner() {
       <button
         type="button"
         disabled={resendBusy || !email.trim()}
-        className="mt-4 text-sm font-semibold text-slate-700 underline-offset-4 hover:text-sky-700 hover:underline disabled:text-slate-400"
+        className="mt-4 text-sm font-semibold text-ink-2 underline-offset-4 hover:text-select hover:underline disabled:text-ink-3"
         onClick={async () => {
           setError(null);
           setInfo(null);

@@ -1,6 +1,5 @@
 'use client';
 
-import { TriangleAlert } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -67,10 +66,9 @@ export function PlanQuotaBadge() {
             pathname && pathname.startsWith('/') ? pathname : '/parcel-intel';
           router.push(`/sign-in?next=${encodeURIComponent(next)}`);
         }}
-        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 text-xs font-semibold text-amber-950 hover:bg-amber-100"
+        className="btn border-stale text-stale"
         title="Your account is visible, but its API credential expired. Sign in again to restore full data access."
       >
-        <TriangleAlert className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">Reconnect data</span>
         <span className="sm:hidden">Reconnect</span>
       </button>
@@ -84,7 +82,7 @@ export function PlanQuotaBadge() {
     return (
       <span
         data-testid="plan-quota-badge"
-        className="hidden h-9 items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-900 sm:inline-flex"
+        className="hidden text-xs text-ink-2 sm:inline"
       >
         Admin: unlimited
       </span>
@@ -94,27 +92,24 @@ export function PlanQuotaBadge() {
   const used = me.quota.runs_used;
   const limit = me.quota.monthly_run_limit ?? 0;
   const text = `${plan_type[0].toUpperCase()}${plan_type.slice(1)} plan: ${used}/${limit} runs this month`;
-  const pct = limit > 0 ? Math.min(100, Math.max(0, Math.round((used / limit) * 100))) : 0;
-  // Bar color shifts as the user gets closer to the cap so the chip
-  // tells you both "what plan" and "how close to running out" at a glance.
-  const barColor = pct >= 100 ? 'bg-rose-500' : pct >= 60 ? 'bg-amber-500' : 'bg-sky-500';
+  const atLimit = limit > 0 && used >= limit;
+  const nearLimit = limit > 0 && used / limit >= 0.8;
+  const stateWord = atLimit ? ' Limit reached.' : nearLimit ? ' Near limit.' : '';
   return (
     <span
       data-testid="plan-quota-badge"
       title={text}
-      className="hidden h-9 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 pl-3 pr-2 text-xs font-medium text-slate-800 sm:inline-flex"
+      className="hidden text-xs text-ink-2 sm:inline"
     >
-      <span className="hidden xl:inline">{text}</span>
-      <span className="xl:hidden">{`${used}/${limit} runs`}</span>
-      <span
-        aria-hidden="true"
-        className="relative h-1.5 w-12 overflow-hidden rounded-full bg-slate-200"
-      >
-        <span
-          className={`absolute inset-y-0 left-0 ${barColor} transition-all`}
-          style={{ width: `${pct}%` }}
-        />
+      <span className="hidden xl:inline">
+        {`${plan_type[0].toUpperCase()}${plan_type.slice(1)} plan: `}
       </span>
+      <span className="ws-tabular tabular-nums text-ink">{`${used}/${limit}`}</span>
+      {' runs'}
+      <span className="hidden xl:inline">{' this month'}</span>
+      {stateWord ? (
+        <span className="font-semibold text-stale">{stateWord}</span>
+      ) : null}
     </span>
   );
 }

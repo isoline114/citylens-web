@@ -1,5 +1,6 @@
 'use client';
 
+import { formatAddress, formatBbl } from '@/lib/parcel-format';
 import { useEffect, useRef, useState } from 'react';
 import {
   ArrowUpRight,
@@ -99,14 +100,15 @@ function Metric({
   value: string;
   detail?: string;
 }) {
+  const unitValue = /^(.*?)( (?:sqft|years))$/.exec(value);
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-[0_1px_0_rgba(15,23,42,0.02)]">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-        {label}
+    <div className="min-w-0 border-b border-rule py-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-baseline gap-3">
+        <div className="font-cond text-[13px] text-ink-3">{label}</div>
+        <div className="break-words text-right text-sm font-medium tabular-nums text-ink">{unitValue ? <>{unitValue[1]}<small className="text-xs font-normal text-ink-3">{unitValue[2]}</small></> : value}</div>
       </div>
-      <div className="mt-1 text-sm font-semibold text-slate-950">{value}</div>
       {detail && (
-        <div className="mt-1 text-[11px] leading-4 text-slate-500">
+        <div className="mt-1 text-right text-xs leading-4 text-ink-3">
           {detail}
         </div>
       )}
@@ -119,27 +121,27 @@ function ownerStatus(dossier: ParcelOfficialDossier) {
     case 'match':
       return {
         label: 'Recorded-owner sources align',
-        className: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+        className: 'text-ink',
       };
     case 'different':
       return {
-        label: 'Owner sources differ — verify title',
-        className: 'border-amber-200 bg-amber-50 text-amber-900',
+        label: 'Owner sources differ; verify title',
+        className: 'text-stale',
       };
     case 'acris_only':
       return {
         label: 'ACRIS owner available',
-        className: 'border-sky-200 bg-sky-50 text-sky-800',
+        className: 'text-ink',
       };
     case 'pluto_only':
       return {
         label: 'PLUTO owner available',
-        className: 'border-sky-200 bg-sky-50 text-sky-800',
+        className: 'text-ink',
       };
     default:
       return {
         label: 'Recorded owner unavailable',
-        className: 'border-slate-200 bg-slate-50 text-slate-700',
+        className: 'text-ink',
       };
   }
 }
@@ -184,10 +186,10 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
     return (
       <section
         data-testid="parcel-official-dossier-loading"
-        className="border-b border-slate-200 bg-slate-50 px-5 py-5"
+        className="border-b border-rule bg-white px-5 py-5"
       >
-        <div className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
-          <LoaderCircle className="h-4 w-4 animate-spin text-sky-600" />
+        <div className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
+          <LoaderCircle className="h-4 w-4 animate-spin text-ink" />
           Loading source-verified tax-lot facts…
         </div>
       </section>
@@ -198,9 +200,9 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
     return (
       <section
         data-testid="parcel-official-dossier-error"
-        className="border-b border-amber-200 bg-amber-50 px-5 py-4"
+        className="border-b border-rule bg-white px-5 py-4"
       >
-        <div className="flex items-start gap-2 text-sm text-amber-900">
+        <div className="flex items-start gap-2 text-sm text-red-700">
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
             <div className="font-semibold">Official parcel record unavailable</div>
@@ -224,26 +226,26 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
   const readiness = buildDossierEvidenceReadiness(dossier);
   const readinessTone =
     readiness.status === 'review_required'
-      ? 'border-amber-300/30 bg-amber-300/10 text-amber-100'
+      ? 'text-stale'
       : readiness.status === 'partial'
-        ? 'border-sky-300/30 bg-sky-300/10 text-sky-100'
-        : 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100';
+        ? 'text-ink-3'
+        : 'text-ink';
 
   const evidenceTone = (status: DossierEvidenceStatus) =>
     status === 'available'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+      ? 'text-ink'
       : status === 'review'
-        ? 'border-amber-200 bg-amber-50 text-amber-900'
+        ? 'text-stale'
         : status === 'partial'
-          ? 'border-sky-200 bg-sky-50 text-sky-800'
-          : 'border-slate-200 bg-slate-100 text-slate-600';
+          ? 'text-ink-3'
+          : 'text-ink-3';
 
   return (
     <section
       data-testid="parcel-official-dossier"
-      className="border-b border-slate-200 bg-[#f8fafc]"
+      className="min-w-0 border-b border-rule bg-white [overflow-wrap:anywhere]"
     >
-      <div className="bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.22),transparent_38%),linear-gradient(115deg,#07101f,#0f2740_58%,#0c4a6e)] px-5 py-5 text-white md:px-6">
+      <div className="border-b border-rule bg-white px-4 py-4 text-ink md:px-6">
         <div
           className={
             compact
@@ -252,24 +254,17 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
           }
         >
           <div className="flex items-start gap-3">
-            <span className="rounded-xl border border-white/15 bg-white/10 p-2.5 text-sky-200 shadow-inner">
+            <span className="mt-0.5 text-ink-3">
               <MapPinned className="h-5 w-5" />
             </span>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-200">
-                  Official parcel dossier
-                </p>
-                <span className="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-emerald-200">
-                  Any NYC tax lot · not a lead score
-                </span>
-              </div>
+            <div className="min-w-0">
               <h3 className="mt-1 text-xl font-semibold tracking-tight">
-                {dossier.address ?? 'Address not reported'}
+                {formatAddress(dossier.address) || 'Address not reported'}
               </h3>
-              <p className="mt-1 text-xs text-slate-300">
+              <p className="mt-1 text-xs text-ink-3">Official parcel dossier · Any NYC tax lot · not a lead score</p>
+              <p className="mt-1 text-xs text-ink-3">
                 {BOROUGH_LABELS[dossier.borough] ?? dossier.borough} · BBL{' '}
-                <span className="font-mono text-white">{dossier.bbl}</span>
+                <span className="font-mono text-ink">{formatBbl(dossier.bbl)}</span>
               </p>
             </div>
           </div>
@@ -280,7 +275,7 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
                 href={href}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex h-8 items-center gap-1 rounded-lg border border-white/15 bg-white/10 px-2.5 text-[10px] font-semibold text-white transition hover:bg-white/15"
+                className="inline-flex h-8 items-center gap-1 rounded-sm border border-control bg-white px-2.5 text-xs font-semibold text-ink transition hover:bg-paper-2"
               >
                 {key === 'zola'
                   ? 'ZoLa'
@@ -297,7 +292,7 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
       <div className="space-y-4 px-4 py-5 md:px-6">
         <div
           data-testid="parcel-dossier-readiness"
-          className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+          className="border-t border-rule"
         >
           <div
             className={
@@ -309,22 +304,22 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
             <div className="p-4 md:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="flex items-center gap-2 text-slate-950">
-                    <ClipboardCheck className="h-4 w-4 text-emerald-700" />
+                  <div className="flex items-center gap-2 text-ink">
+                    <ClipboardCheck className="h-4 w-4 text-ink" />
                     <h4 className="text-sm font-semibold">
                       Evidence readiness
                     </h4>
                   </div>
-                  <p className="mt-1 max-w-2xl text-[11px] leading-5 text-slate-500">
-                    Source coverage and discrepancies—not correctness,
+                  <p className="mt-1 max-w-2xl text-xs leading-5 text-ink-3">
+                    Source coverage and discrepancies; not correctness,
                     investment suitability, or predictive confidence.
                   </p>
                 </div>
                 <div
                   data-testid="parcel-dossier-readiness-status"
-                  className={`rounded-xl border px-3 py-2 ${readinessTone}`}
+                  className={`text-right ${readinessTone}`}
                 >
-                  <div className="text-[9px] font-semibold uppercase tracking-[0.13em] opacity-75">
+                  <div className="font-cond text-[13px] font-semibold">
                     {readiness.presentCount} of {readiness.totalCount} groups
                     present
                   </div>
@@ -333,18 +328,12 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
                   </div>
                 </div>
               </div>
-              <div
-                className={
-                  compact
-                    ? 'mt-4 grid gap-2 sm:grid-cols-2'
-                    : 'mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3'
-                }
-              >
+              <div className="mt-4 divide-y divide-rule">
                 {readiness.groups.map((group) => (
                   <div
                     key={group.key}
                     data-testid={`parcel-dossier-evidence-${group.key}`}
-                    className={`rounded-xl border p-3 ${evidenceTone(group.status)}`}
+                    className={`py-3 ${evidenceTone(group.status)}`}
                   >
                     <div className="flex items-center gap-2">
                       {group.status === 'available' ? (
@@ -354,11 +343,11 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
                       ) : (
                         <CircleDashed className="h-3.5 w-3.5 shrink-0" />
                       )}
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.1em]">
+                      <span className="font-cond text-[13px] font-semibold ">
                         {group.label}
                       </span>
                     </div>
-                    <p className="mt-1.5 text-[10px] leading-4 opacity-80">
+                    <p className="mt-1.5 text-xs leading-4">
                       {group.detail}
                     </p>
                   </div>
@@ -367,13 +356,13 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
             </div>
 
             <aside
-              className={`border-t border-slate-200 bg-slate-950 p-4 text-white md:p-5 ${
+              className={`border-t border-rule bg-white p-4 text-ink md:p-5 ${
                 compact ? '' : 'lg:border-l lg:border-t-0'
               }`}
             >
               <div className="flex items-center gap-2">
-                <Route className="h-4 w-4 text-sky-300" />
-                <h4 className="text-xs font-semibold uppercase tracking-[0.12em]">
+                <Route className="h-4 w-4 text-ink" />
+                <h4 className="text-[13px] font-semibold ">
                   Verify next
                 </h4>
               </div>
@@ -385,17 +374,17 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
                     href={dossier.official_links[action.link]}
                     target="_blank"
                     rel="noreferrer"
-                    className="group flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.06] p-3 transition hover:border-sky-300/30 hover:bg-white/[0.1]"
+                    className="group flex items-start gap-3 rounded-sm border border-control bg-white p-3 transition hover:border-control hover:bg-paper-2"
                   >
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-300/15 text-[9px] font-bold text-sky-200">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center text-xs font-bold text-ink">
                       {index + 1}
                     </span>
                     <span className="min-w-0">
-                      <span className="flex items-center gap-1 text-[11px] font-semibold text-white">
+                      <span className="flex items-center gap-1 text-xs font-semibold text-ink">
                         {action.label}
                         <ArrowUpRight className="h-3 w-3 opacity-60 transition group-hover:opacity-100" />
                       </span>
-                      <span className="mt-1 block text-[10px] leading-4 text-slate-400">
+                      <span className="mt-1 block text-xs leading-4 text-ink-3">
                         {action.detail}
                       </span>
                     </span>
@@ -407,6 +396,7 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
         </div>
 
         <ParcelSalesComparablesPanel bbl={bbl} compact={compact} />
+        <p className="font-mono text-xs text-ink-3">PLUTO as of {dossier.property_facts_retrieved_at.slice(0, 10)} · Dataset {dossier.property_facts_dataset_id}</p>
 
         <div
           className={
@@ -455,21 +445,22 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
               : 'grid gap-3 lg:grid-cols-[1.15fr_0.85fr]'
           }
         >
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="border-t border-rule py-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Landmark className="h-4 w-4 text-sky-700" />
-                <h4 className="text-sm font-semibold text-slate-950">
+                <Landmark className="h-4 w-4 text-ink" />
+                <h4 className="text-sm font-semibold text-ink">
                   Recorded ownership & deed
                 </h4>
               </div>
               <span
-                className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${ownership.className}`}
+                className={`border px-2.5 py-1 text-xs font-semibold ${ownership.className}`}
               >
                 {ownership.label}
               </span>
             </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <p className="mt-2 font-mono text-xs text-ink-3">ACRIS features as of {dossier.ownership_features_updated_at.slice(0, 10)} · PLUTO as of {dossier.property_facts_retrieved_at.slice(0, 10)}</p>
+            <div className="mt-3 divide-y divide-rule">
               <Metric
                 label="ACRIS recorded grantee"
                 value={dossier.acris_owner_name ?? 'Not reported'}
@@ -500,7 +491,7 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
               />
             </div>
             {dossier.owner_source_status === 'different' && (
-              <div className="mt-3 flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+              <div className="mt-3 flex gap-2 border-b border-rule bg-white p-3 text-xs leading-5 text-ink">
                 <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
                 PLUTO and ACRIS name different recorded parties. CityLens has
                 preserved both rather than inferring which entity controls the
@@ -509,25 +500,26 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
             )}
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="border-t border-rule py-4">
             <div className="flex items-center gap-2">
-              <Layers3 className="h-4 w-4 text-violet-700" />
-              <h4 className="text-sm font-semibold text-slate-950">
+              <Layers3 className="h-4 w-4 text-ink" />
+              <h4 className="text-sm font-semibold text-ink">
                 Mapped FAR references
               </h4>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            <p className="mt-2 font-mono text-xs text-ink-3">PLUTO as of {dossier.property_facts_retrieved_at.slice(0, 10)}</p>
+            <div className="mt-3 divide-y divide-rule">
               {mappedFar.length ? (
                 mappedFar.map(([label, value]) => (
                   <Metric key={label} label={label} value={number(value)} />
                 ))
               ) : (
-                <p className="col-span-2 text-xs text-slate-500">
+                <p className="col-span-2 text-xs text-ink-3">
                   FAR references are not reported for this lot.
                 </p>
               )}
             </div>
-            <p className="mt-3 text-[11px] leading-5 text-slate-500">
+            <p className="mt-3 text-xs leading-5 text-ink-3">
               These are PLUTO mapped references, not a zoning calculation or
               buildable-area determination. Overlays, use, lot geometry,
               bonuses, deductions, and project-specific rules may control.
@@ -573,17 +565,17 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
         </div>
 
         <div
-          className={`flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-950 px-4 py-3 text-slate-200 ${
+          className={`flex flex-col gap-3 border-b border-rule bg-white px-4 py-3 text-ink ${
             compact ? '' : 'md:flex-row md:items-center md:justify-between'
           }`}
         >
           <div className="flex items-start gap-2">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-            <p className="max-w-4xl text-[11px] leading-5">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
+            <p className="max-w-4xl text-xs leading-5">
               {dossier.interpretation}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-3 text-[10px] text-slate-400">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-ink-3">
             <span className="inline-flex items-center gap-1">
               <Database className="h-3 w-3" />
               PLUTO {dossier.property_facts_dataset_id}

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { formatAddress, formatBbl } from '@/lib/parcel-format';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -11,7 +12,6 @@ import {
   BriefcaseBusiness,
   Building2,
   CheckCircle2,
-  ChevronDown,
   CircleAlert,
   ClipboardCheck,
   Clock3,
@@ -65,7 +65,6 @@ import {
 import { explainParcel } from './[borough]/parcel-intel-explain';
 import {
   BOROUGH_LABELS,
-  BOROUGH_SHORT_LABELS,
   opportunityLabel,
   priorityLabel,
 } from './parcel-intel-explorer-support';
@@ -225,42 +224,35 @@ const AUDIT_STATUS_STYLES: Record<
 > = {
   verified: {
     label: 'Verified in feed',
-    className: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
+    className: 'bg-white text-ink ',
   },
   review: {
     label: 'Review required',
-    className: 'bg-amber-50 text-amber-900 ring-amber-200',
+    className: 'text-stale',
   },
   excluded: {
     label: 'Excluded',
-    className: 'bg-rose-50 text-rose-800 ring-rose-200',
+    className: 'text-red-700',
   },
   unavailable: {
     label: 'Unavailable',
-    className: 'bg-slate-100 text-slate-700 ring-slate-200',
+    className: 'bg-white text-ink ',
   },
   informational: {
     label: 'Context only',
-    className: 'bg-sky-50 text-sky-800 ring-sky-200',
+    className: 'bg-paper-2 text-ink ',
   },
-};
-
-const AUDIT_LAYER_LABELS: Record<ParcelDecisionAuditCheck['layer'], string> = {
-  model_signal: 'Historical model signal',
-  eligibility_gate: 'Current acquisition gate',
-  current_diligence: 'Current diligence only',
-  source_freshness: 'Source provenance',
 };
 
 const READINESS_STYLES: Record<
   NonNullable<ParcelDecisionAudit['readiness']>['status'],
   string
 > = {
-  blocked: 'border-rose-200 bg-rose-50 text-rose-950',
-  incomplete: 'border-amber-200 bg-amber-50 text-amber-950',
-  review_required: 'border-amber-200 bg-amber-50 text-amber-950',
-  initial_review_ready: 'border-emerald-200 bg-emerald-50 text-emerald-950',
-  limited_preview: 'border-sky-200 bg-sky-50 text-sky-950',
+  blocked: 'border-rule bg-white text-red-700',
+  incomplete: 'border-rule bg-white text-stale',
+  review_required: 'border-rule bg-white text-stale',
+  initial_review_ready: 'border-rule bg-white text-ink',
+  limited_preview: 'border-rule bg-paper-2 text-ink',
 };
 
 function pluralize(count: number, singular: string, plural = `${singular}s`) {
@@ -535,7 +527,7 @@ function ParcelDecisionAuditPanel({
 }) {
   if (!audit) {
     return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+      <div className="border-b border-rule bg-white p-4 text-sm text-ink">
         <div className="flex items-center gap-2 font-semibold">
           <TriangleAlert className="h-4 w-4" />
           Decision audit unavailable
@@ -549,10 +541,10 @@ function ParcelDecisionAuditPanel({
   }
 
   const overallStyle = {
-    screened: 'border-emerald-200 bg-emerald-50 text-emerald-950',
-    screened_with_flags: 'border-amber-200 bg-amber-50 text-amber-950',
-    excluded: 'border-rose-200 bg-rose-50 text-rose-950',
-    incomplete: 'border-slate-300 bg-slate-100 text-slate-950',
+    screened: 'border-rule bg-white text-ink',
+    screened_with_flags: 'border-rule bg-white text-ink',
+    excluded: 'border-rule bg-white text-ink',
+    incomplete: 'border-rule bg-white text-stale',
   }[audit.overall_status];
   const readiness = audit.readiness;
   const evidenceVersionCount = reviewableAuditCount(audit);
@@ -601,15 +593,12 @@ function ParcelDecisionAuditPanel({
 
   return (
     <div data-testid="parcel-decision-audit">
-      <section className={`rounded-xl border p-4 ${overallStyle}`}>
+      <section className={`border-b p-4 ${overallStyle}`}>
         <div className="flex items-start gap-2">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">
-              Decision evidence audit
-            </div>
             <h4 className="mt-1 text-base font-semibold">{audit.overall_label}</h4>
-            <p className="mt-1 text-xs leading-5 opacity-80">
+            <p className="mt-1 text-xs leading-5">
               This status organizes available evidence. It is not a purchase
               recommendation, appraisal, seller-intent score, or completed diligence.
             </p>
@@ -619,15 +608,12 @@ function ParcelDecisionAuditPanel({
 
       {readiness && (
         <section
-          className={`mt-3 rounded-xl border p-4 ${readinessStyle}`}
+          className={`mt-3 border-b p-4 ${readinessStyle}`}
           data-testid="parcel-decision-readiness"
         >
           <div className="flex items-start gap-2">
             <ClipboardCheck className="mt-0.5 h-5 w-5 shrink-0" />
             <div className="min-w-0">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">
-                Next diligence decision
-              </div>
               <h4 className="mt-1 text-sm font-semibold">{readiness.label}</h4>
               <p className="mt-1 text-xs leading-5 opacity-85">
                 {readiness.recommended_action}
@@ -638,7 +624,7 @@ function ParcelDecisionAuditPanel({
           {(readiness.blockers.length > 0 ||
             readiness.review_items.length > 0 ||
             readiness.cleared_items.length > 0) && (
-            <div className="mt-3 space-y-2 border-t border-current/10 pt-3 text-xs leading-5">
+            <div className="mt-3 space-y-2 border-t border-rule pt-3 text-xs leading-5">
               {readiness.blockers.map((item) => (
                 <div key={`blocked-${item}`} className="flex items-start gap-2">
                   <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -652,7 +638,7 @@ function ParcelDecisionAuditPanel({
                 </div>
               ))}
               {readiness.cleared_items.map((item) => (
-                <div key={`cleared-${item}`} className="flex items-start gap-2 opacity-80">
+                <div key={`cleared-${item}`} className="flex items-start gap-2">
                   <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <span>{item}</span>
                 </div>
@@ -665,7 +651,7 @@ function ParcelDecisionAuditPanel({
               type="button"
               onClick={onOpenWorkflow}
               disabled={actionDisabled}
-              className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-sm bg-ink px-3 text-xs font-medium text-white hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {actionPending ? (
                 <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
@@ -684,12 +670,12 @@ function ParcelDecisionAuditPanel({
             </button>
           )}
           {signedIn && evidenceVersionCount > 0 && (
-            <p className="mt-2 text-[10px] leading-4 opacity-75">
+            <p className="mt-2 text-xs leading-4">
               Records the exact cited source and date you considered. It never
               clears diligence risk.
             </p>
           )}
-          <p className="mt-3 text-[10px] leading-4 opacity-70">
+          <p className="mt-3 text-xs leading-4">
             {readiness.disclaimer}
           </p>
         </section>
@@ -697,39 +683,39 @@ function ParcelDecisionAuditPanel({
 
       <details
         data-testid="historical-validation-details"
-        className="group mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white"
+        className="group mt-4 border-t border-rule bg-white"
       >
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-xs text-slate-800 marker:content-none">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-semibold text-ink marker:content-none after:text-ink-3 after:content-['+'] group-open:after:content-['−'] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select">
           <span className="flex items-center gap-1.5 font-semibold">
             <Gauge className="h-3.5 w-3.5" />
             Historical validation
           </span>
-          <span className="text-[10px] font-medium text-slate-500">
+          <span className="text-xs font-medium text-ink-3">
             2024 features → 2025 filings
           </span>
         </summary>
-        <div className="border-t border-slate-200 p-3">
+        <div className="border-t border-rule p-3">
         {boroughCohort && boroughCohortLabel && (
           <div
             data-testid="historical-borough-cohort"
-            className="mb-3 overflow-hidden rounded-xl border border-cyan-200 bg-gradient-to-br from-cyan-50 via-white to-sky-50"
+            className="mb-3 border-b border-rule bg-white"
           >
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-cyan-100 px-3 py-3">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-rule px-3 py-3">
               <div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-800">
+                <div className="text-xs font-medium text-ink-3">
                   {boroughCohortLabel} historical cohort
                 </div>
-                <div className="mt-1 flex items-baseline gap-2 text-slate-950">
+                <div className="mt-1 flex items-baseline gap-2 text-ink">
                   <span className="text-2xl font-semibold tracking-tight">
                     {boroughCohort.cohort.top_100.observed_hits}
-                    <span className="text-base text-slate-400">/100</span>
+                    <span className="text-base text-ink-3">/100</span>
                   </span>
-                  <span className="text-xs font-medium text-slate-600">
+                  <span className="text-xs font-medium text-ink-3">
                     next-year NB filings
                   </span>
                 </div>
               </div>
-              <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-[10px] font-semibold text-cyan-900">
+              <span className="px-2.5 py-1 text-xs font-semibold text-ink">
                 95%{' '}
                 {formatRate(
                   boroughCohort.cohort.top_100.precision_95ci[0],
@@ -740,15 +726,15 @@ function ParcelDecisionAuditPanel({
                 )}
               </span>
             </div>
-            <div className="space-y-2 px-3 py-3 text-[11px] leading-5 text-slate-600">
+            <div className="space-y-2 px-3 py-3 text-xs leading-5 text-ink-3">
               <p>
                 In the fixed 2024→2025 evaluation,{' '}
                 {boroughCohort.cohort.top_100.observed_hits} of the model’s
                 historical {boroughCohortLabel} top 100 received a DOB
                 new-building filing in the following year.
               </p>
-              <p className="rounded-lg bg-white/80 px-2.5 py-2 text-slate-700 ring-1 ring-inset ring-cyan-100">
-                Cohort context only—not this parcel’s probability, current
+              <p className="bg-white px-2.5 py-2 text-ink ">
+                Cohort context only; not this parcel’s probability, current
                 accuracy, seller intent, or acquisition outcome. The live list
                 uses newer records and current project, ZAP, landmark, and
                 completeness gates.
@@ -756,7 +742,7 @@ function ParcelDecisionAuditPanel({
             </div>
           </div>
         )}
-        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-700">
+        <div className="font-cond flex items-center gap-1.5 text-[13px] font-semibold text-ink-3">
           <Gauge className="h-3.5 w-3.5" />
           Citywide historical filing benchmark
         </div>
@@ -764,16 +750,16 @@ function ParcelDecisionAuditPanel({
           {benchmarkCards.map((card) => (
             <div
               key={card.label}
-              className="rounded-lg border border-slate-200 bg-slate-50 p-2.5"
+              className="border-b border-rule py-2.5"
             >
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              <div className="font-cond text-[13px] font-semibold text-ink-3">
                 {card.label}
               </div>
-              <div className="mt-1 text-sm font-semibold text-slate-950">
+              <div className="mt-1 text-sm font-semibold text-ink">
                 {card.value}
               </div>
               {card.detail && (
-                <div className="mt-1 text-[10px] leading-4 text-slate-500">
+                <div className="mt-1 text-xs leading-4 text-ink-3">
                   {card.detail}
                 </div>
               )}
@@ -783,28 +769,28 @@ function ParcelDecisionAuditPanel({
         {benchmark && (
           <div
             data-testid="historical-benchmark-receipt"
-            className="mt-2 rounded-lg border border-violet-200 bg-violet-50 p-2.5 text-[11px] leading-4 text-violet-950"
+            className="mt-2 border-b border-rule bg-paper-2 p-2.5 text-xs leading-4 text-ink"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-semibold">
                 2024 features → 2025 DOB filings
               </span>
-              <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ring-1 ring-inset ring-violet-200">
+              <span className="font-cond px-2 py-0.5 text-[13px] font-semibold ">
                 {benchmark.evidence_status === 'development_exposed'
                   ? 'Development-exposed evidence'
                   : benchmark.evidence_status.replaceAll('_', ' ')}
               </span>
             </div>
-            <p className="mt-1.5 text-violet-900/80">
+            <p className="mt-1.5 text-ink/80">
               Observed 95% ranges use a Wilson interval around each fixed
               historical top-k list. {benchmark.interval.limitations}
             </p>
           </div>
         )}
-        <p className="mt-2 text-[11px] leading-4 text-slate-600">
+        <p className="mt-2 text-xs leading-4 text-ink-3">
           {audit.validation.evaluation_scope}
         </p>
-        <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-sky-50 p-2 text-[11px] leading-4 text-sky-900">
+        <p className="mt-2 flex items-start gap-1.5 bg-paper-2 p-2 text-xs leading-4 text-ink">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           {audit.validation.disclaimer}
         </p>
@@ -825,37 +811,34 @@ function ParcelDecisionAuditPanel({
           return (
             <article
               key={check.key}
-              className="rounded-xl border border-slate-200 bg-white p-3"
+              className="border-b border-rule bg-white py-3"
               data-testid={`decision-audit-${check.key}`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex min-w-0 items-start gap-2">
-                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" />
                   <div className="min-w-0">
-                    <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                      {AUDIT_LAYER_LABELS[check.layer]}
-                    </div>
-                    <h5 className="mt-0.5 text-xs font-semibold text-slate-950">
+                    <h5 className="mt-0.5 text-xs font-semibold text-ink">
                       {check.label}
                     </h5>
                   </div>
                 </div>
                 <span
-                  className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ring-1 ring-inset ${status.className}`}
+                  className={`shrink-0 px-2 py-1 text-xs font-semibold ${status.className}`}
                 >
                   {status.label}
                 </span>
               </div>
-              <p className="mt-2 text-xs leading-5 text-slate-600">
+              <p className="mt-2 text-xs leading-5 text-ink-3">
                 {check.summary}
               </p>
-              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-500">
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-xs text-ink-3">
                 <span>{check.source}</span>
                 {check.as_of && <span>As of {check.as_of}</span>}
                 {check.affects_model_rank ? (
-                  <span className="font-semibold text-violet-700">Model input</span>
+                  <span className="font-semibold text-ink">Model input</span>
                 ) : check.affects_acquisition_eligibility ? (
-                  <span className="font-semibold text-emerald-700">
+                  <span className="font-semibold text-ink">
                     Eligibility gate
                   </span>
                 ) : (
@@ -867,20 +850,20 @@ function ParcelDecisionAuditPanel({
         })}
       </section>
 
-      <section className="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3">
-        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-violet-900">
+      <section className="mt-3 border-b border-rule py-3">
+        <div className="font-cond flex items-center gap-1.5 text-[13px] font-semibold text-ink-3">
           <BriefcaseBusiness className="h-3.5 w-3.5" />
           User workflow evidence
         </div>
         {signedIn ? (
           workflowItem ? (
-            <div className="mt-2 text-xs leading-5 text-violet-950">
+            <div className="mt-2 text-xs leading-5 text-ink">
               <span className="font-semibold capitalize">{workflowItem.stage}</span>
               {' · '}
               <span className="capitalize">
                 {workflowItem.outcome.replaceAll('_', ' ')}
               </span>
-              <div className="mt-1 text-violet-800">
+              <div className="mt-1 text-ink">
                 {workflowItem.next_action
                   ? `${workflowItem.next_action}${
                       workflowItem.next_action_due_date
@@ -891,24 +874,24 @@ function ParcelDecisionAuditPanel({
               </div>
             </div>
           ) : (
-            <p className="mt-2 text-xs leading-5 text-violet-800">
+            <p className="mt-2 text-xs leading-5 text-ink">
               This parcel is not yet in your acquisition workflow. User-entered
               disposition evidence remains separate from model and source evidence.
             </p>
           )
         ) : (
-          <p className="mt-2 text-xs leading-5 text-violet-800">
+          <p className="mt-2 text-xs leading-5 text-ink">
             Sign in to add private notes, actions, and outcomes. Those fields never
             alter the historical model rank.
           </p>
         )}
       </section>
 
-      <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-        <summary className="cursor-pointer text-xs font-semibold text-slate-800">
+      <details className="group mt-3 border border-rule bg-white p-3">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-semibold text-ink marker:content-none after:text-ink-3 after:content-['+'] group-open:after:content-['−'] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select">
           What this audit cannot prove
         </summary>
-        <ul className="mt-2 space-y-1.5 pl-4 text-[11px] leading-4 text-slate-600">
+        <ul className="mt-2 space-y-1.5 pl-4 text-xs leading-4 text-ink-3">
           {audit.limitations.map((limitation) => (
             <li key={limitation} className="list-disc">
               {limitation}
@@ -948,16 +931,7 @@ function ParcelAcquisitionBrief({
     ['Review', readiness.review_items.length],
     ['Cleared', readiness.cleared_items.length],
   ] as const;
-  const laneStyles = {
-    violet:
-      'border-violet-300/20 bg-violet-400/[0.08] text-violet-100',
-    emerald:
-      'border-emerald-300/20 bg-emerald-400/[0.08] text-emerald-100',
-    amber: 'border-amber-300/20 bg-amber-400/[0.08] text-amber-100',
-    sky: 'border-sky-300/20 bg-sky-400/[0.08] text-sky-100',
-    rose: 'border-rose-300/20 bg-rose-400/[0.08] text-rose-100',
-    slate: 'border-white/10 bg-white/[0.05] text-slate-100',
-  } as const;
+
   const laneIcons = {
     signal: Gauge,
     eligibility: ShieldCheck,
@@ -967,122 +941,108 @@ function ParcelAcquisitionBrief({
 
   return (
     <section
-      className="mb-3 overflow-hidden rounded-2xl bg-[radial-gradient(circle_at_top_right,_rgba(14,165,233,0.2),_transparent_42%),linear-gradient(145deg,#020617,#0f172a)] text-white shadow-lg ring-1 ring-inset ring-white/10"
+      className="mb-4 bg-paper-2 p-3 text-ink"
       data-testid="parcel-decision-posture"
     >
-      <div className="p-3.5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300">
-              <BriefcaseBusiness className="h-3.5 w-3.5" />
-              Acquisition decision brief
-            </div>
-            <h4 className="mt-1 text-sm font-semibold text-white">
-              {brief.label}
-            </h4>
-            <p className="mt-1 text-[11px] leading-4 text-slate-300">
-              Four evidence lanes kept separate—no composite confidence score.
-            </p>
-          </div>
-          <span className="shrink-0 rounded-full bg-white/[0.08] px-2 py-1 text-[10px] font-semibold text-slate-200 ring-1 ring-inset ring-white/10">
-            Source-bound
+      <h4 className={`text-sm font-bold leading-5 ${readiness.status === 'blocked' ? 'text-red-700' : readiness.status === 'incomplete' || readiness.status === 'review_required' ? 'text-stale' : 'text-ink'}`}>{brief.label}</h4>
+      <p className="mt-1 text-sm leading-5 text-ink-3">
+        {readiness.recommended_action}
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums">
+        {counts.map(([label, count]) => (
+          <span
+            key={label}
+            className={
+              count > 0 && label === 'Blocked'
+                ? 'font-medium text-red-700'
+                : count > 0 && label === 'Review'
+                  ? 'font-medium text-stale'
+                  : 'text-ink-3'
+            }
+          >
+            {label} {count}
           </span>
-        </div>
-
-        <div
-          className="mt-3 grid gap-2 sm:grid-cols-2"
-          data-testid="parcel-decision-brief"
+        ))}
+      </div>
+      <p className="mt-1 font-mono text-xs text-ink-3">
+        {brief.evidenceAsOf
+          ? `CityLens evidence as of ${brief.evidenceAsOf}`
+          : 'Evidence date unavailable'}
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={onOpenAudit}
+          className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-sm border border-control bg-white px-2 py-1.5 text-xs font-medium text-ink hover:bg-white"
         >
+          Inspect evidence
+          <FileSearch className="h-3 w-3 shrink-0" />
+        </button>
+        {isAuthenticated ? (
+          <button
+            type="button"
+            onClick={onOpenWorkflow}
+            disabled={actionDisabled}
+            data-testid="parcel-decision-next-action"
+            className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-sm bg-ink px-2 py-1.5 text-xs font-medium text-white hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {actionPending ? (
+              <>
+                Saving diligence
+                <LoaderCircle className="h-3 w-3 shrink-0 animate-spin" />
+              </>
+            ) : (
+              <>
+                {workflowItem ? 'Open workflow' : 'Start diligence'}
+                <ArrowRight className="h-3 w-3 shrink-0" />
+              </>
+            )}
+          </button>
+        ) : (
+          <Link
+            href={`/sign-in?next=${encodeURIComponent(
+              `/parcel-intel?bbl=${row.bbl}`,
+            )}`}
+            data-testid="parcel-decision-next-action"
+            className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-sm bg-ink px-2 py-1.5 text-xs font-medium text-white hover:bg-ink/90"
+          >
+            Unlock full screen
+            <ArrowRight className="h-3 w-3 shrink-0" />
+          </Link>
+        )}
+      </div>
+      <details className="group mt-3 border-t border-rule pt-3">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-semibold text-ink marker:content-none after:text-ink-3 after:content-['+'] group-open:after:content-['−'] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select">
+          Decision evidence &amp; sources
+        </summary>
+        <p className="mt-2 text-xs leading-5 text-ink-3">
+          Four evidence lanes kept separate; no composite confidence score.
+        </p>
+        <div className="mt-2 divide-y divide-rule" data-testid="parcel-decision-brief">
           {brief.lanes.map((lane) => {
             const Icon = laneIcons[lane.key];
             return (
               <article
                 key={lane.key}
-                className={`rounded-xl border p-2.5 ${laneStyles[lane.tone]}`}
+                className="py-3"
                 data-testid={`parcel-decision-brief-${lane.key}`}
               >
-                <div className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] opacity-70">
-                  <Icon className="h-3 w-3" />
-                  {lane.eyebrow}
-                </div>
-                <div className="mt-1 text-xs font-semibold leading-4">
-                  {lane.headline}
-                </div>
-                <p className="mt-1 line-clamp-3 text-[10px] leading-4 opacity-75">
-                  {lane.detail}
-                </p>
-                <p
-                  className="mt-2 border-t border-current/10 pt-1.5 text-[9px] leading-[1.35] opacity-65"
-                  title={lane.source}
-                >
+                <h5 className="flex items-start gap-1.5 text-sm font-medium leading-5">
+                  <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>{lane.eyebrow}: {lane.headline}</span>
+                </h5>
+                <p className="mt-1 text-xs leading-5 text-ink-3">{lane.detail}</p>
+                <p className="mt-2 font-mono text-xs leading-5 text-ink-3" title={lane.source}>
                   {lane.source}
                 </p>
               </article>
             );
           })}
         </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-3">
-          {counts.map(([label, count]) => (
-            <span
-              key={label}
-              className="rounded-full bg-white/[0.07] px-2 py-1 text-[10px] font-semibold text-slate-300 ring-1 ring-inset ring-white/10"
-            >
-              {label} {count}
-            </span>
-          ))}
-          {brief.evidenceAsOf && (
-            <span className="text-[10px] text-slate-400">
-              Evidence {formatIsoDate(brief.evidenceAsOf)}
-            </span>
-          )}
-        </div>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={onOpenAudit}
-            className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-white/15 bg-white/[0.06] px-2.5 text-[10px] font-semibold text-white hover:bg-white/[0.12]"
-          >
-            Inspect evidence
-            <FileSearch className="h-3 w-3" />
-          </button>
-          {isAuthenticated ? (
-            <button
-              type="button"
-              onClick={onOpenWorkflow}
-              disabled={actionDisabled}
-              data-testid="parcel-decision-next-action"
-              className="inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-white px-2.5 text-[10px] font-semibold text-slate-950 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {actionPending ? (
-                <>
-                  Saving diligence
-                  <LoaderCircle className="h-3 w-3 animate-spin" />
-                </>
-              ) : (
-                <>
-                  {workflowItem ? 'Open workflow' : 'Start diligence'}
-                  <ArrowRight className="h-3 w-3" />
-                </>
-              )}
-            </button>
-          ) : (
-            <Link
-              href={`/sign-in?next=${encodeURIComponent(
-                `/parcel-intel?bbl=${row.bbl}`,
-              )}`}
-              data-testid="parcel-decision-next-action"
-              className="inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-white px-2.5 text-[10px] font-semibold text-slate-950 hover:bg-sky-50"
-            >
-              Unlock full screen
-              <ArrowRight className="h-3 w-3" />
-            </Link>
-          )}
-        </div>
-        <p className="mt-2 text-[10px] leading-4 text-slate-400">
+        <p className="border-t border-rule pt-3 text-xs leading-5 text-ink-3">
           {readiness.disclaimer} The brief is not a buy/pass recommendation.
         </p>
-      </div>
+      </details>
     </section>
   );
 }
@@ -1671,48 +1631,46 @@ export function ParcelIntelPropertyPanel({
 
   return (
     <div
-      className="flex h-full min-h-0 flex-col bg-white"
+      className="flex h-full min-h-0 min-w-0 flex-col bg-white text-ink [overflow-wrap:anywhere]"
       data-testid="parcel-property-panel"
       role="region"
       aria-labelledby="parcel-property-panel-title"
     >
-      <div className="shrink-0 border-b border-slate-200 px-4 pb-3 pt-4">
+      <div className="shrink-0 border-b border-rule px-4 py-3">
         <button
           type="button"
           autoFocus
           onClick={onClose}
           aria-label="Close parcel panel and return to ranked parcels"
-          className="inline-flex items-center gap-1 rounded-md text-xs font-medium text-slate-500 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+          className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-ink-3 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select focus-visible:ring-offset-2"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to ranked parcels
         </button>
-        <div className="mt-3 flex items-start justify-between gap-3">
+        <div className="mt-2 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.13em] text-sky-700">
-              {BOROUGH_LABELS[row.borough ?? ''] ?? row.borough} · BBL {row.bbl}
-            </div>
             <h3
               id="parcel-property-panel-title"
-              className="mt-1 text-xl font-semibold tracking-tight text-slate-950"
+              className="mt-1 break-words text-xl font-semibold leading-6 tracking-tight text-ink"
             >
-              {row.address ?? 'Address unavailable'}
+              {formatAddress(row.address) || 'Address unavailable'}
             </h3>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              <span className="rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-800 ring-1 ring-inset ring-violet-200">
-                {opportunityLabel(row.opportunity_category)}
-              </span>
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+            <p className="mt-1 text-sm text-ink-2">
+              {BOROUGH_LABELS[row.borough ?? ''] ?? row.borough} · {opportunityLabel(row.opportunity_category)}
+            </p>
+            <p className="mt-2 font-mono text-xs text-ink-3">BBL {formatBbl(row.bbl)}</p>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+              <span className="-l pl-2 text-xs text-ink-3">
                 {priorityLabel(row.priority_tier)} priority
               </span>
               {row.acquisition_eligible && (
-                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200">
+                <span className="text-xs text-ink-3">
                   Acquisition screened
                 </span>
               )}
               {row.address_source === 'nyc_pad' && (
                 <span
-                  className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-800 ring-1 ring-inset ring-sky-200"
+                  className="inline-flex items-center gap-1 text-xs text-ink-3"
                   title="NYC Property Address Directory address matched to this tax-lot BBL"
                 >
                   <MapPin className="h-3 w-3" />
@@ -1720,22 +1678,22 @@ export function ParcelIntelPropertyPanel({
                 </span>
               )}
               {!hasNumberedAddress && (
-                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-900 ring-1 ring-inset ring-amber-200">
+                <span className="text-xs text-ink-3">
                   Unnumbered tax lot
                 </span>
               )}
               {row.recent_change && (
-                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200">
+                <span className="text-xs text-ink-3">
                   Recent physical change
                 </span>
               )}
             </div>
           </div>
-          <span className="shrink-0 rounded-lg bg-slate-950 px-2.5 py-1.5 text-xs font-semibold text-white">
+          <span className="shrink-0 pt-1 text-xs tabular-nums text-ink-3">
             {row.citywide_rank
-              ? `NYC #${row.citywide_rank}`
+              ? `Rank ${row.citywide_rank.toLocaleString()} citywide`
               : row.priority_rank
-                ? `${BOROUGH_SHORT_LABELS[row.borough ?? ''] ?? 'BR'} #${row.priority_rank}`
+                ? `Rank ${row.priority_rank.toLocaleString()} in borough`
               : 'Ranked'}
           </span>
         </div>
@@ -1758,10 +1716,10 @@ export function ParcelIntelPropertyPanel({
                     : undefined
                 }
                 onClick={onToggleCompare}
-                className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                className={`inline-flex h-9 items-center gap-1.5 rounded-sm border px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                   isCompared
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
-                    : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
+                    ? 'border-control bg-white text-ink'
+                    : 'border-control bg-white text-ink hover:bg-white'
                 }`}
               >
                 <Columns3 className="h-3.5 w-3.5" />
@@ -1780,7 +1738,7 @@ export function ParcelIntelPropertyPanel({
                       : 'A numbered official address is required for processing'
                   }
                   onClick={openSiteEvidence}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3 text-xs font-semibold text-sky-950 transition-colors hover:bg-sky-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-control bg-paper-2 px-3 text-xs font-semibold text-ink transition-colors hover:bg-paper-2 disabled:cursor-not-allowed disabled:border-control disabled:bg-white disabled:text-ink-3"
                 >
                   <ScanSearch className="h-3.5 w-3.5" />
                   Build site evidence
@@ -1792,10 +1750,10 @@ export function ParcelIntelPropertyPanel({
                   onClick={() =>
                     setOfficialDossierOpen((value) => !value)
                   }
-                  className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors ${
+                  className={`inline-flex h-9 items-center gap-1.5 rounded-sm border px-3 text-xs font-semibold transition-colors ${
                     officialDossierOpen
-                      ? 'border-sky-300 bg-sky-50 text-sky-900'
-                      : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
+                      ? 'border-control bg-paper-2 text-ink'
+                      : 'border-control bg-white text-ink hover:bg-white'
                   }`}
                 >
                   <Database className="h-3.5 w-3.5" />
@@ -1813,7 +1771,7 @@ export function ParcelIntelPropertyPanel({
                     }
                     void quickSaveWorkflow();
                   }}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-ink px-3 text-xs font-semibold text-white hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {effectiveWorkflowLoadState === 'idle' ||
                   effectiveWorkflowLoadState === 'loading' ? (
@@ -1821,7 +1779,7 @@ export function ParcelIntelPropertyPanel({
                   ) : effectiveWorkflowLoadState === 'error' ? (
                     <CircleAlert className="h-3.5 w-3.5" />
                   ) : workflowItem ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-ink" />
                   ) : (
                     <BookmarkPlus className="h-3.5 w-3.5" />
                   )}
@@ -1834,7 +1792,7 @@ export function ParcelIntelPropertyPanel({
                         ? 'In pipeline · Open'
                         : 'Save lead'}
                 </button>
-                <span className="text-[11px] leading-4 text-slate-500">
+                <span className="sr-only">
                   {workflowItem
                     ? 'Saved facts stay fixed; workflow updates never rewrite the original rank.'
                     : 'Creates the canonical save-time snapshot, then opens follow-up planning.'}
@@ -1845,7 +1803,7 @@ export function ParcelIntelPropertyPanel({
               <Link
                 href="/runs#public-evidence"
                 data-testid="parcel-public-evidence-link"
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3 text-xs font-semibold text-sky-950 transition-colors hover:bg-sky-100"
+                className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-control bg-paper-2 px-3 text-xs font-semibold text-ink transition-colors hover:bg-paper-2"
               >
                 <ScanSearch className="h-3.5 w-3.5" />
                 View aerial evidence
@@ -1858,16 +1816,16 @@ export function ParcelIntelPropertyPanel({
       <nav
         aria-label="Parcel workspace sections"
         data-testid="parcel-workspace-tabs"
-        className="sticky top-0 z-20 grid shrink-0 grid-cols-2 border-b border-slate-200 bg-slate-50/95 p-1.5 shadow-sm backdrop-blur sm:static sm:grid-cols-4 sm:bg-slate-50 sm:shadow-none"
+        className="sticky top-0 z-20 grid shrink-0 grid-cols-4 border-b border-rule bg-white px-2"
       >
         {(
           [
-            ['overview', FileSearch, 'Overview'],
-            ['audit', ShieldCheck, 'Audit'],
-            ['underwrite', Building2, 'Underwrite'],
-            ['workflow', BriefcaseBusiness, 'Workflow'],
+            ['overview', 'Overview'],
+            ['audit', 'Audit'],
+            ['underwrite', 'Underwrite'],
+            ['workflow', 'Workflow'],
           ] as const
-        ).map(([value, Icon, label]) => (
+        ).map(([value, label]) => (
           <button
             key={value}
             type="button"
@@ -1887,13 +1845,12 @@ export function ParcelIntelPropertyPanel({
               setTab(value);
             }}
             aria-pressed={!officialDossierOpen && tab === value}
-            className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-colors ${
+            className={`inline-flex min-h-10 min-w-0 items-center justify-center border-b-2 px-1 text-xs font-medium transition-colors ${
               !officialDossierOpen && tab === value
-                ? 'bg-white text-slate-950 shadow-sm ring-1 ring-slate-200'
-                : 'text-slate-500 hover:bg-white/70 hover:text-slate-900'
+                ? 'border-ink text-ink'
+                : 'border-transparent text-ink-3 hover:bg-white hover:text-ink'
             }`}
           >
-            <Icon className="h-3.5 w-3.5" />
             {label}
           </button>
         ))}
@@ -1903,17 +1860,17 @@ export function ParcelIntelPropertyPanel({
         {officialDossierOpen && (
           <div data-testid="ranked-parcel-official-dossier">
             <div
-              className="mb-3 flex flex-col gap-3 rounded-xl border border-sky-200 bg-sky-50 p-3 sm:flex-row sm:items-center sm:justify-between"
+              className="mb-3 flex flex-col gap-3 border-b border-rule py-3 sm:flex-row sm:items-center sm:justify-between"
               data-testid="official-dossier-workflow-handoff"
             >
               <div>
-                <div className="text-xs font-semibold text-sky-950">
+                <div className="text-xs font-semibold text-ink">
                   Current official-source packet
                 </div>
-                <p className="mt-0.5 text-[11px] leading-4 text-sky-800">
+                <p className="mt-0.5 text-xs leading-4 text-ink">
                   Non-scoring PLUTO and ACRIS evidence for this exact BBL.
                 </p>
-                <p className="mt-1 text-[10px] leading-4 text-sky-700">
+                <p className="mt-1 text-xs leading-4 text-ink">
                   Viewing it never marks evidence reviewed.
                 </p>
               </div>
@@ -1923,7 +1880,7 @@ export function ParcelIntelPropertyPanel({
                   autoFocus
                   aria-label="Back to parcel workspace"
                   onClick={() => setOfficialDossierOpen(false)}
-                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-sky-300 bg-white px-3 text-xs font-semibold text-sky-950 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-sm border border-control bg-white px-3 text-xs font-semibold text-ink hover:bg-paper-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select focus-visible:ring-offset-2"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
                   Back
@@ -1934,7 +1891,7 @@ export function ParcelIntelPropertyPanel({
                   disabled={
                     workflowBusy || effectiveWorkflowLoadState !== 'ready'
                   }
-                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-sm bg-ink px-3 text-xs font-semibold text-white hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {workflowBusy ||
                   effectiveWorkflowLoadState === 'idle' ||
@@ -1959,13 +1916,13 @@ export function ParcelIntelPropertyPanel({
         )}
 
         {!officialDossierOpen && visibleWorkflowError && (
-          <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+          <div className="mb-3 flex items-center justify-between gap-3 border-b border-rule bg-white px-3 py-2 text-xs text-ink">
             <span>{visibleWorkflowError}</span>
             {effectiveWorkflowLoadState === 'error' && (
               <button
                 type="button"
                 onClick={() => setWorkflowReloadKey((value) => value + 1)}
-                className="shrink-0 rounded-md border border-rose-300 bg-white px-2 py-1 font-semibold hover:bg-rose-100"
+                className="shrink-0 rounded-sm border border-rule bg-white px-2 py-1 font-semibold hover:bg-white"
               >
                 Retry
               </button>
@@ -1990,14 +1947,14 @@ export function ParcelIntelPropertyPanel({
               />
             )}
             {row.acquisition_status === 'active_project' && (
-              <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <div className="mb-3 border-b border-rule py-3">
                 <div className="flex items-start gap-2">
-                  <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+                  <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
                   <div>
-                    <h4 className="text-xs font-semibold text-amber-950">
+                    <h4 className="text-xs font-semibold text-ink">
                       Existing project activity detected
                     </h4>
-                    <p className="mt-1 text-xs leading-5 text-amber-900">
+                    <p className="mt-1 text-xs leading-5 text-ink">
                       {row.latest_project_type === 'land_use_entitlement'
                         ? `NYC Planning records ${row.latest_project_status?.toLowerCase() || 'active'} land-use entitlement activity`
                         : `Recent DOB ${row.latest_project_type === 'alt_co_new_building'
@@ -2016,7 +1973,7 @@ export function ParcelIntelPropertyPanel({
                         href={row.latest_project_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-amber-950 underline decoration-amber-400 underline-offset-2"
+                        className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-ink underline decoration-rule underline-offset-2"
                       >
                         Open official project record
                         <ExternalLink className="h-3 w-3" />
@@ -2028,8 +1985,8 @@ export function ParcelIntelPropertyPanel({
             )}
             {(row.acquisition_status === 'constrained' ||
               row.acquisition_status === 'incomplete_data') && (
-              <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-700">
-                <div className="font-semibold text-slate-950">
+              <div className="mb-3 border-b border-rule py-3 text-xs leading-5 text-ink">
+                <div className="font-semibold text-ink">
                   Not included in the acquisition ranking
                 </div>
                 <div className="mt-1">
@@ -2039,48 +1996,29 @@ export function ParcelIntelPropertyPanel({
                 </div>
               </div>
             )}
-            <dl className="grid grid-cols-2 gap-2 text-sm">
-              {row.owner_name?.trim() && (
-                <FactCard
-                  label={row.owner_name_source === 'pluto' ? 'Owner (PLUTO)' : 'Owner'}
-                  value={row.owner_name}
-                  wide
-                />
-              )}
-              <FactCard label="Lot area" value={`${formatNumber(row.lot_area_sqft)} sf`} />
-              <FactCard label="Allowed FAR" value={String(row.allowed_far ?? '—')} />
-              <FactCard
-                label="Unused floor area"
-                value={`${formatNumber(row.unused_floor_area_sqft)} sf`}
-              />
-              <FactCard
+            <div className="grid grid-cols-4 divide-x divide-rule border-t border-ink border-b border-b-rule" data-testid="parcel-core-kpis">
+              <CoreFigure label="Lot area" value={formatNumber(row.lot_area_sqft)} unit="sf" />
+              <CoreFigure label="Zoning" value={row.zoning_district_1 ?? '—'} />
+              <CoreFigure label="Unused floor area proxy" value={formatNumber(row.unused_floor_area_sqft)} unit="sf" />
+              <CoreFigure label="Held" value={formatNumber(row.years_held)} unit="yr" />
+            </div>
+            <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2">
+              <h4 className="text-sm font-semibold text-ink">Property record</h4>
+              <span className="font-mono text-xs text-ink-3">PLUTO as of {row.property_facts_as_of ?? 'date unavailable'}</span>
+            </div>
+            <dl className="divide-y divide-rule border-b border-rule text-sm tabular-nums">
+              <FactRow label="Allowed FAR" value={String(row.allowed_far ?? '—')} />
+              <FactRow
                 label="Built utilization"
-                value={
-                  typeof row.far_utilization_pct === 'number'
-                    ? `${row.far_utilization_pct.toFixed(0)}%`
-                    : '—'
-                }
+                value={typeof row.far_utilization_pct === 'number' ? `${row.far_utilization_pct.toFixed(0)}%` : '—'}
               />
-              <FactCard
+              <FactRow
                 label="Last sale"
-                value={`${formatCurrency(row.last_sale_price)}${
-                  row.last_sale_year ? ` · ${row.last_sale_year}` : ''
-                }`}
+                value={`${formatCurrency(row.last_sale_price)}${row.last_sale_year ? ` · ${row.last_sale_year}` : ''}`}
               />
-              <FactCard
-                label="Held"
-                value={
-                  typeof row.years_held === 'number'
-                    ? `${row.years_held} ${row.years_held === 1 ? 'year' : 'years'}`
-                    : '—'
-                }
-              />
-              <FactCard label="Zoning" value={row.zoning_district_1 ?? '—'} />
-              <FactCard
-                label="Existing building"
-                value={row.year_built && row.year_built > 0 ? String(row.year_built) : 'None recorded'}
-              />
+              <FactRow label="Existing building" value={row.year_built && row.year_built > 0 ? String(row.year_built) : 'None recorded'} />
             </dl>
+            <p className="mt-1 font-mono text-xs text-ink-3">ACRIS as of {row.ownership_as_of ?? 'date unavailable'}</p>
 
             {decisionPeers.length > 0 && onOpenPeer && onComparePeer && (
               <ParcelDecisionPeers
@@ -2102,78 +2040,64 @@ export function ParcelIntelPropertyPanel({
 
             <details
               data-testid="parcel-diligence-details"
-              className="group mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white"
+              className="group mt-4 border-t border-rule bg-white"
             >
-              <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-3 py-3 marker:content-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-semibold text-ink marker:content-none after:text-ink-3 after:content-['+'] group-open:after:content-['−'] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select">
                 <span className="min-w-0">
-                  <span className="block text-xs font-semibold text-slate-950">
-                    Diligence &amp; site context
+                  Diligence &amp; site context
+                  <span className="mt-0.5 block text-xs font-normal text-ink-3">
+                    {diligenceHighlights.join(' · ') || 'Official parcel screens available'}
                   </span>
-                  <span className="mt-1 flex flex-wrap gap-1.5">
-                    {diligenceHighlights.length > 0 ? (
-                      diligenceHighlights.map((highlight) => (
-                        <span
-                          key={highlight}
-                          className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700"
-                        >
-                          {highlight}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-[11px] leading-4 text-slate-500">
-                        Official parcel screens available
-                      </span>
-                    )}
-                  </span>
-                </span>
-                <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-sky-700">
-                  <span className="group-open:hidden">Review details</span>
-                  <span className="hidden group-open:inline">Hide details</span>
-                  <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
                 </span>
               </summary>
-              <div className="border-t border-slate-200 px-3 pb-3">
+              <div className="pb-3">
+                {row.owner_name?.trim() && (
+                  <dl className="mt-3 divide-y divide-rule border-b border-rule">
+                    <FactRow label={row.owner_name_source === 'pluto' ? 'Owner (PLUTO)' : 'Owner'} value={row.owner_name} />
+                  </dl>
+                )}
+                <p className="mt-1 font-mono text-xs text-ink-3">{row.owner_name_source === 'pluto' ? 'PLUTO owner' : 'ACRIS ownership'} as of {row.ownership_as_of ?? 'date unavailable'}</p>
             {row.owner_portfolio_id &&
               (row.owner_portfolio_lot_count ?? 0) >= 2 && (
-                <section className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50 p-3">
+                <section className="mt-3 border-b border-rule py-3">
                   <div className="flex items-start gap-2">
-                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-indigo-700" />
+                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-semibold uppercase tracking-wide text-indigo-950">
+                      <h4 className="text-xs font-medium text-ink-3">
                         Current PLUTO owner portfolio
                       </h4>
                       <div className="mt-2 grid grid-cols-3 gap-2">
                         <div>
-                          <div className="text-lg font-semibold text-indigo-950">
+                          <div className="text-lg font-semibold text-ink">
                             {formatNumber(row.owner_portfolio_lot_count)}
                           </div>
-                          <div className="text-[10px] uppercase tracking-wide text-indigo-700">
+                          <div className="font-cond text-[13px] text-ink-3">
                             Tax lots
                           </div>
                         </div>
                         <div>
-                          <div className="text-lg font-semibold text-indigo-950">
+                          <div className="text-lg font-semibold text-ink">
                             {formatNumber(row.owner_portfolio_borough_count)}
                           </div>
-                          <div className="text-[10px] uppercase tracking-wide text-indigo-700">
+                          <div className="font-cond text-[13px] text-ink-3">
                             Boroughs
                           </div>
                         </div>
                         <div>
-                          <div className="text-lg font-semibold text-indigo-950">
+                          <div className="text-lg font-semibold text-ink">
                             {formatNumber(row.owner_portfolio_candidate_count)}
                           </div>
-                          <div className="text-[10px] uppercase tracking-wide text-indigo-700">
+                          <div className="font-cond text-[13px] text-ink-3">
                             Current leads
                           </div>
                         </div>
                       </div>
-                      <p className="mt-2 text-xs leading-5 text-indigo-900">
+                      <p className="mt-2 text-xs leading-5 text-ink">
                         {formatNumber(row.owner_portfolio_total_lot_area_sqft)} sf
                         across current tax lots ·{' '}
                         {ownerEntityLabel(row.owner_entity_type)}
                       </p>
-                      <p className="mt-2 text-[11px] leading-4 text-indigo-800">
+                      <p className="mt-2 text-xs leading-4 text-ink">
                         Exact normalized PLUTO legal name only. Related LLCs are
                         not inferred, and same-name entities still require
                         ownership verification.
@@ -2185,7 +2109,7 @@ export function ParcelIntelPropertyPanel({
                             onClick={() =>
                               onViewOwnerPortfolio(row.owner_portfolio_id as string)
                             }
-                            className="inline-flex h-8 items-center rounded-lg bg-indigo-950 px-3 text-xs font-medium text-white hover:bg-indigo-800"
+                            className="inline-flex h-8 items-center rounded-sm bg-ink px-3 text-xs font-medium text-white hover:bg-ink/90"
                           >
                             View current candidate holdings
                           </button>
@@ -2194,13 +2118,13 @@ export function ParcelIntelPropertyPanel({
                           href="https://data.cityofnewyork.us/d/64uk-42ks"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs font-medium text-indigo-800 hover:text-indigo-950"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-ink hover:text-select"
                         >
                           PLUTO source
                           <ExternalLink className="h-3 w-3" />
                         </a>
                       </div>
-                      <p className="mt-2 text-[10px] text-indigo-700">
+                      <p className="font-mono mt-2 text-xs text-ink">
                         Data retrieved{' '}
                         {row.owner_portfolio_data_as_of ?? 'date unavailable'}
                       </p>
@@ -2210,14 +2134,14 @@ export function ParcelIntelPropertyPanel({
               )}
 
             {row.tax_lien_sale_year && (
-              <section className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <section className="mt-3 border-b border-rule py-3">
                 <div className="flex items-start gap-2">
-                  <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+                  <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
                   <div>
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-amber-950">
+                    <h4 className="text-[13px] font-semibold text-ink">
                       {row.tax_lien_sale_year} final tax-lien sale record
                     </h4>
-                    <p className="mt-1 text-xs leading-5 text-amber-900">
+                    <p className="font-mono mt-1 text-xs leading-5 text-ink">
                       NYC DOF included this tax lot in its final{' '}
                       {formatIsoDate(row.tax_lien_sale_date) ??
                         `${row.tax_lien_sale_year}`}{' '}
@@ -2230,7 +2154,7 @@ export function ParcelIntelPropertyPanel({
                       sale. Verify current payoff and status before outreach.
                     </p>
                     {row.tax_lien_data_as_of && (
-                      <p className="mt-1 text-[11px] text-amber-800">
+                      <p className="mt-1 text-xs text-ink">
                         Official dataset retrieved {row.tax_lien_data_as_of}.
                       </p>
                     )}
@@ -2239,7 +2163,7 @@ export function ParcelIntelPropertyPanel({
                         href="https://www.nyc.gov/site/finance/property/property-lien-sales.page"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-amber-950 underline decoration-amber-400 underline-offset-2"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-ink underline decoration-rule underline-offset-2"
                       >
                         NYC DOF guidance
                         <ExternalLink className="h-3 w-3" />
@@ -2248,7 +2172,7 @@ export function ParcelIntelPropertyPanel({
                         href="https://data.cityofnewyork.us/d/9rz4-mjek"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-amber-950 underline decoration-amber-400 underline-offset-2"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-ink underline decoration-rule underline-offset-2"
                       >
                         Official source data
                         <ExternalLink className="h-3 w-3" />
@@ -2260,20 +2184,20 @@ export function ParcelIntelPropertyPanel({
             )}
 
             {hasViolationSnapshot && (
-              <section className="mt-3 rounded-xl border border-rose-200 bg-rose-50/70 p-3">
+              <section className="mt-3 border-b border-rule py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-rose-950">
+                    <h4 className="text-[13px] font-semibold text-ink">
                       Open violation snapshot
                     </h4>
-                    <p className="mt-1 text-xs leading-5 text-rose-900">
+                    <p className="mt-1 text-xs leading-5 text-ink">
                       Current official agency statuses joined by BBL. Counts are
                       diligence flags, not ranking inputs or evidence that this
                       property is available.
                     </p>
                   </div>
                   {(row.critical_violation_count ?? 0) > 0 && (
-                    <span className="shrink-0 rounded-full bg-rose-700 px-2 py-1 text-[11px] font-semibold text-white">
+                    <span className="shrink-0 px-2 py-1 text-xs font-semibold text-ink">
                       {formatNumber(row.critical_violation_count)} immediate-hazard{' '}
                       {(row.critical_violation_count ?? 0) === 1
                         ? 'record'
@@ -2283,53 +2207,53 @@ export function ParcelIntelPropertyPanel({
                 </div>
 
                 <dl className="mt-3 grid gap-2 sm:grid-cols-3">
-                  <div className="rounded-lg border border-rose-100 bg-white p-2.5">
-                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <div className="border-b border-rule py-2.5">
+                    <dt className="font-cond text-[13px] font-semibold text-ink-3">
                       DOB Safety active
                     </dt>
-                    <dd className="mt-1 text-lg font-semibold text-slate-950">
+                    <dd className="mt-1 text-lg font-semibold text-ink">
                       {formatNumber(row.dob_safety_active_count)}
                     </dd>
-                    <div className="mt-1 text-[11px] leading-4 text-slate-600">
+                    <div className="mt-1 text-xs leading-4 text-ink-3">
                       Latest issue{' '}
                       {formatIsoDate(row.dob_safety_latest_issue_date) ?? 'unavailable'}
                     </div>
                   </div>
-                  <div className="rounded-lg border border-rose-100 bg-white p-2.5">
-                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <div className="border-b border-rule py-2.5">
+                    <dt className="font-cond text-[13px] font-semibold text-ink-3">
                       OATH / ECB active
                     </dt>
-                    <dd className="mt-1 text-lg font-semibold text-slate-950">
+                    <dd className="mt-1 text-lg font-semibold text-ink">
                       {formatNumber(row.ecb_active_count)}
                     </dd>
-                    <div className="mt-1 text-[11px] leading-4 text-slate-600">
+                    <div className="mt-1 text-xs leading-4 text-ink-3">
                       {formatNumber(row.ecb_class_1_count)} Class 1
                       immediately hazardous · reported balance{' '}
                       {formatCurrency(row.ecb_balance_due)}
                     </div>
-                    <div className="mt-1 text-[11px] leading-4 text-slate-600">
+                    <div className="mt-1 text-xs leading-4 text-ink-3">
                       Latest issue {formatIsoDate(row.ecb_latest_issue_date) ?? 'unavailable'}
                     </div>
                   </div>
-                  <div className="rounded-lg border border-rose-100 bg-white p-2.5">
-                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <div className="border-b border-rule py-2.5">
+                    <dt className="font-cond text-[13px] font-semibold text-ink-3">
                       HPD open
                     </dt>
-                    <dd className="mt-1 text-lg font-semibold text-slate-950">
+                    <dd className="mt-1 text-lg font-semibold text-ink">
                       {formatNumber(row.hpd_open_count)}
                     </dd>
-                    <div className="mt-1 text-[11px] leading-4 text-slate-600">
+                    <div className="mt-1 text-xs leading-4 text-ink-3">
                       {formatNumber(row.hpd_class_c_count)} Class C immediately
                       hazardous
                     </div>
-                    <div className="mt-1 text-[11px] leading-4 text-slate-600">
+                    <div className="mt-1 text-xs leading-4 text-ink-3">
                       Latest inspection{' '}
                       {formatIsoDate(row.hpd_latest_inspection_date) ?? 'unavailable'}
                     </div>
                   </div>
                 </dl>
 
-                <p className="mt-3 text-[11px] leading-4 text-rose-900">
+                <p className="font-mono mt-3 text-xs leading-4 text-ink">
                   A building can have multiple records. Verify current status,
                   correction, hearing, and payment details in the agency systems
                   before underwriting or outreach
@@ -2349,7 +2273,7 @@ export function ParcelIntelPropertyPanel({
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-rose-950 underline decoration-rose-300 underline-offset-2"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-ink underline decoration-rule underline-offset-2"
                     >
                       {label}
                       <ExternalLink className="h-3 w-3" />
@@ -2361,24 +2285,24 @@ export function ParcelIntelPropertyPanel({
 
             {hasFloodplainScreen && (
               <section
-                className={`mt-3 rounded-xl border p-3 ${
+                className={`mt-3 border-b py-3 ${
                   row.floodplain_1pct
-                    ? 'border-sky-300 bg-sky-50'
-                    : 'border-slate-200 bg-slate-50'
+                    ? 'border-rule bg-white'
+                    : 'border-rule bg-white'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h4
-                      className={`text-xs font-semibold uppercase tracking-wide ${
-                        row.floodplain_1pct ? 'text-sky-950' : 'text-slate-800'
+                      className={`text-[13px] font-semibold ${
+                        row.floodplain_1pct ? 'text-ink-3' : 'text-ink-3'
                       }`}
                     >
                       1% annual-chance floodplain screen
                     </h4>
                     <p
                       className={`mt-1 text-xs leading-5 ${
-                        row.floodplain_1pct ? 'text-sky-900' : 'text-slate-600'
+                        row.floodplain_1pct ? 'text-ink' : 'text-ink-3'
                       }`}
                     >
                       {row.floodplain_1pct
@@ -2387,10 +2311,10 @@ export function ParcelIntelPropertyPanel({
                     </p>
                   </div>
                   <span
-                    className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${
+                    className={`shrink-0 px-2 py-1 text-xs font-semibold ${
                       row.floodplain_1pct
-                        ? 'bg-sky-700 text-white'
-                        : 'bg-white text-slate-700 ring-1 ring-inset ring-slate-300'
+                        ? 'text-ink'
+                        : 'bg-white text-ink '
                     }`}
                   >
                     {row.floodplain_1pct ? 'Mapped overlap' : 'No PLUTO flag'}
@@ -2398,33 +2322,33 @@ export function ParcelIntelPropertyPanel({
                 </div>
 
                 <dl className="mt-3 grid grid-cols-2 gap-2">
-                  <div className="rounded-lg border border-white/80 bg-white p-2.5">
-                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <div className="border-b border-rule py-2.5">
+                    <dt className="font-cond text-[13px] font-semibold text-ink-3">
                       FEMA 2007 FIRM
                     </dt>
-                    <dd className="mt-1 text-sm font-semibold text-slate-950">
+                    <dd className="mt-1 text-sm font-semibold text-ink">
                       {row.firm07_floodplain ? 'Tax-lot overlap' : 'Not flagged'}
                     </dd>
-                    <div className="mt-1 text-[11px] text-slate-600">
+                    <div className="mt-1 text-xs text-ink-3">
                       Adopted map
                     </div>
                   </div>
-                  <div className="rounded-lg border border-white/80 bg-white p-2.5">
-                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <div className="border-b border-rule py-2.5">
+                    <dt className="font-cond text-[13px] font-semibold text-ink-3">
                       FEMA 2015 PFIRM
                     </dt>
-                    <dd className="mt-1 text-sm font-semibold text-slate-950">
+                    <dd className="mt-1 text-sm font-semibold text-ink">
                       {row.pfirm15_floodplain ? 'Tax-lot overlap' : 'Not flagged'}
                     </dd>
-                    <div className="mt-1 text-[11px] text-slate-600">
+                    <div className="mt-1 text-xs text-ink-3">
                       Preliminary planning map
                     </div>
                   </div>
                 </dl>
 
                 <p
-                  className={`mt-3 text-[11px] leading-4 ${
-                    row.floodplain_1pct ? 'text-sky-900' : 'text-slate-600'
+                  className={`font-mono mt-3 text-xs leading-4 ${
+                    row.floodplain_1pct ? 'text-ink' : 'text-ink-3'
                   }`}
                 >
                   A parcel overlap does not prove that an existing building lies
@@ -2440,7 +2364,7 @@ export function ParcelIntelPropertyPanel({
                     href="https://data.cityofnewyork.us/d/64uk-42ks"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-sky-950 underline decoration-sky-300 underline-offset-2"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-select underline decoration-rule underline-offset-2"
                   >
                     Official PLUTO source
                     <ExternalLink className="h-3 w-3" />
@@ -2449,7 +2373,7 @@ export function ParcelIntelPropertyPanel({
                     href="https://www.nyc.gov/site/floodmaps/maps/overview.page"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-sky-950 underline decoration-sky-300 underline-offset-2"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-select underline decoration-rule underline-offset-2"
                   >
                     NYC flood-map guidance
                     <ExternalLink className="h-3 w-3" />
@@ -2460,19 +2384,19 @@ export function ParcelIntelPropertyPanel({
 
             {typeof row.environmental_review_required === 'boolean' && (
               <section
-                className={`mt-3 rounded-xl border p-3 ${
+                className={`mt-3 border-b py-3 ${
                   row.environmental_review_required
-                    ? 'border-orange-300 bg-orange-50'
-                    : 'border-slate-200 bg-slate-50'
+                    ? 'border-rule bg-white'
+                    : 'border-rule bg-white'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h4
-                      className={`text-xs font-semibold uppercase tracking-wide ${
+                      className={`text-[13px] font-semibold ${
                         row.environmental_review_required
-                          ? 'text-orange-950'
-                          : 'text-slate-800'
+                          ? 'text-ink'
+                          : 'text-ink-3'
                       }`}
                     >
                       Environmental designation
@@ -2480,8 +2404,8 @@ export function ParcelIntelPropertyPanel({
                     <p
                       className={`mt-1 text-xs leading-5 ${
                         row.environmental_review_required
-                          ? 'text-orange-900'
-                          : 'text-slate-600'
+                          ? 'text-ink'
+                          : 'text-ink-3'
                       }`}
                     >
                       {row.environmental_review_required
@@ -2493,10 +2417,10 @@ export function ParcelIntelPropertyPanel({
                     </p>
                   </div>
                   <span
-                    className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${
+                    className={`shrink-0 px-2 py-1 text-xs font-semibold ${
                       row.environmental_review_required
-                        ? 'bg-orange-700 text-white'
-                        : 'bg-white text-slate-700 ring-1 ring-inset ring-slate-300'
+                        ? 'bg-white text-ink'
+                        : 'bg-white text-ink '
                     }`}
                   >
                     {row.environmental_review_required
@@ -2505,10 +2429,10 @@ export function ParcelIntelPropertyPanel({
                   </span>
                 </div>
                 <p
-                  className={`mt-3 text-[11px] leading-4 ${
+                  className={`font-mono mt-3 text-xs leading-4 ${
                     row.environmental_review_required
-                      ? 'text-orange-900'
-                      : 'text-slate-600'
+                      ? 'text-ink'
+                      : 'text-ink-3'
                   }`}
                 >
                   E-designations and restrictive declarations can concern
@@ -2526,7 +2450,7 @@ export function ParcelIntelPropertyPanel({
                     href="https://www.nyc.gov/site/oer/remediation/e-designation.page"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-orange-950 underline decoration-orange-300 underline-offset-2"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-ink underline decoration-rule underline-offset-2"
                   >
                     NYC OER guidance
                     <ExternalLink className="h-3 w-3" />
@@ -2535,7 +2459,7 @@ export function ParcelIntelPropertyPanel({
                     href="https://data.cityofnewyork.us/d/64uk-42ks"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-orange-950 underline decoration-orange-300 underline-offset-2"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-ink underline decoration-rule underline-offset-2"
                   >
                     Official PLUTO source
                     <ExternalLink className="h-3 w-3" />
@@ -2546,20 +2470,20 @@ export function ParcelIntelPropertyPanel({
 
             {typeof row.mandatory_inclusionary_housing === 'boolean' && (
               <section
-                className={`mt-3 rounded-xl border p-3 ${
+                className={`mt-3 border-b py-3 ${
                   row.mandatory_inclusionary_housing
-                    ? 'border-fuchsia-300 bg-fuchsia-50'
-                    : 'border-slate-200 bg-slate-50'
+                    ? 'border-rule bg-white'
+                    : 'border-rule bg-white'
                 }`}
                 data-testid="mih-diligence"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h4
-                      className={`text-xs font-semibold uppercase tracking-wide ${
+                      className={`text-[13px] font-semibold ${
                         row.mandatory_inclusionary_housing
-                          ? 'text-fuchsia-950'
-                          : 'text-slate-800'
+                          ? 'text-ink-3'
+                          : 'text-ink-3'
                       }`}
                     >
                       Mandatory Inclusionary Housing screen
@@ -2567,8 +2491,8 @@ export function ParcelIntelPropertyPanel({
                     <p
                       className={`mt-1 text-xs leading-5 ${
                         row.mandatory_inclusionary_housing
-                          ? 'text-fuchsia-900'
-                          : 'text-slate-600'
+                          ? 'text-ink'
+                          : 'text-ink-3'
                       }`}
                     >
                       {row.mandatory_inclusionary_housing
@@ -2577,10 +2501,10 @@ export function ParcelIntelPropertyPanel({
                     </p>
                   </div>
                   <span
-                    className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${
+                    className={`shrink-0 px-2 py-1 text-xs font-semibold ${
                       row.mandatory_inclusionary_housing
-                        ? 'bg-fuchsia-700 text-white'
-                        : 'bg-white text-slate-700 ring-1 ring-inset ring-slate-300'
+                        ? 'text-ink'
+                        : 'bg-white text-ink '
                     }`}
                   >
                     {row.mandatory_inclusionary_housing
@@ -2595,7 +2519,7 @@ export function ParcelIntelPropertyPanel({
                       {row.mih_options?.map((option) => (
                         <span
                           key={option}
-                          className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-fuchsia-900 ring-1 ring-inset ring-fuchsia-200"
+                          className="px-2 py-1 text-xs font-semibold text-ink "
                         >
                           {option}
                         </span>
@@ -2604,10 +2528,10 @@ export function ParcelIntelPropertyPanel({
                   )}
 
                 <p
-                  className={`mt-3 text-[11px] leading-4 ${
+                  className={`font-mono mt-3 text-xs leading-4 ${
                     row.mandatory_inclusionary_housing
-                      ? 'text-fuchsia-900'
-                      : 'text-slate-600'
+                      ? 'text-ink'
+                      : 'text-ink-3'
                   }`}
                 >
                   This is a dated spatial reference screen, not a tax-lot legal
@@ -2625,7 +2549,7 @@ export function ParcelIntelPropertyPanel({
                     href="https://data.cityofnewyork.us/Housing-Development/Mandatory-Inclusionary-Housing-MIH-/bw8v-wzdr/about"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-fuchsia-950 underline decoration-fuchsia-300 underline-offset-2"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-select underline decoration-rule underline-offset-2"
                   >
                     Official MIH map
                     <ExternalLink className="h-3 w-3" />
@@ -2634,7 +2558,7 @@ export function ParcelIntelPropertyPanel({
                     href="https://zr.planning.nyc.gov/index.php/node/21424"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-fuchsia-950 underline decoration-fuchsia-300 underline-offset-2"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-select underline decoration-rule underline-offset-2"
                   >
                     Zoning Resolution Appendix F
                     <ExternalLink className="h-3 w-3" />
@@ -2643,7 +2567,7 @@ export function ParcelIntelPropertyPanel({
                     href="https://www.nyc.gov/site/hpd/services-and-information/inclusionary-housing.page"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-fuchsia-950 underline decoration-fuchsia-300 underline-offset-2"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-select underline decoration-rule underline-offset-2"
                   >
                     HPD guidance
                     <ExternalLink className="h-3 w-3" />
@@ -2654,19 +2578,19 @@ export function ParcelIntelPropertyPanel({
 
             {typeof row.nearest_transit_station_distance_m === 'number' && (
               <section
-                className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50 p-3"
+                className="mt-3 border-b border-rule py-3"
                 data-testid="transit-diligence"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-cyan-950">
+                    <h4 className="text-xs font-medium text-ink-3">
                       Subway / SIR access screen
                     </h4>
-                    <p className="mt-1 text-sm font-semibold text-slate-950">
+                    <p className="mt-1 text-sm font-semibold text-ink">
                       {row.nearest_transit_station_name ?? 'Unnamed station complex'}
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-cyan-950 ring-1 ring-inset ring-cyan-300">
+                  <span className="shrink-0 px-2 py-1 text-xs font-semibold text-ink ">
                     {row.nearest_transit_station_distance_m.toLocaleString()} m
                   </span>
                 </div>
@@ -2676,7 +2600,7 @@ export function ParcelIntelPropertyPanel({
                     {row.nearest_transit_routes?.map((route) => (
                       <span
                         key={route}
-                        className="inline-flex min-w-6 items-center justify-center rounded-full bg-slate-950 px-2 py-1 text-[11px] font-bold text-white"
+                        className="inline-flex min-w-6 items-center justify-center px-2 py-1 text-xs font-bold text-ink"
                       >
                         {route}
                       </span>
@@ -2685,33 +2609,33 @@ export function ParcelIntelPropertyPanel({
                 )}
 
                 <dl className="mt-3 grid grid-cols-3 gap-2">
-                  <div className="rounded-lg bg-white p-2 ring-1 ring-inset ring-cyan-100">
-                    <dt className="text-[10px] uppercase tracking-wide text-slate-500">
+                  <div className="bg-white p-2 ">
+                    <dt className="font-cond text-[13px] text-ink-3">
                       ≤400 m
                     </dt>
-                    <dd className="mt-0.5 text-sm font-semibold text-slate-950">
+                    <dd className="mt-0.5 text-sm font-semibold text-ink">
                       {row.transit_station_count_400m ?? 0}
                     </dd>
                   </div>
-                  <div className="rounded-lg bg-white p-2 ring-1 ring-inset ring-cyan-100">
-                    <dt className="text-[10px] uppercase tracking-wide text-slate-500">
+                  <div className="bg-white p-2 ">
+                    <dt className="font-cond text-[13px] text-ink-3">
                       ≤800 m
                     </dt>
-                    <dd className="mt-0.5 text-sm font-semibold text-slate-950">
+                    <dd className="mt-0.5 text-sm font-semibold text-ink">
                       {row.transit_station_count_800m ?? 0}
                     </dd>
                   </div>
-                  <div className="rounded-lg bg-white p-2 ring-1 ring-inset ring-cyan-100">
-                    <dt className="text-[10px] uppercase tracking-wide text-slate-500">
+                  <div className="bg-white p-2 ">
+                    <dt className="font-cond text-[13px] text-ink-3">
                       ADA
                     </dt>
-                    <dd className="mt-0.5 text-sm font-semibold capitalize text-slate-950">
+                    <dd className="mt-0.5 text-sm font-semibold capitalize text-ink">
                       {row.nearest_transit_ada_status ?? 'unknown'}
                     </dd>
                   </div>
                 </dl>
 
-                <p className="mt-3 text-[11px] leading-4 text-cyan-950">
+                <p className="font-mono mt-3 text-xs leading-4 text-ink">
                   Great-circle distance from the tax-lot centroid to the MTA
                   station-complex centroid. This is not a walking route,
                   entrance distance, travel time, service-frequency measure, or
@@ -2725,7 +2649,7 @@ export function ParcelIntelPropertyPanel({
                   href="https://data.ny.gov/Transportation/MTA-Subway-Stations/39hk-dx4f"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-cyan-950 underline decoration-cyan-300 underline-offset-2"
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-select underline decoration-rule underline-offset-2"
                 >
                   Official MTA station data
                   <ExternalLink className="h-3 w-3" />
@@ -2734,11 +2658,11 @@ export function ParcelIntelPropertyPanel({
             )}
 
             {(row.assemblage_lot_count ?? 0) >= 2 && (
-              <section className="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-violet-900">
+              <section className="mt-3 border-b border-rule py-3">
+                <h4 className="text-xs font-medium text-ink-3">
                   Assemblage · {row.assemblage_lot_count} adjacent lots
                 </h4>
-                <p className="mt-1 text-xs text-violet-800">
+                <p className="mt-1 text-xs text-ink">
                   {formatNumber(row.assemblage_combined_lot_area_sqft)} sf combined lot ·{' '}
                   {formatNumber(row.assemblage_combined_buildable_sqft)} sf potential envelope
                 </p>
@@ -2754,7 +2678,7 @@ export function ParcelIntelPropertyPanel({
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:border-sky-300 hover:text-sky-800"
+                  className="inline-flex items-center gap-1 rounded-sm border border-control bg-white px-2.5 py-1 text-xs font-medium text-ink hover:border-control hover:text-select"
                 >
                   {link.label}
                   <ExternalLink className="h-3 w-3" />
@@ -2766,40 +2690,36 @@ export function ParcelIntelPropertyPanel({
 
             <details
               data-testid="parcel-ranking-rationale"
-              className="group mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white"
+              className="group mt-4 border-t border-rule bg-white"
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 marker:content-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500">
-                <span className="text-xs font-semibold text-slate-950">
-                  Why it surfaced
-                </span>
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500">
-                  {pluralize(reasons.length, 'signal')}
-                  <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-semibold text-ink marker:content-none after:text-ink-3 after:content-['+'] group-open:after:content-['−'] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select">
+                <span className="text-xs font-semibold text-ink">
+                  Why it surfaced <span className="ml-2 font-normal text-ink-3">{pluralize(reasons.length, 'signal')}</span>
                 </span>
               </summary>
-              <div className="space-y-2 border-t border-slate-200 p-3">
+              <div className="space-y-2 border-t border-rule p-3">
                 {reasons.length > 0 ? (
                   reasons.map((reason) => (
                     <div
                       key={`${reason.label}-${reason.detail}`}
-                      className={`rounded-xl border p-3 ${
+                      className={`border-b p-3 ${
                         reason.tone === 'caution'
-                          ? 'border-amber-200 bg-amber-50'
+                          ? 'border-rule bg-white'
                           : reason.tone === 'positive'
-                            ? 'border-emerald-200 bg-emerald-50/70'
-                            : 'border-slate-200 bg-slate-50'
+                            ? 'border-rule bg-white'
+                            : 'border-rule bg-white'
                       }`}
                     >
-                      <div className="text-xs font-semibold text-slate-900">
+                      <div className="text-xs font-semibold text-ink">
                         {reason.label}
                       </div>
-                      <p className="mt-1 text-xs leading-5 text-slate-600">
+                      <p className="mt-1 text-xs leading-5 text-ink-3">
                         {reason.detail}
                       </p>
                     </div>
                   ))
                 ) : (
-                  <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                  <p className="border border-rule bg-white p-3 text-xs text-ink-3">
                     No single signal dominates this ranking. Review the underlying records
                     before advancing the parcel.
                   </p>
@@ -2808,15 +2728,15 @@ export function ParcelIntelPropertyPanel({
             </details>
 
             {(row.top_features ?? []).length > 0 && (
-              <details className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
-                <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-slate-700">
+              <details className="group mt-4 border-t border-rule bg-white py-3">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-semibold text-ink marker:content-none after:text-ink-3 after:content-['+'] group-open:after:content-['−'] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select">
                   Model attribution
                 </summary>
                 <ul className="mt-3 space-y-2">
                   {row.top_features.map((feature) => (
-                    <li key={feature.name} className="text-xs text-slate-600">
+                    <li key={feature.name} className="text-xs text-ink-3">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="font-medium text-slate-800">
+                        <span className="font-medium text-ink">
                           {modelFeatureLabel(feature.name)}
                         </span>
                         <span className="shrink-0">
@@ -2824,15 +2744,15 @@ export function ParcelIntelPropertyPanel({
                           {Math.round(feature.contribution_pct * 100)}%
                         </span>
                       </div>
-                      <div className="mt-0.5 text-[11px] text-slate-500">
+                      <div className="mt-0.5 text-xs text-ink-3">
                         Observed value: {modelFeatureValue(feature)}
                       </div>
-                      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <div className="mt-1 h-1.5 overflow-hidden bg-white">
                         <div
                           className={
                             feature.contribution_logit >= 0
-                              ? 'h-full bg-emerald-500'
-                              : 'h-full bg-rose-500'
+                              ? 'h-full bg-ink'
+                              : 'h-full bg-ink-3'
                           }
                           style={{
                             width: `${Math.min(
@@ -2845,7 +2765,7 @@ export function ParcelIntelPropertyPanel({
                     </li>
                   ))}
                 </ul>
-                <p className="mt-3 border-t border-slate-100 pt-2 text-[11px] leading-4 text-slate-500">
+                <p className="mt-3 border-t border-rule pt-2 text-xs leading-4 text-ink-3">
                   DOB activity records can include filings, trade permits, and renewals tied
                   to one job; they are not a count of completed buildings. Contributions
                   explain this model score, not seller intent.
@@ -2853,9 +2773,9 @@ export function ParcelIntelPropertyPanel({
               </details>
             )}
 
-            <section className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <h4 className="text-xs font-semibold text-slate-800">Source freshness</h4>
-              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600">
+            <section className="mt-4 border-t border-rule pt-3">
+              <h4 className="text-xs font-semibold text-ink">Source freshness</h4>
+              <div className="font-mono mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-3">
                 <span>PLUTO {row.property_facts_as_of ?? 'date unavailable'}</span>
                 <span>
                   {row.owner_name_source === 'pluto' ? 'PLUTO owner' : 'ACRIS ownership'}{' '}
@@ -2868,7 +2788,7 @@ export function ParcelIntelPropertyPanel({
                 )}
               </div>
               {row.property_facts_current === false && (
-                <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-800">
+                <p className="mt-2 flex items-start gap-1.5 text-xs text-ink">
                   <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   Current lot match unavailable. Verify capacity facts before use.
                 </p>
@@ -2892,7 +2812,7 @@ export function ParcelIntelPropertyPanel({
 
         {!officialDossierOpen && tab === 'underwrite' && (
           <div>
-            <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs leading-5 text-sky-900">
+            <div className="border-b border-rule py-3 text-xs leading-5 text-ink">
               This is a fast residual-land-value screen, not an appraisal. Verify zoning,
               affordable-housing requirements, construction costs, and tenancy.
             </div>
@@ -2902,23 +2822,23 @@ export function ParcelIntelPropertyPanel({
               onAssumptionsChange={trackFirstUnderwritingAdjustment}
             />
             <section
-              className="mt-3 rounded-xl border border-slate-200 bg-white p-3"
+              className="mt-3 border-b border-rule bg-white py-3"
               data-testid="underwriting-diligence-handoff"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h4 className="flex items-center gap-1.5 text-xs font-semibold text-slate-950">
-                    <BriefcaseBusiness className="h-3.5 w-3.5 text-sky-700" />
+                  <h4 className="flex items-center gap-1.5 text-xs font-semibold text-ink">
+                    <BriefcaseBusiness className="h-3.5 w-3.5 text-ink" />
                     Turn the screen into diligence
                   </h4>
-                  <p className="mt-1 max-w-md text-xs leading-5 text-slate-600">
+                  <p className="mt-1 max-w-md text-xs leading-5 text-ink-3">
                     {workflowItem
                       ? 'Continue with the saved evidence snapshot and next action.'
                       : underwritingAdjusted
                         ? 'Preserve this parcel and assign validation of capacity, market evidence, and costs.'
                         : 'Save the base screen now, or refine an assumption first. Either path starts with validation.'}
                   </p>
-                  <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                  <p className="mt-1 text-xs leading-4 text-ink-3">
                     Financial inputs stay in this browser session and are never
                     copied into the workflow.
                   </p>
@@ -2931,7 +2851,7 @@ export function ParcelIntelPropertyPanel({
                       workflowBusy ||
                       effectiveWorkflowLoadState !== 'ready'
                     }
-                    className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-sm bg-ink px-3 text-xs font-semibold text-white hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {workflowBusy ||
                     effectiveWorkflowLoadState === 'idle' ||
@@ -2954,7 +2874,7 @@ export function ParcelIntelPropertyPanel({
                     href={`/sign-in?next=${encodeURIComponent(
                       `/parcel-intel?bbl=${row.bbl}`,
                     )}`}
-                    className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800"
+                    className="inline-flex h-9 shrink-0 items-center justify-center rounded-sm bg-ink px-3 text-xs font-semibold text-white hover:bg-ink/90"
                   >
                     Sign in to save
                   </Link>
@@ -2970,14 +2890,14 @@ export function ParcelIntelPropertyPanel({
             effectiveWorkflowLoadState === 'idle' ||
             effectiveWorkflowLoadState === 'loading' ? (
               <div
-                className="flex min-h-48 items-center justify-center gap-2 text-sm text-slate-500"
+                className="flex min-h-48 items-center justify-center gap-2 text-sm text-ink-3"
                 role="status"
               >
                 <LoaderCircle className="h-4 w-4 animate-spin" />
                 Checking pipeline status…
               </div>
             ) : effectiveWorkflowLoadState === 'error' ? (
-              <div className="flex min-h-48 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-rose-50 p-5 text-center text-sm text-rose-800">
+              <div className="flex min-h-48 items-center justify-center border-b border-dashed border-rule bg-white p-5 text-center text-sm text-ink">
                 Retry the pipeline check before creating or changing this lead.
               </div>
             ) : (
@@ -3006,8 +2926,8 @@ export function ParcelIntelPropertyPanel({
                   />
                 )}
                 {workflowEvents.length > 0 && (
-                <section className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
-                  <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-700">
+                <section className="mt-3 border-b border-rule bg-white py-3">
+                  <h4 className="flex items-center gap-1.5 text-[13px] font-semibold text-ink-3">
                     <Clock3 className="h-3.5 w-3.5" />
                     Decision history
                   </h4>
@@ -3015,16 +2935,16 @@ export function ParcelIntelPropertyPanel({
                     {workflowEvents.slice(0, 8).map((event) => (
                       <li
                         key={event.event_id}
-                        className="border-l-2 border-slate-200 pl-3 text-xs"
+                        className="border-l-2 border-rule pl-3 text-xs"
                       >
-                        <div className="font-medium capitalize text-slate-900">
+                        <div className="font-medium capitalize text-ink">
                           {event.event_type}
                           {event.to_stage ? ` · ${event.to_stage}` : ''}
                           {event.to_outcome && event.to_outcome !== 'unknown'
                             ? ` · ${event.to_outcome.replaceAll('_', ' ')}`
                             : ''}
                         </div>
-                        <div className="mt-0.5 text-slate-500">
+                        <div className="mt-0.5 text-ink-3">
                           {new Intl.DateTimeFormat('en-US', {
                             month: 'short',
                             day: 'numeric',
@@ -3046,14 +2966,14 @@ export function ParcelIntelPropertyPanel({
               </>
             )
           ) : (
-            <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white ring-1 ring-slate-200">
-                <LockKeyhole className="h-5 w-5 text-slate-500" />
+            <div className="flex min-h-72 flex-col items-center justify-center border-b border-dashed border-rule bg-white p-6 text-center">
+              <div className="flex h-11 w-11 items-center justify-center bg-white ">
+                <LockKeyhole className="h-5 w-5 text-ink-3" />
               </div>
-              <h4 className="mt-3 text-sm font-semibold text-slate-950">
+              <h4 className="mt-3 text-sm font-semibold text-ink">
                 Sign in to manage this opportunity
               </h4>
-              <p className="mt-1 max-w-xs text-xs leading-5 text-slate-600">
+              <p className="mt-1 max-w-xs text-xs leading-5 text-ink-3">
                 Save notes, assign an owner, watch record changes, and move the parcel
                 through your acquisition pipeline.
               </p>
@@ -3061,7 +2981,7 @@ export function ParcelIntelPropertyPanel({
                 href={`/sign-in?next=${encodeURIComponent(
                   `/parcel-intel?bbl=${row.bbl}`,
                 )}`}
-                className="mt-4 inline-flex h-9 items-center rounded-lg bg-slate-950 px-4 text-xs font-medium text-white hover:bg-slate-800"
+                className="mt-4 inline-flex h-9 items-center rounded-sm bg-ink px-4 text-xs font-medium text-white hover:bg-ink/90"
               >
                 Sign in
               </Link>
@@ -3069,9 +2989,9 @@ export function ParcelIntelPropertyPanel({
           ))}
       </div>
 
-      <div className="shrink-0 border-t border-slate-200 bg-slate-50 px-4 py-2 text-[11px] leading-4 text-slate-500">
+      <div className="shrink-0 border-t border-rule bg-white px-4 py-2 text-xs leading-4 text-ink-3">
         <span className="inline-flex items-center gap-1">
-          <MapPin className="h-3 w-3" /> Screening intelligence only—verify official
+          <MapPin className="h-3 w-3" /> Screening intelligence only; verify official
           records and site conditions.
         </span>
       </div>
@@ -3079,27 +2999,34 @@ export function ParcelIntelPropertyPanel({
   );
 }
 
-function FactCard({
+function FactRow({
   label,
   value,
-  wide = false,
 }: {
   label: string;
   value: string;
-  wide?: boolean;
 }) {
   return (
     <div
-      className={`min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 ${
-        wide ? 'col-span-2' : ''
-      }`}
+      className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] items-baseline gap-3 py-2.5"
     >
-      <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+      <dt className="font-cond text-xs text-ink-3">
         {label}
       </dt>
-      <dd className="mt-0.5 truncate font-semibold text-slate-950" title={value}>
+      <dd className="break-words text-right text-sm font-medium tabular-nums text-ink" title={value}>
         {value}
       </dd>
+    </div>
+  );
+}
+
+function CoreFigure({ label, value, unit }: { label: string; value: string; unit?: string }) {
+  return (
+    <div className="min-w-0 px-2 py-3 first:pl-0">
+      <strong className="block break-words text-base font-bold tabular-nums leading-5 text-ink">
+        {value}{unit && value !== '—' && <small className="ml-1 text-xs font-normal text-ink-3">{unit}</small>}
+      </strong>
+      <span className="mt-1 block font-cond text-xs leading-4 text-ink-3">{label}</span>
     </div>
   );
 }

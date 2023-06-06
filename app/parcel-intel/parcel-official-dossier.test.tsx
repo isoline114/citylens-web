@@ -86,7 +86,7 @@ describe('ParcelOfficialDossierPanel', () => {
     render(<ParcelOfficialDossierPanel bbl="3058920038" />);
 
     const panel = await screen.findByTestId('parcel-official-dossier');
-    expect(panel).toHaveTextContent('464 OVINGTON AVENUE');
+    expect(panel).toHaveTextContent('464 Ovington Avenue');
     expect(panel).toHaveTextContent('Any NYC tax lot · not a lead score');
     expect(panel).toHaveTextContent('$1,460,000');
     expect(panel).toHaveTextContent('E-839');
@@ -127,7 +127,7 @@ describe('ParcelOfficialDossierPanel', () => {
     render(<ParcelOfficialDossierPanel bbl="3058920038" />);
 
     expect(
-      await screen.findByText('Owner sources differ — verify title'),
+      await screen.findByText('Owner sources differ; verify title'),
     ).toBeVisible();
     expect(screen.getByText('CURRENT DEED GRANTEE LLC')).toBeVisible();
     expect(screen.getByText('PLUTO TAX OWNER LLC')).toBeVisible();

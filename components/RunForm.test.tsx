@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -72,6 +72,16 @@ beforeEach(() => {
 });
 
 describe('RunForm', () => {
+  it('places output validation under the choices and does not create an invalid run', async () => {
+    const user = userEvent.setup();
+    render(<RunForm showFeaturedDemos={false} />);
+    await user.type(screen.getByTestId('run-address-input'), '100 E 21st St Brooklyn, NY');
+    for (const option of screen.getAllByRole('checkbox')) await user.click(option);
+    fireEvent.submit(screen.getByTestId('run-form'));
+    expect(await screen.findByRole('alert')).toBeVisible();
+    expect(mocks.createRun).not.toHaveBeenCalled();
+  });
+
   it('renders fixed run-option chips', () => {
     render(<RunForm />);
     expect(screen.getByTestId('imagery-year-chip')).toHaveTextContent('2024');
@@ -162,7 +172,7 @@ describe('RunForm', () => {
     mocks.authState.user = null;
 
     render(<RunForm />);
-    expect(screen.getByRole('link', { name: 'Sign up — free' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Sign up for free' })).toHaveAttribute(
       'href',
       '/sign-up?next=%2Fruns%2Fnew',
     );

@@ -92,7 +92,7 @@ describe('ParcelLeadReviewWorkspace', () => {
     expect(
       screen.getByRole('progressbar', { name: 'Lead review coverage' }),
     ).toHaveAttribute('aria-valuenow', '1');
-    expect(screen.getByText(/Coverage—not accuracy/i)).toBeInTheDocument();
+    expect(screen.getByText(/Coverage does not measure accuracy/i)).toBeInTheDocument();
     expect(screen.getByText('100 Brooklyn Avenue')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('review-next-unreviewed'));

@@ -1,162 +1,43 @@
 import Link from 'next/link';
-import { ArrowRight, ImageIcon, Layers, MapPin } from 'lucide-react';
-
 import type { DemoFeaturedRun } from '@/lib/api';
+import { formatAddress } from '@/lib/parcel-format';
 
 type Props = {
-  /** Pre-fetched demos. Server components should pass the result of
-   *  fetchFeaturedDemosOnServer() so the SSR HTML already includes them. */
-  demos: DemoFeaturedRun[];
-  sectionId?: string;
-  eyebrow?: string;
-  title?: string;
-  description?: string;
-  limit?: number;
+  demos: DemoFeaturedRun[]; sectionId?: string; eyebrow?: string; title?: string;
+  description?: string; limit?: number; variant?: 'cards' | 'survey';
 };
-
-export function FeaturedDemoCards({
-  demos,
-  sectionId,
-  eyebrow,
-  title = 'Featured demos',
-  description = 'Real precomputed CityLens runs. No sign-in required.',
-  limit = 6,
-}: Props) {
-  if (!demos || demos.length === 0) {
-    return (
-      <section
-        id={sectionId}
-        data-testid={sectionId === 'public-evidence' ? 'public-evidence-library' : undefined}
-        className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-6"
-      >
-        {eyebrow && (
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
-            {eyebrow}
-          </div>
-        )}
-        <h2 className="mt-1 text-xl font-semibold">{title}</h2>
-        <p className="mt-2 text-sm text-slate-600">
-          Featured demos are temporarily unavailable. You can still{' '}
-          <Link href="/sign-in" className="font-medium text-slate-900 underline">
-            sign in
-          </Link>{' '}
-          to create a run.
-        </p>
-      </section>
-    );
-  }
-
+export function demoId(demo: DemoFeaturedRun): string | null {
+  return [demo.run_id, demo.id].find((id): id is string => typeof id === 'string' && !!id.trim()) ?? null;
+}
+export function previewDemo(demos: DemoFeaturedRun[]) {
+  return demos.find(demo => demoId(demo) && (!Array.isArray(demo.outputs) || demo.outputs.includes('previews')));
+}
+export function demoTitle(demo: DemoFeaturedRun): string {
+  return demo.title?.trim() || demo.label?.trim() || formatAddress(demo.address) || 'Public site evidence';
+}
+export function FeaturedDemoCards({ demos, sectionId, title = 'Public evidence library', description = 'Precomputed runs you can open without an account: imagery, change geometry, the 3D view and the QA receipt.', limit = 6 }: Props) {
+  const available = demos.filter(demo => demoId(demo)).slice(0, limit);
   return (
-    <section
-      id={sectionId}
-      data-testid={sectionId === 'public-evidence' ? 'public-evidence-library' : undefined}
-      className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-    >
-      <div className="flex items-end justify-between">
-        <div>
-          {eyebrow && (
-            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
-              {eyebrow}
-            </div>
-          )}
-          <h2 className="mt-1 text-xl font-semibold tracking-tight">{title}</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            {description}
-          </p>
+    <section id={sectionId} data-testid={sectionId === 'public-evidence' ? 'public-evidence-library' : undefined} className="grid min-w-0 gap-7 border-t border-rule py-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-10">
+      <div>
+        <h2 className="text-3xl font-bold leading-tight tracking-tight text-ink">{title}</h2>
+        <p className="mt-3 max-w-[46ch] text-sm leading-6 text-ink-2">{description}</p>
+      </div>
+      {available.length ? (
+        <div className="min-w-0 overflow-x-auto" data-testid="featured-demo-strip">
+          <table className="w-full border-collapse text-left text-sm">
+            <caption className="sr-only">Public evidence runs</caption>
+            <thead className="border-b border-ink font-cond text-ink-3"><tr>
+              <th scope="col" className="pb-2 pr-4 font-semibold">Site</th><th scope="col" className="pb-2 pr-4 font-semibold">Address</th><th scope="col" className="pb-2 text-right font-semibold">Footprints → imagery</th>
+            </tr></thead>
+            <tbody>{available.map(demo => <tr key={demoId(demo)} className="border-b border-rule align-top">
+              <td className="py-3 pr-4"><Link data-testid="featured-demo-card" href={`/runs/${encodeURIComponent(demoId(demo)!)}?demo=1`} className="font-medium text-ink underline underline-offset-4">{demoTitle(demo)}</Link></td>
+              <td className="py-3 pr-4 text-ink-2">{formatAddress(demo.address) || 'Address unavailable'}</td>
+              <td className="ws-tabular py-3 text-right font-mono text-xs text-ink-2">{typeof demo.baseline_year === 'number' && typeof demo.imagery_year === 'number' ? `${demo.baseline_year} → ${demo.imagery_year}` : 'Dates unavailable'}</td>
+            </tr>)}</tbody>
+          </table>
         </div>
-      </div>
-
-      <p className="mt-4 text-xs font-medium text-slate-500 md:hidden">
-        Swipe through real NYC examples.
-      </p>
-      <div
-        className="mt-4 grid snap-x snap-mandatory auto-cols-[86%] grid-flow-col gap-4 overflow-x-auto pb-2 md:mt-6 md:grid-flow-row md:grid-cols-2 md:overflow-visible md:pb-0 lg:grid-cols-3"
-        data-testid="featured-demo-strip"
-      >
-        {demos.slice(0, limit).map((demo, index) => {
-          const id = demoId(demo);
-          if (!id) return null;
-          return <DemoCard key={id} demo={demo} runId={id} index={index} />;
-        })}
-      </div>
+      ) : <p className="text-sm leading-6 text-ink-3">Featured demos are temporarily unavailable. Visit the <Link href="/runs#public-evidence" className="text-ink underline underline-offset-4">public evidence library</Link> to try again.</p>}
     </section>
   );
-}
-
-// Cycled through the demo grid so the section reads as a kit alongside
-// the home-page feature cards (which use the same sky/amber/emerald
-// palette).
-const DEMO_ACCENTS = ['bg-sky-500', 'bg-amber-500', 'bg-emerald-500'] as const;
-
-function DemoCard({
-  demo,
-  runId,
-  index,
-}: {
-  demo: DemoFeaturedRun;
-  runId: string;
-  index: number;
-}) {
-  const title = demoTitle(demo, runId);
-  const address = typeof demo.address === 'string' ? demo.address : null;
-  const imageryYear = typeof demo.imagery_year === 'number' ? demo.imagery_year : undefined;
-  const baselineYear = typeof demo.baseline_year === 'number' ? demo.baseline_year : undefined;
-  const outputs = Array.isArray(demo.outputs)
-    ? demo.outputs.filter((o): o is string => typeof o === 'string')
-    : [];
-  const accent = DEMO_ACCENTS[index % DEMO_ACCENTS.length];
-
-  return (
-    <Link
-      href={`/runs/${encodeURIComponent(runId)}?demo=1`}
-      className="group relative flex snap-start flex-col gap-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-4 pl-5 transition-all hover:border-slate-300 hover:bg-white hover:shadow-sm"
-      data-testid="featured-demo-card"
-    >
-      <span className={`absolute inset-y-0 left-0 w-1 ${accent}`} aria-hidden="true" />
-      <div className="flex items-start justify-between gap-3">
-        <div className="text-sm font-semibold text-slate-900">{title}</div>
-        <ArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-700" />
-      </div>
-
-      {address && (
-        <div className="flex items-start gap-2 text-xs text-slate-700">
-          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
-          <span className="line-clamp-2">{address}</span>
-        </div>
-      )}
-
-      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-        {imageryYear !== undefined && baselineYear !== undefined && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">
-            <Layers className="h-3 w-3" />
-            {baselineYear} → {imageryYear}
-          </span>
-        )}
-        {outputs.length > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">
-            <ImageIcon className="h-3 w-3" />
-            {outputs.join(' · ')}
-          </span>
-        )}
-      </div>
-
-      <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-slate-900">
-        View demo
-        <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-      </span>
-    </Link>
-  );
-}
-
-function demoId(d: DemoFeaturedRun): string | null {
-  const v = (typeof d.run_id === 'string' && d.run_id) || (typeof d.id === 'string' ? d.id : null);
-  return v && v.trim().length > 0 ? v : null;
-}
-
-function demoTitle(d: DemoFeaturedRun, fallback: string): string {
-  const candidates = [d.title, d.label, d.address];
-  for (const c of candidates) {
-    if (typeof c === 'string' && c.trim()) return c.trim();
-  }
-  return fallback;
 }

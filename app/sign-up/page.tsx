@@ -28,7 +28,6 @@ export default function SignUpPage() {
   if (!IS_NEON) {
     return (
       <AuthPageShell
-        eyebrow="Local workspace"
         title="No account needed"
         description="Mock authentication creates a temporary local user without registration."
       >
@@ -41,7 +40,6 @@ export default function SignUpPage() {
 
   return (
     <AuthPageShell
-      eyebrow="Start free"
       title="Create your account"
       description={PRODUCT_ACCESS_COPY.freeAccountSummary}
       footer={
@@ -109,7 +107,7 @@ export default function SignUpPage() {
         }}
       >
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-800">Email</span>
+          <span className="text-sm font-medium text-ink">Email</span>
           <input
             className={authInputClass}
             type="email"
@@ -120,7 +118,7 @@ export default function SignUpPage() {
           />
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-800">Password</span>
+          <span className="text-sm font-medium text-ink">Password</span>
           <input
             className={authInputClass}
             type="password"
@@ -132,9 +130,9 @@ export default function SignUpPage() {
           />
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-800">
+          <span className="text-sm font-medium text-ink">
             Display name{' '}
-            <span className="font-normal text-slate-500">(optional)</span>
+            <span className="font-normal text-ink-3">(optional)</span>
           </span>
           <input
             className={authInputClass}

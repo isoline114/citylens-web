@@ -192,6 +192,14 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   await page.setViewportSize({ width: 320, height: 800 });
   await expect(page.getByLabel('Search parcels')).toBeVisible();
   await expect(page.getByTestId('parcel-citywide-map')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Map', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#parcel-acquisition-ranking')).toBeHidden();
+  await expectNoDocumentHorizontalOverflow(
+    page,
+    'Parcel Intelligence map at 400% equivalent zoom',
+  );
+  await page.getByRole('button', { name: 'Results', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Results', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#parcel-acquisition-ranking')).toBeVisible();
   await expectNoDocumentHorizontalOverflow(
     page,
@@ -245,9 +253,11 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   });
   await expect(closeParcel).toBeFocused();
   await expect(page.getByTestId('parcel-workspace-announcer')).toContainText(
-    'Parcel workspace opened for 100 E 21 STREET',
+    'Parcel workspace opened for 100 E 21 Street',
   );
   await page.setViewportSize({ width: 320, height: 800 });
+  await page.getByRole('button', { name: 'Parcel details', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Parcel details', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(
     page.getByRole('region', { name: '100 E 21 STREET' }),
   ).toBeVisible();
@@ -272,9 +282,12 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   await expect(rankingRationale).not.toHaveAttribute('open', '');
   await diligenceDetails.locator('summary').click();
   await expect(diligenceDetails).toHaveAttribute('open', '');
-  await expect(diligenceDetails.getByText('Hide details')).toBeVisible();
   await diligenceDetails.locator('summary').click();
   await expect(diligenceDetails).not.toHaveAttribute('open', '');
+  // Earlier steps leave the document scrolled so the toolbar sits under the
+  // sticky site header; axe then reports those unfocused controls as obscured.
+  // Scan the workspace layout from the top of the page.
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoWcagViolations(page, 'Parcel evidence workspace');
   const comparePeer = page.getByRole('button', {
     name: 'Compare 1:1 with 41-20 QUEENS PLAZA',
@@ -287,8 +300,8 @@ test('compares two parcels and downloads a source-dated evidence packet', async 
   await expect(page.getByTestId('parcel-comparison-announcer')).toContainText(
     'Comparison workspace opened with 2 parcels',
   );
-  await expect(desk).toContainText('100 E 21 STREET');
-  await expect(desk).toContainText('41-20 QUEENS PLAZA');
+  await expect(desk).toContainText('100 E 21 Street');
+  await expect(desk).toContainText('41-20 Queens Plaza');
   await expect(desk).toContainText('Evidence currency');
   await expectNoWcagViolations(page, 'Parcel comparison desk');
   await page.setViewportSize({ width: 320, height: 800 });

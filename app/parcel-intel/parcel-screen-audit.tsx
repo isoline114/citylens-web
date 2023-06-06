@@ -29,7 +29,7 @@ export function ParcelScreenAudit({ audit, onRelax, onOpened }: Props) {
   const panelId = 'parcel-screen-audit-panel';
 
   return (
-    <div className="border-t border-white/10 bg-slate-950/75">
+    <div className="border-t border-rule bg-white">
       <button
         type="button"
         aria-expanded={open}
@@ -40,17 +40,15 @@ export function ParcelScreenAudit({ audit, onRelax, onOpened }: Props) {
             return !value;
           })
         }
-        className="flex w-full items-center justify-between gap-4 px-3.5 py-3 text-left transition hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400"
+        className="flex w-full items-center justify-between gap-4 px-3.5 py-3 text-left transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-select"
       >
         <span className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-400/10 text-sky-300 ring-1 ring-inset ring-sky-300/15">
-            <Filter className="h-4 w-4" />
-          </span>
+          <Filter className="h-4 w-4" />
           <span className="min-w-0">
-            <span className="block text-xs font-semibold text-white">
+            <span className="block text-xs font-semibold text-ink">
               Audit this screen
             </span>
-            <span className="mt-0.5 block truncate text-[10px] text-slate-400">
+            <span className="mt-0.5 block truncate text-[10px] text-ink-3">
               {audit.criteriaCount} active condition
               {audit.criteriaCount === 1 ? '' : 's'} · one-at-a-time
               sensitivity
@@ -59,13 +57,13 @@ export function ParcelScreenAudit({ audit, onRelax, onOpened }: Props) {
         </span>
         <span className="flex shrink-0 items-center gap-2">
           {audit.largestMarginalCriterion && (
-            <span className="hidden rounded-full bg-amber-400/10 px-2 py-1 text-[10px] font-medium text-amber-200 sm:inline">
+            <span className="hidden text-[10px] font-medium text-stale sm:inline">
               Largest marginal lift: +
               {audit.largestMarginalCriterion.addedIfRelaxed.toLocaleString()}
             </span>
           )}
           <ChevronDown
-            className={`h-4 w-4 text-slate-400 transition-transform ${
+            className={`h-4 w-4 text-ink-3  ${
               open ? 'rotate-180' : ''
             }`}
           />
@@ -76,42 +74,36 @@ export function ParcelScreenAudit({ audit, onRelax, onOpened }: Props) {
         <div
           id={panelId}
           data-testid="screen-audit"
-          className="border-t border-slate-200 bg-white p-3.5 text-slate-950"
+          className="border-t border-rule bg-white p-3.5 text-ink"
         >
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h3 className="text-xs font-semibold">Why this set is narrow</h3>
-              <p className="mt-1 max-w-2xl text-[10px] leading-4 text-slate-500">
-                Each card removes one condition while holding every other
+              <p className="mt-1 max-w-2xl text-[10px] leading-4 text-ink-3">
+                Each row removes one condition while holding every other
                 condition fixed. The added count is a sensitivity check, not a
                 causal explanation, feasibility conclusion, or new score.
               </p>
             </div>
-            <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-600">
+            <span className="shrink-0 text-[10px] font-semibold text-ink-2">
               {audit.matchCount.toLocaleString()} of{' '}
               {audit.loadedCount.toLocaleString()} loaded
             </span>
           </div>
 
-          <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-3 divide-y divide-rule">
             {audit.criteria.map((criterion) => {
-              const isLargest =
-                audit.largestMarginalCriterion?.id === criterion.id;
               return (
                 <article
                   key={criterion.id}
-                  className={`rounded-xl border p-3 ${
-                    isLargest
-                      ? 'border-amber-200 bg-amber-50/70'
-                      : 'border-slate-200 bg-slate-50/70'
-                  }`}
+                  className="border-b border-rule py-3 text-ink"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                      <div className="text-[9px] font-semibold font-cond text-ink-3">
                         {criterion.label}
                       </div>
-                      <div className="mt-1 truncate text-xs font-semibold text-slate-950">
+                      <div className="mt-1 truncate text-xs font-semibold text-ink">
                         {criterion.valueLabel}
                       </div>
                     </div>
@@ -119,7 +111,7 @@ export function ParcelScreenAudit({ audit, onRelax, onOpened }: Props) {
                       type="button"
                       onClick={() => onRelax(criterion.id)}
                       aria-label={`Relax ${criterion.label}: ${criterion.valueLabel}`}
-                      className="shrink-0 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-700 shadow-sm hover:border-sky-300 hover:text-sky-800"
+                      className="shrink-0 rounded-sm border border-control bg-white px-2 py-1 text-[10px] font-semibold text-ink-2 hover:border-control hover:text-select"
                     >
                       Relax
                     </button>
@@ -129,23 +121,23 @@ export function ParcelScreenAudit({ audit, onRelax, onOpened }: Props) {
                     <span
                       className={`text-sm font-semibold ${
                         criterion.addedIfRelaxed > 0
-                          ? 'text-emerald-700'
-                          : 'text-slate-500'
+                          ? 'text-ink'
+                          : 'text-ink-3'
                       }`}
                     >
                       {criterion.addedIfRelaxed > 0
                         ? `+${criterion.addedIfRelaxed.toLocaleString()}`
                         : 'No marginal lift'}
                     </span>
-                    <span className="text-[10px] text-slate-500">
+                    <span className="text-[10px] text-ink-3">
                       {criterion.relaxedMatchCount.toLocaleString()} if relaxed
                     </span>
                   </div>
 
                   {criterion.coverageScopeCount !== null &&
                     criterion.knownValueCount !== null && (
-                      <div className="mt-2 rounded-lg bg-white px-2 py-1.5 text-[10px] text-slate-600 ring-1 ring-inset ring-slate-200">
-                        <div className="font-medium text-slate-700">
+                      <div className="mt-2 border-t border-rule pt-2 font-mono text-xs text-ink-3">
+                        <div className="font-medium text-ink-2">
                           PLUTO source coverage
                         </div>
                         <div className="mt-0.5">
@@ -156,7 +148,7 @@ export function ParcelScreenAudit({ audit, onRelax, onOpened }: Props) {
                           )}
                         </div>
                         {(criterion.missingValueCount ?? 0) > 0 && (
-                          <div className="mt-1 flex items-start gap-1 text-amber-700">
+                          <div className="mt-1 flex items-start gap-1 text-stale">
                             <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0" />
                             {criterion.missingValueCount?.toLocaleString()}{' '}
                             missing{' '}

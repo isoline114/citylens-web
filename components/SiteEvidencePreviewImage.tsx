@@ -4,22 +4,21 @@ import Image from 'next/image';
 import { ImageOff } from 'lucide-react';
 import { useState } from 'react';
 
-export function SiteEvidencePreviewImage({ src }: { src: string }) {
+export function SiteEvidencePreviewImage({ src, alt = '' }: { src: string; alt?: string }) {
   const [failed, setFailed] = useState(false);
 
   if (failed) {
     return (
       <div
-        className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_35%_25%,rgba(14,165,233,0.24),transparent_32%),linear-gradient(145deg,#020617,#0f172a)]"
+        className="absolute inset-0 flex items-center justify-center bg-paper-2 px-5"
         data-testid="home-site-evidence-fallback"
         role="img"
         aria-label="Site-evidence preview unavailable"
       >
-        <div className="flex flex-col items-center gap-2 text-center text-slate-300">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5">
-            <ImageOff className="h-5 w-5 text-sky-300" aria-hidden="true" />
-          </span>
-          <span className="text-xs font-medium">Preview temporarily unavailable</span>
+        <div className="flex flex-col items-center gap-3 text-center text-ink-3">
+          <ImageOff className="h-5 w-5" aria-hidden="true" />
+          <span className="text-sm font-medium">Preview temporarily unavailable</span>
+          <span className="max-w-[16rem] text-xs leading-5">Open the evidence record to inspect available artifacts.</span>
         </div>
       </div>
     );
@@ -28,10 +27,11 @@ export function SiteEvidencePreviewImage({ src }: { src: string }) {
   return (
     <Image
       src={src}
-      alt=""
+      alt={alt}
       fill
       unoptimized
-      className="object-cover opacity-95"
+      sizes="(min-width: 1024px) 55vw, 100vw"
+      className="object-contain"
       onError={() => setFailed(true)}
       data-testid="home-site-evidence-image"
     />

@@ -17,9 +17,16 @@ test('shared shell exposes one landmark, active navigation, and a true sticky fo
   await expect(pricingLinks.last()).not.toHaveAttribute('aria-current');
   await expect(page.getByTestId('product-page-header')).toBeVisible();
   await expect(
-    page
-      .getByTestId('product-page-header')
-      .getByText('Full 5,000-lead citywide workspace', { exact: true }),
+    page.getByRole('heading', {
+      level: 1,
+      name: 'The full citywide workspace is free with a verified account.',
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('rowheader', {
+      name: 'Full 5,000-lead citywide workspace',
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
     page.getByText(
@@ -57,28 +64,24 @@ test('shared shell exposes one landmark, active navigation, and a true sticky fo
   ).toHaveAttribute('aria-current', 'page');
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByTestId('home-closing-cta')).toBeVisible();
   await expect(
-    page.getByRole('link', { name: 'Create site evidence' }),
-  ).toHaveAttribute('href', '/runs/new');
+    page.getByRole('link', { name: 'Open the parcel map' }),
+  ).toHaveAttribute('href', '/parcel-intel');
   await expectNoDocumentHorizontalOverflow(page, 'Compact mobile homepage');
   expect(
     await page.evaluate(() => document.body.scrollHeight),
   ).toBeLessThanOrEqual(5_000);
-  for (const testId of ['home-decision-flow', 'home-trust-strip']) {
-    const strip = page.getByTestId(testId);
-    await expect(strip).toBeVisible();
-    expect(
-      await strip.evaluate(
-        (element) => element.scrollWidth > element.clientWidth,
-      ),
-    ).toBe(true);
-  }
-  const evidenceStrip = page.getByTestId('home-evidence-output-strip');
-  await expect(evidenceStrip).toBeVisible();
+  await expect(
+    page.getByRole('heading', {
+      level: 1,
+      name: /Every tax lot in New York City, ranked for redevelopment/i,
+    }),
+  ).toBeVisible();
+  const dateline = page.getByLabel('Feed dateline');
+  await expect(dateline).toBeVisible();
   expect(
-    await evidenceStrip.evaluate(
-      (element) => element.scrollWidth > element.clientWidth,
+    await dateline.evaluate(
+      (element) => element.scrollWidth <= element.clientWidth,
     ),
   ).toBe(true);
   await expectNoWcagViolations(page, 'Homepage');
@@ -114,7 +117,7 @@ test('shared shell exposes one landmark, active navigation, and a true sticky fo
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: 'Build acquisition workflows on a source-aware city model.',
+      name: 'Build acquisition workflows with the CityLens API.',
     }),
   ).toBeVisible();
   await expect(

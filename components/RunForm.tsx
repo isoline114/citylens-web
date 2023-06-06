@@ -13,6 +13,7 @@ import {
   type DemoFeaturedRun,
   type RunOptions,
 } from '@/lib/api';
+import { formatAddress } from '@/lib/parcel-format';
 import { trackEvent } from '@/lib/analytics';
 import { useAuth } from '@/lib/auth';
 import {
@@ -72,6 +73,8 @@ export function RunForm({
   const auth = useAuth();
   const [form, setForm] = useState<CitylensCreateRunInput>(DEFAULTS);
   const [submitting, setSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
   // Tri-state demo loading: 'loading' | 'loaded' | 'error'. Initialize as
   // 'loaded' if the parent passed pre-fetched demos (so we never render the
   // empty/error state during the initial paint). Otherwise start in
@@ -91,7 +94,7 @@ export function RunForm({
   const signedIn = auth.status === 'authenticated';
 
   useEffect(() => {
-    const address = initialAddress?.trim();
+    const address = formatAddress(initialAddress);
     if (!address) return;
     setForm((current) =>
       current.address.trim() ? current : { ...current, address },
@@ -158,7 +161,7 @@ export function RunForm({
     const title = typeof d.title === 'string' ? d.title : undefined;
     const label = typeof d.label === 'string' ? d.label : undefined;
     const address = typeof d.address === 'string' ? d.address : undefined;
-    return (title ?? label ?? address ?? id).trim();
+    return (title ?? label ?? (formatAddress(address) || id)).trim();
   }
 
   function setField<K extends keyof CitylensCreateRunInput>(
@@ -185,6 +188,8 @@ export function RunForm({
       return;
     }
 
+    setFieldErrors({});
+    setSubmitError(null);
     const parsed = citylensCreateRunSchema.safeParse({
       ...form,
       address: form.address.trim(),
@@ -192,6 +197,7 @@ export function RunForm({
     });
 
     if (!parsed.success) {
+      setFieldErrors(Object.fromEntries(parsed.error.issues.map((issue) => [String(issue.path[0]), issue.message])));
       toast.error('Invalid request', {
         description: parsed.error.issues.map((i) => i.message).join(' · '),
       });
@@ -208,6 +214,7 @@ export function RunForm({
       toast.success('Run created', { description: runId });
       router.push(`/runs/${encodeURIComponent(runId)}`);
     } catch (err: unknown) {
+      setSubmitError(errorMessage(err));
       const apiErr = err instanceof ApiError ? err : null;
       const status = apiErr?.status;
       if (status === 401) {
@@ -239,7 +246,7 @@ export function RunForm({
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium">Featured demos</span>
           <select
-            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+            className="field h-10 rounded-sm border border-control bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-select"
             value={selectedDemoRunId}
             onChange={(e) => {
               const nextRunId = e.target.value;
@@ -258,7 +265,7 @@ export function RunForm({
 
               setForm((prev) => ({
                 ...prev,
-                address: nextAddress ?? prev.address,
+                address: nextAddress ? formatAddress(nextAddress) : prev.address,
               }));
 
               router.push(`/runs/${encodeURIComponent(nextRunId)}?demo=1`);
@@ -278,12 +285,12 @@ export function RunForm({
               ))}
           </select>
           {featuredStatus === 'error' && (
-            <div className="text-xs text-slate-600">
+            <div className="text-xs text-ink-2">
               Featured demos are temporarily unavailable. You can still sign in to create a run.
             </div>
           )}
           {featuredStatus === 'loaded' && featured.length === 0 && (
-            <div className="text-xs text-slate-600">
+            <div className="text-xs text-ink-2">
               Featured demos are temporarily unavailable. You can still sign in to create a run.
             </div>
           )}
@@ -294,20 +301,23 @@ export function RunForm({
         <label className="flex flex-col gap-1 md:col-span-2">
           <span className="text-sm font-medium">Address</span>
           <input
+            aria-invalid={Boolean(fieldErrors.address)}
+            aria-describedby={fieldErrors.address ? 'run-address-error' : undefined}
             data-testid="run-address-input"
-            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+            className="field h-10 rounded-sm border border-control bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-select"
             value={form.address}
             onChange={(e) => setField('address', e.target.value)}
             placeholder="350 5th Ave, New York, NY"
             required
           />
+          {fieldErrors.address && <span id="run-address-error" className="text-sm text-red-700" role="alert">{fieldErrors.address}</span>}
         </label>
 
         <div className="flex flex-col gap-1">
           <span className="text-sm font-medium">Imagery year</span>
           <div
             data-testid="imagery-year-chip"
-            className="h-10 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+            className="h-10 border-t border-rule bg-white px-3 py-2 font-mono text-sm text-ink-2"
           >
             {lockedImageryYear}
           </div>
@@ -317,7 +327,7 @@ export function RunForm({
           <span className="text-sm font-medium">Baseline year</span>
           <div
             data-testid="baseline-year-chip"
-            className="h-10 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+            className="h-10 border-t border-rule bg-white px-3 py-2 font-mono text-sm text-ink-2"
           >
             {lockedBaselineYear}
           </div>
@@ -327,11 +337,11 @@ export function RunForm({
           <span className="text-sm font-medium">Segmentation</span>
           <div
             data-testid="segmentation-chip"
-            className="h-10 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+            className="h-10 border-t border-rule bg-white px-3 py-2 font-mono text-sm text-ink-2"
           >
             {lockedBackend}
           </div>
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-ink-3">
             Server-locked for reproducibility.
           </div>
         </div>
@@ -339,16 +349,16 @@ export function RunForm({
 
       <div className="flex flex-col gap-2">
         <div className="text-sm font-medium">Outputs</div>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="divide-y divide-rule border-y border-rule">
           {OUTPUT_OPTIONS.map((option) => {
             const checked = form.outputs.includes(option.value);
             return (
               <label
                 key={option.value}
-                className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-3 text-sm transition-colors ${
+                className={`flex cursor-pointer items-start gap-2.5 py-3 text-sm transition-colors ${
                   checked
-                    ? 'border-sky-300 bg-sky-50 text-sky-950'
-                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                    ? 'text-ink'
+                    : 'text-ink-2'
                 }`}
               >
                 <input
@@ -359,7 +369,7 @@ export function RunForm({
                 />
                 <span>
                   <span className="block font-medium">{option.label}</span>
-                  <span className="mt-0.5 block text-xs text-slate-500">
+                  <span className="mt-0.5 block text-xs text-ink-3">
                     {option.description}
                   </span>
                 </span>
@@ -367,25 +377,27 @@ export function RunForm({
             );
           })}
         </div>
-        <div className="text-xs text-slate-500">At least one output is required.</div>
+        <div className="text-xs text-ink-3">At least one output is required.</div>
+        {fieldErrors.outputs && <p className="text-sm text-red-700" role="alert">{fieldErrors.outputs}</p>}
       </div>
 
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium">Notes (optional)</span>
         <textarea
-          className="min-h-20 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+          className="field min-h-20 rounded-sm border border-control bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-select"
           value={form.notes ?? ''}
           onChange={(e) => setField('notes', e.target.value)}
           placeholder="Purpose, assumptions, or review owner"
         />
       </label>
 
+      {submitError && <p className="text-sm text-red-700" role="alert">{submitError}</p>}
       <div className="flex items-center gap-3">
         {signedIn ? (
           <button
             type="submit"
             disabled={!canSubmit}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center rounded-sm bg-ink px-4 text-sm font-medium text-white hover:bg-ink disabled:opacity-60"
           >
             {submitting ? 'Starting…' : submitLabel}
           </button>
@@ -393,17 +405,17 @@ export function RunForm({
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/sign-up?next=%2Fruns%2Fnew"
-              className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
+              className="inline-flex h-10 items-center justify-center rounded-sm bg-ink px-4 text-sm font-medium text-white hover:bg-ink"
             >
-              Sign up — free
+              Sign up for free
             </Link>
             <Link
               href="/sign-in?next=%2Fruns%2Fnew"
-              className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 hover:bg-slate-50"
+              className="inline-flex h-10 items-center justify-center rounded-sm border border-control bg-white px-4 text-sm font-medium text-ink hover:bg-paper-2"
             >
               Sign in
             </Link>
-            <span className="text-xs text-slate-600">
+            <span className="text-xs text-ink-2">
               Free account: 5 runs/month. Public demos above need no account.
             </span>
           </div>

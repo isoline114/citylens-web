@@ -127,7 +127,7 @@ describe('ParcelWorkflowActionsPanel', () => {
     expect(screen.getByTestId('workflow-actions-announcer')).toHaveTextContent(
       '2 leads in the attention action queue.',
     );
-    expect(screen.getByText('100 E 21 STREET')).toBeInTheDocument();
+    expect(screen.getByText('100 E 21 Street')).toBeInTheDocument();
     expect(screen.getByText('2 days overdue · brooklyn')).toBeInTheDocument();
     expect(
       within(screen.getByTestId('workflow-action-3020960069')).getByText(
@@ -150,14 +150,14 @@ describe('ParcelWorkflowActionsPanel', () => {
       />,
     );
 
-    await screen.findByText('100 E 21 STREET');
+    await screen.findByText('100 E 21 Street');
     fireEvent.click(screen.getByRole('button', { name: 'Needs plan 1' }));
 
     expect(screen.getByTestId('workflow-actions-announcer')).toHaveTextContent(
       '1 lead in the unplanned action queue.',
     );
-    expect(screen.queryByText('100 E 21 STREET')).not.toBeInTheDocument();
-    expect(screen.getByText('BBL 4012340056')).toBeInTheDocument();
+    expect(screen.queryByText('100 E 21 Street')).not.toBeInTheDocument();
+    expect(screen.getByText('BBL 4-01234-0056')).toBeInTheDocument();
     expect(
       screen.getByText('Set a concrete next action and due date.'),
     ).toBeInTheDocument();

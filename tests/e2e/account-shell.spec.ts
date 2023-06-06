@@ -14,10 +14,10 @@ test('account entry routes share a concise, accessible workspace frame', async (
   await expect(page).toHaveTitle('Sign in — CityLens');
   await expect(page.getByTestId('auth-page-shell')).toBeVisible();
   await expect(
-    page.getByText('Move from parcel signal to a defensible decision.'),
+    page.getByText('Open your parcel workspace, saved pursuits, and processing history.'),
   ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Sign in' })).toHaveCount(1);
-  await expect(page.getByText('Five-borough map')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Explore Parcel Intelligence' })).toBeVisible();
   await expectNoDocumentHorizontalOverflow(page, 'mobile sign-in');
   await expectNoWcagViolations(page, 'mobile sign-in');
 

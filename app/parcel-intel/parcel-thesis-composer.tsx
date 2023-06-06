@@ -3,11 +3,9 @@
 import {
   ArrowRight,
   Check,
-  ChevronDown,
   CircleAlert,
   RotateCcw,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
 
@@ -129,7 +127,7 @@ export function ParcelThesisComposer({
 
   return (
     <section
-      className="border-b border-sky-200 bg-[linear-gradient(110deg,#f8fafc_0%,#eff6ff_48%,#ecfdf5_100%)]"
+      className="border-b border-rule bg-white"
       aria-labelledby="parcel-thesis-composer-title"
       data-testid="parcel-thesis-composer"
     >
@@ -138,48 +136,40 @@ export function ParcelThesisComposer({
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-controls="parcel-thesis-composer-body"
-        className="flex w-full scroll-mt-24 items-center justify-between gap-4 px-4 py-3 text-left outline-none hover:bg-white/45 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500 md:px-6"
+        className="flex w-full scroll-mt-24 items-center justify-between gap-4 px-4 py-3 text-left outline-none hover:bg-white focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-select md:px-6"
       >
         <span className="flex min-w-0 items-start gap-3">
-          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-sky-300 shadow-sm">
-            <Sparkles className="h-4 w-4" aria-hidden="true" />
-          </span>
           <span className="min-w-0">
             <span className="flex flex-wrap items-center gap-2">
               <span
                 id="parcel-thesis-composer-title"
-                className="text-sm font-semibold text-slate-950"
+                className="text-sm font-semibold text-ink"
               >
                 Compose an acquisition thesis
               </span>
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
+              <span className="text-xs text-ink-3">
                 Local + auditable
               </span>
             </span>
-            <span className="mt-0.5 block text-xs leading-5 text-slate-600">
+            <span className="mt-0.5 block text-xs leading-5 text-ink-3">
               Describe the screen in plain language; review every supported
               filter before applying it.
             </span>
           </span>
         </span>
-        <ChevronDown
-          className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${
-            open ? 'rotate-180' : ''
-          }`}
-          aria-hidden="true"
-        />
+        <span aria-hidden="true" className="text-ink-3">{open ? '−' : '+'}</span>
       </button>
 
       {open && (
         <div
           id="parcel-thesis-composer-body"
-          className="border-t border-sky-100 px-4 py-4 md:px-6"
+          className="border-t border-rule px-4 py-4 md:px-6"
         >
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
-            <div className="rounded-2xl border border-white bg-white/85 p-4 shadow-sm backdrop-blur">
+            <div className="min-w-0 bg-white p-4">
               <label
                 htmlFor={inputId}
-                className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-700"
+                className="font-cond text-[13px] font-semibold text-ink-3"
               >
                 Acquisition thesis
               </label>
@@ -191,15 +181,15 @@ export function ParcelThesisComposer({
                 rows={4}
                 aria-describedby={guidanceId}
                 placeholder="Example: High-priority long-held vacant sites in Brooklyn near transit with 10k+ sf lots"
-                className="mt-2 min-h-28 w-full resize-y rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm leading-6 text-slate-950 outline-none placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                className="mt-2 min-h-28 w-full resize-y rounded-sm border border-control bg-white px-3 py-2.5 text-sm leading-6 text-ink outline-none placeholder:text-ink-3 focus:border-select focus:ring-2 focus:ring-select"
               />
               <div
                 id={guidanceId}
-                className="mt-2 flex flex-col gap-2 text-[11px] leading-5 text-slate-600 sm:flex-row sm:items-center sm:justify-between"
+                className="mt-2 flex flex-col gap-2 text-xs leading-5 text-ink-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <span className="inline-flex items-start gap-1.5">
                   <ShieldCheck
-                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700"
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink"
                     aria-hidden="true"
                   />
                   CityLens processes this text in your browser and does not
@@ -209,7 +199,7 @@ export function ParcelThesisComposer({
               </div>
 
               <div className="mt-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                <div className="font-cond text-[13px] font-semibold text-ink-3">
                   Try a governed example
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -218,7 +208,7 @@ export function ParcelThesisComposer({
                       key={example}
                       type="button"
                       onClick={() => updateDraft(example)}
-                      className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-900"
+                      className="rounded-sm border border-control bg-white px-2.5 py-1 text-xs font-medium text-ink hover:border-rule hover:bg-paper-2 hover:text-select"
                     >
                       Example {index + 1}
                     </button>
@@ -232,7 +222,7 @@ export function ParcelThesisComposer({
                   onClick={review}
                   disabled={draft.trim().length < 3}
                   data-testid="thesis-review"
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-sm bg-ink px-4 text-xs font-semibold text-white hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   Review filters
                   <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -241,7 +231,7 @@ export function ParcelThesisComposer({
                   <button
                     type="button"
                     onClick={reset}
-                    className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    className="inline-flex h-10 items-center justify-center gap-1.5 rounded-sm border border-control bg-white px-3 text-xs font-semibold text-ink hover:bg-white"
                   >
                     <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
                     Clear
@@ -251,20 +241,17 @@ export function ParcelThesisComposer({
             </div>
 
             <div
-              className="rounded-2xl border border-slate-200 bg-slate-950 p-4 text-white shadow-sm"
+              className="min-w-0 border-l border-rule bg-white p-4 text-ink"
               data-testid="thesis-review-receipt"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300">
-                    Review receipt
-                  </div>
                   <h3 className="mt-1 text-sm font-semibold">
                     Visible filters only
                   </h3>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-right">
-                  <div className="text-[9px] uppercase tracking-wide text-slate-400">
+                <div className="border-l border-rule px-3 py-2 text-right tabular-nums">
+                  <div className="font-cond text-[13px] text-ink-3">
                     Current matches
                   </div>
                   <div
@@ -277,7 +264,7 @@ export function ParcelThesisComposer({
               </div>
 
               {!composition ? (
-                <div className="mt-5 rounded-xl border border-dashed border-white/15 bg-white/5 p-4 text-xs leading-5 text-slate-300">
+                <div className="mt-5 border-b border-dashed border-rule bg-white p-4 text-xs leading-5 text-ink-3">
                   Nothing is applied automatically. Review translates only
                   supported wording into the same controls shown below the
                   composer.
@@ -285,23 +272,23 @@ export function ParcelThesisComposer({
               ) : (
                 <div className="mt-4 space-y-3">
                   <div>
-                    <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    <div className="font-cond text-[13px] font-semibold text-ink-3">
                       Recognized
                     </div>
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    <div className="mt-1.5 divide-y divide-rule">
                       {composition.criteria.map((criterion) => (
                         <span
                           key={criterion.id}
-                          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                          className={`flex items-center justify-between gap-2 py-2 text-xs font-medium ${
                             criterion.source === 'safe_default'
-                              ? 'border-amber-300/35 bg-amber-300/10 text-amber-100'
-                              : 'border-emerald-300/25 bg-emerald-300/10 text-emerald-100'
+                              ? 'text-stale'
+                              : 'text-ink'
                           }`}
                         >
                           <Check className="h-3 w-3" aria-hidden="true" />
                           {criterion.label}: {criterion.valueLabel}
                           {criterion.source === 'safe_default' && (
-                            <span className="text-[9px] uppercase tracking-wide text-amber-300">
+                            <span className="font-cond text-[13px] text-stale">
                               default
                             </span>
                           )}
@@ -312,17 +299,17 @@ export function ParcelThesisComposer({
 
                   {composition.unsupported.length > 0 && (
                     <div
-                      className="rounded-xl border border-amber-300/25 bg-amber-300/10 p-3"
+                      className="border-b border-rule py-3"
                       data-testid="thesis-unsupported"
                     >
-                      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200">
+                      <div className="font-cond flex items-center gap-1.5 text-[13px] font-semibold text-ink">
                         <CircleAlert
                           className="h-3.5 w-3.5"
                           aria-hidden="true"
                         />
                         Not applied
                       </div>
-                      <ul className="mt-2 space-y-2 text-[11px] leading-4 text-amber-50">
+                      <ul className="mt-2 space-y-2 text-xs leading-4 text-ink">
                         {composition.unsupported.map((concept) => (
                           <li key={concept.id}>
                             <strong>{concept.label}.</strong>{' '}
@@ -336,9 +323,9 @@ export function ParcelThesisComposer({
                   {composition.conflicts.length > 0 && (
                     <div
                       role="alert"
-                      className="rounded-xl border border-rose-300/30 bg-rose-400/10 p-3 text-[11px] leading-4 text-rose-100"
+                      className="border-b border-rule py-3 text-xs leading-4 text-red-700"
                     >
-                      <strong className="block text-rose-200">
+                      <strong className="block text-ink">
                         Resolve before applying
                       </strong>
                       <ul className="mt-1 list-disc space-y-1 pl-4">
@@ -353,7 +340,7 @@ export function ParcelThesisComposer({
                     composition.conflicts.length === 0 && (
                       <div
                         role="alert"
-                        className="rounded-xl border border-amber-300/25 bg-amber-300/10 p-3 text-[11px] leading-4 text-amber-100"
+                        className="border-b border-rule bg-white p-3 text-xs leading-4 text-ink"
                       >
                         Add a supported borough, priority, site type, evidence
                         signal, minimum lot area, or minimum unused-FAR proxy.
@@ -361,7 +348,7 @@ export function ParcelThesisComposer({
                     )}
 
                   {!inventoryReady && (
-                    <div className="rounded-xl border border-sky-300/25 bg-sky-300/10 p-3 text-[11px] leading-4 text-sky-100">
+                    <div className="border-b border-rule bg-paper-2 p-3 text-xs leading-4 text-ink">
                       Waiting for the verified full inventory before applying
                       or counting this screen.
                     </div>
@@ -378,7 +365,7 @@ export function ParcelThesisComposer({
                   matchCount === null
                 }
                 data-testid="thesis-apply"
-                className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-sky-400 px-4 text-xs font-semibold text-slate-950 shadow-sm hover:bg-sky-300 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-slate-500"
+                className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-sm bg-ink px-4 text-xs font-semibold text-white hover:bg-ink/90 disabled:cursor-not-allowed disabled:bg-white disabled:text-ink-3"
               >
                 {composition?.canApply
                   ? `Apply ${composition.explicitCriterionCount} reviewed ${

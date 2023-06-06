@@ -1,5 +1,7 @@
 'use client';
 
+import { formatAddress, formatBbl } from '@/lib/parcel-format';
+
 import Link from 'next/link';
 import {
   ArrowUpRight,
@@ -7,7 +9,6 @@ import {
   BriefcaseBusiness,
   Building2,
   Check,
-  Columns3,
   Copy,
   Download,
   ExternalLink,
@@ -115,7 +116,7 @@ function currentProject(row: ParcelIntelRow): ReactNode {
         href={projectUrl}
         target="_blank"
         rel="noreferrer"
-        className="inline-flex items-center gap-1 font-medium text-sky-700 hover:text-sky-900"
+        className="inline-flex items-center gap-1 font-medium text-ink hover:text-select"
       >
         {label}
         <ExternalLink className="h-3 w-3 shrink-0" />
@@ -177,8 +178,8 @@ const COMPARISON_ROWS: ComparisonRow[] = [
     description: 'Current screening, separate from historical rank',
     render: (row) => (
       <div>
-        <div className="font-semibold text-slate-950">{readinessLabel(row)}</div>
-        <p className="mt-1 text-xs leading-5 text-slate-600">
+        <div className="font-semibold text-ink">{readinessLabel(row)}</div>
+        <p className="mt-1 text-xs leading-5 text-ink-3">
           {recommendedAction(row)}
         </p>
       </div>
@@ -188,10 +189,10 @@ const COMPARISON_ROWS: ComparisonRow[] = [
     label: 'Opportunity',
     render: (row) => (
       <div>
-        <div className="font-medium text-slate-950">
+        <div className="font-medium text-ink">
           {opportunityLabel(row.opportunity_category)}
         </div>
-        <div className="mt-1 text-xs text-slate-500">
+        <div className="mt-1 text-xs text-ink-3">
           {priorityLabel(row.priority_tier)} priority
         </div>
       </div>
@@ -199,32 +200,32 @@ const COMPARISON_ROWS: ComparisonRow[] = [
   },
   {
     label: 'Development capacity',
-    description: 'PLUTO screening values—not a zoning determination',
+    description: 'PLUTO screening values, not a zoning determination',
     render: (row) => (
-      <dl className="space-y-1 text-xs">
+      <dl className="space-y-2 text-xs">
         <div className="flex justify-between gap-3">
-          <dt className="text-slate-500">Lot</dt>
-          <dd className="font-medium text-slate-900">
+          <dt className="text-ink-3">Lot</dt>
+          <dd className="text-right text-sm font-medium tabular-nums text-ink">
             {formatNumber(row.lot_area_sqft)} sqft
           </dd>
         </div>
         <div className="flex justify-between gap-3">
-          <dt className="text-slate-500">Allowed FAR</dt>
-          <dd className="font-medium text-slate-900">
+          <dt className="text-ink-3">Allowed FAR</dt>
+          <dd className="text-right text-sm font-medium tabular-nums text-ink">
             {row.allowed_far?.toLocaleString(undefined, {
               maximumFractionDigits: 2,
             }) ?? '—'}
           </dd>
         </div>
         <div className="flex justify-between gap-3">
-          <dt className="text-slate-500">Unused floor area</dt>
-          <dd className="font-medium text-slate-900">
+          <dt className="text-ink-3">Unused floor area</dt>
+          <dd className="text-right text-sm font-medium tabular-nums text-ink">
             {formatNumber(row.unused_floor_area_sqft)} sqft
           </dd>
         </div>
         <div className="flex justify-between gap-3">
-          <dt className="text-slate-500">Built</dt>
-          <dd className="font-medium text-slate-900">
+          <dt className="text-ink-3">Built</dt>
+          <dd className="text-right text-sm font-medium tabular-nums text-ink">
             {row.far_utilization_pct === null
               ? '—'
               : `${Math.round(row.far_utilization_pct)}%`}
@@ -237,16 +238,16 @@ const COMPARISON_ROWS: ComparisonRow[] = [
     label: 'Ownership & sale',
     render: (row) => (
       <div className="space-y-1">
-        <div className="font-medium text-slate-950">
+        <div className="font-medium text-ink">
           {row.owner_name ?? row.owner_type ?? 'Owner unavailable'}
         </div>
-        <div className="text-xs text-slate-500">
+        <div className="text-xs text-ink-3">
           Held {formatNumber(row.years_held)} years
           {row.owner_portfolio_lot_count && row.owner_portfolio_lot_count > 1
             ? ` · ${row.owner_portfolio_lot_count} exact-name lots`
             : ''}
         </div>
-        <div className="text-xs text-slate-600">
+        <div className="text-xs text-ink-3">
           Last sale {formatCurrency(row.last_sale_price)}
           {row.last_sale_year ? ` (${row.last_sale_year})` : ''}
         </div>
@@ -266,14 +267,14 @@ const COMPARISON_ROWS: ComparisonRow[] = [
           {flags.map((flag) => (
             <span
               key={flag}
-              className="rounded-full bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-900 ring-1 ring-inset ring-amber-200"
+              className="text-xs text-ink-2"
             >
               {flag}
             </span>
           ))}
         </div>
       ) : (
-        <span className="text-sm text-emerald-800">
+        <span className="text-sm text-ink">
           No surfaced flags; full diligence still required
         </span>
       );
@@ -284,7 +285,7 @@ const COMPARISON_ROWS: ComparisonRow[] = [
     render: (row) => {
       const diligenceDates = diligenceEvidenceDates(row);
       return (
-        <dl className="space-y-1 text-xs">
+        <dl className="space-y-2 text-xs">
           {[
             {
               label: 'Property facts',
@@ -298,8 +299,8 @@ const COMPARISON_ROWS: ComparisonRow[] = [
             ...diligenceDates,
           ].map((item) => (
             <div key={item.label} className="flex justify-between gap-3">
-              <dt className="text-slate-500">{item.label}</dt>
-              <dd className="font-medium text-slate-900">{item.value}</dd>
+              <dt className="text-ink-3">{item.label}</dt>
+              <dd className="text-right font-mono text-xs text-ink-3">{item.value}</dd>
             </div>
           ))}
         </dl>
@@ -396,22 +397,18 @@ export function ParcelComparisonDesk({
 
   return (
     <section
-      className="flex flex-col border-b border-slate-200 bg-slate-50"
+      className="flex min-w-0 flex-col border-b border-rule bg-white text-ink"
       aria-label="Parcel comparison desk"
       data-testid="parcel-comparison-desk"
     >
-      <div className="order-1 flex flex-col gap-3 border-b border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-start sm:justify-between md:px-6">
+      <div className="order-1 flex flex-col gap-3 border-b border-rule bg-white px-4 py-4 sm:flex-row sm:items-start sm:justify-between md:px-6">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">
-            <Columns3 className="h-4 w-4" />
-            Evidence comparison
-          </div>
-          <h3 className="mt-1 text-lg font-semibold text-slate-950">
-            Compare the shortlist before committing team time.
+          <h3 className="mt-1 text-lg font-semibold text-ink">
+            Compare parcel evidence
           </h3>
-          <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-600">
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-ink-3">
             Side-by-side current facts, acquisition posture, capacity, and
-            source dates. This is a screening aid—not an appraisal, site plan,
+            source dates. This is a screening aid, not an appraisal, site plan,
             zoning opinion, or buy/pass recommendation.
           </p>
         </div>
@@ -419,7 +416,7 @@ export function ParcelComparisonDesk({
           <button
             type="button"
             onClick={() => downloadCsv(rows, 'comparison')}
-            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-sm border border-control bg-white px-3 text-xs font-semibold text-ink hover:bg-white"
           >
             <Download className="h-3.5 w-3.5" />
             Evidence CSV
@@ -427,10 +424,10 @@ export function ParcelComparisonDesk({
           <button
             type="button"
             onClick={() => void copyEvidenceBrief()}
-            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-sm border border-control bg-white px-3 text-xs font-semibold text-ink hover:bg-white"
           >
             {copyState === 'copied' ? (
-              <Check className="h-3.5 w-3.5 text-emerald-600" />
+              <Check className="h-3.5 w-3.5 text-ink" />
             ) : (
               <Copy className="h-3.5 w-3.5" />
             )}
@@ -445,7 +442,7 @@ export function ParcelComparisonDesk({
             onClick={onClose}
             autoFocus
             aria-label="Close parcel comparison"
-            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-sm border border-control bg-white px-3 text-xs font-semibold text-ink hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select focus-visible:ring-offset-2"
           >
             <X className="h-3.5 w-3.5" />
             Close
@@ -454,46 +451,46 @@ export function ParcelComparisonDesk({
       </div>
 
       <div
-        className="order-3 overflow-x-auto px-3 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500 md:px-5"
+        className="order-3 min-w-0 overflow-x-auto px-3 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-select md:px-5"
         role="region"
         aria-label="Scrollable parcel evidence comparison table"
         tabIndex={0}
       >
-        <p className="mb-2 text-[11px] leading-4 text-slate-500 md:hidden">
+        <p className="mb-2 text-xs leading-4 text-ink-3 md:hidden">
           Scroll horizontally to review every parcel and evidence field.
         </p>
         <table
-          className="w-full table-fixed overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+          className="w-full table-fixed border-collapse bg-white tabular-nums"
           style={{ minWidth: `${190 + rows.length * 270}px` }}
         >
           <caption className="sr-only">
             Current acquisition evidence for {rows.length} shortlisted parcels
           </caption>
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-950 text-left text-white">
-              <th className="w-[190px] px-4 py-4 align-top text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <tr className="border-b border-rule bg-white text-left text-ink">
+              <th scope="col" className="font-cond w-[190px] px-4 py-4 align-top text-[13px] font-semibold text-ink-3">
                 Measure
               </th>
               {rows.map((row) => (
-                <th key={row.bbl} className="px-4 py-4 align-top">
+                <th scope="col" key={row.bbl} className="border-l border-rule px-4 py-4 align-top">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-[10px] font-semibold uppercase tracking-wide text-sky-300">
+                      <div className="text-xs font-medium text-ink-3">
                         {BOROUGH_LABELS[row.borough ?? ''] ?? row.borough} ·{' '}
                         {rankLabel(row)}
                       </div>
-                      <div className="mt-1 break-words text-sm font-semibold text-white">
-                        {row.address ?? `BBL ${row.bbl}`}
+                      <div className="mt-1 break-words text-base font-semibold text-ink">
+                        {formatAddress(row.address) || `BBL ${formatBbl(row.bbl)}`}
                       </div>
-                      <div className="mt-1 text-[11px] font-normal text-slate-400">
-                        BBL {row.bbl}
+                      <div className="mt-1 font-mono text-xs font-normal text-ink-3">
+                        BBL {formatBbl(row.bbl)}
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => removeRow(row.bbl)}
                       aria-label={`Remove ${row.address ?? row.bbl} from comparison`}
-                      className="rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-white"
+                      className="rounded-sm p-1 text-ink-3 hover:bg-paper-2 hover:text-ink"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -501,7 +498,7 @@ export function ParcelComparisonDesk({
                   <button
                     type="button"
                     onClick={() => onSelectParcel(row.bbl)}
-                    className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-sky-300 hover:text-sky-100"
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-ink hover:text-select"
                   >
                     Open parcel
                     <ArrowUpRight className="h-3 w-3" />
@@ -514,10 +511,10 @@ export function ParcelComparisonDesk({
                       }
                       aria-pressed={selectedBbl === row.bbl}
                       aria-label={`Advance ${row.address ?? row.bbl} from comparison`}
-                      className={`mt-3 inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors ${
+                      className={`ml-3 mt-3 inline-flex h-8 items-center gap-1.5 rounded-sm border px-2.5 text-xs font-semibold transition-colors ${
                         selectedBbl === row.bbl
-                          ? 'bg-emerald-300 text-emerald-950'
-                          : 'bg-white/10 text-white hover:bg-white/15'
+                          ? 'border-ink bg-paper-2 text-ink'
+                          : 'border-control bg-white text-ink hover:bg-paper-2'
                       }`}
                     >
                       <BookmarkPlus className="h-3.5 w-3.5" />
@@ -535,20 +532,20 @@ export function ParcelComparisonDesk({
                 className={
                   index === COMPARISON_ROWS.length - 1
                     ? ''
-                    : 'border-b border-slate-200'
+                    : 'border-b border-rule'
                 }
               >
-                <th className="bg-slate-50 px-4 py-4 text-left align-top">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-900">
+                <th scope="row" className="px-4 py-4 text-left align-top">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-ink">
                     {item.label === 'Decision posture' ? (
-                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                      <ShieldCheck className="h-3.5 w-3.5 text-ink" />
                     ) : item.label === 'Development capacity' ? (
-                      <Building2 className="h-3.5 w-3.5 text-violet-600" />
+                      <Building2 className="h-3.5 w-3.5 text-ink" />
                     ) : null}
                     {item.label}
                   </div>
                   {item.description && (
-                    <p className="mt-1 text-[10px] font-normal leading-4 text-slate-500">
+                    <p className="mt-1 text-xs font-normal leading-4 text-ink-3">
                       {item.description}
                     </p>
                   )}
@@ -556,7 +553,7 @@ export function ParcelComparisonDesk({
                 {rows.map((row) => (
                   <td
                     key={`${item.label}-${row.bbl}`}
-                    className="px-4 py-4 align-top text-sm text-slate-700"
+                    className="border-l border-rule px-4 py-4 align-top text-sm text-ink"
                   >
                     {item.render(row)}
                   </td>
@@ -568,41 +565,37 @@ export function ParcelComparisonDesk({
       </div>
 
       <section
-        className="order-2 border-b border-slate-200 bg-white px-4 py-4 md:px-6"
+        className="order-2 border-b border-rule bg-white px-4 py-4 md:px-6"
         aria-label="Comparison decision handoff"
         data-testid="comparison-decision-handoff"
       >
         {!signedIn ? (
-          <div className="flex flex-col gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-l-2 border-rule pl-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.13em] text-sky-800">
+              <div className="flex items-center gap-2 text-xs font-medium text-ink-3">
                 <BriefcaseBusiness className="h-4 w-4" />
                 Turn evidence into a decision
               </div>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-sky-950">
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-ink">
                 Sign in to advance one parcel with a fixed evidence snapshot
                 and a concrete next diligence action.
               </p>
             </div>
             <Link
               href="/sign-in?next=%2Fparcel-intel"
-              className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-sm bg-ink px-4 text-sm font-semibold text-white hover:bg-ink/90"
             >
               Sign in to advance
             </Link>
           </div>
         ) : selectedRow ? (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
+          <div className="border-l-2 border-ink pl-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.13em] text-emerald-800">
-                  <BriefcaseBusiness className="h-4 w-4" />
-                  Decision handoff
-                </div>
-                <h4 className="mt-1 text-base font-semibold text-slate-950">
-                  Advance {selectedRow.address ?? `BBL ${selectedRow.bbl}`}
+                <h4 className="mt-1 text-base font-semibold text-ink">
+                  Advance {formatAddress(selectedRow.address) || `BBL ${formatBbl(selectedRow.bbl)}`}
                 </h4>
-                <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">
+                <p className="mt-1 max-w-2xl text-xs leading-5 text-ink-3">
                   CityLens records your choice as pursuing and preserves the
                   current evidence snapshot. It will never replace an active
                   workflow record.
@@ -616,7 +609,7 @@ export function ParcelComparisonDesk({
                   setDueDate('');
                   setAdvanceState({ status: 'idle' });
                 }}
-                className="text-xs font-semibold text-slate-500 hover:text-slate-900"
+                className="text-xs font-semibold text-ink-3 hover:text-ink"
               >
                 Choose another
               </button>
@@ -624,11 +617,11 @@ export function ParcelComparisonDesk({
 
             {advanceState.status === 'saved' ? (
               <div
-                className="mt-4 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="mt-4 flex flex-col gap-3 border-t border-rule bg-white py-4 sm:flex-row sm:items-center sm:justify-between"
                 role="status"
               >
                 <div>
-                  <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-ink">
                     <Check className="h-4 w-4" />
                     {advanceState.result === 'existing'
                       ? 'Active workflow preserved'
@@ -636,7 +629,7 @@ export function ParcelComparisonDesk({
                         ? 'Lead restored to reviewing'
                         : 'Lead advanced to reviewing'}
                   </div>
-                  <p className="mt-1 text-xs leading-5 text-slate-600">
+                  <p className="mt-1 text-xs leading-5 text-ink-3">
                     {advanceState.result === 'existing'
                       ? 'No existing stage, action, assignee, or note was changed.'
                       : 'The save-time evidence is fixed; future workflow edits cannot rewrite the original rank.'}
@@ -645,7 +638,7 @@ export function ParcelComparisonDesk({
                 <button
                   type="button"
                   onClick={() => onSelectParcel(selectedRow.bbl)}
-                  className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800"
+                  className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-sm bg-ink px-3 text-xs font-semibold text-white hover:bg-ink/90"
                 >
                   Open parcel workspace
                   <ArrowUpRight className="h-3.5 w-3.5" />
@@ -654,7 +647,7 @@ export function ParcelComparisonDesk({
             ) : (
               <>
                 <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
-                  <label className="text-xs font-semibold text-slate-700">
+                  <label className="text-xs font-medium text-ink">
                     Next diligence action
                     <input
                       value={nextAction}
@@ -665,16 +658,16 @@ export function ParcelComparisonDesk({
                         }
                       }}
                       maxLength={240}
-                      className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                      className="field mt-1 h-10 w-full rounded-sm border border-control bg-white px-3 text-sm font-normal text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select"
                     />
                   </label>
-                  <label className="text-xs font-semibold text-slate-700">
-                    Due date <span className="font-normal text-slate-500">(optional)</span>
+                  <label className="text-xs font-medium text-ink">
+                    Due date <span className="font-normal text-ink-3">(optional)</span>
                     <input
                       type="date"
                       value={dueDate}
                       onChange={(event) => setDueDate(event.target.value)}
-                      className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                      className="field mt-1 h-10 w-full rounded-sm border border-control bg-white px-3 text-sm font-normal text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select"
                     />
                   </label>
                 </div>
@@ -683,7 +676,7 @@ export function ParcelComparisonDesk({
                     className={`text-xs ${
                       advanceState.status === 'error'
                         ? 'text-rose-700'
-                        : 'text-slate-500'
+                        : 'text-ink-3'
                     }`}
                     role={advanceState.status === 'error' ? 'alert' : undefined}
                   >
@@ -698,7 +691,7 @@ export function ParcelComparisonDesk({
                       !nextAction.trim() || advanceState.status === 'saving'
                     }
                     onClick={() => void advanceSelected()}
-                    className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-sm bg-ink px-4 text-sm font-semibold text-white hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {advanceState.status === 'saving' ? (
                       <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -714,13 +707,13 @@ export function ParcelComparisonDesk({
             )}
           </div>
         ) : (
-          <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <BriefcaseBusiness className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" />
+          <div className="flex items-start gap-3 border-l-2 border-rule pl-4">
+            <BriefcaseBusiness className="mt-0.5 h-5 w-5 shrink-0 text-ink" />
             <div>
-              <h4 className="text-sm font-semibold text-slate-950">
+              <h4 className="text-sm font-semibold text-ink">
                 Choose the parcel that earns next diligence.
               </h4>
-              <p className="mt-1 text-xs leading-5 text-slate-600">
+              <p className="mt-1 text-xs leading-5 text-ink-3">
                 Use “Advance” above to make the decision yourself. CityLens
                 shows the evidence and records the handoff; it does not choose
                 a winner or imply seller intent.

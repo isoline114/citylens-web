@@ -115,3 +115,53 @@ export async function fetchParcelIntelIndexOnServer(): Promise<ParcelIntelIndex>
     return empty;
   }
 }
+
+/** Public homepage loaders never attach the server API key or user credentials. */
+export type HomeParcelData = {
+  index: ParcelIntelIndex | null;
+  inventory: import('@/lib/api').ParcelIntelMapResponse | null;
+  lots: import('@/lib/api').ParcelIntelRow[];
+};
+export async function fetchHomePublicJsonOnServer<T>(path: string, timeoutMs: number): Promise<T | null> {
+  try {
+    const res = await fetch(`${serverApiBase()}${path}`, {
+      headers: { Accept: 'application/json' }, next: { revalidate: 60 }, signal: AbortSignal.timeout(timeoutMs),
+    });
+    return res.ok ? await res.json() as T : null;
+  } catch { return null; }
+}
+const HOME_PARCEL_BUDGET_MS = 10_000;
+const HOME_MAX_PARTNER_LOTS = 3;
+
+export async function fetchHomeParcelDataOnServer(): Promise<HomeParcelData> {
+  if (process.env.CITYLENS_DISABLE_SSR_PARCEL_INTEL === '1') return { index: null, inventory: null, lots: [] };
+  // Fixture mode (CI and Playwright) keeps the server render deterministic: the
+  // index comes from the checked-in fixture and no live inventory is fetched.
+  if (process.env.CITYLENS_USE_PARCEL_INTEL_INDEX_FIXTURE === '1') {
+    return { index: await fetchParcelIntelIndexOnServer(), inventory: null, lots: [] };
+  }
+  // One budget for the whole optional case-file chain (map -> #1 -> partners),
+  // so a slow API cannot hold a cold homepage render for the sum of timeouts.
+  const deadline = Date.now() + HOME_PARCEL_BUDGET_MS;
+  const budget = (cap: number) => Math.max(500, Math.min(cap, deadline - Date.now()));
+  const [index, inventory] = await Promise.all([
+    fetchParcelIntelIndexOnServer(),
+    fetchHomePublicJsonOnServer<import('@/lib/api').ParcelIntelMapResponse>('/v1/parcel-intel/map?top_per_borough=1000', budget(8_000)),
+  ]);
+  const first = inventory?.access_scope === 'public_preview' && Array.isArray(inventory.rows)
+    ? inventory.rows.find(row => row.citywide_rank === 1) : null;
+  if (!first || !/^[1-5]\d{9}$/.test(first.bbl)) return { index, inventory, lots: [] };
+  if (deadline - Date.now() < 500) return { index, inventory, lots: [] };
+  const top = await fetchHomePublicJsonOnServer<import('@/lib/api').ParcelIntelRow>(`/v1/parcel-intel/parcel/${first.bbl}`, budget(8_000));
+  if (!top || top.bbl !== first.bbl || top.citywide_rank !== 1) return { index, inventory, lots: [] };
+  const members = [...new Set((top.assemblage_member_bbls ?? []).filter(bbl => bbl !== top.bbl && /^[1-5]\d{9}$/.test(bbl)))];
+  // A site with more partners than the case file can draw is shown as one lot.
+  if (members.length > HOME_MAX_PARTNER_LOTS || deadline - Date.now() < 500) return { index, inventory, lots: [top] };
+  const partners = await Promise.all(members.map(bbl => fetchHomePublicJsonOnServer<import('@/lib/api').ParcelIntelRow>(`/v1/parcel-intel/parcel/${bbl}`, budget(8_000))));
+  if (partners.some((lot, i) => !lot || lot.bbl !== members[i])) return { index, inventory, lots: [] };
+  return { index, inventory, lots: [top, ...partners.filter((lot): lot is import('@/lib/api').ParcelIntelRow => lot !== null)] };
+}
+export async function fetchHomeRunSummaryOnServer(runId: string): Promise<Record<string, unknown> | null> {
+  if (process.env.CITYLENS_DISABLE_SSR_DEMOS === '1') return null;
+  return fetchHomePublicJsonOnServer(`/v1/demo/artifacts/${encodeURIComponent(runId)}/run_summary.json`, 2_000);
+}

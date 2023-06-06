@@ -37,7 +37,6 @@ export default function ForgotPasswordPage() {
   if (!IS_NEON) {
     return (
       <AuthPageShell
-        eyebrow="Local workspace"
         title="No password to reset"
         description="Mock authentication does not persist passwords."
       >
@@ -51,12 +50,11 @@ export default function ForgotPasswordPage() {
   if (sent) {
     return (
       <AuthPageShell
-        eyebrow="Reset requested"
         title="Check your email"
         description={
           <>
             If an account exists for{' '}
-            <span className="font-medium text-slate-900">{email}</span>, its
+            <span className="font-medium text-ink">{email}</span>, its
             six-digit reset code is on the way.
           </>
         }
@@ -76,7 +74,6 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthPageShell
-      eyebrow="Account recovery"
       title="Reset your password"
       description="Enter your account email and we’ll send a six-digit reset code."
       footer={
@@ -120,7 +117,7 @@ export default function ForgotPasswordPage() {
         }}
       >
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-800">Email</span>
+          <span className="text-sm font-medium text-ink">Email</span>
           <input
             className={authInputClass}
             type="email"

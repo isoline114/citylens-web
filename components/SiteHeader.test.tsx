@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { ImgHTMLAttributes } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -39,12 +39,21 @@ import { SiteHeader } from './SiteHeader';
 describe('SiteHeader', () => {
   it('marks the active destination in desktop and mobile navigation', () => {
     render(<SiteHeader />);
+    fireEvent.click(screen.getByLabelText('Open navigation'));
 
     const parcelLinks = screen.getAllByRole('link', { name: 'Parcels' });
     expect(parcelLinks).toHaveLength(2);
     parcelLinks.forEach((link) => {
       expect(link).toHaveAttribute('aria-current', 'page');
     });
+  });
+
+  it('shows the CityLens wordmark with the block-and-lot mark and no image tile', () => {
+    render(<SiteHeader />);
+    const home = screen.getByRole('link', { name: 'CityLens home' });
+    expect(home).toHaveTextContent('CityLens');
+    expect(home.querySelector('svg')).not.toBeNull();
+    expect(home.querySelector('img')).toBeNull();
   });
 
   it('keeps Home current while the static root pathname initializes', () => {

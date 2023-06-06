@@ -7,7 +7,6 @@ describe('LegalDocumentShell', () => {
   it('provides one scannable trust document with anchored sections', () => {
     render(
       <LegalDocumentShell
-        eyebrow="Trust center"
         title="Test policy"
         summary="A concise policy summary."
         effectiveDate="July 29, 2026"

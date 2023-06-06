@@ -1,0 +1,20 @@
+.explorer-panes {
+  height: max(440px, calc(100dvh - 190px));
+}
+
+@media (min-width: 1024px) {
+  .explorer-panes {
+    height: var(--parcel-pane-height, calc(100dvh - 120px));
+    min-height: 440px;
+  }
+}
+
+/* Keep the desktop controls in one row; disclosures expand only when requested. */
+@media (min-width: 1280px) {
+  .parcel-workspace-toolbar { align-items: center; }
+  .parcel-workspace-toolbar input,
+  .parcel-workspace-toolbar select,
+  .parcel-workspace-toolbar button { height: 36px; }
+}
+
+.parcel-result-row { font-variant-numeric: tabular-nums lining-nums; }

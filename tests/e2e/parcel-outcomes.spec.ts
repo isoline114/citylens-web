@@ -1095,11 +1095,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
     .getByRole('button', { name: /1 entered · 1 left/i })
     .click();
   await expect(page.getByTestId('saved-views-panel')).toContainText(
-    'Exact membership change—not seller intent or a new prediction.',
+    'Exact membership change, not seller intent or a new prediction.',
   );
   await expect(
     page.getByRole('button', {
-      name: 'BBL 3000019999 · inspect current screening',
+      name: 'BBL 3-00001-9999 · inspect current screening',
     }),
   ).toBeVisible();
   await page
@@ -1120,9 +1120,12 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(savedViewsTrigger).toBeFocused();
   await expect(page.getByLabel('Filter by borough')).toHaveValue('brooklyn');
   await expect(page.getByLabel('Filter by priority')).toHaveValue('highest');
+  // Map colors live in a compact disclosure; open it to inspect the overlay.
+  await page.getByText(/^Map color ·/).click();
   await expect(
     page.getByRole('button', { name: 'priority' }),
   ).toHaveAttribute('aria-pressed', 'true');
+  await page.getByText(/^Map color ·/).click();
 
   await page.getByRole('button', { name: 'Saved views' }).click();
   await page.getByLabel('View name').fill('Priority follow-up');
@@ -1135,9 +1138,11 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   await expect(page.getByText('Priority follow-up')).not.toBeVisible();
   await page.getByRole('button', { name: 'Close saved views' }).click();
   await expect(savedViewsTrigger).toBeFocused();
+  await page.getByRole('button', { name: 'Signals', exact: true }).click();
   await expect(
-    page.getByRole('button', { name: /Subway\/SIR ≤800 m/i }),
+    page.getByRole('button', { name: /Transit within 800 m/i }),
   ).toContainText('1');
+  await page.getByRole('button', { name: 'Signals', exact: true }).click();
   await expect(page.getByTestId('activation-guide-attention')).toContainText(
     '2 saved leads',
   );
@@ -1276,7 +1281,7 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   );
   await page.getByRole('button', { name: 'Overview' }).click();
   const decisionBrief = page.getByTestId('parcel-decision-posture');
-  await expect(decisionBrief).toContainText('Acquisition decision brief');
+  await expect(decisionBrief.getByRole('heading')).toBeVisible();
   await expect(decisionBrief).toContainText('Historical model #65');
   await expect(decisionBrief).toContainText('1 current gate cleared');
   await expect(decisionBrief).toContainText('2 open evidence items');
@@ -1592,13 +1597,13 @@ test('authenticated parcel explorer shows maturity-qualified outcome evidence', 
   const rankedDossier = page.getByTestId('ranked-parcel-official-dossier');
   await expect(rankedDossier).toBeVisible();
   await expect(page.getByTestId('parcel-official-dossier')).toContainText(
-    '100 E 21 STREET',
+    '100 E 21 Street',
   );
   await expect(page.getByTestId('parcel-official-dossier')).toContainText(
     'not a lead score',
   );
   await expect(page.getByTestId('parcel-official-dossier')).toContainText(
-    'Owner sources differ — verify title',
+    'Owner sources differ; verify title',
   );
   await expect(
     page.getByRole('button', { name: 'Back to parcel workspace' }),

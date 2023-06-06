@@ -64,16 +64,35 @@ export async function expectNoDocumentHorizontalOverflow(
     const body = document.body;
     const viewportWidth = root.clientWidth;
     const contentWidth = Math.max(root.scrollWidth, body.scrollWidth);
+    // Name the elements that extend past the viewport so a failure is actionable.
+    const clipped = (element: HTMLElement): boolean => {
+      for (let node = element.parentElement; node && node !== body; node = node.parentElement) {
+        if (getComputedStyle(node).overflowX !== 'visible') return true;
+      }
+      return false;
+    };
+    const offenders = Array.from(body.querySelectorAll<HTMLElement>('*'))
+      .map((element) => ({ element, right: element.getBoundingClientRect().right + window.scrollX }))
+      .filter(({ element, right }) => right > viewportWidth + 1 && !clipped(element))
+      .sort((a, b) => b.right - a.right)
+      .slice(0, 5)
+      .map(({ element, right }) => {
+        const id = element.id ? `#${element.id}` : '';
+        const testId = element.getAttribute('data-testid');
+        const cls = (element.getAttribute('class') ?? '').split(/\s+/).slice(0, 6).join('.');
+        return `${element.tagName.toLowerCase()}${id}${testId ? `[data-testid=${testId}]` : ''}${cls ? `.${cls}` : ''} right=${Math.round(right)}`;
+      });
     return {
       viewportWidth,
       contentWidth,
       overflow: Math.max(0, contentWidth - viewportWidth),
+      offenders,
     };
   });
 
   expect(
     receipt.overflow,
-    `${surface} overflows the ${receipt.viewportWidth}px document viewport: ${receipt.contentWidth}px content width`,
+    `${surface} overflows the ${receipt.viewportWidth}px document viewport: ${receipt.contentWidth}px content width. Widest elements: ${receipt.offenders.join(' | ') || 'none found'}`,
   ).toBeLessThanOrEqual(1);
 }
 

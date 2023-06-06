@@ -79,6 +79,7 @@ vi.mock('./parcel-intel-explorer-map', () => ({
     inventoryLoadedCount,
     inventoryAvailableCount,
     onViewportRowsChange,
+    onSelect,
   }: {
     rows: ParcelIntelRow[];
     overlay: string;
@@ -86,6 +87,7 @@ vi.mock('./parcel-intel-explorer-map', () => ({
     inventoryLoadedCount: number;
     inventoryAvailableCount: number;
     onViewportRowsChange?: (bbls: string[]) => void;
+    onSelect: (bbl: string) => void;
   }) => (
     <div
       data-testid="citywide-map-stub"
@@ -102,6 +104,9 @@ vi.mock('./parcel-intel-explorer-map', () => ({
         }
       >
         Simulate map viewport
+      </button>
+      <button type="button" onClick={() => onSelect(rows[0].bbl)}>
+        Select first map parcel
       </button>
     </div>
   ),
@@ -333,7 +338,7 @@ describe('ParcelIntelExplorer', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByTestId('parcel-public-inventory-notice'),
-    ).toHaveTextContent('Signed out on this browser');
+    ).toHaveTextContent('Loading public preview…');
     expect(screen.getByTestId('parcel-mobile-access-status')).toHaveTextContent(
       'Preview access',
     );
@@ -343,7 +348,7 @@ describe('ParcelIntelExplorer', () => {
     await waitFor(() =>
       expect(
         screen.getByTestId('parcel-public-inventory-notice'),
-      ).toHaveTextContent('2 of 2 parcels'),
+      ).toHaveTextContent('Public preview · 2 of 2'),
     );
     expect(
       screen.queryByRole('option', { name: /Immediate-hazard violations/i }),
@@ -357,7 +362,7 @@ describe('ParcelIntelExplorer', () => {
     await waitFor(() => expect(screen.getByTestId('citywide-map-stub')).toHaveTextContent('2 mapped rows'));
     expect(screen.getByTestId('citywide-map-stub')).toHaveAttribute(
       'data-overlay',
-      'borough',
+      'priority',
     );
     expect(screen.getByTestId('citywide-map-stub')).toHaveAttribute(
       'data-inventory-scope',
@@ -378,7 +383,7 @@ describe('ParcelIntelExplorer', () => {
     render(<ParcelIntelExplorer boroughs={boroughs} />);
 
     const toggle = screen.getByRole('button', {
-      name: /Market filters.*Borough.*priority.*type/i,
+      name: /Market filters.*Borough.*priority/i,
     });
     const controls = document.getElementById('parcel-mobile-market-filters');
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -400,7 +405,7 @@ describe('ParcelIntelExplorer', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    expect(toggle).toHaveTextContent('Borough · priority · type');
+    expect(toggle).toHaveTextContent('Borough · priority');
   });
 
   it('keeps authenticated workspace tools compact on mobile', async () => {
@@ -493,7 +498,7 @@ describe('ParcelIntelExplorer', () => {
         'ready',
       ),
     );
-    expect(screen.getByText(/Coverage—not accuracy/i)).toBeInTheDocument();
+    expect(screen.getByText(/Coverage does not measure accuracy/i)).toBeInTheDocument();
     expect(mocks.getParcelLeadReviewIndex).toHaveBeenCalledOnce();
 
     fireEvent.click(screen.getByTestId('review-next-unreviewed'));
@@ -614,7 +619,7 @@ describe('ParcelIntelExplorer', () => {
     expect(
       screen.queryByRole('button', { name: /12 Assembly Avenue/i }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText(/2 parcels · 13k sf combined site/i)).toBeInTheDocument();
+    expect(screen.getByText(/2 lots, 12,500 sf combined site/i)).toBeInTheDocument();
     expect(screen.getByText(/50k sf buildable envelope/i)).toBeInTheDocument();
   });
 
@@ -1379,7 +1384,7 @@ describe('ParcelIntelExplorer', () => {
     render(<ParcelIntelExplorer boroughs={boroughs} />);
 
     const guide = await screen.findByTestId('activation-guide-empty');
-    expect(guide).toHaveTextContent('Open a lead—or watch this exact screen');
+    expect(guide).toHaveTextContent('Open a lead or watch this exact screen');
     expect(guide).toHaveTextContent(
       'see what enters or exits after the next feed',
     );
@@ -1749,7 +1754,7 @@ describe('ParcelIntelExplorer', () => {
     );
     expect(screen.queryByTestId('activation-guide-empty')).not.toBeInTheDocument();
     expect(
-      screen.queryByText('Open a lead—or watch this exact screen.'),
+      screen.queryByText('Open a lead or watch this exact screen.'),
     ).not.toBeInTheDocument();
   });
 
@@ -1792,12 +1797,15 @@ describe('ParcelIntelExplorer', () => {
     });
   });
 
-  it('moves focus into parcel evidence and restores the recreated ranking row', async () => {
+  it('preserves the ranking element, scroll position, and focus when returning from parcel evidence', async () => {
     render(<ParcelIntelExplorer boroughs={boroughs} />);
 
     const brooklynLead = await screen.findByRole('button', {
       name: /brooklyn test site/i,
     });
+    const ranking = document.getElementById('parcel-acquisition-ranking')!;
+    ranking.scrollTop = 180;
+    fireEvent.click(screen.getByRole('button', { name: 'Results' }));
     brooklynLead.focus();
     expect(brooklynLead).toHaveFocus();
     fireEvent.click(brooklynLead);
@@ -1806,6 +1814,10 @@ describe('ParcelIntelExplorer', () => {
       name: 'Back to ranking',
     });
     expect(back).toHaveFocus();
+    expect(document.getElementById('parcel-acquisition-ranking')).toBe(ranking);
+    expect(screen.getByRole('button', { name: /brooklyn test site/i })).toBe(brooklynLead);
+    expect(brooklynLead).toHaveAttribute('aria-pressed', 'true');
+    expect(ranking.scrollTop).toBe(180);
     fireEvent.click(back);
 
     await waitFor(() =>
@@ -1813,7 +1825,96 @@ describe('ParcelIntelExplorer', () => {
         screen.getByRole('button', { name: /brooklyn test site/i }),
       ).toHaveFocus(),
     );
+    expect(document.getElementById('parcel-acquisition-ranking')).toBe(ranking);
+    expect(screen.getByRole('button', { name: /brooklyn test site/i })).toBe(brooklynLead);
+    expect(brooklynLead).toHaveAttribute('aria-pressed', 'false');
+    expect(ranking.scrollTop).toBe(180);
+    expect(screen.getByRole('button', { name: 'Results' })).toHaveAttribute('aria-pressed', 'true');
   });
+
+  it('switches responsive workspace views without losing the selection and returns to its source on close', async () => {
+    render(<ParcelIntelExplorer boroughs={boroughs} />);
+    await screen.findByText('2 mapped rows');
+
+    const map = screen.getByRole('button', { name: 'Map' });
+    const results = screen.getByRole('button', { name: 'Results' });
+    const details = screen.getByRole('button', { name: 'Parcel details' });
+    const ranking = document.getElementById('parcel-acquisition-ranking');
+    const mapElement = screen.getByTestId('citywide-map-stub');
+    expect(map).toHaveAttribute('aria-pressed', 'true');
+    expect(results).toHaveAttribute('aria-pressed', 'false');
+    expect(details).toBeDisabled();
+
+    fireEvent.click(results);
+    expect(results).toHaveAttribute('aria-pressed', 'true');
+    expect(map).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(screen.getByRole('button', { name: /brooklyn test site/i }));
+    const panel = await screen.findByTestId('property-panel-stub');
+    expect(details).toBeEnabled();
+    expect(details).toHaveAttribute('aria-pressed', 'true');
+
+    for (const pane of [map, results, details]) {
+      fireEvent.click(pane);
+      expect(pane).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByTestId('property-panel-stub')).toBe(panel);
+      expect(panel).toHaveTextContent('brooklyn:3000010001');
+      expect(document.getElementById('parcel-acquisition-ranking')).toBe(ranking);
+      expect(screen.getByTestId('citywide-map-stub')).toBe(mapElement);
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Back to ranking' }));
+    expect(results).toHaveAttribute('aria-pressed', 'true');
+    expect(details).toBeDisabled();
+    expect(screen.queryByTestId('property-panel-stub')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: /brooklyn test site/i })).toHaveFocus());
+
+    fireEvent.click(map);
+    const marker = screen.getByRole('button', { name: 'Select first map parcel' });
+    marker.focus();
+    fireEvent.click(marker);
+    await screen.findByTestId('property-panel-stub');
+    expect(details).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Back to ranking' }));
+    expect(map).toHaveAttribute('aria-pressed', 'true');
+    expect(results).toHaveAttribute('aria-pressed', 'false');
+    expect(details).toBeDisabled();
+    await waitFor(() => expect(marker).toHaveFocus());
+
+    // Pointer-only Leaflet shapes do not receive focus. Closing must return
+    // to the visible map rather than a row inside the hidden results pane.
+    marker.blur();
+    fireEvent.click(marker);
+    await screen.findByTestId('property-panel-stub');
+    fireEvent.click(screen.getByRole('button', { name: 'Back to ranking' }));
+    await waitFor(() => expect(document.getElementById('parcel-map-pane')).toHaveFocus());
+  });
+
+  it.each(['ranking', 'map'] as const)(
+    'returns focus to the latest result after selecting another parcel from %s',
+    async (source) => {
+      render(<ParcelIntelExplorer boroughs={boroughs} />);
+      await screen.findByText('2 mapped rows');
+
+      const first = source === 'map'
+        ? screen.getByRole('button', { name: 'Select first map parcel' })
+        : screen.getByRole('button', { name: /manhattan test site/i });
+      first.focus();
+      fireEvent.click(first);
+      await screen.findByTestId('property-panel-stub');
+
+      const results = screen.getByRole('button', { name: 'Results' });
+      fireEvent.click(results);
+      const next = screen.getByRole('button', { name: /brooklyn test site/i });
+      next.focus();
+      fireEvent.click(next);
+      await waitFor(() =>
+        expect(screen.getByTestId('property-panel-stub')).toHaveTextContent('brooklyn:3000010001'),
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Back to ranking' }));
+
+      expect(results).toHaveAttribute('aria-pressed', 'true');
+      await waitFor(() => expect(next).toHaveFocus());
+    },
+  );
 
   it('records one coarse authenticated parcel open without parcel identifiers', async () => {
     mocks.authStatus = 'authenticated';

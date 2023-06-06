@@ -134,7 +134,7 @@ describe('NewRunWorkspace', () => {
       ),
     );
     const receipt = screen.getByTestId('parcel-run-prefill-receipt');
-    expect(receipt).toHaveTextContent('BBL 3050660023');
+    expect(receipt).toHaveTextContent('BBL 3-05066-0023');
     expect(receipt).toHaveTextContent('224 Clarkson Avenue');
     expect(window.location.search).toBe('');
   });

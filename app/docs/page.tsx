@@ -5,7 +5,6 @@ import {
   Boxes,
   CheckCircle2,
   ChevronDown,
-  Code2,
   Database,
   KeyRound,
   MapPinned,
@@ -59,27 +58,15 @@ export default function DocsPage() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 py-2 sm:py-6">
       <header
-        className="relative overflow-hidden rounded-[1.75rem] border border-slate-800 bg-slate-950 px-5 py-7 text-white shadow-[0_30px_90px_-52px_rgba(15,23,42,0.8)] sm:px-8 sm:py-10"
+        className="relative overflow-hidden border-t border-rule bg-white px-5 py-7 text-ink sm:px-8 sm:py-10"
         data-testid="developer-center-hero"
       >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-20 -top-28 h-80 w-80 rounded-full bg-sky-500/20 blur-3xl"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-emerald-400/10 blur-3xl"
-        />
         <div className="relative grid gap-7 lg:grid-cols-[minmax(0,1fr)_330px] lg:items-end">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-sky-200">
-              <Code2 className="h-3.5 w-3.5" />
-              Developer platform · v0.1
-            </div>
             <h1 className="mt-4 text-balance text-3xl font-semibold tracking-[-0.04em] sm:text-5xl">
-              Build acquisition workflows on a source-aware city model.
+              Build acquisition workflows with the CityLens API.
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base sm:leading-7">
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-ink-2 sm:text-base sm:leading-7">
               Screen the five-borough parcel market, explain exact tax lots,
               and request reproducible aerial-change evidence through one REST
               API. Receipts expose access scope, source lineage, and output
@@ -88,23 +75,23 @@ export default function DocsPage() {
             <div className="mt-6 flex flex-wrap gap-2">
               <a
                 href="#start"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-slate-950 transition hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                className="btn-primary gap-2"
               >
-                <Sparkles className="h-4 w-4 text-sky-700" />
+                <Sparkles className="h-4 w-4 text-ink" />
                 Run the quickstart
               </a>
               <Link
                 href="/account/api-keys"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.06] px-4 text-sm font-semibold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-sm border border-control bg-white px-4 text-sm font-semibold text-ink transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select focus-visible:ring-offset-2 focus-visible:ring-offset-white"
               >
-                <KeyRound className="h-4 w-4 text-sky-300" />
+                <KeyRound className="h-4 w-4 text-ink" />
                 API keys
               </Link>
               <a
                 href={`${API_BASE}/v1/health`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-sm px-3 text-sm font-semibold text-ink-2 transition hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select"
               >
                 Service status
                 <ArrowUpRight className="h-3.5 w-3.5" />
@@ -112,18 +99,18 @@ export default function DocsPage() {
             </div>
           </div>
 
-          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10">
+          <dl className="grid grid-cols-2 gap-px overflow-hidden border-t border-rule bg-white">
             {[
               ['5,000', 'published leads'],
               ['125', 'public preview'],
               ['5', 'NYC boroughs'],
               ['4', 'run artifacts'],
             ].map(([value, label]) => (
-              <div key={label} className="bg-slate-950/80 px-4 py-3.5">
-                <dt className="text-[10px] uppercase tracking-[0.12em] text-slate-400">
+              <div key={label} className="bg-white px-4 py-3.5">
+                <dt className="font-cond text-[13px] text-ink-3">
                   {label}
                 </dt>
-                <dd className="mt-1 text-xl font-semibold text-white">
+                <dd className="mt-1 tabular-nums text-xl font-semibold text-ink">
                   {value}
                 </dd>
               </div>
@@ -137,7 +124,6 @@ export default function DocsPage() {
       <div className="mx-auto min-w-0 max-w-4xl space-y-3">
           <DocSection
             id="start"
-            eyebrow="Public first request"
             title="Resolve a live demo, then inspect its receipt."
             summary="The demo registry can change when outputs are regenerated. Resolve the current run id at request time; do not copy one from a screenshot or an old response."
             defaultOpen
@@ -146,7 +132,7 @@ export default function DocsPage() {
               {QUICKSTART}
             </CodeBlock>
             <Callout tone="info" title="Stable browser delivery">
-              Demo artifact URLs are relative API proxy paths—not signed GCS
+              Demo artifact URLs are relative API proxy paths rather than signed GCS
               URLs. Join them to <code>{API_BASE}</code>, or call the documented
               proxy path directly as above.
             </Callout>
@@ -154,11 +140,10 @@ export default function DocsPage() {
 
           <DocSection
             id="authentication"
-            eyebrow="Access"
             title="Use public routes, a browser session, or a revocable API key."
             summary="The product UI manages its own short-lived JWT. External scripts should use a user API key and keep it out of browser bundles, source control, logs, and URLs."
           >
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="divide-y divide-rule">
               <AccessCard
                 icon={Database}
                 label="Public"
@@ -187,7 +172,6 @@ export default function DocsPage() {
 
           <DocSection
             id="parcel-intelligence"
-            eyebrow="Primary data product"
             title="Treat inventory scope as a response contract."
             summary="Public access returns a bounded 25-per-borough preview. Any valid user credential returns the complete published citywide inventory, currently 5,000 unique tax lots."
           >
@@ -215,9 +199,9 @@ export default function DocsPage() {
               In the signed-in dashboard, <strong>Build site evidence</strong>{' '}
               carries a numbered selected parcel into a new imagery run. The
               address is editable before submission and travels in a one-time,
-              tab-scoped session record—not in the URL or analytics.
+              tab-scoped session record rather than in the URL or analytics.
             </Callout>
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="divide-y divide-rule">
               <ContractRoute
                 method="GET"
                 path="/v1/parcel-intel/index"
@@ -255,7 +239,7 @@ export default function DocsPage() {
                 body="Current, source-specific PLUTO and ACRIS facts. This dossier does not alter rank."
               />
             </div>
-            <p className="text-xs leading-5 text-slate-500">
+            <p className="text-xs leading-5 text-ink-3">
               Workflow, evidence-review, saved-view, and product-event routes
               remain pilot application contracts. Contact CityLens before
               building an external integration against them.
@@ -264,7 +248,6 @@ export default function DocsPage() {
 
           <DocSection
             id="imagery-runs"
-            eyebrow="Aerial evidence"
             title="Create a run, poll its state, then fetch named artifacts."
             summary="Run options are intentionally locked. Discover the accepted values first, submit only public fields, and read QA or timing from run_summary.json."
           >
@@ -340,7 +323,7 @@ export default function DocsPage() {
                 </>
               }
             />
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="divide-y divide-rule">
               <ContractRoute
                 method="GET"
                 path="/v1/runs?limit&cursor"
@@ -376,23 +359,22 @@ export default function DocsPage() {
 
           <DocSection
             id="errors"
-            eyebrow="Failure handling"
             title="Branch on status and structured product codes."
             summary="Policy and quota failures expose detail.code. Generic authentication, ownership, and infrastructure errors may use a plain detail message. Failed asynchronous runs carry a structured error object on the run."
           >
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
-              <table className="min-w-[640px] divide-y divide-slate-200 text-sm">
+            <div className="overflow-x-auto border-t border-rule">
+              <table className="min-w-[640px] divide-y divide-rule text-sm">
                 <caption className="sr-only">
                   CityLens API response codes and recommended client behavior
                 </caption>
-                <thead className="bg-slate-50 text-left text-[10px] uppercase tracking-[0.12em] text-slate-500">
+                <thead className="font-cond bg-paper-2 text-left text-[13px] text-ink-3">
                   <tr>
                     <th className="px-4 py-3">HTTP / state</th>
                     <th className="px-4 py-3">Stable code</th>
                     <th className="px-4 py-3">Client action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 bg-white">
+                <tbody className="divide-y divide-rule bg-white">
                   <ErrRow
                     state="400"
                     code="INVALID_RUN_OPTION"
@@ -430,11 +412,10 @@ export default function DocsPage() {
 
           <DocSection
             id="evidence"
-            eyebrow="Interpretation"
             title="Keep provenance, model quality, and commercial outcomes separate."
             summary="CityLens exposes evidence needed to audit a response. Those receipts narrow uncertainty; they do not turn a screening product into a title report, zoning opinion, appraisal, or prediction of seller behavior."
           >
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="divide-y divide-rule">
               <EvidenceCard
                 icon={Database}
                 title="Source receipt"
@@ -443,7 +424,7 @@ export default function DocsPage() {
               <EvidenceCard
                 icon={Boxes}
                 title="Pipeline QA"
-                body="Mask overlap, mesh coverage, change counts, and stage timings describe technical output—not acquisition accuracy."
+                body="Mask overlap, mesh coverage, change counts, and stage timings describe technical output, not acquisition accuracy."
               />
               <EvidenceCard
                 icon={MapPinned}
@@ -459,19 +440,19 @@ export default function DocsPage() {
             </Callout>
           </DocSection>
 
-          <section className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <section className="flex flex-col gap-3 border-t border-rule bg-paper-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-slate-950">
+              <h2 className="text-sm font-semibold text-ink">
                 Planning an integration?
               </h2>
-              <p className="mt-1 text-xs leading-5 text-slate-600">
+              <p className="mt-1 text-xs leading-5 text-ink-2">
                 Bring the intended workflow, request volume, and evidence
-                requirements—not just an endpoint list.
+                requirements, including endpoint behavior.
               </p>
             </div>
             <Link
               href="/contact"
-              className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:w-auto"
+              className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-sm bg-ink px-4 text-sm font-semibold text-white transition hover:bg-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select focus-visible:ring-offset-2 sm:w-auto"
             >
               Discuss an integration
               <ArrowUpRight className="h-3.5 w-3.5" />
@@ -484,14 +465,12 @@ export default function DocsPage() {
 
 function DocSection({
   id,
-  eyebrow,
   title,
   summary,
   children,
   defaultOpen = false,
 }: {
   id: string;
-  eyebrow: string;
   title: string;
   summary: string;
   children: ReactNode;
@@ -501,34 +480,31 @@ function DocSection({
     <details
       id={id}
       open={defaultOpen}
-      className="group scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_50px_-44px_rgba(15,23,42,0.5)]"
+      className="group scroll-mt-24 overflow-hidden border-t border-rule bg-white"
       data-testid={`docs-section-${id}`}
     >
       <summary
-        className="flex cursor-pointer list-none items-start justify-between gap-4 px-5 py-5 marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500 sm:px-6"
+        className="flex cursor-pointer list-none items-start justify-between gap-4 px-5 py-5 marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-select sm:px-6"
         data-testid={`docs-section-${id}-toggle`}
       >
         <span className="min-w-0">
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700">
-            {eyebrow}
-          </span>
-          <h2 className="mt-1.5 text-xl font-semibold tracking-[-0.025em] text-slate-950 sm:text-2xl">
+          <h2 className="mt-1.5 text-xl font-semibold tracking-[-0.025em] text-ink sm:text-2xl">
             {title}
           </h2>
-          <span className="mt-2 block max-w-3xl text-sm leading-6 text-slate-600">
+          <span className="mt-2 block max-w-3xl text-sm leading-6 text-ink-2">
             {summary}
           </span>
         </span>
-        <span className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition group-hover:border-slate-300 group-hover:bg-white">
+        <span className="mt-1 text-ink-2">
           <span className="sr-only">Toggle {title}</span>
           <ChevronDown
             aria-hidden="true"
-            className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
+            className="h-4 w-4 duration-200 group-open:rotate-180"
           />
         </span>
       </summary>
       <div
-        className="space-y-4 border-t border-slate-200 px-5 pb-5 pt-5 sm:px-6 sm:pb-6"
+        className="space-y-4 border-t border-rule px-5 pb-5 pt-5 sm:px-6 sm:pb-6"
         data-testid={`docs-section-${id}-content`}
       >
         {children}
@@ -549,17 +525,10 @@ function AccessCard({
   body: string;
 }) {
   return (
-    <article className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-sky-800 shadow-sm ring-1 ring-slate-200">
-          <Icon className="h-4 w-4" />
-        </div>
-        <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 ring-1 ring-slate-200">
-          {label}
-        </span>
-      </div>
-      <h3 className="mt-3 text-sm font-semibold text-slate-950">{title}</h3>
-      <p className="mt-1 text-xs leading-5 text-slate-600">{body}</p>
+    <article className="border-t border-rule bg-white p-4">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><Icon className="h-4 w-4" />{title}</h3>
+      <p className="mt-1 text-xs text-ink-3">{label}</p>
+      <p className="mt-1 text-xs leading-5 text-ink-2">{body}</p>
     </article>
   );
 }
@@ -576,25 +545,25 @@ function ContractRoute({
   body: string;
 }) {
   return (
-    <article className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+    <article className="min-w-0 border-t border-rule bg-white p-4">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <span
-          className={`rounded-md px-2 py-1 font-mono text-[10px] font-semibold ${
+          className={`rounded-sm px-2 py-1 font-mono text-[10px] font-semibold ${
             method === 'GET'
-              ? 'bg-sky-100 text-sky-800'
-              : 'bg-emerald-100 text-emerald-800'
+              ? 'bg-paper-2 text-ink'
+              : 'bg-paper-2 text-ink'
           }`}
         >
           {method}
         </span>
-        <code className="min-w-0 break-all text-xs font-semibold text-slate-900">
+        <code className="min-w-0 break-all text-xs font-semibold text-ink">
           {path}
         </code>
-        <span className="ml-auto rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-slate-500 ring-1 ring-slate-200">
+        <span className="ml-auto text-[10px] font-semibold text-ink-3">
           {access}
         </span>
       </div>
-      <p className="mt-3 text-xs leading-5 text-slate-600">{body}</p>
+      <p className="mt-3 text-xs leading-5 text-ink-2">{body}</p>
     </article>
   );
 }
@@ -611,10 +580,10 @@ function Callout({
   const warning = tone === 'warning';
   return (
     <div
-      className={`rounded-xl border px-4 py-3 ${
+      className={`rounded-sm border px-4 py-3 ${
         warning
-          ? 'border-amber-200 bg-amber-50 text-amber-950'
-          : 'border-sky-200 bg-sky-50 text-sky-950'
+          ? 'border-rule bg-white text-stale'
+          : 'border-rule bg-paper-2 text-ink'
       }`}
     >
       <div className="flex items-center gap-2 text-xs font-semibold">
@@ -625,7 +594,7 @@ function Callout({
         )}
         {title}
       </div>
-      <div className="mt-1.5 text-xs leading-5 opacity-90">{children}</div>
+      <div className="mt-1.5 text-xs leading-5">{children}</div>
     </div>
   );
 }
@@ -640,10 +609,10 @@ function EvidenceCard({
   body: string;
 }) {
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <Icon className="h-5 w-5 text-sky-700" />
-      <h3 className="mt-3 text-sm font-semibold text-slate-950">{title}</h3>
-      <p className="mt-1 text-xs leading-5 text-slate-600">{body}</p>
+    <article className="border-t border-rule bg-white p-4">
+      <Icon className="h-5 w-5 text-ink" />
+      <h3 className="mt-3 text-sm font-semibold text-ink">{title}</h3>
+      <p className="mt-1 text-xs leading-5 text-ink-2">{body}</p>
     </article>
   );
 }
@@ -659,9 +628,9 @@ function ErrRow({
 }) {
   return (
     <tr>
-      <td className="px-4 py-3 font-mono text-xs text-slate-900">{state}</td>
-      <td className="px-4 py-3 font-mono text-xs text-slate-700">{code}</td>
-      <td className="px-4 py-3 text-xs leading-5 text-slate-600">{action}</td>
+      <td className="px-4 py-3 font-mono text-xs text-ink">{state}</td>
+      <td className="px-4 py-3 font-mono text-xs text-ink-2">{code}</td>
+      <td className="px-4 py-3 text-xs leading-5 text-ink-2">{action}</td>
     </tr>
   );
 }

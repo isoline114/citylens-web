@@ -23,12 +23,11 @@ export default function SignOutPage() {
 
   return (
     <AuthPageShell
-      eyebrow="Account"
       title="Signing out…"
       description="Closing this CityLens session and returning you home."
     >
-      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-        <div className="h-full w-2/3 animate-pulse rounded-full bg-sky-500" />
+      <div className="h-2 overflow-hidden border-t border-rule">
+        <div className="h-full w-2/3 animate-pulse rounded-sm bg-white" />
       </div>
     </AuthPageShell>
   );

@@ -42,12 +42,11 @@ export default function SignInPage() {
   if (auth.status === 'authenticated') {
     return (
       <AuthPageShell
-        eyebrow="Account ready"
         title="You’re signed in."
         description={
           <>
             Continue as{' '}
-            <span className="font-medium text-slate-900">
+            <span className="font-medium text-ink">
               {auth.user.email ?? auth.user.id}
             </span>
             .
@@ -67,7 +66,6 @@ export default function SignInPage() {
 
   return (
     <AuthPageShell
-      eyebrow="Welcome back"
       title="Sign in"
       description="Open your parcel workspace, saved pursuits, and processing history."
       footer={
@@ -155,7 +153,7 @@ export default function SignInPage() {
         }}
       >
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-800">Email</span>
+          <span className="text-sm font-medium text-ink">Email</span>
           <input
             className={authInputClass}
             type="email"
@@ -169,7 +167,7 @@ export default function SignInPage() {
 
         {IS_NEON && (
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-slate-800">Password</span>
+            <span className="text-sm font-medium text-ink">Password</span>
             <input
               className={authInputClass}
               type="password"
@@ -198,9 +196,9 @@ export default function SignInPage() {
       </form>
 
       {!IS_NEON && (
-        <p className="mt-4 text-xs leading-5 text-slate-500">
+        <p className="mt-4 text-xs leading-5 text-ink-3">
           Local dev uses a mock auth provider. Set{' '}
-          <code className="rounded bg-slate-100 px-1 font-mono text-slate-700">
+          <code className="rounded-sm bg-paper-2 px-1 font-mono text-ink-2">
             NEXT_PUBLIC_AUTH_PROVIDER=neon
           </code>{' '}
           to use the configured production provider.

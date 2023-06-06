@@ -447,7 +447,7 @@ describe('LandBasisCalculator', () => {
     expect(
       screen.getByTestId('underwriting-assumption-editor'),
     ).toHaveTextContent(
-      'Defaults are illustrative—not current comps or bids',
+      'Defaults are illustrative, not current comps or bids',
     );
     expect(screen.getByTestId('land-basis-scenario-upside')).toHaveTextContent(
       'Value +10%',

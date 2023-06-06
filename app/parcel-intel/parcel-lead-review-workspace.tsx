@@ -1,5 +1,7 @@
 'use client';
 
+import { formatAddress, formatBbl } from '@/lib/parcel-format';
+
 import {
   CheckCircle2,
   CircleSlash2,
@@ -41,10 +43,10 @@ const FILTERS: Array<{
 ];
 
 const VERDICT_STYLES: Record<ParcelLeadReviewVerdict, string> = {
-  pursue: 'bg-emerald-100 text-emerald-900',
-  watch: 'bg-sky-100 text-sky-900',
-  pass: 'bg-rose-100 text-rose-900',
-  unclear: 'bg-amber-100 text-amber-950',
+  pursue: 'text-ink',
+  watch: 'text-ink',
+  pass: 'text-ink',
+  unclear: 'text-ink-3',
 };
 
 function rankValue(row: ParcelIntelMapRow): number {
@@ -138,7 +140,7 @@ export function ParcelLeadReviewWorkspace({
   return (
     <section
       id="parcel-lead-review-workspace"
-      className="border-b border-slate-200 bg-slate-950 text-white"
+      className="border-b border-rule bg-white text-ink"
       aria-label="Lead review workspace"
       data-testid="lead-review-workspace"
       data-state={loading ? 'loading' : error || !data ? 'error' : 'ready'}
@@ -146,14 +148,10 @@ export function ParcelLeadReviewWorkspace({
       <div className="px-4 py-5 md:px-7">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-300">
-              <Target className="h-4 w-4" />
-              Lead review workspace
-            </div>
             <h3 className="mt-1 text-xl font-semibold">
-              Work the list, not just the clicks.
+              Review leads in the current generation.
             </h3>
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-300">
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-ink-2">
               Review the current ranked generation systematically. Your calls
               stay private and never rewrite rank.
             </p>
@@ -163,26 +161,26 @@ export function ParcelLeadReviewWorkspace({
             autoFocus
             onClick={onClose}
             aria-label="Close lead review workspace"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-slate-200 hover:bg-white/15 hover:text-white"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-sm border border-control bg-white text-ink-2 hover:bg-white hover:text-ink"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {loading ? (
-          <div className="mt-4 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+          <div className="mt-4 flex items-center gap-2 border-t border-rule bg-white p-4 text-sm text-ink-2">
             <LoaderCircle className="h-4 w-4 animate-spin" />
             Loading current-generation coverage…
           </div>
         ) : error || !data ? (
-          <div className="mt-4 flex flex-col gap-3 rounded-xl border border-rose-300/20 bg-rose-300/10 p-4 text-sm text-rose-100 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-4 flex flex-col gap-3 border-t border-rule bg-white p-4 text-sm text-red-700 sm:flex-row sm:items-center sm:justify-between">
             <span>
               Review coverage could not be reconciled to the current inventory.
             </span>
             <button
               type="button"
               onClick={() => setReloadKey((value) => value + 1)}
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-rose-200/30 bg-white/10 px-3 text-xs font-semibold hover:bg-white/15"
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-sm border border-control bg-white px-3 text-xs font-semibold hover:bg-white"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Retry
@@ -191,20 +189,20 @@ export function ParcelLeadReviewWorkspace({
         ) : (
           <>
             <div className="mt-4 grid gap-3 lg:grid-cols-[1.15fr_1fr]">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="border-t border-rule bg-white p-4">
                 <div className="flex items-end justify-between gap-4">
                   <div>
-                    <div className="text-[11px] uppercase tracking-wide text-slate-400">
+                    <div className="font-cond text-[13px] text-ink-3">
                       Current generation
                     </div>
                     <div className="mt-1 text-3xl font-semibold tracking-tight">
                       {data.reviewed_count.toLocaleString()}
-                      <span className="text-base font-medium text-slate-400">
+                      <span className="text-base font-medium text-ink-3">
                         {' '}
                         / {data.available_count.toLocaleString()}
                       </span>
                     </div>
-                    <div className="mt-1 text-xs text-slate-400">
+                    <div className="mt-1 text-xs text-ink-3">
                       {Math.round(coverage * 100)}% reviewed ·{' '}
                       {data.unreviewed_count.toLocaleString()} remaining
                     </div>
@@ -216,13 +214,13 @@ export function ParcelLeadReviewWorkspace({
                       if (nextUnreviewed) onSelectParcel(nextUnreviewed.bbl);
                     }}
                     data-testid="review-next-unreviewed"
-                    className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-emerald-300 px-4 text-xs font-semibold text-slate-950 hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex h-10 shrink-0 items-center justify-center rounded-sm bg-paper-2 px-4 text-xs font-semibold text-ink hover:bg-paper-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {nextUnreviewed ? 'Review next' : 'Generation reviewed'}
                   </button>
                 </div>
                 <div
-                  className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"
+                  className="mt-4 h-2 overflow-hidden bg-paper-2"
                   role="progressbar"
                   aria-label="Lead review coverage"
                   aria-valuemin={0}
@@ -230,12 +228,12 @@ export function ParcelLeadReviewWorkspace({
                   aria-valuenow={data.reviewed_count}
                 >
                   <div
-                    className="h-full rounded-full bg-emerald-300 transition-[width]"
+                    className="h-full bg-ink transition-[width]"
                     style={{ width: `${coverage * 100}%` }}
                   />
                 </div>
-                <p className="mt-3 text-[11px] leading-4 text-slate-400">
-                  Coverage—not accuracy. Independent blinded review and
+                <p className="mt-3 text-[11px] leading-4 text-ink-3">
+                  Coverage does not measure accuracy. Independent blinded review and
                   prospective outcomes remain separate evidence gates.
                 </p>
               </div>
@@ -251,31 +249,31 @@ export function ParcelLeadReviewWorkspace({
                         current === value ? 'all' : value,
                       )
                     }
-                    className={`rounded-xl border p-3 text-left transition-colors ${
+                    className={`border-b border-control py-3 text-left transition-colors ${
                       filter === value
-                        ? 'border-emerald-300/60 bg-emerald-300/10'
-                        : 'border-white/10 bg-white/5 hover:bg-white/10'
+                        ? 'border-ink bg-paper-2'
+                        : 'border-control hover:bg-paper-2'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <Icon className="h-4 w-4 text-slate-300" />
+                      <Icon className="h-4 w-4 text-ink-2" />
                       <span className="text-lg font-semibold">
                         {value === 'all'
                           ? data.reviewed_count.toLocaleString()
                           : data.verdict_counts[value].toLocaleString()}
                       </span>
                     </div>
-                    <div className="mt-1 text-xs text-slate-400">{label}</div>
+                    <div className="mt-1 text-xs text-ink-3">{label}</div>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-white">
-              <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 text-slate-950">
+            <div className="mt-4 overflow-hidden border-t border-rule bg-white">
+              <div className="flex items-center justify-between gap-3 border-b border-rule px-4 py-3 text-ink">
                 <div>
                   <div className="text-xs font-semibold">Reviewed leads</div>
-                  <div className="mt-0.5 text-[11px] text-slate-500">
+                  <div className="mt-0.5 text-[11px] text-ink-3">
                     {visibleReviews.length.toLocaleString()}{' '}
                     {filter === 'all' ? 'current calls' : filter}
                   </div>
@@ -284,19 +282,19 @@ export function ParcelLeadReviewWorkspace({
                   <button
                     type="button"
                     onClick={() => setFilter('all')}
-                    className="text-xs font-semibold text-sky-700 hover:text-sky-900"
+                    className="text-xs font-semibold text-ink hover:text-select"
                   >
                     Show all
                   </button>
                 )}
               </div>
               {visibleReviews.length === 0 ? (
-                <div className="px-4 py-6 text-center text-sm text-slate-500">
+                <div className="px-4 py-6 text-center text-sm text-ink-3">
                   No {filter === 'all' ? '' : `${filter} `}calls in this
                   generation yet.
                 </div>
               ) : (
-                <div className="max-h-64 divide-y divide-slate-100 overflow-y-auto">
+                <div className="max-h-64 divide-y divide-rule overflow-y-auto">
                   {visibleReviews.slice(0, visibleLimit).map((review) => {
                     const row = inventoryByBbl.get(review.bbl);
                     return (
@@ -304,20 +302,20 @@ export function ParcelLeadReviewWorkspace({
                         key={review.review_id}
                         type="button"
                         onClick={() => onSelectParcel(review.bbl)}
-                        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-slate-950 hover:bg-slate-50"
+                        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-ink hover:bg-paper-2"
                       >
                         <span className="min-w-0">
                           <span className="block truncate text-xs font-semibold">
-                            {row?.address ?? `BBL ${review.bbl}`}
+                            {formatAddress(row?.address) || `BBL ${formatBbl(review.bbl)}`}
                           </span>
-                          <span className="mt-0.5 block text-[11px] text-slate-500">
+                          <span className="mt-0.5 block text-[11px] text-ink-3">
                             {review.citywide_rank
                               ? `NYC #${review.citywide_rank.toLocaleString()}`
                               : 'Rank unavailable'}
                           </span>
                         </span>
                         <span
-                          className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold capitalize ${VERDICT_STYLES[review.verdict]}`}
+                          className={`shrink-0 text-xs font-medium capitalize ${VERDICT_STYLES[review.verdict]}`}
                         >
                           {review.verdict}
                         </span>
@@ -325,13 +323,13 @@ export function ParcelLeadReviewWorkspace({
                     );
                   })}
                   {visibleReviews.length > visibleLimit && (
-                    <div className="bg-slate-50 px-4 py-3 text-center">
+                    <div className="bg-paper-2 px-4 py-3 text-center">
                       <button
                         type="button"
                         onClick={() =>
                           setVisibleLimit((current) => current + 50)
                         }
-                        className="text-xs font-semibold text-sky-700 hover:text-sky-900"
+                        className="text-xs font-semibold text-ink hover:text-select"
                       >
                         Show 50 more
                       </button>

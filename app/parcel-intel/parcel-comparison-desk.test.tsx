@@ -99,12 +99,12 @@ describe('ParcelComparisonDesk', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Copy evidence brief' }),
     );
-    await waitFor(() => expect(mocks.writeText).toHaveBeenCalledOnce());
+    expect(await screen.findByRole('button', { name: 'Brief copied' })).toBeVisible();
+    expect(mocks.writeText).toHaveBeenCalledOnce();
     expect(mocks.writeText.mock.calls[0][0]).toContain(
       '# CityLens parcel evidence comparison',
     );
     expect(mocks.writeText.mock.calls[0][0]).toContain('100 E 21 STREET');
-    expect(screen.getByRole('button', { name: 'Brief copied' })).toBeVisible();
   });
 
   it('keeps copy failure visible without breaking comparison', async () => {

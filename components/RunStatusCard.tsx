@@ -53,7 +53,7 @@ function ElapsedSince({ createdAt }: { createdAt: string }) {
   }, [createdMs]);
   if (!Number.isFinite(createdMs)) return null;
   return (
-    <span className="text-xs tabular-nums text-slate-500">
+    <span className="text-xs tabular-nums text-ink-3">
       {formatElapsed(elapsedMs)} elapsed
     </span>
   );
@@ -96,11 +96,11 @@ function technicalRunError(error: RunResponse['error']): string | null {
 
 function statusStyle(status: string) {
   const s = presentRunState(status).state;
-  if (s === 'succeeded') return { cls: 'bg-emerald-50 text-emerald-800 border-emerald-200', icon: CheckCircle2 };
-  if (s === 'failed') return { cls: 'bg-rose-50 text-rose-800 border-rose-200', icon: XCircle };
-  if (s === 'running') return { cls: 'bg-blue-50 text-blue-800 border-blue-200', icon: Loader2 };
-  if (s === 'queued') return { cls: 'bg-slate-50 text-slate-800 border-slate-200', icon: Clock };
-  return { cls: 'bg-slate-50 text-slate-800 border-slate-200', icon: AlertTriangle };
+  if (s === 'succeeded') return { cls: 'text-ink-2', icon: CheckCircle2 };
+  if (s === 'failed') return { cls: 'text-red-700', icon: XCircle };
+  if (s === 'running') return { cls: 'text-ink-2', icon: Loader2 };
+  if (s === 'queued') return { cls: 'text-ink-2', icon: Clock };
+  return { cls: 'text-ink-2', icon: AlertTriangle };
 }
 
 export function RunStatusCard({
@@ -158,17 +158,17 @@ export function RunStatusCard({
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" data-testid="run-status-card">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50/80 px-5 py-4">
+    <section className="overflow-hidden border-t border-rule bg-white" data-testid="run-status-card">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule bg-white px-5 py-4">
         <div>
-          <div className="text-sm font-semibold text-slate-950">Processing receipt</div>
-          <div className="mt-0.5 text-xs text-slate-500">
+          <div className="text-sm font-semibold text-ink">Processing receipt</div>
+          <div className="mt-0.5 text-xs text-ink-3">
             Current state, timing, and support reference
           </div>
         </div>
         <div className="flex items-center gap-2">
           {isActive && createdAt && <ElapsedSince createdAt={createdAt} />}
-          <div className={cn('inline-flex h-8 items-center gap-2 rounded-full border px-3 text-xs font-semibold', cls)}>
+          <div className={cn('inline-flex items-center gap-2 text-xs font-medium', cls)}>
             <Icon className={cn('h-4 w-4', status.toLowerCase() === 'running' ? 'animate-spin' : '')} />
             <span>{loading ? 'Checking' : presentation.label}</span>
           </div>
@@ -176,52 +176,52 @@ export function RunStatusCard({
       </div>
 
       <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Run ID</div>
+        <div className="border-t border-rule bg-paper-2 px-3 py-3">
+          <div className="font-cond text-[13px] font-semibold text-ink-3">Run ID</div>
           <div className="mt-1.5 flex items-center justify-between gap-2">
-            <span className="truncate font-mono text-sm font-medium text-slate-900" title={runId}>
+            <span className="truncate font-mono text-sm font-medium text-ink" title={runId}>
               {shortRunId(runId)}
             </span>
             <button
               type="button"
               onClick={() => void copyRunId()}
               aria-label={copied ? 'Run ID copied' : 'Copy run ID'}
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-slate-950"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border border-control bg-white text-ink-2 hover:text-ink"
             >
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Current stage</div>
-          <div className="mt-2 text-sm font-medium text-slate-900">{stage}</div>
+        <div className="border-t border-rule bg-paper-2 px-3 py-3">
+          <div className="font-cond text-[13px] font-semibold text-ink-3">Current stage</div>
+          <div className="mt-2 text-sm font-medium text-ink">{stage}</div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Created</div>
-          <time className="mt-2 block text-sm font-medium text-slate-900" dateTime={createdAt}>
+        <div className="border-t border-rule bg-paper-2 px-3 py-3">
+          <div className="font-cond text-[13px] font-semibold text-ink-3">Created</div>
+          <time className="mt-2 block font-mono text-xs text-ink-2" dateTime={createdAt}>
             {formatRunDateTime(createdAt)}
           </time>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Last activity</div>
-          <time className="mt-2 block text-sm font-medium text-slate-900" dateTime={updatedAt}>
+        <div className="border-t border-rule bg-paper-2 px-3 py-3">
+          <div className="font-cond text-[13px] font-semibold text-ink-3">Last activity</div>
+          <time className="mt-2 block font-mono text-xs text-ink-2" dateTime={updatedAt}>
             {formatRunDateTime(updatedAt)}
           </time>
         </div>
       </div>
 
       {isActive && (
-        <div className="border-t border-slate-200 px-5 py-4">
+        <div className="border-t border-rule px-5 py-4">
           <div className="mb-2 flex items-center justify-between gap-3">
-            <span className="text-xs font-semibold text-slate-700">
+            <span className="text-xs font-semibold text-ink-2">
               {presentation.summary}
             </span>
-            <span className="text-xs tabular-nums text-slate-500">
+            <span className="text-xs tabular-nums text-ink-3">
               {progress === undefined ? 'Awaiting progress' : `${Math.round(progress)}%`}
             </span>
           </div>
           <div
-            className="h-2 w-full overflow-hidden rounded-full bg-slate-100"
+            className="h-2 w-full overflow-hidden border-t border-rule"
             role="progressbar"
             aria-label="Run progress"
             aria-valuemin={0}
@@ -230,12 +230,12 @@ export function RunStatusCard({
           >
             <div
               className={cn(
-                'h-full rounded-full transition-[width]',
+                'h-full rounded-sm transition-[width]',
                 presentation.state === 'succeeded'
-                  ? 'bg-emerald-500'
+                  ? 'bg-ink'
                   : presentation.state === 'failed'
-                    ? 'bg-rose-500'
-                    : 'bg-sky-600',
+                    ? 'bg-ink'
+                    : 'bg-ink',
               )}
               style={{ width: `${Math.round(progress ?? 0)}%` }}
             />
@@ -244,17 +244,17 @@ export function RunStatusCard({
       )}
 
       {String(run?.status ?? '').toLowerCase() === 'failed' && (
-        <div className="border-t border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-900">
+        <div className="border-t border-rule bg-white px-5 py-4 text-sm text-red-700">
           <div className="font-semibold">Processing stopped</div>
           <div className="mt-1 whitespace-pre-wrap leading-6">
             {formatRunError(run?.error) ?? 'No error message provided by API.'}
           </div>
           {technicalError && (
-            <details className="mt-3 rounded-lg border border-rose-200 bg-white/70 px-3 py-2 text-xs">
+            <details className="mt-3 border-t border-rule bg-white px-3 py-2 text-xs">
               <summary className="cursor-pointer font-semibold">
                 Technical details
               </summary>
-              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap font-mono text-rose-950">
+              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap font-mono text-red-700">
                 {technicalError}
               </pre>
             </details>
@@ -263,7 +263,7 @@ export function RunStatusCard({
       )}
 
       {apiErr?.status === 401 && (
-        <div className="border-t border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="border-t border-rule bg-white px-4 py-3 text-sm text-stale">
           <div className="font-medium">Sign in required</div>
           <div className="mt-1">
             Your session expired or you&apos;re not signed in.{' '}
@@ -273,21 +273,21 @@ export function RunStatusCard({
       )}
 
       {apiErr?.status === 429 && (
-        <div className="border-t border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="border-t border-rule bg-white px-4 py-3 text-sm text-stale">
           <div className="font-medium">Quota exceeded (429)</div>
           <div className="mt-1">Please wait and refresh.</div>
         </div>
       )}
 
       {apiErr && apiErr.status !== 401 && apiErr.status !== 429 && (
-        <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
+        <div className="border-t border-rule px-4 py-3 text-sm text-red-700">
           <div className="font-medium">Could not load this run</div>
           <div className="mt-1 whitespace-pre-wrap">{errorMessage}</div>
           {onRetry && (
             <button
               type="button"
               onClick={onRetry}
-              className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold hover:bg-slate-100"
+              className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-sm border border-control bg-white px-3 text-xs font-semibold hover:bg-paper-2"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Try again
@@ -297,14 +297,14 @@ export function RunStatusCard({
       )}
 
       {Boolean(error) && !apiErr && (
-        <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
+        <div className="border-t border-rule px-4 py-3 text-sm text-red-700">
           <div className="font-medium">Could not load this run</div>
           <div className="mt-1 whitespace-pre-wrap">{errorMessage}</div>
           {onRetry && (
             <button
               type="button"
               onClick={onRetry}
-              className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold hover:bg-slate-100"
+              className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-sm border border-control bg-white px-3 text-xs font-semibold hover:bg-paper-2"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Try again

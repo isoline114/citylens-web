@@ -1,9 +1,9 @@
 'use client';
 
+import { formatAddress, formatBbl } from '@/lib/parcel-format';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ArrowUpRight,
-  BadgeDollarSign,
   CircleAlert,
   LoaderCircle,
   MapPin,
@@ -73,14 +73,14 @@ function SummaryMetric({
   detail: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+    <div className="border-b border-rule px-3 py-2.5 text-right tabular-nums">
+      <p className="font-cond text-xs font-semibold text-ink-3">
         {label}
       </p>
-      <p className="mt-1 text-base font-semibold tracking-tight text-slate-950">
+      <p className="mt-1 text-base font-semibold tracking-tight text-ink">
         {value}
       </p>
-      <p className="mt-0.5 text-[10px] text-slate-500">{detail}</p>
+      <p className="mt-0.5 text-xs text-ink-3">{detail}</p>
     </div>
   );
 }
@@ -120,29 +120,26 @@ export function ParcelSalesComparablesPanel({
     <section
       data-testid="parcel-sales-comparables"
       data-state={state.status}
-      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+      className="overflow-hidden border-b border-rule bg-white "
     >
       <div
         className={
           compact
-            ? 'flex flex-col gap-3 border-b border-slate-200 bg-slate-950 px-4 py-4 text-white'
-            : 'flex flex-col gap-3 border-b border-slate-200 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.18),transparent_40%),linear-gradient(110deg,#07101f,#10293e)] px-4 py-4 text-white sm:flex-row sm:items-center sm:justify-between'
+            ? 'flex flex-col gap-3 border-b border-rule bg-white px-4 py-4 text-ink'
+            : 'flex flex-col gap-3 border-b border-rule bg-white px-4 py-4 text-ink sm:flex-row sm:items-center sm:justify-between'
         }
       >
         <div className="flex items-start gap-3">
-          <span className="rounded-xl border border-white/10 bg-white/10 p-2 text-emerald-200">
-            <BadgeDollarSign className="h-4 w-4" />
-          </span>
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h4 className="text-sm font-semibold">Official sale context</h4>
-              <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-emerald-200">
+              <span className="px-2 py-0.5 text-xs font-semibold text-ink">
                 NYC DOF
               </span>
             </div>
-            <p className="mt-1 max-w-xl text-[11px] leading-5 text-slate-300">
+            <p className="mt-1 max-w-xl text-xs leading-5 text-ink-3">
               Recent tax-lot transactions selected by class, scale, proximity,
-              and recency. Comparable screen only—not a valuation.
+              and recency. Comparable screen only; not a valuation.
             </p>
           </div>
         </div>
@@ -152,7 +149,7 @@ export function ParcelSalesComparablesPanel({
             type="button"
             onClick={load}
             data-testid="parcel-sales-comparables-load"
-            className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-3 text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-sm border border-control bg-white px-3 text-xs font-semibold text-ink transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select"
           >
             {state.status === 'error' ? (
               <RefreshCw className="h-3.5 w-3.5" />
@@ -166,17 +163,17 @@ export function ParcelSalesComparablesPanel({
         {state.status === 'loading' && (
           <div
             data-testid="parcel-sales-comparables-loading"
-            className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 text-xs font-semibold text-slate-100"
+            className="inline-flex h-9 shrink-0 items-center gap-2 border-b border-rule bg-white px-3 text-xs font-semibold text-ink-3"
           >
-            <LoaderCircle className="h-3.5 w-3.5 animate-spin text-emerald-300" />
+            <LoaderCircle className="h-3.5 w-3.5 animate-spin text-ink" />
             Screening official records…
           </div>
         )}
       </div>
 
       {state.status === 'idle' && (
-        <div className="flex items-start gap-3 px-4 py-4 text-xs leading-5 text-slate-600">
-          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-sky-700" />
+        <div className="flex items-start gap-3 px-4 py-4 text-xs leading-5 text-ink-2">
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
           <p>
             Load when you need pricing context. CityLens queries current PLUTO
             location facts and recent DOF sales without changing the parcel
@@ -188,7 +185,7 @@ export function ParcelSalesComparablesPanel({
       {state.status === 'error' && (
         <div
           data-testid="parcel-sales-comparables-error"
-          className="flex items-start gap-3 border-t border-amber-200 bg-amber-50 px-4 py-4 text-xs leading-5 text-amber-900"
+          className="flex items-start gap-3 border-t border-rule px-4 py-4 text-xs leading-5 text-red-700"
         >
           <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
@@ -201,11 +198,11 @@ export function ParcelSalesComparablesPanel({
       {state.status === 'ready' && !available && (
         <div
           data-testid="parcel-sales-comparables-insufficient"
-          className="flex items-start gap-3 px-4 py-4 text-xs leading-5 text-slate-600"
+          className="flex items-start gap-3 px-4 py-4 text-xs leading-5 text-ink-2"
         >
-          <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
           <div>
-            <p className="font-semibold text-slate-900">
+            <p className="font-semibold text-ink">
               No defensible comparison set
             </p>
             <p className="mt-1">
@@ -226,8 +223,8 @@ export function ParcelSalesComparablesPanel({
           <div
             className={
               compact
-                ? 'grid gap-2 border-b border-slate-200 p-4 sm:grid-cols-2'
-                : 'grid gap-2 border-b border-slate-200 p-4 sm:grid-cols-3'
+                ? 'grid gap-2 border-b border-rule p-4 sm:grid-cols-2'
+                : 'grid gap-2 border-b border-rule p-4 sm:grid-cols-3'
             }
           >
             <SummaryMetric
@@ -252,8 +249,9 @@ export function ParcelSalesComparablesPanel({
             />
           </div>
 
-          <div className="divide-y divide-slate-200">
-            {result.comparables.map((sale, index) => (
+          <div className="flex justify-between gap-3 border-b border-rule px-4 py-2 font-cond text-xs text-ink-3" aria-hidden="true"><span>Parcel and sale record</span><span>Sale price</span></div>
+          <div className="divide-y divide-rule">
+            {result.comparables.map((sale) => (
               <article
                 key={`${sale.bbl}-${sale.sale_date}`}
                 data-testid="parcel-comparable-sale"
@@ -261,22 +259,19 @@ export function ParcelSalesComparablesPanel({
               >
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-950 text-[9px] font-bold text-white">
-                      {index + 1}
-                    </span>
-                    <h5 className="truncate text-xs font-semibold text-slate-950">
-                      {sale.address}
+                    <h5 className="truncate text-xs font-semibold text-ink">
+                      {formatAddress(sale.address)}
                     </h5>
-                    <span className="font-mono text-[9px] text-slate-400">
-                      {sale.bbl}
+                    <span className="font-mono text-xs text-ink-3">
+                      {formatBbl(sale.bbl)}
                     </span>
                     {sale.building_class && (
-                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600">
+                      <span className="text-xs text-ink-3">
                         Class {sale.building_class}
                       </span>
                     )}
                   </div>
-                  <p className="mt-1.5 text-[11px] text-slate-500">
+                  <p className="mt-1.5 text-xs text-ink-3">
                     {date(sale.sale_date)} · {sale.distance_miles.toFixed(1)} mi
                     · {number(sale.lot_area_sqft)} land sf
                     {sale.gross_area_sqft !== null
@@ -287,22 +282,22 @@ export function ParcelSalesComparablesPanel({
                     {sale.match_reasons.map((reason) => (
                       <span
                         key={reason}
-                        className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9px] font-medium text-sky-800"
+                        className="px-2 py-0.5 text-xs font-medium text-ink"
                       >
                         {reason}
                       </span>
                     ))}
                   </div>
                 </div>
-                <div className="text-left sm:text-right">
-                  <p className="text-sm font-semibold text-slate-950">
+                <div className="text-right tabular-nums">
+                  <p className="text-sm font-semibold text-ink">
                     {money(sale.sale_price)}
                   </p>
-                  <p className="mt-1 text-[10px] text-slate-500">
+                  <p className="mt-1 text-xs text-ink-3">
                     {money(sale.price_per_land_sqft)} / land sf
                   </p>
                   {sale.price_per_gross_sqft !== null && (
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-xs text-ink-3">
                       {money(sale.price_per_gross_sqft)} / gross sf
                     </p>
                   )}
@@ -311,20 +306,20 @@ export function ParcelSalesComparablesPanel({
             ))}
           </div>
 
-          <footer className="border-t border-slate-200 bg-slate-50 px-4 py-3">
-            <div className="flex flex-col gap-2 text-[10px] leading-4 text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+          <footer className="border-t border-rule bg-white px-4 py-3">
+            <div className="flex flex-col gap-2 text-xs leading-4 text-ink-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="max-w-3xl">{result.interpretation}</p>
               <a
                 href={result.source_url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex shrink-0 items-center gap-1 font-semibold text-sky-700 hover:text-sky-900"
+                className="inline-flex shrink-0 items-center gap-1 font-semibold text-ink hover:text-ink"
               >
                 DOF source
                 <ArrowUpRight className="h-3 w-3" />
               </a>
             </div>
-            <p className="mt-1 text-[9px] text-slate-400">
+            <p className="mt-1 font-mono text-xs text-ink-3">
               Dataset {result.source_dataset_id} · source updated{' '}
               {date(
                 result.source_data_updated_at ?? result.source_retrieved_at,

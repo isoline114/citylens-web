@@ -1,20 +1,34 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
+import { Menu } from 'lucide-react';
 import { usePathname, useSelectedLayoutSegments } from 'next/navigation';
 
 import { AuthHeaderControls } from '@/components/AuthHeaderControls';
 import { PlanQuotaBadge } from '@/components/PlanQuotaBadge';
-import { publicAssetPath } from '@/lib/site';
 
 const navigation = [
   { href: '/', label: 'Home' },
-  { href: '/runs', label: 'Runs' },
   { href: '/parcel-intel', label: 'Parcels' },
+  { href: '/runs', label: 'Site evidence' },
   { href: '/pricing', label: 'Pricing' },
   { href: '/docs', label: 'Docs' },
 ] as const;
+
+export function CityLensMark({ className = 'h-5 w-5' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+      focusable="false"
+      className={className}
+    >
+      <rect x="1.5" y="1.5" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M1.5 10.5h17M8 1.5v17" stroke="currentColor" strokeWidth="1.1" fill="none" />
+      <rect x="8" y="10.5" width="10.5" height="8" fill="currentColor" />
+    </svg>
+  );
+}
 
 function normalizePathname(pathname: string | null): string {
   if (!pathname) return '/';
@@ -33,16 +47,16 @@ function isCurrentRoute(
 
 function navigationClass(current: boolean, mobile: boolean): string {
   if (mobile) {
-    return `shrink-0 border-b-2 px-0.5 pb-2 pt-1 text-sm font-medium transition-colors ${
+    return `flex min-h-11 items-center border-l-2 px-3 text-sm ${
       current
-        ? 'border-sky-500 text-slate-950'
-        : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-950'
+        ? 'border-ink font-semibold text-ink'
+        : 'border-transparent font-medium text-ink-2 hover:text-ink'
     }`;
   }
-  return `rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors ${
+  return `inline-flex h-[51px] items-center border-b-2 text-sm transition-colors ${
     current
-      ? 'bg-slate-100 text-slate-950'
-      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
+      ? 'border-ink font-semibold text-ink'
+      : 'border-transparent font-medium text-ink-2 hover:text-ink'
   }`;
 }
 
@@ -51,28 +65,22 @@ export function SiteHeader() {
   const segments = useSelectedLayoutSegments();
 
   return (
-    <header className="sticky top-0 z-[1000] border-b border-slate-200/90 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-[1480px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6 xl:px-8">
-        <div className="flex min-w-0 flex-1 items-center gap-4">
+    <header className="sticky top-0 z-[1000] h-[52px] shrink-0 border-b border-rule bg-white">
+      <div className="flex h-full w-full items-center gap-2 px-3.5 sm:px-5 lg:gap-6">
+        <div className="flex min-w-0 flex-1 items-center gap-7">
           <Link
             href="/"
-            className="flex shrink-0 items-center gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+            className="flex shrink-0 items-center gap-[9px] rounded-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select focus-visible:ring-offset-2"
             aria-label="CityLens home"
           >
-            <Image
-              src={publicAssetPath('/citylens-mark.svg')}
-              alt=""
-              width={28}
-              height={28}
-              priority
-            />
-            <span className="text-lg font-semibold tracking-[-0.02em]">
+            <CityLensMark />
+            <span className="hidden text-[17px] font-extrabold tracking-[-0.02em] text-ink min-[360px]:inline">
               CityLens
             </span>
           </Link>
           <nav
             aria-label="Primary navigation"
-            className="hidden items-center gap-1 md:flex"
+            className="hidden items-center gap-5 md:flex"
           >
             {navigation.map((item) => {
               const current = isCurrentRoute(pathname, segments, item.href);
@@ -90,29 +98,34 @@ export function SiteHeader() {
           </nav>
         </div>
 
-        <div className="ml-auto flex max-w-full shrink-0 items-center gap-1.5 sm:gap-2">
+        <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2">
           <PlanQuotaBadge />
           <AuthHeaderControls />
         </div>
 
-        <nav
-          aria-label="Mobile primary navigation"
-          className="flex w-full items-center gap-5 overflow-x-auto pt-0.5 md:hidden"
-        >
-          {navigation.map((item) => {
-            const current = isCurrentRoute(pathname, segments, item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={current ? 'page' : undefined}
-                className={navigationClass(current, true)}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <details className="group md:hidden" key={pathname}>
+          <summary className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-sm border border-control text-ink marker:hidden hover:bg-paper-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select" aria-label="Open navigation">
+            <Menu className="h-4 w-4" aria-hidden="true" />
+          </summary>
+          <nav
+            aria-label="Mobile primary navigation"
+            className="absolute inset-x-0 top-full border-b border-rule bg-white p-3"
+          >
+            {navigation.map((item) => {
+              const current = isCurrentRoute(pathname, segments, item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={current ? 'page' : undefined}
+                  className={navigationClass(current, true)}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </details>
       </div>
     </header>
   );

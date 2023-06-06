@@ -6,8 +6,17 @@ comparison, and private workflow. The historical ranking, current eligibility
 gate, diligence overlays, and team decision remain separate in both copy and
 interface. Aerial change detection and LiDAR reconstruction are positioned as
 deeper site evidence after a parcel warrants investigation, not as a competing
-homepage product. The primary explorer CTA and illustrative decision workspace
-remain useful when featured aerial demos are unavailable.
+homepage product. The Survey interface uses a paper-and-ink palette, restrained green actions,
+and fine rules. The homepage shows real featured aerial evidence when
+available and an official-source coverage panel when it is unavailable.
+The primary explorer CTA remains available in either state.
+
+The parcel workspace keeps results, map, and the selected dossier together
+on wide desktop screens, with independent scrolling and a persistent results
+list. Narrow screens expose Map, Results, and Parcel details views; closing a
+parcel returns to the view that opened it. Feed qualification and workspace
+tools use compact, accessible disclosures. Source warnings, inventory
+verification, comparison limits, and private workflow behavior are unchanged.
 
 The signed-out `/runs` route is the canonical public evidence library. It
 loads only real precomputed runs from `/v1/demo/featured` and lets a visitor
@@ -29,6 +38,18 @@ The selected-parcel header exposes address identity honestly: numbered NYC PAD
 addresses are labeled as BBL-matched enrichment, while street-only records are
 marked as unnumbered tax lots. Address provenance never implies a rank or
 eligibility change.
+The parcel basemap uses standard OpenStreetMap raster tiles at
+`https://tile.openstreetmap.org/{z}/{x}/{y}.png`, with visible linked
+OpenStreetMap attribution. CARTO's anonymous raster URLs now display a key
+watermark; their [current access requirements](https://www.carto.com/basemaps/apikey/)
+require a separately registered key. The OSM layer uses ordinary browser
+caching, the site's origin-preserving referrer policy, and viewport-only
+loading under the [OSMF tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
+Do not add offline downloads, bulk prefetch, cache-busting, or suppressed
+referrers. Automated browser tests should stub tile requests rather than
+repeatedly pan and zoom the public service. OSM hosting is best-effort;
+high-traffic or guaranteed-availability deployments need a managed or
+self-hosted provider before increasing tile demand.
 For signed-in operators, **Build site evidence** carries a numbered selected
 parcel into `/runs/new` and prefills its address for imagery, change, 3D, and
 QA processing. The handoff is tab-scoped, expires after 30 minutes, is consumed

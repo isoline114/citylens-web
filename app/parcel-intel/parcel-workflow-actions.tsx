@@ -1,8 +1,8 @@
 'use client';
 
+import { formatAddress, formatBbl } from '@/lib/parcel-format';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  CalendarClock,
   CircleAlert,
   LoaderCircle,
   RefreshCw,
@@ -27,11 +27,11 @@ type ActionFilter =
   | 'snoozed';
 
 const STATE_STYLES: Record<ParcelWorkflowActionItem['action_state'], string> = {
-  overdue: 'border-rose-400/35 bg-rose-400/10 text-rose-100',
-  due_today: 'border-amber-400/35 bg-amber-400/10 text-amber-100',
-  due_soon: 'border-sky-400/30 bg-sky-400/10 text-sky-100',
-  scheduled: 'border-white/10 bg-white/5 text-slate-200',
-  unscheduled: 'border-violet-400/30 bg-violet-400/10 text-violet-100',
+  overdue: 'border-rule bg-white text-ink',
+  due_today: 'border-rule bg-white text-ink',
+  due_soon: 'border-rule bg-paper-2 text-ink',
+  scheduled: 'border-rule bg-white text-ink',
+  unscheduled: 'border-rule bg-white text-ink-3',
 };
 
 function dueLabel(item: ParcelWorkflowActionItem): string {
@@ -49,7 +49,7 @@ function dueLabel(item: ParcelWorkflowActionItem): string {
 }
 
 function addressLabel(item: ParcelWorkflowActionItem): string {
-  return item.address || `BBL ${item.bbl}`;
+  return formatAddress(item.address) || `BBL ${formatBbl(item.bbl)}`;
 }
 
 function coverageLabel(rate: number | null): string {
@@ -157,19 +157,15 @@ export function ParcelWorkflowActionsPanel({
   return (
     <section
       id="parcel-action-queue"
-      className="border-b border-slate-200 bg-slate-950 px-4 py-5 text-white md:px-7"
+      className="border-b border-rule bg-white px-4 py-5 text-ink md:px-7"
       aria-label="Acquisition action queue"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-violet-300">
-            <CalendarClock className="h-4 w-4" />
-            Acquisition action queue
-          </div>
           <h3 className="mt-1 text-xl font-semibold">
             What needs attention next?
           </h3>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-300">
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-3">
             Private follow-up commitments across your saved leads. Overdue work comes
             first; missing owners and stale outcome records stay visible instead of
             silently weakening the pipeline.
@@ -180,20 +176,20 @@ export function ParcelWorkflowActionsPanel({
           autoFocus
           onClick={onClose}
           aria-label="Close action queue"
-          className="self-end rounded-lg border border-white/10 p-2 text-slate-300 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 sm:self-auto"
+          className="self-end rounded-sm border border-control p-2 text-ink-3 hover:bg-paper-2 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-select focus-visible:ring-offset-2 focus-visible:ring-offset-white sm:self-auto"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
       {loading ? (
-        <div className="mt-5 flex items-center gap-2 text-sm text-slate-300" role="status">
+        <div className="mt-5 flex items-center gap-2 text-sm text-ink-3" role="status">
           <LoaderCircle className="h-4 w-4 animate-spin" />
           Building your follow-up queue…
         </div>
       ) : error || !data ? (
         <div
-          className="mt-5 flex flex-col gap-3 rounded-xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-100 sm:flex-row sm:items-center sm:justify-between"
+          className="mt-5 flex flex-col gap-3 border-b border-rule bg-white p-4 text-sm text-ink sm:flex-row sm:items-center sm:justify-between"
           role="alert"
         >
           <span className="flex items-center gap-2">
@@ -203,7 +199,7 @@ export function ParcelWorkflowActionsPanel({
           <button
             type="button"
             onClick={() => setReloadKey((value) => value + 1)}
-            className="inline-flex items-center gap-1 rounded-md border border-white/20 px-2.5 py-1.5 text-xs"
+            className="inline-flex items-center gap-1 rounded-sm border border-rule px-2.5 py-1.5 text-xs"
           >
             <RefreshCw className="h-3.5 w-3.5" /> Retry
           </button>
@@ -222,7 +218,7 @@ export function ParcelWorkflowActionsPanel({
             action queue.
           </div>
           {mutationError && (
-            <div className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-3 text-sm text-rose-100" role="alert">
+            <div className="mt-4 border-b border-rule bg-white p-3 text-sm text-ink" role="alert">
               The reminder could not be updated. Retry, or open the parcel workflow.
             </div>
           )}
@@ -256,13 +252,13 @@ export function ParcelWorkflowActionsPanel({
             ].map(({ label, value, detail }) => (
               <div
                 key={label}
-                className="rounded-xl border border-white/10 bg-white/5 p-3"
+                className="border-b border-rule px-3 py-3"
               >
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">
+                <div className="font-cond text-[13px] text-ink-3">
                   {label}
                 </div>
-                <div className="mt-1 text-xl font-semibold">{value}</div>
-                <div className="mt-1 text-[11px] text-slate-400">
+                <div className="mt-1 text-xl font-semibold tabular-nums">{value}</div>
+                <div className="mt-1 text-xs text-ink-3">
                   {detail}
                 </div>
               </div>
@@ -286,10 +282,10 @@ export function ParcelWorkflowActionsPanel({
                 type="button"
                 onClick={() => setFilter(value)}
                 aria-pressed={filter === value}
-                className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+                className={`rounded-sm border px-3 py-1.5 text-xs font-medium ${
                   filter === value
-                    ? 'border-white bg-white text-slate-950'
-                    : 'border-white/15 text-slate-300 hover:bg-white/10 hover:text-white'
+                    ? 'border-ink bg-paper-2 text-ink'
+                    : 'border-control text-ink-3 hover:bg-paper-2 hover:text-ink'
                 }`}
               >
                 {label}
@@ -298,35 +294,35 @@ export function ParcelWorkflowActionsPanel({
           </div>
 
           {visibleItems.length === 0 ? (
-            <div className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-4 text-sm text-emerald-100">
+            <div className="mt-4 border-b border-rule bg-paper-2 p-4 text-sm text-ink">
               {data.open_records === 0
                 ? 'No open acquisition leads yet. Save a parcel and assign its first action.'
                 : 'No leads match this queue view.'}
             </div>
           ) : (
-            <div className="mt-4 grid gap-2 xl:grid-cols-2">
+            <div className="mt-4 divide-y divide-rule">
               {visibleItems.map((item) => (
                 <article
                   key={item.bbl}
-                  className={`rounded-xl border p-4 ${STATE_STYLES[item.action_state]} ${
-                    item.is_snoozed ? 'opacity-70' : ''
+                  className={`py-4 ${STATE_STYLES[item.action_state]} ${
+                    item.is_snoozed ? 'bg-paper-2' : ''
                   }`}
                   data-testid={`workflow-action-${item.bbl}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-75">
+                      <div className="font-mono text-xs text-ink-3">
                         {dueLabel(item)} · {item.borough.replaceAll('_', ' ')}
                       </div>
                       {snoozeLabel(item) && (
-                        <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-violet-200">
+                        <div className="font-cond mt-1 text-[13px] font-semibold text-ink-3">
                           {snoozeLabel(item)}
                         </div>
                       )}
-                      <h4 className="mt-1 break-words text-sm font-semibold text-white">
+                      <h4 className={`mt-1 break-words text-sm font-semibold text-ink ${!item.address ? 'font-mono' : ''}`}>
                         {addressLabel(item)}
                       </h4>
-                      <p className="mt-1 text-xs leading-5 opacity-90">
+                      <p className="mt-1 text-xs leading-5">
                         {item.next_action || 'Set a concrete next action and due date.'}
                       </p>
                     </div>
@@ -334,7 +330,7 @@ export function ParcelWorkflowActionsPanel({
                       <button
                         type="button"
                         onClick={() => onSelectParcel(item.bbl)}
-                        className="rounded-md border border-white/20 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-white/10"
+                        className="rounded-sm border border-control px-2.5 py-1.5 text-xs font-medium text-ink hover:bg-paper-2"
                       >
                         Open workflow
                       </button>
@@ -344,7 +340,7 @@ export function ParcelWorkflowActionsPanel({
                             type="button"
                             disabled={busyBbl !== null}
                             onClick={() => void updateSnooze(item, 0)}
-                            className="rounded-md border border-white/15 px-2.5 py-1.5 text-[11px] text-slate-200 hover:bg-white/10 disabled:opacity-50"
+                            className="rounded-sm border border-control px-2.5 py-1.5 text-xs text-ink hover:bg-paper-2 disabled:opacity-50"
                           >
                             {busyBbl === item.bbl
                               ? 'Updating…'
@@ -356,7 +352,7 @@ export function ParcelWorkflowActionsPanel({
                               type="button"
                               disabled={busyBbl !== null}
                               onClick={() => void updateSnooze(item, 1)}
-                              className="rounded-md border border-white/15 px-2.5 py-1.5 text-[11px] text-slate-200 hover:bg-white/10 disabled:opacity-50"
+                              className="rounded-sm border border-control px-2.5 py-1.5 text-xs text-ink hover:bg-paper-2 disabled:opacity-50"
                             >
                               {busyBbl === item.bbl
                                 ? 'Updating…'
@@ -366,7 +362,7 @@ export function ParcelWorkflowActionsPanel({
                               type="button"
                               disabled={busyBbl !== null}
                               onClick={() => void updateSnooze(item, 7)}
-                              className="rounded-md border border-white/15 px-2.5 py-1.5 text-[11px] text-slate-200 hover:bg-white/10 disabled:opacity-50"
+                              className="rounded-sm border border-control px-2.5 py-1.5 text-xs text-ink hover:bg-paper-2 disabled:opacity-50"
                             >
                               Snooze 7 days
                             </button>
@@ -374,28 +370,28 @@ export function ParcelWorkflowActionsPanel({
                         ))}
                     </div>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
-                    <span className="rounded bg-black/15 px-2 py-1 capitalize">
+                  <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
+                    <span className="px-2 py-1 capitalize">
                       {item.stage}
                     </span>
                     {item.citywide_rank && (
-                      <span className="rounded bg-black/15 px-2 py-1">
+                      <span className="px-2 py-1">
                         Saved rank #{item.citywide_rank}
                       </span>
                     )}
                     {item.assignee ? (
-                      <span className="inline-flex items-center gap-1 rounded bg-black/15 px-2 py-1">
+                      <span className="inline-flex items-center gap-1 px-2 py-1">
                         <UserRound className="h-3 w-3" />
                         {item.assignee}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded bg-black/15 px-2 py-1">
+                      <span className="inline-flex items-center gap-1 px-2 py-1">
                         <CircleAlert className="h-3 w-3" />
                         No assignee
                       </span>
                     )}
                     {item.needs_outcome_update && (
-                      <span className="rounded bg-black/15 px-2 py-1">
+                      <span className="px-2 py-1">
                         Outcome update due
                       </span>
                     )}
@@ -405,7 +401,8 @@ export function ParcelWorkflowActionsPanel({
             </div>
           )}
 
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="mt-3 font-mono text-xs text-ink-3">Private workflow as of {data.generated_at}</p>
+          <p className="mt-3 text-xs text-ink-3">
             Outcome updates become due after 30 days without a recorded outcome.
             Terminal records are removed from this queue automatically.
           </p>

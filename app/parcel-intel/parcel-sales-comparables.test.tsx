@@ -96,7 +96,7 @@ describe('ParcelSalesComparablesPanel', () => {
     expect(screen.getByTestId('parcel-comparable-sale')).toHaveTextContent(
       '$1,610,000',
     );
-    expect(screen.getByText('609 OVINGTON AVENUE')).toBeVisible();
+    expect(screen.getByText('609 Ovington Avenue')).toBeVisible();
     expect(screen.getByText('Same building-class family')).toBeVisible();
     expect(screen.getByText(/not an appraisal/i)).toBeVisible();
     expect(screen.getByRole('link', { name: 'DOF source' })).toHaveAttribute(
