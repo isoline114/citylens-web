@@ -173,6 +173,7 @@ async function verifyClusteredMap(expectedFormatted) {
       .textContent()
   )?.trim();
   const clusterCount = await page.locator('.parcel-map-cluster-icon').count();
+  const canvasCount = await map.locator('canvas').count();
   const fitControlVisible = await page
     .getByRole('button', {
       name: 'Fit the map to all matching parcels',
@@ -184,6 +185,7 @@ async function verifyClusteredMap(expectedFormatted) {
     in_view_count: positiveFormattedCountWithSuffix(inViewText, 'in view'),
     match_count: positiveFormattedCountWithSuffix(matchText, 'matches'),
     cluster_count: clusterCount,
+    canvas_count: canvasCount,
     fit_control_visible: fitControlVisible,
     mapped_aria_label_matches:
       mappedAriaLabel?.includes(
@@ -192,15 +194,16 @@ async function verifyClusteredMap(expectedFormatted) {
   };
   if (
     receipt.inventory_scope_label !==
-      `Full inventory · ${expectedFormatted} loaded` ||
+      `${expectedFormatted} of ${expectedFormatted} ranked parcels shown · full inventory` ||
     receipt.in_view_count !== expectedCount ||
     receipt.match_count !== expectedCount ||
-    receipt.cluster_count <= 0 ||
+    receipt.cluster_count !== 0 ||
+    receipt.canvas_count < 1 ||
     receipt.fit_control_visible !== true ||
     receipt.mapped_aria_label_matches !== true
   ) {
     throw new Error(
-      `Unexpected clustered map receipt: ${JSON.stringify(receipt)}.`,
+      `Unexpected ranked map receipt: ${JSON.stringify(receipt)}.`,
     );
   }
   return receipt;
@@ -635,7 +638,7 @@ try {
       verdictCountSum === reviewedCount,
     workspace_state: await leadReviewWorkspace.getAttribute('data-state'),
     evidence_boundary_visible: await leadReviewWorkspace
-      .getByText(/Coverage—not accuracy/i)
+      .getByText(/Coverage does not measure accuracy/i)
       .isVisible(),
     review_next_visible: await leadReviewWorkspace
       .getByTestId('review-next-unreviewed')
@@ -938,7 +941,7 @@ try {
   const statusBoundaryVisible =
     prospectiveStatus === 'awaiting_post_issue_data'
       ? await prospectiveValidation
-          .getByText(/intentionally unavailable—not 0%/i)
+          .getByText(/intentionally unavailable; not 0%/i)
           .isVisible()
       : prospectiveStatus === 'collecting'
         ? await prospectiveValidation
@@ -1096,7 +1099,7 @@ try {
   await officialDossier.waitFor({ timeout: 15_000 });
   if (
     !(await officialDossier
-      .getByText('464 OVINGTON AVENUE', { exact: true })
+      .getByText('464 Ovington Avenue', { exact: true })
       .isVisible()) ||
     !(await officialDossier
       .getByText('Any NYC tax lot · not a lead score', { exact: true })
@@ -1204,7 +1207,7 @@ try {
     .getByText('One official tax lot found')
     .waitFor({ timeout: 15_000 });
   if (
-    !(await resolver.getByText('3058920038').isVisible()) ||
+    !(await resolver.getByText('3-05892-0038').isVisible()) ||
     !(await resolver.getByText(/NYC PAD/).isVisible())
   ) {
     throw new Error(

@@ -1940,7 +1940,7 @@ export function ParcelIntelExplorer({
           </div>
           {sourceReceipt}
           <span data-testid="parcel-mobile-access-status" className="border-l border-rule pl-2 text-[11px] sm:hidden">
-            {auth.status === 'loading' ? 'Checking' : inventoryState === 'upgrading' ? 'Upgrading' : inventoryState === 'full' ? 'Full' : inventoryState === 'incomplete' ? 'Reconnect' : 'Preview'} access
+            <b className="font-semibold text-ink">{auth.status === 'loading' ? 'Checking' : inventoryState === 'upgrading' ? 'Upgrading' : inventoryState === 'full' ? 'Full' : inventoryState === 'incomplete' ? 'Reconnect' : 'Preview'}</b> access
           </span>
           {isAuthenticated && (
             <button type="button" onClick={() => { setMobileWorkspaceToolsOpen((value) => !value); setMobilePane('results'); }} aria-label="Workspace tools" aria-expanded={mobileWorkspaceToolsOpen} aria-controls="parcel-mobile-workspace-tools" className="btn sm:hidden">

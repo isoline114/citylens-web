@@ -30,7 +30,7 @@ export default async function HomePage() {
   const inventory = parcel.inventory;
   const count = (n: number) => n.toLocaleString('en-US');
   return <div className="bg-paper text-ink">
-    <div aria-label="Feed dateline" className="flex flex-wrap gap-x-6 gap-y-1 border-b border-rule bg-paper-2 px-4 py-2 text-xs text-ink-2">
+    <div aria-label="Feed dateline" data-testid="home-feed-dateline" className="flex flex-wrap gap-x-6 gap-y-1 border-b border-rule bg-paper-2 px-4 py-2 text-xs text-ink-2">
       <span>Feed published <b className="font-semibold text-ink">{dateLabel(parcel.index?.generated_at)}</b></span>
       <span className="ws-tabular">{total !== null ? `${count(total)} ranked parcels` : 'Ranked-parcel count unavailable'}</span>
       <span className="ws-tabular">{checked.length ? `${checked.length} public sources checked` : 'Source receipt unavailable'}</span>

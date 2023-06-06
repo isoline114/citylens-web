@@ -19,7 +19,7 @@ const routes = [
     name: 'home',
     path: '/',
     current: 'Home',
-    requiredTestId: 'home-closing-cta',
+    requiredTestId: 'home-feed-dateline',
   },
   { name: 'parcels', path: '/parcel-intel', current: 'Parcels' },
   {
