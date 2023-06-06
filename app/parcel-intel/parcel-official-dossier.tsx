@@ -261,7 +261,7 @@ export function ParcelOfficialDossierPanel({ bbl, compact = false }: Props) {
               <h3 className="mt-1 text-xl font-semibold tracking-tight">
                 {formatAddress(dossier.address) || 'Address not reported'}
               </h3>
-              <p className="mt-1 text-xs text-ink-3">Official parcel dossier · Any NYC tax lot · not a lead score</p>
+              <p className="mt-1 text-xs text-ink-3">Official parcel dossier · <span>Any NYC tax lot · not a lead score</span></p>
               <p className="mt-1 text-xs text-ink-3">
                 {BOROUGH_LABELS[dossier.borough] ?? dossier.borough} · BBL{' '}
                 <span className="font-mono text-ink">{formatBbl(dossier.bbl)}</span>
